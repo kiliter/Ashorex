@@ -9,6 +9,21 @@
 - `make format`：格式化服务端和 iOS 代码。
 - `make verify`：依次执行服务端与 iOS 完整验证。
 
+## Java 版本切换
+
+仓库根目录的 `.sdkmanrc` 固定使用 SDKMAN 候选版本 `21.0.7.fx-zulu`。本机开启
+`sdkman_auto_env=true` 后，进入项目目录会自动切换到 Java 21，不会修改 SDKMAN 的全局默认版本。
+
+自动切换未生效时，可以在已初始化 SDKMAN 的终端中手动执行：
+
+```bash
+sdk env
+java -version
+cd apps/server && ./mvnw --version
+```
+
+如果本机尚未安装配置中的 Java 版本，执行 `sdk env install` 安装。
+
 修改代码前，必须依次阅读 `AGENTS.md`、V1 设计规范、实施计划和需求追踪矩阵。
 
 ## V1 边界
