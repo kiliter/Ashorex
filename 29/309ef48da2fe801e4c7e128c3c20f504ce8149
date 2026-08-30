@@ -1,0 +1,97 @@
+apps/ios/lib/features/catalog/presentation/course_detail_page.dart
+  s_4d8f86932c7463::t_192c14850c0d00 28-31
+  s_4d8f86932c7463::t_59174c11d21ef7 1-27,32-55
+apps/ios/lib/features/profile/data/preferences_repository.dart
+  s_4d8f86932c7463::t_7a1e57d7faa04a 1-60
+apps/server/src/main/java/com/shangan/catalog/application/CatalogQueryService.java
+  s_4d8f86932c7463::t_b3f991e47b00e2 1-40
+apps/server/src/main/java/com/shangan/catalog/application/CourseSyncService.java
+  s_4d8f86932c7463::t_decd5ffa1484b8 4
+  s_4d8f86932c7463::t_9db2df839210f2 30,33-37,42,79,87,97
+  s_4d8f86932c7463::t_b3f991e47b00e2 1-3,5-29,31-32,38-41,43-44,80-86,88-96,98-102
+  s_4d8f86932c7463::t_acabb2e4b1c7cb 45-78
+apps/server/src/main/java/com/shangan/ShanganApplication.java
+  s_4d8f86932c7463::t_b3f991e47b00e2 5,9
+apps/server/src/test/java/com/shangan/catalog/CourseSyncServiceTest.java
+  s_4d8f86932c7463::t_6350143355580d 1-4,6-27,29-30,32-33,35-44,50-55,58-133
+  s_4d8f86932c7463::t_9db2df839210f2 5,45-49
+  s_4d8f86932c7463::t_192c14850c0d00 28,31,34,56-57
+apps/ios/test/features/catalog/course_list_page_test.dart
+  s_4d8f86932c7463::t_192c14850c0d00 27
+  s_4d8f86932c7463::t_fb230d03b987c3 1-26,28-34
+apps/server/src/main/java/com/shangan/catalog/domain/MediaItem.java
+  s_4d8f86932c7463::t_3bb908c605c300 1-12
+apps/ios/lib/features/catalog/data/catalog_repository.dart
+  s_4d8f86932c7463::t_db2bd723467965 1-92
+  s_4d8f86932c7463::t_51f33b132359d1 93-103
+apps/server/src/main/resources/templates/admin/courses.html
+  s_4d8f86932c7463::t_32895366f5451f 1-37
+apps/server/src/main/java/com/shangan/catalog/infrastructure/JdbcCourseRepository.java
+  s_4d8f86932c7463::t_fc7e13607cedc3 1-112,114-172
+  s_4d8f86932c7463::t_192c14850c0d00 113
+.gitignore
+  s_4d8f86932c7463::t_1946693fc5f9c1 29-30
+apps/server/src/main/resources/templates/admin/course-lessons.html
+  s_4d8f86932c7463::t_32895366f5451f 1-31
+apps/ios/lib/core/api/api_client.dart
+  s_4d8f86932c7463::t_db2bd723467965 60-65,69-79
+  s_4d8f86932c7463::t_192c14850c0d00 66-68
+apps/server/src/test/java/com/shangan/media/emby/EmbyClientContractTest.java
+  s_4d8f86932c7463::t_9db2df839210f2 11,48-49
+  s_4d8f86932c7463::t_6350143355580d 1-10,12-47,50-58
+apps/ios/lib/features/catalog/presentation/course_list_page.dart
+  s_4d8f86932c7463::t_59174c11d21ef7 1-35,39-48
+  s_4d8f86932c7463::t_192c14850c0d00 36-38
+apps/server/src/main/java/com/shangan/catalog/api/CatalogController.java
+  s_4d8f86932c7463::t_acabb2e4b1c7cb 1-68
+apps/server/src/main/resources/db/migration/V003__catalog.sql
+  s_4d8f86932c7463::t_b3f991e47b00e2 1-30
+apps/ios/integration_test/app_shell_smoke_test.dart
+  s_4d8f86932c7463::t_fb230d03b987c3 9,30,47-54
+  s_4d8f86932c7463::t_073b27eb2e596c 55-56
+apps/server/src/main/java/com/shangan/admin/CourseAdminController.java
+  s_4d8f86932c7463::t_acabb2e4b1c7cb 1-61
+apps/server/src/main/resources/application.yml
+  s_4d8f86932c7463::t_b3f991e47b00e2 34-36
+apps/ios/test/features/dashboard/app_shell_test.dart
+  s_4d8f86932c7463::t_fb230d03b987c3 7,21-24,36-43
+  s_4d8f86932c7463::t_690c18ae37969f 44-45
+apps/ios/lib/app/router.dart
+  s_4d8f86932c7463::t_59174c11d21ef7 5,38-39,42
+  s_4d8f86932c7463::t_192c14850c0d00 40-41
+apps/server/src/main/java/com/shangan/media/emby/EmbyClient.java
+  s_4d8f86932c7463::t_9db2df839210f2 21
+  s_4d8f86932c7463::t_3bb908c605c300 1-20,22-71
+apps/ios/lib/features/dashboard/presentation/app_shell.dart
+  s_4d8f86932c7463::t_59174c11d21ef7 5,24
+apps/server/src/main/java/com/shangan/media/emby/EmbyDtos.java
+  s_4d8f86932c7463::t_3bb908c605c300 1-10
+apps/server/src/main/java/com/shangan/catalog/domain/Course.java
+  s_4d8f86932c7463::t_3bb908c605c300 1-14
+apps/server/src/main/java/com/shangan/media/emby/EmbyProperties.java
+  s_4d8f86932c7463::t_3bb908c605c300 1-21
+apps/server/src/main/java/com/shangan/catalog/application/CatalogSnapshotWriter.java
+  s_4d8f86932c7463::t_9db2df839210f2 1-54
+apps/server/src/main/java/com/shangan/media/emby/EmbyGateway.java
+  s_4d8f86932c7463::t_3bb908c605c300 1-8
+apps/server/src/main/java/com/shangan/catalog/infrastructure/CourseRepository.java
+  s_4d8f86932c7463::t_fc7e13607cedc3 1-28
+apps/ios/lib/app/bootstrap.dart
+  s_4d8f86932c7463::t_59174c11d21ef7 8,26,33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "29309ef48da2fe801e4c7e128c3c20f504ce8149",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
