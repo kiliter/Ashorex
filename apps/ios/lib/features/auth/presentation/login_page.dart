@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
+import 'package:shangan_ios/core/config/server_configuration_controller.dart';
+import 'package:shangan_ios/features/auth/presentation/server_settings_page.dart';
 
 /// App 登录页，只收集凭据并委托 AuthController 调用服务端。
 final class LoginPage extends ConsumerStatefulWidget {
@@ -43,9 +45,30 @@ final class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final controller = ref.watch(authControllerProvider);
+    final server = ref
+        .watch(serverConfigurationControllerProvider)
+        .configuration;
     final state = controller.state;
     final submitting = state.status == AuthStatus.authenticating;
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        actions: [
+          IconButton(
+            key: const Key('serverSettingsButton'),
+            tooltip: '服务器设置',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => const ServerSettingsPage(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.dns_outlined),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -74,6 +97,13 @@ final class _LoginPageState extends ConsumerState<LoginPage> {
                       '今天的计划，要算数。',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '当前服务器：${server.displayLabel}',
+                      key: const Key('currentServerLabel'),
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 36),
                     TextFormField(

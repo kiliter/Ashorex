@@ -158,6 +158,12 @@ final class ApiClient {
     }
   }
 
+  /// 服务端切换或 App 销毁时关闭连接池，避免旧 Origin 继续持有活动连接。
+  void close() {
+    _dio.close(force: true);
+    _refreshDio.close(force: true);
+  }
+
   Future<void> _onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,

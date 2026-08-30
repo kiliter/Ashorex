@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/core/auth/auth_repository.dart';
+import 'package:shangan_ios/core/config/server_configuration.dart';
+import 'package:shangan_ios/core/config/server_configuration_controller.dart';
+import 'package:shangan_ios/core/config/server_configuration_store.dart';
 import 'package:shangan_ios/core/storage/token_store.dart';
 import 'package:shangan_ios/features/auth/presentation/login_page.dart';
 
@@ -15,10 +18,21 @@ void main() {
     );
     await controller.initialize();
     addTearDown(controller.dispose);
+    final serverController = ServerConfigurationController(
+      initialConfiguration: ServerConfiguration.parse('http://127.0.0.1:8080'),
+      store: _MemoryServerConfigurationStore(),
+      tokenStore: tokenStore,
+    );
+    addTearDown(serverController.dispose);
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authControllerProvider.overrideWithValue(controller)],
+        overrides: [
+          authControllerProvider.overrideWithValue(controller),
+          serverConfigurationControllerProvider.overrideWithValue(
+            serverController,
+          ),
+        ],
         child: const MaterialApp(home: LoginPage()),
       ),
     );
@@ -34,6 +48,16 @@ void main() {
     expect(controller.state.user?.id, 'user-1');
     expect((await tokenStore.read())?.refreshToken, 'refresh-token');
   });
+}
+
+final class _MemoryServerConfigurationStore
+    implements ServerConfigurationStore {
+  @override
+  Future<ServerConfiguration> load({required String defaultBaseUrl}) async =>
+      ServerConfiguration.parse(defaultBaseUrl);
+
+  @override
+  Future<void> save(ServerConfiguration configuration) async {}
 }
 
 final class _MemoryTokenStore implements TokenStore {

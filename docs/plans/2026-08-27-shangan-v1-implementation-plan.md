@@ -1747,6 +1747,7 @@ git tag -a v0.1.0-rc1 -m "上岸 V1 release candidate 1"
 **Files:**
 - Create: `apps/ios/lib/core/config/server_configuration.dart`
 - Create: `apps/ios/lib/core/config/server_configuration_store.dart`
+- Create: `apps/ios/lib/core/config/server_configuration_controller.dart`
 - Create: `apps/ios/lib/core/config/server_health_checker.dart`
 - Create: `apps/ios/lib/app/application_bootstrap.dart`
 - Create: `apps/ios/lib/features/auth/presentation/server_settings_page.dart`
