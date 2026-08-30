@@ -1,0 +1,135 @@
+apps/ios/lib/core/storage/token_store.dart
+  s_4d8f86932c7463::t_40410ddc903329 1-59
+apps/ios/ios/RunnerTests/RunnerTests.swift
+  s_4d8f86932c7463::t_9be73828d8a785 1-6,10-12
+  s_4d8f86932c7463::t_a710be836684dc 7-9
+apps/ios/pubspec.yaml
+  s_4d8f86932c7463::t_554fc122513202 1-30
+apps/ios/analysis_options.yaml
+  s_4d8f86932c7463::t_9be73828d8a785 1-38
+.gitignore
+  s_4d8f86932c7463::t_90e151c77a6aa7 18
+apps/ios/lib/features/auth/presentation/login_page.dart
+  s_4d8f86932c7463::t_5f2b96cfd08f41 69-70,88-89,105-106,114-116,128-130
+  s_4d8f86932c7463::t_cabae4438ff8e7 29-32,34
+  s_4d8f86932c7463::t_7a1e57d7faa04a 1-28,33,35-68,71-87,90-104,107-113,117-127,131-144
+.github/workflows/server-verify.yml
+  s_4d8f86932c7463::t_db041391a16ea0 1-30
+apps/ios/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md
+  s_4d8f86932c7463::t_4758401bd40924 1-5
+apps/ios/lib/features/profile/presentation/settings_page.dart
+  s_4d8f86932c7463::t_47a42b7fdc772a 1-59,69-103,107-119,122-142
+  s_4d8f86932c7463::t_579fd4ed1dce76 104,106
+  s_4d8f86932c7463::t_5f2b96cfd08f41 60-68,105,120-121
+apps/ios/lib/app/router.dart
+  s_4d8f86932c7463::t_eae113c37845a8 1-29,31-52
+  s_4d8f86932c7463::t_5f2b96cfd08f41 30
+apps/ios/ios/Runner/SceneDelegate.swift
+  s_4d8f86932c7463::t_4758401bd40924 1-5
+apps/ios/README.md
+  s_4d8f86932c7463::t_4758401bd40924 1,3,5,7,9-14,16,18-22
+  s_4d8f86932c7463::t_9be73828d8a785 2,4,6,8,15,17
+apps/ios/lib/core/auth/auth_controller.dart
+  s_4d8f86932c7463::t_579fd4ed1dce76 22,25-29
+  s_4d8f86932c7463::t_5f2b96cfd08f41 73-76,90-93
+  s_4d8f86932c7463::t_cabae4438ff8e7 45-51,53-61
+  s_4d8f86932c7463::t_4adbb17513baef 1-21,23-24,30-44,52,62-72,77-89,94-127
+.github/workflows/ios-verify.yml
+  s_4d8f86932c7463::t_db041391a16ea0 1-27,31-36
+  s_4d8f86932c7463::t_cabae4438ff8e7 28-30
+apps/ios/integration_test/app_shell_smoke_test.dart
+  s_4d8f86932c7463::t_86eccb3481e604 1-99
+apps/ios/ios/Runner/Info.plist
+  s_4d8f86932c7463::t_9be73828d8a785 1-9,11-17,19-28,34-75
+  s_4d8f86932c7463::t_db041391a16ea0 10,18
+  s_4d8f86932c7463::t_cabae4438ff8e7 29-33
+apps/ios/ios/Runner/AppDelegate.swift
+  s_4d8f86932c7463::t_4758401bd40924 1-18
+apps/ios/lib/app/bootstrap.dart
+  s_4d8f86932c7463::t_eae113c37845a8 1-36
+apps/ios/.fvmrc
+  s_4d8f86932c7463::t_12e0505caf13f1 1-3
+apps/ios/test/core/api/api_client_test.dart
+  s_4d8f86932c7463::t_86eccb3481e604 1-114
+apps/ios/test/features/auth/login_page_test.dart
+  s_4d8f86932c7463::t_86eccb3481e604 1-79
+apps/ios/lib/core/auth/auth_repository.dart
+  s_4d8f86932c7463::t_4adbb17513baef 1-101
+apps/ios/ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme
+  s_4d8f86932c7463::t_9be73828d8a785 1-119
+apps/ios/.metadata
+  s_4d8f86932c7463::t_9be73828d8a785 1-30
+apps/ios/ios/Runner.xcodeproj/project.pbxproj
+  s_4d8f86932c7463::t_90e151c77a6aa7 363,490,542
+  s_4d8f86932c7463::t_9be73828d8a785 1-362,364-489,491-541,543-647
+apps/ios/lib/core/api/api_client.dart
+  s_4d8f86932c7463::t_4adbb17513baef 1-8,10-12,18-108,110-135,137-195
+  s_4d8f86932c7463::t_579fd4ed1dce76 9,13-17
+  s_4d8f86932c7463::t_4a63428511019f 109,136
+apps/ios/lib/features/dashboard/presentation/app_shell.dart
+  s_4d8f86932c7463::t_5f2b96cfd08f41 47-48,59-62,90-94
+  s_4d8f86932c7463::t_47a42b7fdc772a 1-46,49-58,63-89,95-147
+apps/ios/test/core/auth/auth_controller_test.dart
+  s_4d8f86932c7463::t_5f2b96cfd08f41 35-38
+  s_4d8f86932c7463::t_867799a1b910b8 1,5-34,39-72,78-105
+  s_4d8f86932c7463::t_0d64ed3dc12048 2-4,73-77
+apps/ios/lib/core/api/api_exception.dart
+  s_4d8f86932c7463::t_40410ddc903329 1-30
+apps/ios/lib/app/app.dart
+  s_4d8f86932c7463::t_eae113c37845a8 1-46
+apps/ios/.gitignore
+  s_4d8f86932c7463::t_9be73828d8a785 1-48
+  s_4d8f86932c7463::t_12e0505caf13f1 49-51
+apps/ios/lib/main.dart
+  s_4d8f86932c7463::t_40410ddc903329 1-4
+apps/ios/test/features/dashboard/app_shell_test.dart
+  s_4d8f86932c7463::t_cb1f1b5051b00d 1-68
+apps/ios/ios/.gitignore
+  s_4d8f86932c7463::t_919ed456aebf48 1-34
+apps/ios/ios/Flutter/AppFrameworkInfo.plist
+  s_4d8f86932c7463::t_7a1590f160747d 1-24
+apps/ios/ios/Flutter/Debug.xcconfig
+  s_4d8f86932c7463::t_7f084b9c09a2bd 1
+apps/ios/ios/Flutter/Release.xcconfig
+  s_4d8f86932c7463::t_c768639f10f15c 1
+apps/ios/ios/Runner.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+  s_4d8f86932c7463::t_30a02219bf489c 1-7
+apps/ios/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+  s_4d8f86932c7463::t_a058d2c137acd3 1-8
+apps/ios/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+  s_4d8f86932c7463::t_a8320c6b6b74d8 1-8
+apps/ios/ios/Runner.xcworkspace/contents.xcworkspacedata
+  s_4d8f86932c7463::t_829010c9fcda00 1-7
+apps/ios/ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+  s_4d8f86932c7463::t_2aebf08eab8865 1-8
+apps/ios/ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+  s_4d8f86932c7463::t_d6c770230d40c2 1-8
+apps/ios/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json
+  s_4d8f86932c7463::t_6dcf806b61d2cf 1-122
+apps/ios/ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json
+  s_4d8f86932c7463::t_6ba01e2139a71a 1-23
+apps/ios/ios/Runner/Base.lproj/LaunchScreen.storyboard
+  s_4d8f86932c7463::t_27398c96904a15 1-37
+apps/ios/ios/Runner/Base.lproj/Main.storyboard
+  s_4d8f86932c7463::t_4d8ab6d51a8435 1-26
+apps/ios/ios/Runner/Runner-Bridging-Header.h
+  s_4d8f86932c7463::t_2969272b12b042 1
+apps/ios/pubspec.lock
+  s_4d8f86932c7463::t_fa9f087f51e8ca 1-1009
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "4cf88dc6098e851905f7927e67d41f79b8168a04",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
