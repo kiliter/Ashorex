@@ -52,17 +52,7 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
                     '${item.itemType} · ${item.completedSeconds}/${item.plannedSeconds} 秒',
                   ),
                   trailing: Text(item.status),
-                  onTap: plan.status == 'LOCKED' && item.mediaItemId != null
-                      ? () => context.push(
-                          Uri(
-                            path: '/player/${item.mediaItemId}',
-                            queryParameters: {
-                              'planItemId': item.id,
-                              'title': item.title,
-                            },
-                          ).toString(),
-                        )
-                      : null,
+                  onTap: plan.status == 'LOCKED' ? () => _openItem(item) : null,
                 ),
               ),
               if (plan.status == 'DRAFT') ...[
@@ -91,6 +81,34 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
   Future<void> _addFocus() async {
     await ref.read(planRepositoryProvider).addFocus('专注学习', 25 * 60);
     setState(_reload);
+  }
+
+  /// 按任务组件进入对应学习页面；无媒体的还债任务在 V1 中只可能是 FOCUS。
+  void _openItem(PlanItemData item) {
+    final focusTask =
+        item.itemType == 'FOCUS' ||
+        (item.itemType == 'DEBT_REPAYMENT' && item.mediaItemId == null);
+    if (focusTask) {
+      context.push(
+        Uri(
+          path: '/focus',
+          queryParameters: {
+            'planItemId': item.id,
+            'title': item.title,
+            'plannedSeconds': '${item.plannedSeconds}',
+          },
+        ).toString(),
+      );
+      return;
+    }
+    final mediaItemId = item.mediaItemId;
+    if (mediaItemId == null) return;
+    context.push(
+      Uri(
+        path: '/player/$mediaItemId',
+        queryParameters: {'planItemId': item.id, 'title': item.title},
+      ).toString(),
+    );
   }
 
   Future<void> _showLock(DailyPlanData plan) async {

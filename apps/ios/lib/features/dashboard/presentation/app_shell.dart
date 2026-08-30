@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/features/catalog/presentation/course_list_page.dart';
 import 'package:shangan_ios/features/dashboard/presentation/home_page.dart';
+import 'package:shangan_ios/features/reporting/presentation/daily_report_page.dart';
 
 /// 登录后的五 Tab 根壳层；后续业务 Task 在各占位页内逐步落地。
 final class AppShell extends ConsumerStatefulWidget {
@@ -24,11 +25,7 @@ final class _AppShellState extends ConsumerState<AppShell> {
       title: 'AI',
       message: '只读问答入口，不会修改你的学习数据。',
     ),
-    _ShellPlaceholder(
-      icon: Icons.insights_outlined,
-      title: '数据',
-      message: '日报、周报和晚间审判将在这里展示。',
-    ),
+    DailyReportPage(),
     _ProfileTab(),
   ];
 

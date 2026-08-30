@@ -277,6 +277,37 @@ public class DailyPlanService implements PlanProgressPort {
     }
   }
 
+  @Override
+  @Transactional
+  public void updateFocusProgress(
+      String userId, String planItemId, long absoluteCompletedSeconds, boolean completed) {
+    if (planItemId == null) return;
+    PlanItem item = plans.findOwnedItem(userId, planItemId).orElseThrow(() -> notFound("计划任务不存在"));
+    long absolute = completed ? item.plannedSeconds() : absoluteCompletedSeconds;
+    var update = plans.updateAbsoluteProgress(userId, planItemId, absolute, clock.instant());
+    debts.reconcileRepayment(
+        userId, update.after().debtId(), planItemId, update.positiveDelta(), clock.instant());
+    completePlanIfSatisfied(userId, update.after().planId());
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public void validateFocusLink(String userId, String planItemId) {
+    if (planItemId == null) return;
+    PlanItem item = plans.findOwnedItem(userId, planItemId).orElseThrow(() -> notFound("计划任务不存在"));
+    boolean supported = item.itemType().equals("FOCUS");
+    if (item.itemType().equals("DEBT_REPAYMENT")) {
+      LearningDebt debt =
+          debts
+              .findDebt(userId, item.debtId())
+              .orElseThrow(() -> invalid("PLAN_DEBT_INVALID", "关联的专注欠债不存在"));
+      supported = debt.debtType().equals("FOCUS");
+    }
+    if (!supported) {
+      throw invalid("PLAN_ITEM_FOCUS_MISMATCH", "计划任务不是专注任务");
+    }
+  }
+
   @Transactional(readOnly = true)
   public PlanSummary todaySummary(String userId, String timezone) {
     LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(timezone)));

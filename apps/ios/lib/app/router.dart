@@ -6,10 +6,13 @@ import 'package:shangan_ios/features/catalog/presentation/course_detail_page.dar
 import 'package:shangan_ios/features/dashboard/presentation/app_shell.dart';
 import 'package:shangan_ios/features/debt/presentation/debt_page.dart';
 import 'package:shangan_ios/features/exam/presentation/exam_goal_page.dart';
+import 'package:shangan_ios/features/focus/presentation/focus_timer_page.dart';
 import 'package:shangan_ios/features/planning/presentation/plan_page.dart';
 import 'package:shangan_ios/features/player/presentation/learning_player_page.dart';
 import 'package:shangan_ios/features/profile/presentation/settings_page.dart';
 import 'package:shangan_ios/features/quiz/presentation/quiz_page.dart';
+import 'package:shangan_ios/features/reporting/presentation/daily_report_page.dart';
+import 'package:shangan_ios/features/reporting/presentation/weekly_report_page.dart';
 
 /// 创建受认证状态驱动的根路由，业务页面不自行判断 Token。
 GoRouter createRouter(AuthController authController) {
@@ -47,6 +50,17 @@ GoRouter createRouter(AuthController authController) {
       GoRoute(path: '/plan', builder: (context, state) => const PlanPage()),
       GoRoute(path: '/debts', builder: (context, state) => const DebtPage()),
       GoRoute(
+        path: '/focus',
+        builder: (context, state) => FocusTimerPage(
+          planItemId: state.uri.queryParameters['planItemId'],
+          mediaItemId: state.uri.queryParameters['mediaItemId'],
+          title: state.uri.queryParameters['title'] ?? '专注学习',
+          plannedSeconds:
+              int.tryParse(state.uri.queryParameters['plannedSeconds'] ?? '') ??
+              25 * 60,
+        ),
+      ),
+      GoRoute(
         path: '/player/:lessonId',
         builder: (context, state) => LearningPlayerPage(
           lessonId: state.pathParameters['lessonId']!,
@@ -69,6 +83,29 @@ GoRouter createRouter(AuthController authController) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: '/reports/daily',
+        builder: (context, state) => DailyReportPage(
+          initialDate: DateTime.tryParse(
+            state.uri.queryParameters['date'] ?? '',
+          ),
+          showAppBar: true,
+        ),
+      ),
+      GoRoute(
+        path: '/reports/weekly',
+        builder: (context, state) {
+          final now = DateTime.now();
+          final defaultMonday = now.subtract(Duration(days: now.weekday - 1));
+          return WeeklyReportPage(
+            initialWeekStart:
+                DateTime.tryParse(
+                  state.uri.queryParameters['weekStart'] ?? '',
+                ) ??
+                defaultMonday,
+          );
+        },
       ),
     ],
   );

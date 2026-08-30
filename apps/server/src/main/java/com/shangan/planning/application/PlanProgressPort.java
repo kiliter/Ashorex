@@ -12,4 +12,11 @@ public interface PlanProgressPort {
 
   /** 答题提交前校验任务所有权、任务组成类型以及关联视频。 */
   void validateQuizLink(String userId, String planItemId, String mediaItemId);
+
+  /** 使用服务端累计专注秒数更新计划任务。 */
+  void updateFocusProgress(
+      String userId, String planItemId, long absoluteCompletedSeconds, boolean completed);
+
+  /** 创建专注会话前校验任务所有权以及 FOCUS 欠债类型。 */
+  void validateFocusLink(String userId, String planItemId);
 }

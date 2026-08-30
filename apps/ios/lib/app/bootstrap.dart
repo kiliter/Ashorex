@@ -8,10 +8,12 @@ import 'package:shangan_ios/core/storage/token_store.dart';
 import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
 import 'package:shangan_ios/features/dashboard/data/dashboard_repository.dart';
 import 'package:shangan_ios/features/exam/data/exam_repository.dart';
+import 'package:shangan_ios/features/focus/data/focus_repository.dart';
 import 'package:shangan_ios/features/planning/data/plan_repository.dart';
 import 'package:shangan_ios/features/player/data/watch_repository.dart';
 import 'package:shangan_ios/features/profile/data/preferences_repository.dart';
 import 'package:shangan_ios/features/quiz/data/quiz_repository.dart';
+import 'package:shangan_ios/features/reporting/data/report_repository.dart';
 
 /// 初始化生产依赖；API 地址由构建参数提供，默认值仅用于本机开发。
 Future<void> bootstrap() async {
@@ -38,6 +40,8 @@ Future<void> bootstrap() async {
     deviceId: await loadOrCreatePlayerDeviceId(),
   );
   final quizRepository = RemoteQuizRepository(apiClient);
+  final focusRepository = RemoteFocusRepository(apiClient);
+  final reportRepository = RemoteReportRepository(apiClient);
 
   await authController.initialize();
   runApp(
@@ -50,6 +54,8 @@ Future<void> bootstrap() async {
         planRepositoryProvider.overrideWithValue(planRepository),
         watchRepositoryProvider.overrideWithValue(watchRepository),
         quizRepositoryProvider.overrideWithValue(quizRepository),
+        focusRepositoryProvider.overrideWithValue(focusRepository),
+        reportRepositoryProvider.overrideWithValue(reportRepository),
         preferencesRepositoryProvider.overrideWithValue(preferencesRepository),
       ],
       child: ShanganApp(authController: authController),

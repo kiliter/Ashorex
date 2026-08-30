@@ -8,6 +8,7 @@ import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
 import 'package:shangan_ios/features/dashboard/data/dashboard_repository.dart';
 import 'package:shangan_ios/features/dashboard/presentation/app_shell.dart';
 import 'package:shangan_ios/features/exam/data/exam_repository.dart';
+import 'package:shangan_ios/features/reporting/data/report_repository.dart';
 
 void main() {
   testWidgets('登录后根壳层渲染五个固定 Tab', (tester) async {
@@ -24,6 +25,7 @@ void main() {
           authControllerProvider.overrideWithValue(controller),
           catalogRepositoryProvider.overrideWithValue(_CatalogRepository()),
           dashboardRepositoryProvider.overrideWithValue(_DashboardRepository()),
+          reportRepositoryProvider.overrideWithValue(_ReportRepository()),
         ],
         child: const MaterialApp(home: AppShell()),
       ),
@@ -34,6 +36,37 @@ void main() {
       expect(find.text(label), findsWidgets);
     }
   });
+}
+
+/// 根壳层会预创建数据 Tab，测试以固定日报避免访问真实接口。
+final class _ReportRepository implements ReportRepository {
+  @override
+  Future<DailyReportData> loadDaily(DateTime date) async => DailyReportData(
+    date: date,
+    planStatus: 'LOCKED',
+    plannedSeconds: 1500,
+    videoStudySeconds: 0,
+    focusSeconds: 0,
+    completedTasks: 0,
+    totalTasks: 1,
+    completionRate: 0,
+    videoCompletedCount: 0,
+    answerCount: 0,
+    correctAnswerCount: 0,
+    answerAccuracy: 0,
+    aliveCheckFailureCount: 0,
+    abandoned: false,
+    newDebtSeconds: 0,
+    repaidDebtSeconds: 0,
+    openDebtSeconds: 0,
+    judgmentText: '今天的学习尚未完成。',
+    generatedAt: DateTime.utc(2026, 8, 30),
+  );
+
+  @override
+  Future<WeeklyReportData> loadWeekly(DateTime weekStart) {
+    throw UnimplementedError();
+  }
 }
 
 final class _DashboardRepository implements DashboardRepository {
