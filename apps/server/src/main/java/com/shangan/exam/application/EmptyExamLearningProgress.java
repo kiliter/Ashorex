@@ -1,10 +1,8 @@
 package com.shangan.exam.application;
 
 import java.util.List;
-import org.springframework.stereotype.Component;
 
-/** 可信观看功能落地前的零值实现；Task 9 将其替换为真实完成记录查询。 */
-@Component
+/** 早期脚手架保留的零值实现；生产环境已由可信视频进度仓储替代。 */
 public class EmptyExamLearningProgress implements ExamLearningProgressPort {
 
   @Override

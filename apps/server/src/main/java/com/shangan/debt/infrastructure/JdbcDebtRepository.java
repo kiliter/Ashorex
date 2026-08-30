@@ -39,6 +39,17 @@ public class JdbcDebtRepository implements DebtRepository {
   }
 
   @Override
+  public List<LearningDebt> findOpenVideoByMedia(String userId, String mediaItemId) {
+    return jdbc.sql(
+            "select * from learning_debts where user_id=:userId and media_item_id=:mediaItemId "
+                + "and debt_type='VIDEO_WATCH' and status in ('OPEN','PARTIALLY_REPAID')")
+        .param("userId", userId)
+        .param("mediaItemId", mediaItemId)
+        .query(this::map)
+        .list();
+  }
+
+  @Override
   public void insertIfAbsent(LearningDebt debt, Instant now) {
     jdbc.sql(
             """

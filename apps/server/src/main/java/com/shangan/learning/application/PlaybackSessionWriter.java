@@ -18,6 +18,7 @@ public class PlaybackSessionWriter {
 
   @Transactional
   public void insert(WatchSessionBootstrapRepository.SessionPlayback session) {
+    sessions.stopOpenForUser(session.userId(), clock.instant());
     sessions.insert(session, clock.instant());
   }
 }

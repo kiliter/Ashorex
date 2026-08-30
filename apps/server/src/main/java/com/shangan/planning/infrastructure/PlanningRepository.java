@@ -43,6 +43,9 @@ public interface PlanningRepository {
 
   ProgressUpdate updateAbsoluteProgress(String userId, String itemId, long absolute, Instant now);
 
+  ProgressUpdate updateVideoWatchProgress(
+      String userId, String itemId, long absolute, boolean watchCompleted, Instant now);
+
   ProgressUpdate markQuizCompleted(String userId, String itemId, Instant now);
 
   void markItemCompletedIfSatisfied(String itemId, Instant now);

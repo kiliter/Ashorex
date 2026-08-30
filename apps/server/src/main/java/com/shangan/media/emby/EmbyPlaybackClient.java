@@ -20,7 +20,7 @@ public class EmbyPlaybackClient {
     this.json = json;
   }
 
-  public Selection select(String embyItemId) {
+  public Selection select(String embyItemId, long startPositionMs) {
     if (!properties.configured() || properties.userId().isBlank()) throw unavailable();
     String deviceId = UUID.randomUUID().toString();
     String playSessionId = UUID.randomUUID().toString();
@@ -37,7 +37,7 @@ public class EmbyPlaybackClient {
                           .path("/Items/{id}/PlaybackInfo")
                           .queryParam("UserId", properties.userId())
                           .queryParam("DeviceId", deviceId)
-                          .queryParam("StartTimeTicks", 0)
+                          .queryParam("StartTimeTicks", Math.max(0, startPositionMs) * 10_000)
                           .build(embyItemId))
               .body(Map.of())
               .retrieve()
@@ -59,6 +59,8 @@ public class EmbyPlaybackClient {
                   + deviceId
                   + "&PlaySessionId="
                   + playSessionId
+                  + "&StartTimeTicks="
+                  + Math.max(0, startPositionMs) * 10_000
               : "/Videos/"
                   + embyItemId
                   + "/master.m3u8?MediaSourceId="
@@ -66,7 +68,9 @@ public class EmbyPlaybackClient {
                   + "&VideoCodec=h264&AudioCodec=aac&DeviceId="
                   + deviceId
                   + "&PlaySessionId="
-                  + playSessionId;
+                  + playSessionId
+                  + "&StartTimeTicks="
+                  + Math.max(0, startPositionMs) * 10_000;
       return new Selection(path, !direct, deviceId, playSessionId);
     } catch (BusinessException exception) {
       throw exception;

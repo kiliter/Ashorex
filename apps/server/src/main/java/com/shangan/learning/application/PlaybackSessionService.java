@@ -3,6 +3,8 @@ package com.shangan.learning.application;
 import com.shangan.catalog.application.CatalogQueryService;
 import com.shangan.common.IdGenerator;
 import com.shangan.common.api.BusinessException;
+import com.shangan.identity.infrastructure.UserRepository;
+import com.shangan.learning.infrastructure.VideoProgressRepository;
 import com.shangan.learning.infrastructure.WatchSessionBootstrapRepository;
 import com.shangan.media.emby.EmbyPlaybackClient;
 import com.shangan.planning.application.DailyPlanService;
@@ -19,6 +21,9 @@ public class PlaybackSessionService {
   private final DailyPlanService plans;
   private final EmbyPlaybackClient emby;
   private final WatchSessionBootstrapRepository sessions;
+  private final VideoProgressRepository progress;
+  private final UserRepository users;
+  private final AliveCheckScheduler aliveChecks;
   private final PlaybackSessionWriter writer;
   private final PlaybackTicketService tickets;
   private final IdGenerator ids;
@@ -28,6 +33,9 @@ public class PlaybackSessionService {
       DailyPlanService plans,
       EmbyPlaybackClient emby,
       WatchSessionBootstrapRepository sessions,
+      VideoProgressRepository progress,
+      UserRepository users,
+      AliveCheckScheduler aliveChecks,
       PlaybackSessionWriter writer,
       PlaybackTicketService tickets,
       IdGenerator ids) {
@@ -35,6 +43,9 @@ public class PlaybackSessionService {
     this.plans = plans;
     this.emby = emby;
     this.sessions = sessions;
+    this.progress = progress;
+    this.users = users;
+    this.aliveChecks = aliveChecks;
     this.writer = writer;
     this.tickets = tickets;
     this.ids = ids;
@@ -49,7 +60,20 @@ public class PlaybackSessionService {
             .orElseThrow(
                 () -> new BusinessException(HttpStatus.NOT_FOUND, "LESSON_NOT_FOUND", "课时不存在"));
     plans.validateVideoLink(userId, planItemId, mediaItemId);
-    EmbyPlaybackClient.Selection selection = emby.select(lesson.embyItemId());
+    long trustedPosition =
+        progress
+            .find(userId, mediaItemId)
+            .map(VideoProgressRepository.Progress::maxVerifiedPositionMs)
+            .orElse(0L);
+    String aliveCheckLevel =
+        users
+            .findById(userId)
+            .orElseThrow(
+                () -> new BusinessException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "用户不存在"))
+            .aliveCheckLevel();
+    Long aliveDue =
+        aliveChecks.nextDueWatchMs(aliveCheckLevel, 0).stream().boxed().findFirst().orElse(null);
+    EmbyPlaybackClient.Selection selection = emby.select(lesson.embyItemId(), trustedPosition);
     String sessionId = ids.nextId();
     String deviceId = selection.deviceId() + ":" + clientDeviceId;
     writer.insert(
@@ -63,10 +87,13 @@ public class PlaybackSessionService {
             selection.playSessionId(),
             selection.upstreamPath(),
             selection.hls(),
-            lesson.durationMs()));
+            lesson.durationMs(),
+            trustedPosition,
+            aliveDue));
     String ticket = tickets.issue(userId, mediaItemId, sessionId, deviceId);
     String url = "/api/v1/playback/" + ticket + (selection.hls() ? "/master.m3u8" : "/stream");
-    return new PlaybackSession(sessionId, url, 0, lesson.durationMs(), HEARTBEAT_INTERVAL_SECONDS);
+    return new PlaybackSession(
+        sessionId, url, trustedPosition, lesson.durationMs(), HEARTBEAT_INTERVAL_SECONDS);
   }
 
   @Transactional(readOnly = true)

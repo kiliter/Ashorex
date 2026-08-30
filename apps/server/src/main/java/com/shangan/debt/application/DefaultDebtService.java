@@ -54,6 +54,27 @@ public class DefaultDebtService implements DebtService {
   }
 
   @Override
+  @Transactional
+  public void reconcileOpenVideoDebt(
+      String userId,
+      String mediaItemId,
+      long absoluteTrustedSeconds,
+      boolean completed,
+      Instant now) {
+    for (LearningDebt debt : debts.findOpenVideoByMedia(userId, mediaItemId)) {
+      long alreadyRepaid = debt.originalSeconds() - debt.remainingSeconds();
+      long appliedAbsolute = debt.baselineCompletedSeconds() + alreadyRepaid;
+      long delta =
+          completed
+              ? debt.remainingSeconds()
+              : Math.max(0, absoluteTrustedSeconds - appliedAbsolute);
+      if (delta > 0) {
+        debts.repay(ids.nextId(), userId, debt.id(), null, delta, "DIRECT_VIDEO", now);
+      }
+    }
+  }
+
+  @Override
   @Transactional(readOnly = true)
   public List<LearningDebt> openDebts(String userId) {
     return debts.findOpenByUser(userId);

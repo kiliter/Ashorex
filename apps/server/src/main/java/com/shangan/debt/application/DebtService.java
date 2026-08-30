@@ -14,6 +14,14 @@ public interface DebtService {
   void reconcileRepayment(
       String userId, String debtId, String planItemId, long positiveDelta, Instant now);
 
+  /** 按同一视频的绝对可信进度减少所有匹配的开放观看欠债。 */
+  void reconcileOpenVideoDebt(
+      String userId,
+      String mediaItemId,
+      long absoluteTrustedSeconds,
+      boolean completed,
+      Instant now);
+
   List<LearningDebt> openDebts(String userId);
 
   long openSeconds(String userId);

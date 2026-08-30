@@ -4,5 +4,9 @@ package com.shangan.planning.application;
 public interface PlanProgressPort {
   void updateProgress(String userId, String planItemId, long absoluteCompletedSeconds);
 
+  /** 使用视频绝对可信位置更新任务，并独立传入完成阈值结果。 */
+  void updateVideoWatchProgress(
+      String userId, String planItemId, long absoluteCompletedSeconds, boolean watchCompleted);
+
   void markQuizCompleted(String userId, String planItemId);
 }

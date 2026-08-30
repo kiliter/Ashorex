@@ -209,6 +209,35 @@ public class JdbcPlanningRepository implements PlanningRepository {
   }
 
   @Override
+  public ProgressUpdate updateVideoWatchProgress(
+      String userId, String itemId, long absolute, boolean watchCompleted, Instant now) {
+    PlanItem before = findOwnedItem(userId, itemId).orElseThrow();
+    long next = Math.min(before.plannedSeconds(), Math.max(before.completedSeconds(), absolute));
+    if (before.itemType().equals("VIDEO")) {
+      boolean watched = before.watchCompleted() || watchCompleted;
+      jdbc.sql(
+              "update daily_plan_items set completed_seconds=:completed, watch_completed=:watched, "
+                  + "updated_at=:now where id=:id and item_type='VIDEO'")
+          .param("completed", next)
+          .param("watched", watched ? 1 : 0)
+          .param("now", now.toEpochMilli())
+          .param("id", itemId)
+          .update();
+    } else if (before.itemType().equals("DEBT_REPAYMENT")) {
+      jdbc.sql(
+              "update daily_plan_items set completed_seconds=:completed, updated_at=:now "
+                  + "where id=:id and item_type='DEBT_REPAYMENT'")
+          .param("completed", next)
+          .param("now", now.toEpochMilli())
+          .param("id", itemId)
+          .update();
+    }
+    markItemCompletedIfSatisfied(itemId, now);
+    PlanItem after = findOwnedItem(userId, itemId).orElseThrow();
+    return new ProgressUpdate(before, after, next - before.completedSeconds());
+  }
+
+  @Override
   public ProgressUpdate markQuizCompleted(String userId, String itemId, Instant now) {
     PlanItem before = findOwnedItem(userId, itemId).orElseThrow();
     jdbc.sql("update daily_plan_items set quiz_completed=1, updated_at=:now where id=:id")

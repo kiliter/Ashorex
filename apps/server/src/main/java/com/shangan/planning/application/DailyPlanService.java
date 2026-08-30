@@ -222,6 +222,30 @@ public class DailyPlanService implements PlanProgressPort {
 
   @Override
   @Transactional
+  public void updateVideoWatchProgress(
+      String userId, String planItemId, long absoluteCompletedSeconds, boolean watchCompleted) {
+    if (planItemId == null) return;
+    PlanItem item = plans.findOwnedItem(userId, planItemId).orElseThrow(() -> notFound("计划任务不存在"));
+    long taskAbsolute = absoluteCompletedSeconds;
+    if (item.itemType().equals("DEBT_REPAYMENT")) {
+      LearningDebt debt = requireOpenVideoDebt(userId, item.debtId());
+      long effectiveBaseline =
+          debt.baselineCompletedSeconds() + debt.originalSeconds() - item.plannedSeconds();
+      taskAbsolute =
+          watchCompleted
+              ? item.plannedSeconds()
+              : Math.max(0, absoluteCompletedSeconds - effectiveBaseline);
+    }
+    var update =
+        plans.updateVideoWatchProgress(
+            userId, planItemId, taskAbsolute, watchCompleted, clock.instant());
+    debts.reconcileRepayment(
+        userId, update.after().debtId(), planItemId, update.positiveDelta(), clock.instant());
+    completePlanIfSatisfied(userId, update.after().planId());
+  }
+
+  @Override
+  @Transactional
   public void markQuizCompleted(String userId, String planItemId) {
     var update = plans.markQuizCompleted(userId, planItemId, clock.instant());
     completePlanIfSatisfied(userId, update.after().planId());
@@ -259,9 +283,20 @@ public class DailyPlanService implements PlanProgressPort {
   public void validateVideoLink(String userId, String planItemId, String mediaItemId) {
     if (planItemId == null) return;
     PlanItem item = plans.findOwnedItem(userId, planItemId).orElseThrow(() -> notFound("计划任务不存在"));
-    if (!item.itemType().equals("VIDEO") || !mediaItemId.equals(item.mediaItemId())) {
+    boolean videoTask = item.itemType().equals("VIDEO");
+    boolean videoDebtTask =
+        item.itemType().equals("DEBT_REPAYMENT")
+            && requireOpenVideoDebt(userId, item.debtId()).debtType().equals("VIDEO_WATCH");
+    if ((!videoTask && !videoDebtTask) || !mediaItemId.equals(item.mediaItemId())) {
       throw invalid("PLAN_ITEM_MEDIA_MISMATCH", "计划任务与课时不匹配");
     }
+  }
+
+  private LearningDebt requireOpenVideoDebt(String userId, String debtId) {
+    return debts.openDebts(userId).stream()
+        .filter(debt -> debt.id().equals(debtId) && debt.debtType().equals("VIDEO_WATCH"))
+        .findFirst()
+        .orElseThrow(() -> invalid("PLAN_DEBT_INVALID", "关联的视频欠债不可用"));
   }
 
   private void completePlanIfSatisfied(String userId, String planId) {

@@ -11,6 +11,8 @@ public interface DebtRepository {
 
   Optional<LearningDebt> findOwned(String userId, String debtId);
 
+  List<LearningDebt> findOpenVideoByMedia(String userId, String mediaItemId);
+
   void insertIfAbsent(LearningDebt debt, Instant now);
 
   long sumOpenSeconds(String userId);
