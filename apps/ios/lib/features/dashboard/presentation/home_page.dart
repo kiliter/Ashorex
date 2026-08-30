@@ -76,10 +76,12 @@ final class HomePage extends ConsumerWidget {
                     ListTile(
                       title: const Text('今日计划'),
                       trailing: Text(dashboard.todayPlanStatus),
+                      onTap: () => context.push('/plan'),
                     ),
                     ListTile(
                       title: const Text('历史欠债'),
                       trailing: Text('${dashboard.openDebtSeconds ~/ 60} 分钟'),
+                      onTap: () => context.push('/debts'),
                     ),
                   ],
                 ),

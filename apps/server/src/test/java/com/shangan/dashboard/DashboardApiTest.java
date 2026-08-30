@@ -6,7 +6,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.shangan.planning.application.DailyPlanService;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +34,7 @@ class DashboardApiTest {
 
   @Autowired MockMvc mockMvc;
   @Autowired JdbcClient jdbc;
+  @Autowired DailyPlanService plans;
 
   @DynamicPropertySource
   static void configureApplication(DynamicPropertyRegistry registry) {
@@ -44,6 +47,11 @@ class DashboardApiTest {
 
   @BeforeEach
   void setUpCatalog() {
+    jdbc.sql("delete from debt_repayments").update();
+    jdbc.sql("delete from learning_debts").update();
+    jdbc.sql("delete from plan_abandonments").update();
+    jdbc.sql("delete from daily_plan_items").update();
+    jdbc.sql("delete from daily_plans").update();
     jdbc.sql("delete from exam_goal_courses").update();
     jdbc.sql("delete from exam_goals").update();
     jdbc.sql("delete from media_items").update();
@@ -97,14 +105,22 @@ class DashboardApiTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.name").value("2026 国考"));
 
+    LocalDate today = LocalDate.of(2026, 8, 30);
+    plans.addItem(
+        "user-1", today, new DailyPlanService.ItemDraft("FOCUS", "申论练习", null, null, 300, 0));
+    plans.lock("user-1", today);
+    plans.abandon("user-1", today, "OPEN_PALM", "今天状态不好");
+
     mockMvc
         .perform(get("/api/v1/dashboard").with(userJwt("user-1")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.exam.name").value("2026 国考"))
         .andExpect(jsonPath("$.progressPressure.totalLessons").value(1))
         .andExpect(jsonPath("$.progressPressure.remainingLessons").value(1))
-        .andExpect(jsonPath("$.todayPlan.status").value("NONE"))
-        .andExpect(jsonPath("$.openDebtSeconds").value(0))
+        .andExpect(jsonPath("$.todayPlan.status").value("ABANDONED"))
+        .andExpect(jsonPath("$.todayPlan.plannedSeconds").value(300))
+        .andExpect(jsonPath("$.todayPlan.completedSeconds").value(0))
+        .andExpect(jsonPath("$.openDebtSeconds").value(300))
         .andExpect(jsonPath("$.studyTodaySeconds").value(0))
         .andExpect(jsonPath("$.answerAccuracy").value(0));
   }

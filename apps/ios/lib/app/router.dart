@@ -4,7 +4,9 @@ import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/features/auth/presentation/login_page.dart';
 import 'package:shangan_ios/features/catalog/presentation/course_detail_page.dart';
 import 'package:shangan_ios/features/dashboard/presentation/app_shell.dart';
+import 'package:shangan_ios/features/debt/presentation/debt_page.dart';
 import 'package:shangan_ios/features/exam/presentation/exam_goal_page.dart';
+import 'package:shangan_ios/features/planning/presentation/plan_page.dart';
 import 'package:shangan_ios/features/profile/presentation/settings_page.dart';
 
 /// 创建受认证状态驱动的根路由，业务页面不自行判断 Token。
@@ -40,6 +42,8 @@ GoRouter createRouter(AuthController authController) {
         path: '/exam-goal',
         builder: (context, state) => const ExamGoalPage(),
       ),
+      GoRoute(path: '/plan', builder: (context, state) => const PlanPage()),
+      GoRoute(path: '/debts', builder: (context, state) => const DebtPage()),
       GoRoute(
         path: '/courses/:courseId',
         builder: (context, state) =>

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
+import 'package:shangan_ios/features/planning/data/plan_repository.dart';
 
 /// 展示课程课时；播放会话和加入计划由后续学习/计划 Task 接管。
 final class CourseDetailPage extends ConsumerWidget {
@@ -41,9 +42,24 @@ final class CourseDetailPage extends ConsumerWidget {
                   title: Text(lesson.title),
                   subtitle: Text('${(lesson.durationMs / 60000).ceil()} 分钟'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('播放学习会话将在下一阶段启用')),
-                  ),
+                  onTap: () async {
+                    try {
+                      await ref
+                          .read(planRepositoryProvider)
+                          .addVideo(lesson.id);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('已加入今日 DRAFT 计划')),
+                        );
+                      }
+                    } catch (_) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('当前计划不可修改或加入失败')),
+                        );
+                      }
+                    }
+                  },
                 ),
               ),
             ],
