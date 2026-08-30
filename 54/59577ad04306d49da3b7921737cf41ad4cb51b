@@ -1,0 +1,112 @@
+docs/api/.gitkeep
+  s_4d8f86932c7463::t_1af1432368bc53 1
+apps/server/src/test/java/com/shangan/admin/AdminSecurityTest.java
+  s_4d8f86932c7463::t_853b4da123d45a 17,105-109,119-123
+  s_4d8f86932c7463::t_54143075ce8739 7,76-104,110-118,124
+  s_4d8f86932c7463::t_04e86eb16f7ba6 30
+infra/Caddyfile
+  s_4d8f86932c7463::t_b0e7731987aff2 1-10
+docs/runbooks/v1-physical-device-acceptance.md
+  s_4d8f86932c7463::t_bad4bdbcffb7f1 1-64
+apps/server/src/main/java/com/shangan/common/api/RequestIdFilter.java
+  s_4d8f86932c7463::t_5880ef04686def 10-11,17,37
+  s_4d8f86932c7463::t_b851c07f610dc9 1-9,12-16,18-36,38
+apps/server/src/main/java/com/shangan/admin/HealthAdminController.java
+  s_4d8f86932c7463::t_1aa76daa690bbb 1-21
+apps/server/src/test/java/com/shangan/api/OpenApiContractTest.java
+  s_4d8f86932c7463::t_173ff948eb1812 57-59
+  s_4d8f86932c7463::t_1af1432368bc53 38-45
+  s_4d8f86932c7463::t_36ad428fee21f9 1-37,46-51,53-56,60-61
+  s_4d8f86932c7463::t_acc87020bda1a4 52
+docs/runbooks/backup-restore.md
+  s_4d8f86932c7463::t_bad4bdbcffb7f1 1-80
+infra/scripts/backup_restore_smoke_test.sh
+  s_4d8f86932c7463::t_b0e7731987aff2 1-78
+infra/compose.yml
+  s_4d8f86932c7463::t_b0e7731987aff2 1-11,13-60
+  s_4d8f86932c7463::t_0c716238f55f74 12
+Makefile
+  s_4d8f86932c7463::t_b851c07f610dc9 1,19-22,24
+apps/server/src/main/resources/templates/admin/health.html
+  s_4d8f86932c7463::t_1aa76daa690bbb 1-31
+docs/api/openapi.yaml
+  s_4d8f86932c7463::t_9f09a4e0871562 22-23,41-42,73-74,98-99,112-113,131-132,151-152,177-178,197-198,218-219,245-246,272-273,299-300,325-326,347-348,372-373,392-393,412-413,432-433,452-453,472-473,538-539,557-558,583-584,604-605,625-626,701-702,722-723,736-737,756-757,776-777,796-797,810-811,824-825,855-856,869-870,885-886,905-906,927-928,1749-1753
+  s_4d8f86932c7463::t_817db38b74f4c3 1-21,24-40,43-72,75-97,100-111,114-130,133-150,153-176,179-196,199-217,220-244,247-271,274-298,301-324,327-346,349-371,374-391,394-411,414-431,434-451,454-471,474-537,540-556,559-582,585-603,606-624,627-700,703-721,724-735,738-755,758-775,778-795,798-809,812-823,826-854,857-868,871-884,887-904,907-926,929-1748
+apps/server/src/main/java/com/shangan/common/config/SecurityConfiguration.java
+  s_4d8f86932c7463::t_6db201abc4dcb4 135-136
+  s_4d8f86932c7463::t_c1a21156ec77ba 3,126,133-134,137
+  s_4d8f86932c7463::t_6a5e6ec46ff25e 138
+apps/server/src/main/java/com/shangan/identity/infrastructure/UserRepository.java
+  s_4d8f86932c7463::t_0e29f1640b4514 5,15-17,25-29
+  s_4d8f86932c7463::t_78380542918227 30
+apps/server/src/main/java/com/shangan/media/emby/EmbyHealthService.java
+  s_4d8f86932c7463::t_1aa76daa690bbb 1-44
+apps/server/src/test/java/com/shangan/acceptance/FullLearningFlowAcceptanceTest.java
+  s_4d8f86932c7463::t_52bbc53f92cb11 1-158
+apps/server/src/test/java/com/shangan/acceptance/AbandonAndDebtAcceptanceTest.java
+  s_4d8f86932c7463::t_52bbc53f92cb11 1-60,62-82,86-98
+  s_4d8f86932c7463::t_3a14970d807c4a 61,83-85
+apps/server/src/main/java/com/shangan/admin/OperationsHealthService.java
+  s_4d8f86932c7463::t_1aa76daa690bbb 1-112
+apps/server/src/test/java/com/shangan/acceptance/AiReadOnlyAcceptanceTest.java
+  s_4d8f86932c7463::t_52bbc53f92cb11 1-70,72-128
+  s_4d8f86932c7463::t_3a14970d807c4a 71
+apps/server/src/main/java/com/shangan/common/api/ApiExceptionHandler.java
+  s_4d8f86932c7463::t_b851c07f610dc9 42,44-49
+.dockerignore
+  s_4d8f86932c7463::t_b0e7731987aff2 1-4,9-15
+  s_4d8f86932c7463::t_bccca1f0e20ef3 5-8
+.env.example
+  s_4d8f86932c7463::t_bad4bdbcffb7f1 3
+  s_4d8f86932c7463::t_5928fcb5dcb6cf 1
+apps/server/src/main/java/com/shangan/identity/application/AuthService.java
+  s_4d8f86932c7463::t_0e29f1640b4514 10,117-161,196-201,204-205,208-209
+  s_4d8f86932c7463::t_853b4da123d45a 202-203,206-207
+  s_4d8f86932c7463::t_f64fd2d9fd1690 210
+apps/ios/integration_test/core_flow_test.dart
+  s_4d8f86932c7463::t_43b0ebb4496335 1-22,27-50,55-77,82-266,277-353,358-359,362-373,375-377
+  s_4d8f86932c7463::t_822fae4271a417 23-26,51-54,78-81,267-276,354-357,360-361,374
+apps/server/src/main/java/com/shangan/common/config/OpenApiConfiguration.java
+  s_4d8f86932c7463::t_173ff948eb1812 4
+  s_4d8f86932c7463::t_5964fe9f0f9b6b 3,6-9,23-58
+  s_4d8f86932c7463::t_36ad428fee21f9 1-2,5,10-22,59-60
+apps/server/src/main/resources/application.yml
+  s_4d8f86932c7463::t_5880ef04686def 33-37
+apps/server/src/main/java/com/shangan/identity/infrastructure/JdbcUserRepository.java
+  s_4d8f86932c7463::t_853b4da123d45a 109
+  s_4d8f86932c7463::t_0e29f1640b4514 5,43-49,106-108,110-120
+  s_4d8f86932c7463::t_3f0330f35eacc9 121
+infra/scripts/restore.sh
+  s_4d8f86932c7463::t_b0e7731987aff2 1-50
+apps/server/pom.xml
+  s_4d8f86932c7463::t_54143075ce8739 73-78
+infra/scripts/backup.sh
+  s_4d8f86932c7463::t_b0e7731987aff2 1-61
+apps/server/src/main/resources/templates/admin/users.html
+  s_4d8f86932c7463::t_0e29f1640b4514 1-56
+apps/server/src/main/java/com/shangan/common/api/RequestLoggingInterceptor.java
+  s_4d8f86932c7463::t_6db201abc4dcb4 19-20,32
+  s_4d8f86932c7463::t_c1a21156ec77ba 1-18,21-31,33-59
+infra/docker/server.Dockerfile
+  s_4d8f86932c7463::t_b851c07f610dc9 11,13
+  s_4d8f86932c7463::t_bccca1f0e20ef3 2,10
+  s_4d8f86932c7463::t_b0e7731987aff2 1,3-9,12,14-23
+apps/server/src/main/java/com/shangan/admin/UserAdminController.java
+  s_4d8f86932c7463::t_0e29f1640b4514 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "5459577ad04306d49da3b7921737cf41ad4cb51b",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
