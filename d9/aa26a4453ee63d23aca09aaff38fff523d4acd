@@ -1,0 +1,29 @@
+docs/superpowers/specs/2026-08-30-configurable-server-address-design.md
+  s_4d8f86932c7463::t_372210a5e78e28 1-2,4-191
+  s_4d8f86932c7463::t_d9c5a5f6877e7a 3
+docs/specs/2026-08-27-shangan-v1-design.md
+  s_4d8f86932c7463::t_d9c5a5f6877e7a 1513-1528,1579,1949-1957,1976
+docs/plans/2026-08-27-shangan-v1-implementation-plan.md
+  s_4d8f86932c7463::t_d9c5a5f6877e7a 1745-1831,1890-1898
+  s_4d8f86932c7463::t_04609d1fec69ab 1899
+docs/adr/0005-configurable-server-address.md
+  s_4d8f86932c7463::t_d9c5a5f6877e7a 1-29
+docs/traceability/2026-08-27-shangan-v1-traceability.md
+  s_4d8f86932c7463::t_d9c5a5f6877e7a 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "d9aa26a4453ee63d23aca09aaff38fff523d4acd",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
