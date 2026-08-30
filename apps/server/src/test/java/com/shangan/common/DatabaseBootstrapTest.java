@@ -24,6 +24,7 @@ class DatabaseBootstrapTest {
   static void configureDatabase(DynamicPropertyRegistry registry) {
     registry.add(
         "spring.datasource.url", () -> "jdbc:sqlite:" + databaseDirectory.resolve("bootstrap.db"));
+    registry.add("app.security.jwt-secret", () -> "test-jwt-secret-with-at-least-thirty-two-bytes");
   }
 
   @Test

@@ -20,6 +20,18 @@ management:
         include: health,info
 
 server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: true
+        same-site: lax
   error:
     include-message: never
     include-stacktrace: never
+
+app:
+  security:
+    jwt-secret: ${JWT_SECRET:}
+    bootstrap-admin-username: ${ADMIN_BOOTSTRAP_USERNAME:}
+    bootstrap-admin-password: ${ADMIN_BOOTSTRAP_PASSWORD:}

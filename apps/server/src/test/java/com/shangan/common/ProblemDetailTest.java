@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /** 验证所有业务错误都返回稳定 errorCode，而不是堆栈或内部异常。 */
-@WebMvcTest
+@WebMvcTest(controllers = ProblemDetailTest.TestController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Import({ApiExceptionHandler.class, ProblemDetailTest.TestController.class})
 class ProblemDetailTest {
