@@ -1,0 +1,96 @@
+apps/server/src/main/java/com/shangan/media/emby/EmbyHealthService.java
+  s_4d8f86932c7463::t_6b7af8f434db20 3,26-27,32,34
+apps/server/src/main/resources/static/assets/admin.css
+  s_4d8f86932c7463::t_89156a65495674 433-451,792-813
+  s_4d8f86932c7463::t_eaf77dabaa1c05 814
+apps/server/src/main/java/com/shangan/common/integration/RuntimeIntegrationSettingsRepository.java
+  s_4d8f86932c7463::t_94996e6b878eed 1-10
+apps/server/src/main/java/com/shangan/admin/OperationsHealthService.java
+  s_4d8f86932c7463::t_637a72ad4cad7d 5-6,25,32,37,43,64-66
+apps/server/src/main/java/com/shangan/common/integration/JdbcRuntimeIntegrationSettingsRepository.java
+  s_4d8f86932c7463::t_94996e6b878eed 1-109
+apps/server/src/main/resources/templates/admin/integration-settings.html
+  s_4d8f86932c7463::t_7c37e363a22294 39,76,105,135
+  s_4d8f86932c7463::t_89156a65495674 1-38,40-75,77-104,106-134,136-171
+apps/server/src/test/java/com/shangan/ai/RuntimeAiConfigurationIntegrationTest.java
+  s_4d8f86932c7463::t_e64e8aa01c759e 1-150
+apps/server/src/main/java/com/shangan/common/integration/EnvironmentIntegrationSettings.java
+  s_4d8f86932c7463::t_94996e6b878eed 1-58
+apps/server/src/main/java/com/shangan/admin/IntegrationSettingsForm.java
+  s_4d8f86932c7463::t_89156a65495674 1-111
+apps/server/src/main/java/com/shangan/media/emby/EmbyStreamProxy.java
+  s_4d8f86932c7463::t_6b7af8f434db20 4,36-39,44,94,104,108,123-140,154-156
+  s_4d8f86932c7463::t_ce2adbaa4bb001 157-158
+apps/server/src/main/java/com/shangan/common/integration/RuntimeIntegrationSettings.java
+  s_4d8f86932c7463::t_94996e6b878eed 1-43
+apps/server/src/main/java/com/shangan/ai/application/LangChain4jAiChatEngine.java
+  s_4d8f86932c7463::t_9b7d366fd7019b 3
+apps/server/src/main/java/com/shangan/common/integration/IntegrationSettingsProvider.java
+  s_4d8f86932c7463::t_94996e6b878eed 1-8
+docs/adr/0006-admin-runtime-integration-settings.md
+  s_4d8f86932c7463::t_89156a65495674 3
+apps/server/src/main/java/com/shangan/media/emby/EmbyPlaybackClient.java
+  s_4d8f86932c7463::t_6b7af8f434db20 4,25-26,32-33,40
+apps/server/src/main/java/com/shangan/ai/transcript/EmbyTranscriptionMediaSource.java
+  s_4d8f86932c7463::t_6b7af8f434db20 3,20-21,23,29
+apps/server/src/main/java/com/shangan/ai/transcript/OpenAiCompatibleSummaryProvider.java
+  s_4d8f86932c7463::t_e2faf5c38b9cb5 3-4,18,21-22,24-26,33-37,65-66,73,75,81-82
+  s_4d8f86932c7463::t_b92094c3cd5ff0 84,94
+apps/server/src/test/java/com/shangan/media/emby/RuntimeEmbyConfigurationTest.java
+  s_4d8f86932c7463::t_e64e8aa01c759e 1-77
+apps/server/src/test/java/com/shangan/common/integration/RuntimeIntegrationSettingsServiceTest.java
+  s_4d8f86932c7463::t_9d6ac01165353f 1-6,12-16,18-19,24-60,65-107,178-200
+  s_4d8f86932c7463::t_4902e872db1512 11,17,21,23,61-64,113-115,120,122,125,131-132,136,138,143-177
+  s_4d8f86932c7463::t_9cc87c565e64f9 7-10,20,22,108-112,116-119,121,123-124,126-130,133-135,137,139-142
+apps/server/src/main/java/com/shangan/media/emby/EmbyProperties.java
+  s_4d8f86932c7463::t_619c3c3f4725fa 5,13,18-27
+  s_4d8f86932c7463::t_6b7af8f434db20 3-4,8,10-11,14-15,30-32
+  s_4d8f86932c7463::t_11e3f18af3ddc5 28-29
+apps/server/src/main/java/com/shangan/common/integration/RuntimeIntegrationSettingsService.java
+  s_4d8f86932c7463::t_94996e6b878eed 1-148
+apps/server/src/main/resources/db/migration/V012__runtime_integration_settings.sql
+  s_4d8f86932c7463::t_94996e6b878eed 1-22
+apps/server/src/main/java/com/shangan/media/emby/EmbyClient.java
+  s_4d8f86932c7463::t_6b7af8f434db20 4,30-31,37-38
+apps/server/src/main/java/com/shangan/ai/transcript/OpenAiCompatibleTranscriptionProvider.java
+  s_4d8f86932c7463::t_e2faf5c38b9cb5 3-4,10,24,27,29-30,32-49,56-60,65-66,72,79-80,82,87,96-97
+apps/server/src/main/java/com/shangan/admin/IntegrationSettingsAdminController.java
+  s_4d8f86932c7463::t_d1cdd03ca1096a 4,32-34
+  s_4d8f86932c7463::t_89156a65495674 1-3,5-28,30-31,35-63
+  s_4d8f86932c7463::t_29c00a23cfbf8e 29
+apps/server/src/main/java/com/shangan/ai/application/AiConversationService.java
+  s_4d8f86932c7463::t_09692ffcb77c5c 9,38,49,57,174-175
+apps/server/src/main/java/com/shangan/ai/application/RuntimeAiChatEngine.java
+  s_4d8f86932c7463::t_9b7d366fd7019b 1-38,40-54,64-236
+  s_4d8f86932c7463::t_d1cdd03ca1096a 39,55-63
+apps/server/src/main/java/com/shangan/common/integration/IntegrationSettingsValidationException.java
+  s_4d8f86932c7463::t_94996e6b878eed 1-18
+docs/superpowers/specs/2026-08-30-runtime-integration-settings-design.md
+  s_4d8f86932c7463::t_9cc87c565e64f9 3
+apps/server/src/main/java/com/shangan/ai/config/AiConfiguration.java
+  s_4d8f86932c7463::t_9b7d366fd7019b 5,7,11,17-18
+apps/server/src/main/resources/templates/admin/fragments.html
+  s_4d8f86932c7463::t_89156a65495674 52-57
+apps/server/src/test/java/com/shangan/ai/transcript/RuntimeTranscriptionConfigurationTest.java
+  s_4d8f86932c7463::t_e64e8aa01c759e 1-79
+apps/server/src/test/java/com/shangan/admin/IntegrationSettingsAdminTest.java
+  s_4d8f86932c7463::t_7c37e363a22294 44,58
+  s_4d8f86932c7463::t_d1cdd03ca1096a 52-53,57,110-111
+  s_4d8f86932c7463::t_9d6ac01165353f 1-43,45-51,54-56,59-109,112-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "bcec60b74e5bd09b4060d1d583b636812fafb362",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
