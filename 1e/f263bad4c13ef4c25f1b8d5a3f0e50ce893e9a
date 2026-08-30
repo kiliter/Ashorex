@@ -1,0 +1,115 @@
+apps/server/src/test/java/com/shangan/reporting/JudgmentRendererTest.java
+  s_4d8f86932c7463::t_beaf860ad7c0e8 21,28
+  s_4d8f86932c7463::t_8fa2fccb3e9599 1-20,22-27,29-39
+apps/server/src/main/java/com/shangan/reporting/infrastructure/ReportingRepository.java
+  s_4d8f86932c7463::t_beaf860ad7c0e8 48
+  s_4d8f86932c7463::t_022a8e90e303d0 1-47,49-53
+apps/server/src/main/resources/db/migration/V009__focus_and_reports.sql
+  s_4d8f86932c7463::t_f833ce7e55a06b 1-43
+apps/server/src/test/java/com/shangan/reporting/ReportingFixtures.java
+  s_4d8f86932c7463::t_f24d280b26514a 1-85,89-90,94-99,103-114
+  s_4d8f86932c7463::t_1de51f92cf2cc0 86-88,91-93,100-102
+apps/server/src/main/java/com/shangan/focus/application/FocusSessionService.java
+  s_4d8f86932c7463::t_beaf860ad7c0e8 25,119,143
+  s_4d8f86932c7463::t_b914202d207eef 1-10,12-24,26-118,120-142,144-158
+  s_4d8f86932c7463::t_bfe07aa384d878 11
+apps/server/src/main/java/com/shangan/focus/infrastructure/FocusSessionRepository.java
+  s_4d8f86932c7463::t_f833ce7e55a06b 1-19
+apps/server/src/test/java/com/shangan/focus/FocusSessionStateMachineTest.java
+  s_4d8f86932c7463::t_beaf860ad7c0e8 18,35
+  s_4d8f86932c7463::t_8fa2fccb3e9599 1-17,19-34,36-48
+apps/ios/lib/app/router.dart
+  s_4d8f86932c7463::t_1fff088c14facd 9,14-15,52-62,87-109
+apps/server/src/main/java/com/shangan/reporting/infrastructure/JdbcReportingRepository.java
+  s_4d8f86932c7463::t_beaf860ad7c0e8 54-58,161,168-172
+  s_4d8f86932c7463::t_022a8e90e303d0 1-53,59-160,162-167,173-250
+apps/ios/lib/features/dashboard/presentation/app_shell.dart
+  s_4d8f86932c7463::t_1fff088c14facd 7,28
+apps/server/src/main/java/com/shangan/focus/infrastructure/JdbcFocusSessionRepository.java
+  s_4d8f86932c7463::t_f833ce7e55a06b 1-123
+apps/ios/lib/features/reporting/data/report_repository.dart
+  s_4d8f86932c7463::t_386d8e0bccd74e 1-47,70-136,168-181,186-189,193-203
+  s_4d8f86932c7463::t_ecb69daf36d297 48-69,137-167,182-185,190-192
+apps/ios/test/features/focus/focus_timer_page_test.dart
+  s_4d8f86932c7463::t_f7cb0861ffa04b 1-91
+apps/ios/test/features/dashboard/app_shell_test.dart
+  s_4d8f86932c7463::t_e8448241a89187 11,28,41-69
+  s_4d8f86932c7463::t_c1af45cecabc17 70-71
+apps/ios/lib/features/focus/data/focus_repository.dart
+  s_4d8f86932c7463::t_ecb69daf36d297 107-108,111-112,115-116,119-120
+  s_4d8f86932c7463::t_4e5c191fb3e6cf 1-106,109-110,113-114,117-118,121-130
+apps/server/src/main/java/com/shangan/focus/api/FocusSessionController.java
+  s_4d8f86932c7463::t_b914202d207eef 1-27,29-68
+  s_4d8f86932c7463::t_beaf860ad7c0e8 28
+apps/ios/lib/features/focus/presentation/focus_timer_page.dart
+  s_4d8f86932c7463::t_6e5acdcf35a2d8 29,92,106,109
+  s_4d8f86932c7463::t_ecb69daf36d297 59-60,107-108,110,131-134,170-172,209-212
+  s_4d8f86932c7463::t_6b5f2cf354e1b8 208,213
+  s_4d8f86932c7463::t_4e5c191fb3e6cf 1-28,30-58,61-91,93-105,111-130,135-169,173-207,214-257
+apps/server/src/test/java/com/shangan/reporting/DailyReportAggregationTest.java
+  s_4d8f86932c7463::t_beaf860ad7c0e8 38-39,71
+  s_4d8f86932c7463::t_f24d280b26514a 1-37,40-70,72-84
+apps/server/src/main/java/com/shangan/reporting/application/WeeklyReportService.java
+  s_4d8f86932c7463::t_beaf860ad7c0e8 54,63-64,67-72,84-86
+  s_4d8f86932c7463::t_db9abc20c45012 1-53,55-62,65-66,73-83,87-127
+apps/server/src/main/java/com/shangan/reporting/api/ReportController.java
+  s_4d8f86932c7463::t_ce0f7873bb9e04 1-24,26-29,31-33
+  s_4d8f86932c7463::t_beaf860ad7c0e8 25,30
+apps/server/src/main/java/com/shangan/planning/application/PlanProgressPort.java
+  s_4d8f86932c7463::t_ce57f9b5dc3dde 15-21
+apps/server/src/main/java/com/shangan/focus/application/FocusSessionPlanCloser.java
+  s_4d8f86932c7463::t_b914202d207eef 1-22
+apps/ios/lib/app/bootstrap.dart
+  s_4d8f86932c7463::t_1fff088c14facd 11,16,43-44,57-58
+apps/server/src/main/java/com/shangan/focus/domain/FocusSession.java
+  s_4d8f86932c7463::t_f833ce7e55a06b 1-59,61-220
+  s_4d8f86932c7463::t_beaf860ad7c0e8 60
+apps/server/src/main/java/com/shangan/reporting/application/JudgmentRenderer.java
+  s_4d8f86932c7463::t_022a8e90e303d0 4,19,51-70
+  s_4d8f86932c7463::t_ce57f9b5dc3dde 27,32,39
+  s_4d8f86932c7463::t_f833ce7e55a06b 1-3,5-18,20-26,28-31,33-38,40-50,71
+apps/server/src/test/java/com/shangan/reporting/DailyReportGenerationSchedulerTest.java
+  s_4d8f86932c7463::t_beaf860ad7c0e8 35-36
+  s_4d8f86932c7463::t_ce0f7873bb9e04 1-34,37-78
+apps/server/src/test/java/com/shangan/focus/FocusSessionIntegrationTest.java
+  s_4d8f86932c7463::t_75a756ae5111cf 1-79,81-148
+  s_4d8f86932c7463::t_beaf860ad7c0e8 80
+apps/server/src/main/java/com/shangan/planning/application/DailyPlanService.java
+  s_4d8f86932c7463::t_beaf860ad7c0e8 285,297
+  s_4d8f86932c7463::t_ce57f9b5dc3dde 280-284,286-296,298-310
+apps/server/src/main/java/com/shangan/reporting/application/DailyReportGenerationScheduler.java
+  s_4d8f86932c7463::t_ce0f7873bb9e04 1-39
+apps/ios/lib/features/reporting/presentation/daily_report_page.dart
+  s_4d8f86932c7463::t_ecb69daf36d297 95-98,111-114,123-126,137-152,179-182
+  s_4d8f86932c7463::t_386d8e0bccd74e 1-94,99-110,115-122,127-136,153-178,183-217
+apps/server/src/test/java/com/shangan/reporting/WeeklyReportAggregationTest.java
+  s_4d8f86932c7463::t_beaf860ad7c0e8 36-37
+  s_4d8f86932c7463::t_9b1eef50d250c8 1-35,38-77
+apps/ios/lib/features/reporting/presentation/weekly_report_page.dart
+  s_4d8f86932c7463::t_386d8e0bccd74e 1-25,28-52,65-69,96-104,108-129,132,135-136
+  s_4d8f86932c7463::t_ecb69daf36d297 26-27,53-64,70-95,105-107,130-131,133-134
+apps/server/src/main/java/com/shangan/reporting/application/DailyReportService.java
+  s_4d8f86932c7463::t_db9abc20c45012 73,105
+  s_4d8f86932c7463::t_7639cc9e6f39a1 11,89
+  s_4d8f86932c7463::t_022a8e90e303d0 1-10,12-72,74-88,90-104,106-114
+apps/ios/lib/features/planning/presentation/plan_page.dart
+  s_4d8f86932c7463::t_ecb69daf36d297 55
+  s_4d8f86932c7463::t_1fff088c14facd 86-111
+  s_4d8f86932c7463::t_3d30981e687907 112-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "1ef263bad4c13ef4c25f1b8d5a3f0e50ce893e9a",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
