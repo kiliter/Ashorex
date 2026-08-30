@@ -22,6 +22,8 @@
     <flyway.version>13.3.0</flyway.version>
     <sqlite-jdbc.version>3.53.4.0</sqlite-jdbc.version>
     <spotless-maven-plugin.version>3.10.0</spotless-maven-plugin.version>
+    <!-- WireMock 稳定版本来自官方 3.x 安装文档，仅用于外部服务契约测试。 -->
+    <wiremock.version>3.13.2</wiremock.version>
   </properties>
 
   <dependencies>
@@ -94,6 +96,12 @@
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.wiremock</groupId>
+      <artifactId>wiremock-standalone</artifactId>
+      <version>${wiremock.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

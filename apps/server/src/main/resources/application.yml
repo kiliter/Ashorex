@@ -39,3 +39,20 @@ app:
     jwt-secret: ${JWT_SECRET:}
     bootstrap-admin-username: ${ADMIN_BOOTSTRAP_USERNAME:}
     bootstrap-admin-password: ${ADMIN_BOOTSTRAP_PASSWORD:}
+  ai:
+    asr:
+      base-url: ${ASR_BASE_URL:}
+      api-key: ${ASR_API_KEY:}
+      model: ${ASR_MODEL:}
+      timeout: ${ASR_TIMEOUT:PT2M}
+    llm:
+      base-url: ${LLM_BASE_URL:}
+      api-key: ${LLM_API_KEY:}
+      model: ${LLM_MODEL:}
+      timeout: ${LLM_TIMEOUT:PT2M}
+    transcription:
+      ffmpeg-path: ${FFMPEG_PATH:ffmpeg}
+      ffprobe-path: ${FFPROBE_PATH:ffprobe}
+      process-timeout: ${FFMPEG_TIMEOUT:PT30M}
+      temporary-root: ${TRANSCRIPTION_TEMP_DIR:${java.io.tmpdir}}
+      chunk-seconds: 600

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>视频转写管理 - 上岸</title>
+  </head>
+  <body>
+    <main>
+      <h1>视频转写管理</h1>
+      <p><a th:href="@{/admin/courses}">返回课程管理</a></p>
+
+      <section>
+        <h2>发起转写</h2>
+        <form
+          th:each="lesson : ${lessons}"
+          method="post"
+          th:action="@{/admin/transcriptions/{id}(id=${lesson.id})}"
+        >
+          <span th:text="${lesson.title}"></span>
+          <span th:if="${!lesson.available}">Emby 中已不可用</span>
+          <button type="submit" th:disabled="${!lesson.available}">开始或重新生成</button>
+        </form>
+      </section>
+
+      <section>
+        <h2>任务状态</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>课时</th>
+              <th>状态</th>
+              <th>尝试次数</th>
+              <th>开始时间</th>
+              <th>完成时间</th>
+              <th>安全错误</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="job : ${jobs}">
+              <td th:text="${job.mediaTitle}"></td>
+              <td th:text="${job.status}"></td>
+              <td th:text="${job.attemptCount}"></td>
+              <td th:text="${job.startedAt ?: '-'}"></td>
+              <td th:text="${job.finishedAt ?: '-'}"></td>
+              <td th:text="${job.lastError ?: '-'}"></td>
+              <td>
+                <form
+                  method="post"
+                  th:if="${job.status == 'FAILED'}"
+                  th:action="@{/admin/transcriptions/{id}/retry(id=${job.mediaItemId})}"
+                >
+                  <button type="submit">重试</button>
+                </form>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>

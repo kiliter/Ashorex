@@ -70,6 +70,14 @@ public class CourseSyncService {
     return courses.findMediaItems(courseId, false);
   }
 
+  /** 转写后台需要跨课程选择课时，保持查询仍通过应用服务而非 Controller 直连仓储。 */
+  @Transactional(readOnly = true)
+  public List<MediaItem> listAllAdminLessons() {
+    return courses.findAllCourses(false).stream()
+        .flatMap(course -> courses.findMediaItems(course.id(), false).stream())
+        .toList();
+  }
+
   /** 更新管理员可控字段，不修改 Emby 同步字段。 */
   @Transactional
   public void updateLessonControls(String lessonId, boolean enabled, int sortOrder) {

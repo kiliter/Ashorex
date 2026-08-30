@@ -8,6 +8,7 @@
   <body>
     <main>
       <h1>课程管理</h1>
+      <p><a th:href="@{/admin/transcriptions}">视频转写管理</a></p>
       <form method="post" th:action="@{/admin/courses}">
         <label>课程名称 <input name="name" required /></label>
         <label>课程说明 <input name="description" /></label>
