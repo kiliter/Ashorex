@@ -1,0 +1,28 @@
+AGENTS.md
+  h_b1099757fa8f7e 1-491
+CODEX_START_PROMPT.md
+  h_b1099757fa8f7e 1-44
+HANDOFF_VALIDATION.txt
+  h_b1099757fa8f7e 1-27
+MANIFEST.sha256
+  h_b1099757fa8f7e 1-7
+START_HERE.md
+  h_b1099757fa8f7e 1-78
+docs/plans/2026-08-27-shangan-v1-implementation-plan.md
+  h_b1099757fa8f7e 1-1833
+docs/specs/2026-08-27-shangan-v1-design.md
+  h_b1099757fa8f7e 1-1987
+docs/traceability/2026-08-27-shangan-v1-traceability.md
+  h_b1099757fa8f7e 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "991a6448f1ebb5d96a71663a0209c212da3bc917",
+  "prompts": {},
+  "humans": {
+    "h_b1099757fa8f7e": {
+      "author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
