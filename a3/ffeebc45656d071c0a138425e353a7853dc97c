@@ -1,0 +1,61 @@
+apps/ios/lib/app/router.dart
+  s_4d8f86932c7463::t_429a11019a034a 10,48-55
+apps/ios/test/features/player/verified_progress_bar_test.dart
+  s_4d8f86932c7463::t_34c27b7fb205e1 1-27
+apps/ios/test/features/player/alive_check_dialog_test.dart
+  s_4d8f86932c7463::t_fbe2ddde7c1271 34,36
+  s_4d8f86932c7463::t_34c27b7fb205e1 1-15,18-33,35,37-38
+  s_4d8f86932c7463::t_ea3fbc7540b067 16-17
+apps/ios/lib/features/player/domain/learning_player_state.dart
+  s_4d8f86932c7463::t_622c288b83bec0 1-4,6-77
+  s_4d8f86932c7463::t_ea3fbc7540b067 5
+apps/ios/lib/features/player/presentation/learning_player_page.dart
+  s_4d8f86932c7463::t_ea3fbc7540b067 26,87-88
+  s_4d8f86932c7463::t_52ebdce6dba874 1-25,27-86,89-237
+apps/ios/lib/features/planning/data/plan_repository.dart
+  s_4d8f86932c7463::t_0936555fcfcfe7 10,19,28
+apps/ios/lib/app/bootstrap.dart
+  s_4d8f86932c7463::t_429a11019a034a 12,34-38,49
+apps/ios/lib/features/player/presentation/learning_player_controller.dart
+  s_4d8f86932c7463::t_fa49b58b52a087 65,68-70
+  s_4d8f86932c7463::t_5313d05866d8ee 1-20,22-49,51-64,66-67,71-247
+  s_4d8f86932c7463::t_ea3fbc7540b067 21,50
+apps/ios/test/features/player/learning_player_controller_test.dart
+  s_4d8f86932c7463::t_ea3fbc7540b067 16-19,113
+  s_4d8f86932c7463::t_34c27b7fb205e1 1-15,20-112,114-175
+apps/ios/lib/features/player/data/watch_repository.dart
+  s_4d8f86932c7463::t_fa49b58b52a087 107,111-113
+  s_4d8f86932c7463::t_429a11019a034a 1-2,5-22
+  s_4d8f86932c7463::t_622c288b83bec0 3-4,23-92,94-106,108-110,114-151,153-163
+  s_4d8f86932c7463::t_ea3fbc7540b067 93,152
+apps/ios/lib/features/player/presentation/verified_progress_bar.dart
+  s_4d8f86932c7463::t_ea3fbc7540b067 25-26,39-40,50-52
+  s_4d8f86932c7463::t_60032a274e9019 1-24,27-38,41-49,53-98
+apps/ios/lib/features/player/presentation/alive_check_dialog.dart
+  s_4d8f86932c7463::t_60032a274e9019 1-14,16-19,21-33,37-47
+  s_4d8f86932c7463::t_52ebdce6dba874 15,20
+  s_4d8f86932c7463::t_fa49b58b52a087 34-36
+apps/ios/lib/features/planning/presentation/plan_page.dart
+  s_4d8f86932c7463::t_ea3fbc7540b067 55
+  s_4d8f86932c7463::t_0936555fcfcfe7 3,56-65
+apps/ios/lib/features/catalog/presentation/course_detail_page.dart
+  s_4d8f86932c7463::t_ea3fbc7540b067 77-78,82-83
+  s_4d8f86932c7463::t_0936555fcfcfe7 3,7,45-59,68-76,79-81,84-85
+  s_4d8f86932c7463::t_51f00911a0c05f 86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "a3ffeebc45656d071c0a138425e353a7853dc97c",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
