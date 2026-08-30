@@ -1,0 +1,66 @@
+apps/server/src/main/resources/application.yml
+  s_4d8f86932c7463::t_23278b308ef3d6 37
+apps/server/src/main/java/com/shangan/learning/infrastructure/JdbcWatchSessionBootstrapRepository.java
+  s_4d8f86932c7463::t_21a7b1b686e6d8 1-64
+apps/server/src/main/resources/db/migration/V006__watch_sessions.sql
+  s_4d8f86932c7463::t_21a7b1b686e6d8 1-32
+apps/server/src/test/java/com/shangan/learning/PlaybackTicketServiceTest.java
+  s_4d8f86932c7463::t_84ec699b2a0b30 33-34
+  s_4d8f86932c7463::t_84bd606a95fdb1 1-32,35-46
+apps/server/src/main/java/com/shangan/planning/application/DailyPlanService.java
+  s_4d8f86932c7463::t_84ec699b2a0b30 261
+  s_4d8f86932c7463::t_fb575411f324d2 257-260,262-266
+apps/server/src/main/java/com/shangan/learning/infrastructure/WatchSessionBootstrapRepository.java
+  s_4d8f86932c7463::t_21a7b1b686e6d8 1-23
+apps/server/src/test/java/com/shangan/media/emby/HlsManifestRewriteTest.java
+  s_4d8f86932c7463::t_84bd606a95fdb1 1-19,21-22,26-34,46-49
+  s_4d8f86932c7463::t_9b0c7dd1c0af8c 20,23-25,35-45
+apps/server/src/main/java/com/shangan/learning/application/PlaybackTicketService.java
+  s_4d8f86932c7463::t_a02a2791a78f2d 1-30,32-60,62-84,86-95
+  s_4d8f86932c7463::t_d4f189dc897c2a 31
+  s_4d8f86932c7463::t_84ec699b2a0b30 61,85
+apps/server/src/main/java/com/shangan/learning/application/PlaybackSessionService.java
+  s_4d8f86932c7463::t_fb575411f324d2 1-21,23-30,32,34-37,39-54,56-67,70-102
+  s_4d8f86932c7463::t_ee3db99bc0078b 22,31,33,38,55
+  s_4d8f86932c7463::t_84ec699b2a0b30 68-69
+apps/server/src/test/java/com/shangan/media/emby/EmbyClientContractTest.java
+  s_4d8f86932c7463::t_32efac69a7fa42 48-50
+apps/server/src/main/java/com/shangan/learning/api/PlaybackProxyController.java
+  s_4d8f86932c7463::t_326c3284c9729f 1-63,65-93,95-96
+  s_4d8f86932c7463::t_84ec699b2a0b30 64,94
+apps/server/src/main/java/com/shangan/media/emby/EmbyProperties.java
+  s_4d8f86932c7463::t_23278b308ef3d6 8,12-13,16
+apps/server/src/main/java/com/shangan/common/config/SecurityConfiguration.java
+  s_4d8f86932c7463::t_326c3284c9729f 71-72
+apps/server/src/main/java/com/shangan/media/emby/EmbyStreamProxy.java
+  s_4d8f86932c7463::t_3eda8cde2dc4cb 87-89
+  s_4d8f86932c7463::t_87bfaf24a6a4f1 1-11,14-20,22,24-68,72-80,95,97-108,111-113,125-144,147-153
+  s_4d8f86932c7463::t_9b0c7dd1c0af8c 12-13,21,69-71,81-86,90-94,96,109-110,114-124
+  s_4d8f86932c7463::t_84ec699b2a0b30 23,145-146
+apps/server/src/main/java/com/shangan/media/emby/EmbyPlaybackClient.java
+  s_4d8f86932c7463::t_84ec699b2a0b30 83-84
+  s_4d8f86932c7463::t_21a7b1b686e6d8 1-82,85
+apps/server/src/test/java/com/shangan/media/emby/RangeProxyIntegrationTest.java
+  s_4d8f86932c7463::t_84bd606a95fdb1 1-46,49-52
+  s_4d8f86932c7463::t_84ec699b2a0b30 47-48
+apps/server/src/main/java/com/shangan/learning/api/WatchSessionController.java
+  s_4d8f86932c7463::t_326c3284c9729f 1-32
+apps/server/src/main/java/com/shangan/learning/application/PlaybackSessionWriter.java
+  s_4d8f86932c7463::t_ee3db99bc0078b 1-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "ad89975219f586774d0f489b34a52fc989ad7606",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
