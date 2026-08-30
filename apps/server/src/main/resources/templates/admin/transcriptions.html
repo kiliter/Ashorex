@@ -1,63 +1,81 @@
 <!doctype html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>视频转写管理 - 上岸</title>
-  </head>
-  <body>
-    <main>
-      <h1>视频转写管理</h1>
-      <p><a th:href="@{/admin/courses}">返回课程管理</a></p>
+  <head th:replace="~{admin/fragments :: head('视频转写 - 上岸管理台')}"></head>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <aside th:replace="~{admin/fragments :: navigation('transcriptions')}"></aside>
+      <main class="admin-main">
+        <header class="page-header">
+          <div>
+            <p class="page-eyebrow">TRANSCRIPTION QUEUE</p>
+            <h1>视频转写</h1>
+            <p>发起音频提取、转写与摘要任务，并查看安全化任务状态。</p>
+          </div>
+        </header>
 
-      <section>
-        <h2>发起转写</h2>
-        <form
-          th:each="lesson : ${lessons}"
-          method="post"
-          th:action="@{/admin/transcriptions/{id}(id=${lesson.id})}"
-        >
-          <span th:text="${lesson.title}"></span>
-          <span th:if="${!lesson.available}">Emby 中已不可用</span>
-          <button type="submit" th:disabled="${!lesson.available}">开始或重新生成</button>
-        </form>
-      </section>
+        <section class="panel" aria-labelledby="start-transcription-title">
+          <div class="panel-header">
+            <div>
+              <h2 id="start-transcription-title">发起转写</h2>
+              <p>重新生成会事务性替换已有的转写分段和摘要。</p>
+            </div>
+          </div>
+          <div class="empty-state" th:if="${#lists.isEmpty(lessons)}">
+            <strong>没有可转写课时</strong>
+            请先在课程管理中同步 Emby 课时。
+          </div>
+          <div class="item-list" th:unless="${#lists.isEmpty(lessons)}">
+            <form class="item-card" th:each="lesson : ${lessons}" method="post" th:action="@{/admin/transcriptions/{id}(id=${lesson.id})}">
+              <div class="item-card__title">
+                <strong th:text="${lesson.title}"></strong>
+                <span class="status-pill status-pill--danger" th:if="${!lesson.available}">Emby 已不可用</span>
+              </div>
+              <div class="actions">
+                <button type="submit" th:disabled="${!lesson.available}">开始或重新生成</button>
+              </div>
+            </form>
+          </div>
+        </section>
 
-      <section>
-        <h2>任务状态</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>课时</th>
-              <th>状态</th>
-              <th>尝试次数</th>
-              <th>开始时间</th>
-              <th>完成时间</th>
-              <th>安全错误</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr th:each="job : ${jobs}">
-              <td th:text="${job.mediaTitle}"></td>
-              <td th:text="${job.status}"></td>
-              <td th:text="${job.attemptCount}"></td>
-              <td th:text="${job.startedAt ?: '-'}"></td>
-              <td th:text="${job.finishedAt ?: '-'}"></td>
-              <td th:text="${job.lastError ?: '-'}"></td>
-              <td>
-                <form
-                  method="post"
-                  th:if="${job.status == 'FAILED'}"
-                  th:action="@{/admin/transcriptions/{id}/retry(id=${job.mediaItemId})}"
-                >
-                  <button type="submit">重试</button>
-                </form>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-    </main>
+        <section class="panel panel--flush" aria-labelledby="transcription-jobs-title">
+          <div class="panel-header panel-header--padded">
+            <div>
+              <h2 id="transcription-jobs-title">任务状态</h2>
+              <p>完整第三方错误不会在后台展示。</p>
+            </div>
+            <span class="status-pill" th:text="|${#lists.size(jobs)} 个任务|">任务数量</span>
+          </div>
+          <div class="empty-state empty-state--inset" th:if="${#lists.isEmpty(jobs)}">
+            <strong>尚未发起任务</strong>
+            从上方选择一个课时开始转写。
+          </div>
+          <div class="table-scroll" th:unless="${#lists.isEmpty(jobs)}">
+            <table>
+              <thead>
+                <tr><th>课时</th><th>状态</th><th>尝试</th><th>开始时间</th><th>完成时间</th><th>安全错误</th><th>操作</th></tr>
+              </thead>
+              <tbody>
+                <tr th:each="job : ${jobs}">
+                  <td><strong th:text="${job.mediaTitle}"></strong></td>
+                  <td>
+                    <span class="status-pill" th:classappend="${job.status == 'READY' ? 'status-pill--ok' : (job.status == 'FAILED' ? 'status-pill--danger' : 'status-pill--info')}" th:text="${job.status}"></span>
+                  </td>
+                  <td class="data-text" th:text="${job.attemptCount}"></td>
+                  <td class="data-text" th:text="${job.startedAt ?: '-'}"></td>
+                  <td class="data-text" th:text="${job.finishedAt ?: '-'}"></td>
+                  <td th:text="${job.lastError ?: '-'}"></td>
+                  <td>
+                    <form method="post" th:if="${job.status == 'FAILED'}" th:action="@{/admin/transcriptions/{id}/retry(id=${job.mediaItemId})}">
+                      <button class="button--small button--secondary" type="submit">重试</button>
+                    </form>
+                    <span class="status-pill" th:unless="${job.status == 'FAILED'}">无需操作</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
   </body>
 </html>

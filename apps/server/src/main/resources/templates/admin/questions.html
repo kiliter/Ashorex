@@ -1,29 +1,41 @@
 <!doctype html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>课后题管理 - 上岸</title>
-  </head>
-  <body>
-    <main>
-      <h1 th:text="|${lesson.title} · 课后题|">课后题管理</h1>
-      <p>
-        <a th:href="@{/admin/courses/{courseId}/lessons(courseId=${lesson.courseId})}">返回课时列表</a>
-        <a th:href="@{/admin/lessons/{lessonId}/questions/new(lessonId=${lesson.id})}">新增题目</a>
-      </p>
-      <p th:if="${#lists.isEmpty(questions)}">暂未配置题目；锁定计划时不会要求答题。</p>
-      <ol>
-        <li th:each="question : ${questions}">
-          <span th:text="${question.content}">题目</span>
-          <span th:text="${question.questionType == 'TRUE_FALSE' ? '判断题' : '单选题'}">题型</span>
-          <strong th:text="${question.enabled ? '已启用' : '已禁用'}">状态</strong>
-          <a
-            th:href="@{/admin/lessons/{lessonId}/questions/{questionId}(lessonId=${lesson.id},questionId=${question.id})}"
-            >编辑</a
-          >
-        </li>
-      </ol>
-    </main>
+  <head th:replace="~{admin/fragments :: head('课后题管理 - 上岸管理台')}"></head>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <aside th:replace="~{admin/fragments :: navigation('courses')}"></aside>
+      <main class="admin-main">
+        <a class="breadcrumb" th:href="@{/admin/courses/{courseId}/lessons(courseId=${lesson.courseId})}">← 返回课时列表</a>
+        <header class="page-header">
+          <div>
+            <p class="page-eyebrow">QUIZ BUILDER</p>
+            <h1 th:text="|${lesson.title} · 课后题|">课后题管理</h1>
+            <p>启用的题目将在可信观看完成后解锁。</p>
+          </div>
+          <a class="button" th:href="@{/admin/lessons/{lessonId}/questions/new(lessonId=${lesson.id})}">新增题目</a>
+        </header>
+
+        <div class="empty-state" th:if="${#lists.isEmpty(questions)}">
+          <strong>暂未配置题目</strong>
+          当前课时锁定计划时不会要求答题。
+        </div>
+
+        <ol class="item-list" th:unless="${#lists.isEmpty(questions)}">
+          <li class="item-card" th:each="question : ${questions}">
+            <div class="item-card__title">
+              <strong th:text="${question.content}">题目</strong>
+              <span class="status-pill" th:classappend="${question.enabled ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${question.enabled ? '已启用' : '已禁用'}"></span>
+            </div>
+            <div class="item-card__meta">
+              <span class="status-pill status-pill--info" th:text="${question.questionType == 'TRUE_FALSE' ? '判断题' : '单选题'}">题型</span>
+              <span th:text="|排序 ${question.sortOrder}|">排序</span>
+            </div>
+            <div class="actions">
+              <a class="button button--secondary" th:href="@{/admin/lessons/{lessonId}/questions/{questionId}(lessonId=${lesson.id},questionId=${question.id})}">编辑题目</a>
+            </div>
+          </li>
+        </ol>
+      </main>
+    </div>
   </body>
 </html>

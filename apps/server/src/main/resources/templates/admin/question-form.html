@@ -1,57 +1,85 @@
 <!doctype html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>编辑课后题 - 上岸</title>
-  </head>
-  <body>
-    <main>
-      <h1 th:text="${question == null ? '新增课后题' : '编辑课后题'}">编辑课后题</h1>
-      <p><a th:href="@{/admin/lessons/{lessonId}/questions(lessonId=${lesson.id})}">返回题目列表</a></p>
-      <form method="post" th:action="@{/admin/lessons/{lessonId}/questions/save(lessonId=${lesson.id})}">
-        <input th:if="${question != null}" type="hidden" name="questionId" th:value="${question.id}" />
-        <label>
-          题型
-          <select name="questionType" required>
-            <option value="SINGLE_CHOICE" th:selected="${question == null || question.questionType == 'SINGLE_CHOICE'}">单选题</option>
-            <option value="TRUE_FALSE" th:selected="${question != null && question.questionType == 'TRUE_FALSE'}">判断题</option>
-          </select>
-        </label>
-        <label>题目内容 <textarea name="content" required th:text="${question?.content}"></textarea></label>
-        <label>答案解析 <textarea name="explanation" th:text="${question?.explanation}"></textarea></label>
-        <label>排序 <input type="number" name="sortOrder" required th:value="${question == null ? 0 : question.sortOrder}" /></label>
-        <label>启用 <input type="checkbox" name="enabled" value="true" th:checked="${question == null || question.enabled}" /></label>
-
-        <!-- V1 表单固定展示四行；判断题只填写前两行，服务端仍执行精确数量校验。 -->
-        <fieldset>
-          <legend>选项（至少填写两项，单选正确答案）</legend>
-          <div th:each="index : ${#numbers.sequence(0, 3)}">
-            <input
-              type="hidden"
-              name="optionId"
-              th:value="${question != null && question.options.size() > index ? question.options[index].id : ''}"
-            />
-            <label>
-              <input
-                type="radio"
-                name="correctOption"
-                th:value="${index}"
-                required
-                th:checked="${question != null && question.options.size() > index && question.options[index].correct}"
-              />
-              正确
-            </label>
-            <input
-              name="optionContent"
-              th:value="${question != null && question.options.size() > index ? question.options[index].content : ''}"
-              th:placeholder="|选项 ${index + 1}|"
-            />
+  <head th:replace="~{admin/fragments :: head('编辑课后题 - 上岸管理台')}"></head>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <aside th:replace="~{admin/fragments :: navigation('courses')}"></aside>
+      <main class="admin-main">
+        <a class="breadcrumb" th:href="@{/admin/lessons/{lessonId}/questions(lessonId=${lesson.id})}">← 返回题目列表</a>
+        <header class="page-header">
+          <div>
+            <p class="page-eyebrow">QUESTION EDITOR</p>
+            <h1 th:text="${question == null ? '新增课后题' : '编辑课后题'}">编辑课后题</h1>
+            <p th:text="|${lesson.title} · 配置题目、正确答案与解析|">课时信息</p>
           </div>
-        </fieldset>
-        <p>判断题必须恰好填写两个选项；单选题至少填写两个选项。</p>
-        <button type="submit">保存</button>
-      </form>
-    </main>
+        </header>
+
+        <form class="stack" method="post" th:action="@{/admin/lessons/{lessonId}/questions/save(lessonId=${lesson.id})}">
+          <input th:if="${question != null}" type="hidden" name="questionId" th:value="${question.id}" />
+
+          <section class="panel" aria-labelledby="question-content-title">
+            <div class="panel-header">
+              <div>
+                <h2 id="question-content-title">题目内容</h2>
+                <p>判断题必须填写两个选项，单选题至少填写两个选项。</p>
+              </div>
+            </div>
+            <div class="form-grid form-grid--two">
+              <label class="field">
+                题型
+                <select name="questionType" required>
+                  <option value="SINGLE_CHOICE" th:selected="${question == null || question.questionType == 'SINGLE_CHOICE'}">单选题</option>
+                  <option value="TRUE_FALSE" th:selected="${question != null && question.questionType == 'TRUE_FALSE'}">判断题</option>
+                </select>
+              </label>
+              <label class="field">
+                展示顺序
+                <input class="data-text" type="number" name="sortOrder" required th:value="${question == null ? 0 : question.sortOrder}" />
+              </label>
+              <label class="field form-grid__wide">
+                题目内容
+                <textarea name="content" placeholder="输入清晰、无歧义的题目" required th:text="${question?.content}"></textarea>
+              </label>
+              <label class="field form-grid__wide">
+                答案解析
+                <textarea name="explanation" placeholder="说明正确答案及关键知识点" th:text="${question?.explanation}"></textarea>
+              </label>
+              <label class="check-field form-grid__wide">
+                <input type="checkbox" name="enabled" value="true" th:checked="${question == null || question.enabled}" />
+                保存后立即启用
+              </label>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="question-options-title">
+            <div class="panel-header">
+              <div>
+                <h2 id="question-options-title">答案选项</h2>
+                <p>选择一个正确答案；没有内容的选项不会保存。</p>
+              </div>
+            </div>
+            <!-- V1 固定展示四行；判断题只填写前两行，服务端继续执行精确数量校验。 -->
+            <fieldset>
+              <legend>选项与正确答案</legend>
+              <div class="option-list">
+                <div class="option-row" th:each="index : ${#numbers.sequence(0, 3)}">
+                  <input type="hidden" name="optionId" th:value="${question != null && question.options.size() > index ? question.options[index].id : ''}" />
+                  <label class="option-radio">
+                    <input type="radio" name="correctOption" th:value="${index}" required th:checked="${question != null && question.options.size() > index && question.options[index].correct}" />
+                    正确
+                  </label>
+                  <input name="optionContent" th:value="${question != null && question.options.size() > index ? question.options[index].content : ''}" th:placeholder="|选项 ${index + 1}|" />
+                </div>
+              </div>
+            </fieldset>
+          </section>
+
+          <div class="actions">
+            <button type="submit">保存题目</button>
+            <a class="button button--secondary" th:href="@{/admin/lessons/{lessonId}/questions(lessonId=${lesson.id})}">取消</a>
+          </div>
+        </form>
+      </main>
+    </div>
   </body>
 </html>

@@ -1,31 +1,49 @@
 <!doctype html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>运行状态 - 上岸</title>
-  </head>
-  <body>
-    <main>
-      <h1>运行状态</h1>
-      <nav>
-        <a th:href="@{/admin/users}">用户管理</a>
-        <a th:href="@{/admin/courses}">课程管理</a>
-        <a th:href="@{/admin/transcriptions}">视频转写</a>
-      </nav>
-      <p>本页只显示运行状态与是否配置，不展示任何密码、API Key、Token 或远端 URL。</p>
-      <dl>
-        <dt>数据库路径</dt><dd th:text="${health.databasePath}"></dd>
-        <dt>数据库大小（字节）</dt><dd th:text="${health.databaseSizeBytes}"></dd>
-        <dt>WAL 大小（字节）</dt><dd th:text="${health.walSizeBytes}"></dd>
-        <dt>Emby 状态</dt><dd th:text="${health.embyStatus}"></dd>
-        <dt>最后课程同步</dt><dd th:text="${health.lastCourseSync ?: '尚未同步'}"></dd>
-        <dt>活动转写任务</dt><dd th:text="${health.activeTranscription}"></dd>
-        <dt>LLM</dt><dd th:text="${health.llmConfigured ? '已配置' : '未配置'}"></dd>
-        <dt>ASR</dt><dd th:text="${health.asrConfigured ? '已配置' : '未配置'}"></dd>
-        <dt>MCP 搜索</dt><dd th:text="${health.mcpConfigured ? '已配置' : '未配置'}"></dd>
-      </dl>
-      <form method="post" th:action="@{/admin/logout}"><button type="submit">退出登录</button></form>
-    </main>
+  <head th:replace="~{admin/fragments :: head('运行状态 - 上岸管理台')}"></head>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <aside th:replace="~{admin/fragments :: navigation('health')}"></aside>
+      <main class="admin-main">
+        <header class="page-header">
+          <div>
+            <p class="page-eyebrow">SYSTEM OVERVIEW</p>
+            <h1>运行状态</h1>
+            <p>快速确认数据库、媒体与 AI 服务是否已经就绪。</p>
+          </div>
+        </header>
+
+        <section class="panel" aria-labelledby="health-title">
+          <div class="panel-header">
+            <div>
+              <h2 id="health-title">服务概览</h2>
+              <p>只显示运行状态和配置结果，不展示密码、API Key、Token 或远端 URL。</p>
+            </div>
+            <span class="status-pill status-pill--ok">服务在线</span>
+          </div>
+
+          <dl class="metric-grid">
+            <div class="metric"><dt>数据库路径</dt><dd th:text="${health.databasePath}"></dd></div>
+            <div class="metric"><dt>数据库大小（字节）</dt><dd th:text="${health.databaseSizeBytes}"></dd></div>
+            <div class="metric"><dt>WAL 大小（字节）</dt><dd th:text="${health.walSizeBytes}"></dd></div>
+            <div class="metric"><dt>Emby 状态</dt><dd th:text="${health.embyStatus}"></dd></div>
+            <div class="metric"><dt>最后课程同步</dt><dd th:text="${health.lastCourseSync ?: '尚未同步'}"></dd></div>
+            <div class="metric"><dt>活动转写任务</dt><dd th:text="${health.activeTranscription}"></dd></div>
+            <div class="metric">
+              <dt>LLM</dt>
+              <dd><span class="status-pill" th:classappend="${health.llmConfigured ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${health.llmConfigured ? '已配置' : '未配置'}"></span></dd>
+            </div>
+            <div class="metric">
+              <dt>ASR</dt>
+              <dd><span class="status-pill" th:classappend="${health.asrConfigured ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${health.asrConfigured ? '已配置' : '未配置'}"></span></dd>
+            </div>
+            <div class="metric">
+              <dt>MCP 搜索</dt>
+              <dd><span class="status-pill" th:classappend="${health.mcpConfigured ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${health.mcpConfigured ? '已配置' : '未配置'}"></span></dd>
+            </div>
+          </dl>
+        </section>
+      </main>
+    </div>
   </body>
 </html>

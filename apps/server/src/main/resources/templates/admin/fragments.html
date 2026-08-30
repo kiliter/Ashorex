@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+  <!-- 后台页面共用的 Head，确保登录页与业务页使用同一套本地样式。 -->
+  <head th:fragment="head(pageTitle)">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#23437A" />
+    <title th:text="${pageTitle}">上岸管理后台</title>
+    <link rel="stylesheet" th:href="@{/assets/admin.css}" />
+  </head>
+  <body>
+    <!-- 移动端为顶部横向导航，桌面端通过 CSS 转为固定左侧工作台。 -->
+    <aside th:fragment="navigation(activePage)" class="admin-rail">
+      <div class="brand-row">
+        <a class="brand" th:href="@{/admin/health}" aria-label="返回运行状态">
+          <span class="brand-mark" aria-hidden="true">岸</span>
+          <span>
+            <strong>上岸管理台</strong>
+            <small>学习监督系统</small>
+          </span>
+        </a>
+        <form class="logout-form logout-form--mobile" method="post" th:action="@{/admin/logout}">
+          <button class="quiet-button" type="submit">退出</button>
+        </form>
+      </div>
+
+      <nav class="admin-nav" aria-label="管理功能">
+        <a
+          th:href="@{/admin/health}"
+          th:classappend="${activePage == 'health' ? 'is-active' : ''}"
+          th:attr="aria-current=${activePage == 'health' ? 'page' : null}"
+          >运行状态</a
+        >
+        <a
+          th:href="@{/admin/users}"
+          th:classappend="${activePage == 'users' ? 'is-active' : ''}"
+          th:attr="aria-current=${activePage == 'users' ? 'page' : null}"
+          >用户管理</a
+        >
+        <a
+          th:href="@{/admin/courses}"
+          th:classappend="${activePage == 'courses' ? 'is-active' : ''}"
+          th:attr="aria-current=${activePage == 'courses' ? 'page' : null}"
+          >课程管理</a
+        >
+        <a
+          th:href="@{/admin/transcriptions}"
+          th:classappend="${activePage == 'transcriptions' ? 'is-active' : ''}"
+          th:attr="aria-current=${activePage == 'transcriptions' ? 'page' : null}"
+          >视频转写</a
+        >
+      </nav>
+
+      <div class="rail-footer">
+        <p>让每一条学习记录都可信。</p>
+        <form class="logout-form" method="post" th:action="@{/admin/logout}">
+          <button class="quiet-button quiet-button--wide" type="submit">安全退出</button>
+        </form>
+      </div>
+    </aside>
+  </body>
+</html>

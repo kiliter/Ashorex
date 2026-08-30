@@ -1,32 +1,50 @@
 <!doctype html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>课时管理 - 上岸</title>
-  </head>
-  <body>
-    <main>
-      <h1>课时管理</h1>
-      <p><a th:href="@{/admin/courses}">返回课程列表</a></p>
-      <form
-        th:each="lesson : ${lessons}"
-        method="post"
-        th:action="@{/admin/courses/{courseId}/lessons/{lessonId}(courseId=${courseId},lessonId=${lesson.id})}"
-      >
-        <strong th:text="${lesson.title}"></strong>
-        <span th:if="${!lesson.available}">Emby 中已不可用</span>
-        <label>
-          启用
-          <input type="checkbox" name="enabled" value="true" th:checked="${lesson.enabled}" />
-        </label>
-        <label>
-          排序
-          <input type="number" name="sortOrder" th:value="${lesson.sortOrder}" required />
-        </label>
-        <button type="submit">保存</button>
-        <a th:href="@{/admin/lessons/{lessonId}/questions(lessonId=${lesson.id})}">配置课后题</a>
-      </form>
-    </main>
+  <head th:replace="~{admin/fragments :: head('课时管理 - 上岸管理台')}"></head>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <aside th:replace="~{admin/fragments :: navigation('courses')}"></aside>
+      <main class="admin-main">
+        <a class="breadcrumb" th:href="@{/admin/courses}">← 返回课程列表</a>
+        <header class="page-header">
+          <div>
+            <p class="page-eyebrow">LESSON CONTROL</p>
+            <h1>课时管理</h1>
+            <p>控制课时是否开放、展示顺序以及课后题配置。</p>
+          </div>
+        </header>
+
+        <div class="empty-state" th:if="${#lists.isEmpty(lessons)}">
+          <strong>暂时没有课时</strong>
+          返回课程列表执行一次 Emby 同步。
+        </div>
+
+        <section class="item-list" aria-label="课时列表" th:unless="${#lists.isEmpty(lessons)}">
+          <form
+            class="item-card lesson-form"
+            th:each="lesson : ${lessons}"
+            method="post"
+            th:action="@{/admin/courses/{courseId}/lessons/{lessonId}(courseId=${courseId},lessonId=${lesson.id})}"
+          >
+            <div class="item-card__title">
+              <strong th:text="${lesson.title}"></strong>
+              <span class="status-pill status-pill--danger" th:if="${!lesson.available}">Emby 已不可用</span>
+            </div>
+            <label class="check-field">
+              <input type="checkbox" name="enabled" value="true" th:checked="${lesson.enabled}" />
+              对学习端启用
+            </label>
+            <label class="field">
+              展示顺序
+              <input class="data-text" type="number" name="sortOrder" th:value="${lesson.sortOrder}" required />
+            </label>
+            <div class="actions">
+              <button type="submit">保存课时设置</button>
+              <a class="button button--secondary" th:href="@{/admin/lessons/{lessonId}/questions(lessonId=${lesson.id})}">配置课后题</a>
+            </div>
+          </form>
+        </section>
+      </main>
+    </div>
   </body>
 </html>

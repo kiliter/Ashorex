@@ -1,38 +1,82 @@
 <!doctype html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>课程管理 - 上岸</title>
-  </head>
-  <body>
-    <main>
-      <h1>课程管理</h1>
-      <p><a th:href="@{/admin/transcriptions}">视频转写管理</a></p>
-      <form method="post" th:action="@{/admin/courses}">
-        <label>课程名称 <input name="name" required /></label>
-        <label>课程说明 <input name="description" /></label>
-        <label>Emby 父节点 ID <input name="embyParentItemId" required /></label>
-        <button type="submit">创建课程</button>
-      </form>
-      <table>
-        <thead>
-          <tr><th>课程</th><th>上次同步</th><th>结果</th><th>操作</th></tr>
-        </thead>
-        <tbody>
-          <tr th:each="course : ${courses}">
-            <td th:text="${course.name}"></td>
-            <td th:text="${course.lastSyncedAt}"></td>
-            <td th:text="${course.lastSyncError ?: '正常'}"></td>
-            <td>
-              <a th:href="@{/admin/courses/{id}/lessons(id=${course.id})}">课时</a>
-              <form method="post" th:action="@{/admin/courses/{id}/sync(id=${course.id})}">
-                <button type="submit">立即同步</button>
-              </form>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </main>
+  <head th:replace="~{admin/fragments :: head('课程管理 - 上岸管理台')}"></head>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <aside th:replace="~{admin/fragments :: navigation('courses')}"></aside>
+      <main class="admin-main">
+        <header class="page-header">
+          <div>
+            <p class="page-eyebrow">COURSE CATALOG</p>
+            <h1>课程管理</h1>
+            <p>连接 Emby 课程目录，维护课时顺序与课后题。</p>
+          </div>
+        </header>
+
+        <section class="panel" aria-labelledby="create-course-title">
+          <div class="panel-header">
+            <div>
+              <h2 id="create-course-title">添加课程</h2>
+              <p>填写 Emby 父节点 ID 后，可以同步该目录下的视频课时。</p>
+            </div>
+          </div>
+          <form class="form-grid form-grid--two" method="post" th:action="@{/admin/courses}">
+            <label class="field">
+              课程名称
+              <input name="name" placeholder="例如 申论基础课" required />
+            </label>
+            <label class="field">
+              Emby 父节点 ID
+              <input class="data-text" name="embyParentItemId" placeholder="输入 Emby Item ID" required />
+            </label>
+            <label class="field form-grid__wide">
+              课程说明
+              <textarea name="description" placeholder="简要说明课程目标和适用阶段"></textarea>
+            </label>
+            <div class="actions form-grid__wide">
+              <button type="submit">创建课程</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel panel--flush" aria-labelledby="course-list-title">
+          <div class="panel-header panel-header--padded">
+            <div>
+              <h2 id="course-list-title">课程目录</h2>
+              <p>同步只读取已配置的 Emby 节点。</p>
+            </div>
+            <span class="status-pill" th:text="|${#lists.size(courses)} 门课程|">课程数量</span>
+          </div>
+          <div class="empty-state empty-state--inset" th:if="${#lists.isEmpty(courses)}">
+            <strong>还没有课程</strong>
+            使用上方表单添加第一门课程。
+          </div>
+          <div class="table-scroll" th:unless="${#lists.isEmpty(courses)}">
+            <table>
+              <thead>
+                <tr><th>课程</th><th>上次同步</th><th>结果</th><th>操作</th></tr>
+              </thead>
+              <tbody>
+                <tr th:each="course : ${courses}">
+                  <td><strong th:text="${course.name}"></strong></td>
+                  <td class="data-text" th:text="${course.lastSyncedAt ?: '尚未同步'}"></td>
+                  <td>
+                    <span class="status-pill" th:classappend="${course.lastSyncError == null ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${course.lastSyncError ?: '正常'}"></span>
+                  </td>
+                  <td>
+                    <div class="table-actions">
+                      <a class="button button--secondary button--small" th:href="@{/admin/courses/{id}/lessons(id=${course.id})}">管理课时</a>
+                      <form method="post" th:action="@{/admin/courses/{id}/sync(id=${course.id})}">
+                        <button class="button--small" type="submit">立即同步</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
   </body>
 </html>
