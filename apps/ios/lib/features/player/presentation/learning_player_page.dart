@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shangan_ios/features/ai_chat/presentation/video_ai_sheet.dart';
 import 'package:shangan_ios/features/player/data/watch_repository.dart';
 import 'package:shangan_ios/features/player/presentation/alive_check_dialog.dart';
 import 'package:shangan_ios/features/player/presentation/learning_player_controller.dart';
@@ -204,9 +205,21 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
                           label: const Text('网络恢复后继续'),
                         ),
                       OutlinedButton.icon(
-                        onPressed: null,
+                        onPressed: () => showModalBottomSheet<void>(
+                          context: context,
+                          isScrollControlled: true,
+                          useSafeArea: true,
+                          builder: (_) => VideoAiSheet(
+                            lessonId: widget.lessonId,
+                            currentPosition: state.position,
+                            onVideoSeek: (position) {
+                              Navigator.of(context).pop();
+                              unawaited(_controller.seek(position));
+                            },
+                          ),
+                        ),
                         icon: const Icon(Icons.auto_awesome_outlined),
-                        label: const Text('视频 AI（转写功能完成后开放）'),
+                        label: const Text('问问视频 AI'),
                       ),
                     ],
                   ),

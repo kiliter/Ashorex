@@ -6,6 +6,7 @@ import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/core/auth/auth_repository.dart';
 import 'package:shangan_ios/core/storage/token_store.dart';
 import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
+import 'package:shangan_ios/features/ai_chat/data/ai_chat_repository.dart';
 import 'package:shangan_ios/features/dashboard/data/dashboard_repository.dart';
 import 'package:shangan_ios/features/exam/data/exam_repository.dart';
 import 'package:shangan_ios/features/focus/data/focus_repository.dart';
@@ -42,6 +43,7 @@ Future<void> bootstrap() async {
   final quizRepository = RemoteQuizRepository(apiClient);
   final focusRepository = RemoteFocusRepository(apiClient);
   final reportRepository = RemoteReportRepository(apiClient);
+  final aiChatRepository = RemoteAiChatRepository(apiClient);
 
   await authController.initialize();
   runApp(
@@ -57,6 +59,7 @@ Future<void> bootstrap() async {
         focusRepositoryProvider.overrideWithValue(focusRepository),
         reportRepositoryProvider.overrideWithValue(reportRepository),
         preferencesRepositoryProvider.overrideWithValue(preferencesRepository),
+        aiChatRepositoryProvider.overrideWithValue(aiChatRepository),
       ],
       child: ShanganApp(authController: authController),
     ),

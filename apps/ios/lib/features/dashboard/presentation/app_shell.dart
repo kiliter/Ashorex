@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
+import 'package:shangan_ios/features/ai_chat/presentation/ai_tab_page.dart';
 import 'package:shangan_ios/features/catalog/presentation/course_list_page.dart';
 import 'package:shangan_ios/features/dashboard/presentation/home_page.dart';
 import 'package:shangan_ios/features/reporting/presentation/daily_report_page.dart';
@@ -20,11 +21,7 @@ final class _AppShellState extends ConsumerState<AppShell> {
   static const _pages = <Widget>[
     HomePage(),
     CourseListPage(),
-    _ShellPlaceholder(
-      icon: Icons.auto_awesome_outlined,
-      title: 'AI',
-      message: '只读问答入口，不会修改你的学习数据。',
-    ),
+    AiTabPage(),
     DailyReportPage(),
     _ProfileTab(),
   ];
@@ -53,47 +50,6 @@ final class _AppShellState extends ConsumerState<AppShell> {
           ),
           NavigationDestination(icon: Icon(Icons.person_outline), label: '我的'),
         ],
-      ),
-    );
-  }
-}
-
-final class _ShellPlaceholder extends StatelessWidget {
-  const _ShellPlaceholder({
-    required this.icon,
-    required this.title,
-    required this.message,
-  });
-
-  final IconData icon;
-  final String title;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 56,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 16),
-              Text(title, style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 10),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

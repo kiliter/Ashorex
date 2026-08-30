@@ -116,6 +116,32 @@ final class ApiClient {
     }
   }
 
+  /// 发起带 Bearer Token 的 SSE POST，并将底层字节流交给增量解析器。
+  Future<Stream<List<int>>> postByteStream(String path, {Object? data}) async {
+    try {
+      final response = await _dio.post<ResponseBody>(
+        path,
+        data: data,
+        options: Options(
+          responseType: ResponseType.stream,
+          receiveTimeout: const Duration(minutes: 3),
+          headers: {'Accept': 'text/event-stream'},
+        ),
+      );
+      final body = response.data;
+      if (body == null) {
+        throw const ApiException(
+          statusCode: null,
+          errorCode: 'EMPTY_STREAM',
+          message: 'AI 流式响应为空',
+        );
+      }
+      return body.stream.map<List<int>>((chunk) => chunk);
+    } on DioException catch (exception) {
+      throw ApiException.fromDio(exception);
+    }
+  }
+
   Future<void> postEmpty(
     String path, {
     Object? data,
