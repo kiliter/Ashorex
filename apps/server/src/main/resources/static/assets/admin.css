@@ -430,6 +430,25 @@ a:hover {
   font-weight: 650;
 }
 
+/* 密钥字段保持移动端单行操作，显示按钮不会压缩输入框到不可编辑。 */
+.password-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.field small {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 450;
+}
+
+.field .field-error {
+  color: var(--color-signal);
+  font-weight: 650;
+}
+
 input:not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
@@ -768,6 +787,29 @@ legend {
 .data-text {
   font-family: var(--font-data);
   font-size: 12px;
+}
+
+.config-panel {
+  margin-bottom: 0;
+}
+
+.save-panel {
+  display: flex;
+  margin-top: 16px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.save-panel h2 {
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  .save-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 @media (min-width: 680px) {

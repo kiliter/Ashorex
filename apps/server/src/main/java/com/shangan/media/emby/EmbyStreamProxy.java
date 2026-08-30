@@ -1,6 +1,7 @@
 package com.shangan.media.emby;
 
 import com.shangan.common.api.BusinessException;
+import com.shangan.common.integration.RuntimeIntegrationSettings;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -23,29 +24,24 @@ public class EmbyStreamProxy {
       List.of("Content-Range", "Accept-Ranges", "Content-Length", "Content-Type", "Cache-Control");
 
   private final EmbyProperties properties;
-  private final URI baseUri;
   private final HttpClient http;
 
   public EmbyStreamProxy(EmbyProperties properties) {
     this.properties = properties;
-    this.baseUri =
-        properties.baseUrl().isBlank()
-            ? URI.create("http://127.0.0.1")
-            : URI.create(properties.baseUrl());
-    if (!List.of("http", "https").contains(baseUri.getScheme()) || baseUri.getUserInfo() != null) {
-      throw new IllegalStateException("EMBY_BASE_URL 必须是固定 HTTP(S) 地址");
-    }
     this.http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
   }
 
   /** 打开上游流；调用方必须关闭结果，视频与分片不会被整体缓冲。 */
   public ProxyResponse open(String pathAndQuery, String range, String ifRange) {
-    URI target = resolveTarget(pathAndQuery);
+    RuntimeIntegrationSettings.Emby configuration = properties.current();
+    if (!configuration.configured()) throw unavailable();
+    URI baseUri = fixedBaseUri(configuration.baseUrl());
+    URI target = resolveTarget(pathAndQuery, baseUri);
     try {
       HttpRequest.Builder request =
           HttpRequest.newBuilder(target)
               .timeout(Duration.ofSeconds(30))
-              .header("X-Emby-Token", properties.apiKey())
+              .header("X-Emby-Token", configuration.apiKey())
               .GET();
       if (range != null && !range.isBlank()) request.header("Range", range);
       if (ifRange != null && !ifRange.isBlank()) request.header("If-Range", ifRange);
@@ -95,7 +91,7 @@ public class EmbyStreamProxy {
   private String proxyUrl(String ticket, String reference, URI manifestUri) {
     rejectTraversal(reference);
     URI resolved = manifestUri.resolve(reference).normalize();
-    verifySameOrigin(resolved);
+    verifySameOrigin(resolved, manifestUri);
     StringBuilder value =
         new StringBuilder("/api/v1/playback/")
             .append(ticket)
@@ -105,11 +101,11 @@ public class EmbyStreamProxy {
     return value.toString();
   }
 
-  private URI resolveTarget(String pathAndQuery) {
+  private URI resolveTarget(String pathAndQuery, URI baseUri) {
     if (pathAndQuery == null || !pathAndQuery.startsWith("/")) throw forbidden();
     rejectTraversal(pathAndQuery);
     URI target = baseUri.resolve(pathAndQuery).normalize();
-    verifySameOrigin(target);
+    verifySameOrigin(target, baseUri);
     return target;
   }
 
@@ -124,10 +120,24 @@ public class EmbyStreamProxy {
     }
   }
 
-  private void verifySameOrigin(URI target) {
-    if (!baseUri.getScheme().equalsIgnoreCase(target.getScheme())
-        || !baseUri.getHost().equalsIgnoreCase(target.getHost())
-        || effectivePort(baseUri) != effectivePort(target)) {
+  private void verifySameOrigin(URI target, URI allowedOrigin) {
+    if (!allowedOrigin.getScheme().equalsIgnoreCase(target.getScheme())
+        || !allowedOrigin.getHost().equalsIgnoreCase(target.getHost())
+        || effectivePort(allowedOrigin) != effectivePort(target)) {
+      throw forbidden();
+    }
+  }
+
+  private URI fixedBaseUri(String value) {
+    try {
+      URI baseUri = URI.create(value);
+      if (!List.of("http", "https").contains(baseUri.getScheme())
+          || baseUri.getHost() == null
+          || baseUri.getUserInfo() != null) {
+        throw forbidden();
+      }
+      return baseUri;
+    } catch (IllegalArgumentException exception) {
       throw forbidden();
     }
   }
@@ -139,6 +149,11 @@ public class EmbyStreamProxy {
   private BusinessException forbidden() {
     return new BusinessException(
         HttpStatus.BAD_REQUEST, "PLAYBACK_PROXY_TARGET_INVALID", "媒体代理路径无效");
+  }
+
+  private BusinessException unavailable() {
+    return new BusinessException(
+        HttpStatus.SERVICE_UNAVAILABLE, "EMBY_STREAM_UNAVAILABLE", "媒体流暂时不可用");
   }
 
   /** 持有上游 InputStream 的流式响应。 */

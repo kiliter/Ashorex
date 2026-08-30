@@ -49,6 +49,12 @@
           th:attr="aria-current=${activePage == 'transcriptions' ? 'page' : null}"
           >视频转写</a
         >
+        <a
+          th:href="@{/admin/settings/integrations}"
+          th:classappend="${activePage == 'settings' ? 'is-active' : ''}"
+          th:attr="aria-current=${activePage == 'settings' ? 'page' : null}"
+          >服务配置</a
+        >
       </nav>
 
       <div class="rail-footer">

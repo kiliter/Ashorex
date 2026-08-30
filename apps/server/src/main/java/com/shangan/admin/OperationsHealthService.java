@@ -2,6 +2,8 @@ package com.shangan.admin;
 
 import com.shangan.ai.transcript.TranscriptionJobService;
 import com.shangan.catalog.application.CourseSyncService;
+import com.shangan.common.integration.IntegrationSettingsProvider;
+import com.shangan.common.integration.RuntimeIntegrationSettings;
 import com.shangan.media.emby.EmbyHealthService;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,34 +22,25 @@ public class OperationsHealthService {
   private final EmbyHealthService emby;
   private final CourseSyncService courses;
   private final TranscriptionJobService transcriptions;
-  private final boolean llmConfigured;
-  private final boolean asrConfigured;
-  private final boolean mcpConfigured;
+  private final IntegrationSettingsProvider integrationSettings;
 
   public OperationsHealthService(
       @Value("${spring.datasource.url}") String datasourceUrl,
       EmbyHealthService emby,
       CourseSyncService courses,
       TranscriptionJobService transcriptions,
-      @Value("${app.ai.llm.base-url:}") String llmBaseUrl,
-      @Value("${app.ai.llm.api-key:}") String llmApiKey,
-      @Value("${app.ai.llm.model:}") String llmModel,
-      @Value("${app.ai.asr.base-url:}") String asrBaseUrl,
-      @Value("${app.ai.asr.api-key:}") String asrApiKey,
-      @Value("${app.ai.asr.model:}") String asrModel,
-      @Value("${app.ai.mcp.url:}") String mcpUrl) {
+      IntegrationSettingsProvider integrationSettings) {
     this.datasourceUrl = datasourceUrl;
     this.emby = emby;
     this.courses = courses;
     this.transcriptions = transcriptions;
-    this.llmConfigured = configured(llmBaseUrl, llmApiKey, llmModel);
-    this.asrConfigured = configured(asrBaseUrl, asrApiKey, asrModel);
-    this.mcpConfigured = configured(mcpUrl);
+    this.integrationSettings = integrationSettings;
   }
 
   /** 在一个只读事务内获取数据库业务状态；文件大小读取失败时安全降级为 0。 */
   @Transactional(readOnly = true)
   public Snapshot snapshot() {
+    RuntimeIntegrationSettings settings = integrationSettings.current();
     Path database = databasePath();
     Instant lastCourseSync =
         courses.listAdminCourses().stream()
@@ -68,9 +61,9 @@ public class OperationsHealthService {
         emby.status(),
         lastCourseSync,
         activeTranscription,
-        llmConfigured,
-        asrConfigured,
-        mcpConfigured);
+        settings.llm().configured(),
+        settings.asr().configured(),
+        settings.mcp().configured());
   }
 
   private Path databasePath() {
@@ -92,10 +85,6 @@ public class OperationsHealthService {
   private boolean isActive(String status) {
     return java.util.Set.of("PENDING", "EXTRACTING_AUDIO", "TRANSCRIBING", "SUMMARIZING")
         .contains(status);
-  }
-
-  private static boolean configured(String... values) {
-    return java.util.Arrays.stream(values).allMatch(value -> value != null && !value.isBlank());
   }
 
   /** 后台健康快照不包含任何密钥、Token、远端 URL 或第三方响应正文。 */

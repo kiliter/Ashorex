@@ -6,6 +6,7 @@ import com.shangan.ai.infrastructure.JdbcAiConversationRepository;
 import com.shangan.catalog.application.CatalogQueryService;
 import com.shangan.common.IdGenerator;
 import com.shangan.common.api.BusinessException;
+import com.shangan.common.integration.IntegrationSettingsProvider;
 import dev.langchain4j.invocation.InvocationParameters;
 import java.time.Clock;
 import java.time.Instant;
@@ -16,7 +17,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +35,7 @@ public class AiConversationService {
   private final IdGenerator ids;
   private final Clock clock;
   private final ObjectMapper json;
-  private final int maximumContextCharacters;
+  private final IntegrationSettingsProvider integrationSettings;
   private final Set<String> activeUsers = ConcurrentHashMap.newKeySet();
 
   public AiConversationService(
@@ -46,7 +46,7 @@ public class AiConversationService {
       IdGenerator ids,
       Clock clock,
       ObjectMapper json,
-      @Value("${app.ai.llm.max-context-tokens:16000}") int maximumContextTokens) {
+      IntegrationSettingsProvider integrationSettings) {
     this.conversations = conversations;
     this.catalog = catalog;
     this.videoContexts = videoContexts;
@@ -54,7 +54,7 @@ public class AiConversationService {
     this.ids = ids;
     this.clock = clock;
     this.json = json;
-    this.maximumContextCharacters = Math.max(8_000, maximumContextTokens * 3);
+    this.integrationSettings = integrationSettings;
   }
 
   @Transactional
@@ -171,6 +171,8 @@ public class AiConversationService {
 
   private String buildPrompt(
       List<AiConversation.Message> history, String videoContext, String currentMessage) {
+    int maximumContextCharacters =
+        Math.max(8_000, integrationSettings.current().llm().maxContextTokens() * 3);
     StringBuilder bounded = new StringBuilder();
     for (int index = history.size() - 1; index >= 0; index--) {
       AiConversation.Message value = history.get(index);

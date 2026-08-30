@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="~{admin/fragments :: head('服务配置 · 上岸管理台')}"></head>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <aside th:replace="~{admin/fragments :: navigation('settings')}"></aside>
+
+      <main class="admin-main">
+        <header class="page-header">
+          <div>
+            <p class="page-eyebrow">RUNTIME INTEGRATIONS</p>
+            <h1>服务配置</h1>
+            <p>统一管理媒体、模型、转写和联网搜索，新调用保存后立即生效。</p>
+          </div>
+        </header>
+
+        <div class="alert alert--success" th:if="${saved}">配置已保存并立即生效。</div>
+        <div class="alert" th:if="${!fieldErrors.isEmpty()}">
+          配置未保存，请修正标记的字段。
+        </div>
+
+        <form method="post" th:action="@{/admin/settings/integrations}" th:object="${settingsForm}">
+          <div class="stack stack--two">
+            <section class="panel config-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>LLM</h2>
+                  <p>OpenAI-compatible 聊天与视频摘要服务。</p>
+                </div>
+                <span class="status-pill" th:classappend="${currentSettings.llm.configured() ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${currentSettings.llm.configured() ? '已配置' : '未配置'}"></span>
+              </div>
+              <div class="form-grid form-grid--two">
+                <label class="field form-grid__wide">Base URL
+                  <input type="url" th:field="*{llmBaseUrl}" placeholder="https://provider.example/v1" />
+                  <small class="field-error" th:if="${fieldErrors.containsKey('llmBaseUrl')}" th:text="${fieldErrors.get('llmBaseUrl')}"></small>
+                </label>
+                <label class="field form-grid__wide">API Key
+                  <span class="password-field">
+                    <input id="llmApiKey" name="llmApiKey" type="password" th:value="*{llmApiKey}" autocomplete="off" />
+                    <button type="button" class="button button--secondary button--small" data-password-toggle="llmApiKey" aria-label="显示 LLM API Key">显示</button>
+                  </span>
+                </label>
+                <label class="field form-grid__wide">模型名称
+                  <input type="text" th:field="*{llmModel}" placeholder="填写提供商模型名称" />
+                </label>
+                <label class="field">最大上下文 Token
+                  <input type="number" min="1024" max="1000000" th:field="*{llmMaxContextTokens}" />
+                  <small class="field-error" th:if="${fieldErrors.containsKey('llmMaxContextTokens')}" th:text="${fieldErrors.get('llmMaxContextTokens')}"></small>
+                </label>
+                <label class="field">Temperature
+                  <input type="number" min="0" max="2" step="0.1" th:field="*{llmTemperature}" />
+                  <small class="field-error" th:if="${fieldErrors.containsKey('llmTemperature')}" th:text="${fieldErrors.get('llmTemperature')}"></small>
+                </label>
+                <label class="field form-grid__wide">超时（秒）
+                  <input type="number" min="1" max="600" th:field="*{llmTimeoutSeconds}" />
+                  <small class="field-error" th:if="${fieldErrors.containsKey('llmTimeoutSeconds')}" th:text="${fieldErrors.get('llmTimeoutSeconds')}"></small>
+                </label>
+              </div>
+            </section>
+
+            <section class="panel config-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>ASR</h2>
+                  <p>OpenAI-compatible 音频转写服务。</p>
+                </div>
+                <span class="status-pill" th:classappend="${currentSettings.asr.configured() ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${currentSettings.asr.configured() ? '已配置' : '未配置'}"></span>
+              </div>
+              <div class="form-grid">
+                <label class="field">Base URL
+                  <input type="url" th:field="*{asrBaseUrl}" placeholder="https://provider.example/v1" />
+                  <small class="field-error" th:if="${fieldErrors.containsKey('asrBaseUrl')}" th:text="${fieldErrors.get('asrBaseUrl')}"></small>
+                </label>
+                <label class="field">API Key
+                  <span class="password-field">
+                    <input id="asrApiKey" name="asrApiKey" type="password" th:value="*{asrApiKey}" autocomplete="off" />
+                    <button type="button" class="button button--secondary button--small" data-password-toggle="asrApiKey" aria-label="显示 ASR API Key">显示</button>
+                  </span>
+                </label>
+                <label class="field">模型名称
+                  <input type="text" th:field="*{asrModel}" placeholder="填写转写模型名称" />
+                </label>
+                <label class="field">超时（秒）
+                  <input type="number" min="1" max="1800" th:field="*{asrTimeoutSeconds}" />
+                  <small class="field-error" th:if="${fieldErrors.containsKey('asrTimeoutSeconds')}" th:text="${fieldErrors.get('asrTimeoutSeconds')}"></small>
+                </label>
+              </div>
+            </section>
+
+            <section class="panel config-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>MCP 联网搜索</h2>
+                  <p>固定 Streamable HTTP 服务与显式工具白名单。</p>
+                </div>
+                <span class="status-pill" th:classappend="${currentSettings.mcp.configured() ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${currentSettings.mcp.configured() ? '已配置' : '未配置'}"></span>
+              </div>
+              <div class="form-grid">
+                <label class="field">服务 URL
+                  <input type="url" th:field="*{mcpUrl}" placeholder="https://search.example/mcp" />
+                  <small class="field-error" th:if="${fieldErrors.containsKey('mcpUrl')}" th:text="${fieldErrors.get('mcpUrl')}"></small>
+                </label>
+                <label class="field">Bearer Token
+                  <span class="password-field">
+                    <input id="mcpBearerToken" name="mcpBearerToken" type="password" th:value="*{mcpBearerToken}" autocomplete="off" />
+                    <button type="button" class="button button--secondary button--small" data-password-toggle="mcpBearerToken" aria-label="显示 MCP Token">显示</button>
+                  </span>
+                </label>
+                <label class="field">允许工具
+                  <input type="text" th:field="*{mcpAllowedTools}" placeholder="web_search,web_extract" />
+                  <small>多个工具用英文逗号分隔。</small>
+                </label>
+                <label class="field">超时（秒）
+                  <input type="number" min="1" max="120" th:field="*{mcpTimeoutSeconds}" />
+                  <small class="field-error" th:if="${fieldErrors.containsKey('mcpTimeoutSeconds')}" th:text="${fieldErrors.get('mcpTimeoutSeconds')}"></small>
+                </label>
+              </div>
+            </section>
+
+            <section class="panel config-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Emby</h2>
+                  <p>课程同步、播放和转写使用的固定媒体源。</p>
+                </div>
+                <span class="status-pill" th:classappend="${currentSettings.emby.configured() ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${currentSettings.emby.configured() ? '已配置' : '未配置'}"></span>
+              </div>
+              <div class="form-grid">
+                <label class="field">Base URL
+                  <input type="url" th:field="*{embyBaseUrl}" placeholder="http://192.168.1.10:8096" />
+                  <small class="field-error" th:if="${fieldErrors.containsKey('embyBaseUrl')}" th:text="${fieldErrors.get('embyBaseUrl')}"></small>
+                </label>
+                <label class="field">API Key
+                  <span class="password-field">
+                    <input id="embyApiKey" name="embyApiKey" type="password" th:value="*{embyApiKey}" autocomplete="off" />
+                    <button type="button" class="button button--secondary button--small" data-password-toggle="embyApiKey" aria-label="显示 Emby API Key">显示</button>
+                  </span>
+                </label>
+                <label class="field">用户 ID
+                  <input type="text" th:field="*{embyUserId}" />
+                </label>
+                <p class="section-note">修改 Emby 可能影响正在播放的视频，建议在无人播放时保存。</p>
+              </div>
+            </section>
+          </div>
+
+          <section class="panel save-panel">
+            <div>
+              <h2>保存运行时配置</h2>
+              <p class="section-note">首次保存后，SQLite 中的整份配置将优先于环境变量，并随数据库一起备份。</p>
+            </div>
+            <button type="submit">保存全部配置</button>
+          </section>
+        </form>
+      </main>
+    </div>
+
+    <script>
+      // 只切换当前页面密码框的可见性，不复制或记录密钥。
+      document.querySelectorAll("[data-password-toggle]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const input = document.getElementById(button.dataset.passwordToggle);
+          const visible = input.type === "text";
+          input.type = visible ? "password" : "text";
+          button.textContent = visible ? "显示" : "隐藏";
+          button.setAttribute("aria-label", `${visible ? "显示" : "隐藏"} ${input.id}`);
+        });
+      });
+    </script>
+  </body>
+</html>

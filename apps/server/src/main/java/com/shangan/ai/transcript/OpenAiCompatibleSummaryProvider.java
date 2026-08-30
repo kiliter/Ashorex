@@ -1,10 +1,11 @@
 package com.shangan.ai.transcript;
 
+import com.shangan.common.integration.IntegrationSettingsProvider;
+import com.shangan.common.integration.RuntimeIntegrationSettings;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -14,32 +15,26 @@ import tools.jackson.databind.ObjectMapper;
 /** 在引入聊天运行时前，为转写流水线提供最小 OpenAI-compatible 摘要调用。 */
 @Component
 public class OpenAiCompatibleSummaryProvider implements VideoSummaryService.SummaryProvider {
-  private final String apiKey;
-  private final String model;
-  private final RestClient http;
+  private final IntegrationSettingsProvider settings;
   private final ObjectMapper json;
 
-  public OpenAiCompatibleSummaryProvider(
-      @Value("${app.ai.llm.base-url:}") String baseUrl,
-      @Value("${app.ai.llm.api-key:}") String apiKey,
-      @Value("${app.ai.llm.model:}") String model,
-      @Value("${app.ai.llm.timeout:PT2M}") Duration timeout,
-      ObjectMapper json) {
-    this.apiKey = apiKey == null ? "" : apiKey;
-    this.model = model == null ? "" : model;
+  public OpenAiCompatibleSummaryProvider(IntegrationSettingsProvider settings, ObjectMapper json) {
+    this.settings = settings;
     this.json = json;
+  }
+
+  private RestClient client(RuntimeIntegrationSettings.Llm configuration) {
     JdkClientHttpRequestFactory requestFactory =
         new JdkClientHttpRequestFactory(
             HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(10))
                 .build());
-    requestFactory.setReadTimeout(timeout);
-    this.http =
-        RestClient.builder()
-            .baseUrl(baseUrl == null ? "" : baseUrl.replaceAll("/+$", ""))
-            .requestFactory(requestFactory)
-            .build();
+    requestFactory.setReadTimeout(Duration.ofSeconds(configuration.timeoutSeconds()));
+    return RestClient.builder()
+        .baseUrl(configuration.baseUrl())
+        .requestFactory(requestFactory)
+        .build();
   }
 
   @Override
@@ -67,24 +62,26 @@ public class OpenAiCompatibleSummaryProvider implements VideoSummaryService.Summ
   }
 
   private VideoSummaryService.GeneratedText complete(String system, String user) {
-    if (apiKey.isBlank() || model.isBlank()) {
+    RuntimeIntegrationSettings.Llm configuration = settings.current().llm();
+    if (!configuration.configured()) {
       throw new VideoSummaryService.SummaryGenerationException("摘要模型尚未配置");
     }
     try {
       Map<String, Object> body =
           Map.of(
               "model",
-              model,
+              configuration.model(),
               "temperature",
-              0.2,
+              configuration.temperature(),
               "messages",
               List.of(
                   Map.of("role", "system", "content", system),
                   Map.of("role", "user", "content", user)));
       String response =
-          http.post()
+          client(configuration)
+              .post()
               .uri("/chat/completions")
-              .header("Authorization", "Bearer " + apiKey)
+              .header("Authorization", "Bearer " + configuration.apiKey())
               .body(body)
               .retrieve()
               .body(String.class);
@@ -94,7 +91,7 @@ public class OpenAiCompatibleSummaryProvider implements VideoSummaryService.Summ
       if (content.isBlank()) {
         throw new VideoSummaryService.SummaryGenerationException("摘要模型未返回有效内容");
       }
-      return new VideoSummaryService.GeneratedText(content, model);
+      return new VideoSummaryService.GeneratedText(content, configuration.model());
     } catch (VideoSummaryService.SummaryGenerationException exception) {
       throw exception;
     } catch (Exception exception) {

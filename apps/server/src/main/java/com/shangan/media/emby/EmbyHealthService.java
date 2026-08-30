@@ -1,5 +1,6 @@
 package com.shangan.media.emby;
 
+import com.shangan.common.integration.RuntimeIntegrationSettings;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -22,14 +23,15 @@ public class EmbyHealthService {
 
   /** 返回适合后台展示的稳定中文状态，不向调用方传播第三方错误正文。 */
   public String status() {
-    if (!properties.configured()) {
+    RuntimeIntegrationSettings.Emby configuration = properties.current();
+    if (!configuration.configured()) {
       return "未配置";
     }
     try {
       HttpRequest request =
-          HttpRequest.newBuilder(URI.create(properties.baseUrl() + "/System/Info"))
+          HttpRequest.newBuilder(URI.create(configuration.baseUrl() + "/System/Info"))
               .timeout(TIMEOUT)
-              .header("X-Emby-Token", properties.apiKey())
+              .header("X-Emby-Token", configuration.apiKey())
               .GET()
               .build();
       int status = client.send(request, HttpResponse.BodyHandlers.discarding()).statusCode();

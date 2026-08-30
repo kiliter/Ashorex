@@ -1,6 +1,6 @@
 package com.shangan.ai.application;
 
-import com.shangan.ai.config.AiConfiguration.StudyAssistant;
+import com.shangan.ai.application.RuntimeAiChatEngine.StudyAssistant;
 import dev.langchain4j.invocation.InvocationParameters;
 import dev.langchain4j.model.output.TokenUsage;
 

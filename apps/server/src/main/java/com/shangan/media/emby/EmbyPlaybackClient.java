@@ -1,6 +1,7 @@
 package com.shangan.media.emby;
 
 import com.shangan.common.api.BusinessException;
+import com.shangan.common.integration.RuntimeIntegrationSettings;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -21,21 +22,22 @@ public class EmbyPlaybackClient {
   }
 
   public Selection select(String embyItemId, long startPositionMs) {
-    if (!properties.configured() || properties.userId().isBlank()) throw unavailable();
+    RuntimeIntegrationSettings.Emby configuration = properties.current();
+    if (!configuration.configured() || configuration.userId().isBlank()) throw unavailable();
     String deviceId = UUID.randomUUID().toString();
     String playSessionId = UUID.randomUUID().toString();
     try {
       String body =
           RestClient.builder()
-              .baseUrl(properties.baseUrl())
-              .defaultHeader("X-Emby-Token", properties.apiKey())
+              .baseUrl(configuration.baseUrl())
+              .defaultHeader("X-Emby-Token", configuration.apiKey())
               .build()
               .post()
               .uri(
                   builder ->
                       builder
                           .path("/Items/{id}/PlaybackInfo")
-                          .queryParam("UserId", properties.userId())
+                          .queryParam("UserId", configuration.userId())
                           .queryParam("DeviceId", deviceId)
                           .queryParam("StartTimeTicks", Math.max(0, startPositionMs) * 10_000)
                           .build(embyItemId))

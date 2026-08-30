@@ -1,11 +1,13 @@
 package com.shangan.ai.transcript;
 
+import com.shangan.common.integration.IntegrationSettingsProvider;
+import com.shangan.common.integration.RuntimeIntegrationSettings;
 import java.net.http.HttpClient;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -19,57 +21,70 @@ import tools.jackson.databind.ObjectMapper;
 /** OpenAI-compatible ASR HTTP 实现；API Key 仅放在服务端 Authorization 请求头。 */
 @Component
 public class OpenAiCompatibleTranscriptionProvider implements TranscriptionProvider {
-  private final String apiKey;
-  private final String model;
-  private final RestClient http;
+  private final IntegrationSettingsProvider settings;
   private final ObjectMapper json;
 
+  @Autowired
   public OpenAiCompatibleTranscriptionProvider(
-      @Value("${app.ai.asr.base-url:}") String baseUrl,
-      @Value("${app.ai.asr.api-key:}") String apiKey,
-      @Value("${app.ai.asr.model:}") String model,
-      @Value("${app.ai.asr.timeout:PT2M}") Duration timeout,
-      ObjectMapper json) {
-    this.apiKey = apiKey == null ? "" : apiKey;
-    this.model = model == null ? "" : model;
+      IntegrationSettingsProvider settings, ObjectMapper json) {
+    this.settings = settings;
     this.json = json;
+  }
+
+  /** 为不启动 Spring 的 HTTP 契约测试保留固定配置构造器。 */
+  public OpenAiCompatibleTranscriptionProvider(
+      String baseUrl, String apiKey, String model, Duration timeout, ObjectMapper json) {
+    this(
+        () ->
+            new RuntimeIntegrationSettings(
+                new RuntimeIntegrationSettings.Emby("", "", ""),
+                new RuntimeIntegrationSettings.Llm("", "", "", 16_000, 0.2, 120),
+                new RuntimeIntegrationSettings.Asr(
+                    baseUrl, apiKey, model, Math.toIntExact(timeout.toSeconds())),
+                new RuntimeIntegrationSettings.Mcp("", "", "web_search,web_extract", 20),
+                0),
+        json);
+  }
+
+  private RestClient client(RuntimeIntegrationSettings.Asr configuration) {
     JdkClientHttpRequestFactory requestFactory =
         new JdkClientHttpRequestFactory(
             HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(10))
                 .build());
-    requestFactory.setReadTimeout(timeout);
-    this.http =
-        RestClient.builder()
-            .baseUrl(baseUrl == null ? "" : baseUrl.replaceAll("/+$", ""))
-            .requestFactory(requestFactory)
-            .build();
+    requestFactory.setReadTimeout(Duration.ofSeconds(configuration.timeoutSeconds()));
+    return RestClient.builder()
+        .baseUrl(configuration.baseUrl())
+        .requestFactory(requestFactory)
+        .build();
   }
 
   @Override
   public TranscriptionResult transcribe(Path audioChunk, TranscriptionRequest request) {
-    if (apiKey.isBlank() || model.isBlank()) {
+    RuntimeIntegrationSettings.Asr configuration = settings.current().asr();
+    if (!configuration.configured()) {
       throw new TranscriptionProviderException("ASR 服务尚未配置");
     }
     try {
       MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
       body.add("file", new FileSystemResource(audioChunk));
-      body.add("model", model);
+      body.add("model", configuration.model());
       body.add("response_format", "verbose_json");
       body.add("timestamp_granularities[]", "segment");
       if (request.language() != null && !request.language().isBlank()) {
         body.add("language", request.language());
       }
       String response =
-          http.post()
+          client(configuration)
+              .post()
               .uri("/audio/transcriptions")
-              .header("Authorization", "Bearer " + apiKey)
+              .header("Authorization", "Bearer " + configuration.apiKey())
               .contentType(MediaType.MULTIPART_FORM_DATA)
               .body(body)
               .retrieve()
               .body(String.class);
-      return parse(response, request.chunkStartMs());
+      return parse(response, request.chunkStartMs(), configuration.model());
     } catch (TranscriptionProviderException exception) {
       throw exception;
     } catch (Exception exception) {
@@ -78,7 +93,8 @@ public class OpenAiCompatibleTranscriptionProvider implements TranscriptionProvi
     }
   }
 
-  private TranscriptionResult parse(String response, long chunkStartMs) throws Exception {
+  private TranscriptionResult parse(String response, long chunkStartMs, String model)
+      throws Exception {
     JsonNode root = json.readTree(response);
     List<TranscriptionSegment> segments = new ArrayList<>();
     JsonNode values = root.path("segments");

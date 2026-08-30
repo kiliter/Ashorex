@@ -1,23 +1,34 @@
 package com.shangan.media.emby;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.shangan.common.integration.IntegrationSettingsProvider;
+import com.shangan.common.integration.RuntimeIntegrationSettings;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-/** 固定的 Emby 服务端配置，禁止从客户端请求中覆盖主机或密钥。 */
+/** 从服务端运行时配置提供者读取固定 Emby 目标，禁止普通客户端按请求覆盖。 */
 @Component
-public record EmbyProperties(String baseUrl, String apiKey, String userId) {
+public class EmbyProperties {
+  private final IntegrationSettingsProvider settings;
 
-  public EmbyProperties(
-      @Value("${app.emby.base-url:}") String baseUrl,
-      @Value("${app.emby.api-key:}") String apiKey,
-      @Value("${app.emby.user-id:}") String userId) {
-    this.baseUrl = baseUrl == null ? "" : baseUrl.replaceAll("/+$", "");
-    this.apiKey = apiKey == null ? "" : apiKey;
-    this.userId = userId == null ? "" : userId;
+  @Autowired
+  public EmbyProperties(IntegrationSettingsProvider settings) {
+    this.settings = settings;
   }
 
-  /** 仅判断所需配置是否齐全，不输出任何配置值。 */
-  public boolean configured() {
-    return !baseUrl.isBlank() && !apiKey.isBlank();
+  /** 为不启动 Spring 的媒体契约测试提供固定快照，生产环境使用运行时 Provider 构造器。 */
+  public EmbyProperties(String baseUrl, String apiKey, String userId) {
+    this(
+        () ->
+            new RuntimeIntegrationSettings(
+                new RuntimeIntegrationSettings.Emby(baseUrl, apiKey, userId),
+                new RuntimeIntegrationSettings.Llm("", "", "", 16_000, 0.2, 120),
+                new RuntimeIntegrationSettings.Asr("", "", "", 120),
+                new RuntimeIntegrationSettings.Mcp("", "", "web_search,web_extract", 20),
+                0));
+  }
+
+  /** 取得单次 Emby 操作应使用的不可变配置快照。 */
+  public RuntimeIntegrationSettings.Emby current() {
+    return settings.current().emby();
   }
 }

@@ -1,5 +1,6 @@
 package com.shangan.ai.transcript;
 
+import com.shangan.common.integration.RuntimeIntegrationSettings;
 import com.shangan.media.emby.EmbyProperties;
 import java.net.URI;
 import java.util.Map;
@@ -16,15 +17,16 @@ class EmbyTranscriptionMediaSource {
   }
 
   Source resolve(String embyItemId) {
-    if (!properties.configured()) throw new MediaSourceException("Emby 服务尚未配置");
+    RuntimeIntegrationSettings.Emby configuration = properties.current();
+    if (!configuration.configured()) throw new MediaSourceException("Emby 服务尚未配置");
     URI uri =
-        UriComponentsBuilder.fromUriString(properties.baseUrl())
+        UriComponentsBuilder.fromUriString(configuration.baseUrl())
             .pathSegment("Videos", embyItemId, "stream")
             .queryParam("Static", true)
             .build()
             .encode()
             .toUri();
-    return new Source(uri, Map.of("X-Emby-Token", properties.apiKey()));
+    return new Source(uri, Map.of("X-Emby-Token", configuration.apiKey()));
   }
 
   record Source(URI uri, Map<String, String> headers) {}

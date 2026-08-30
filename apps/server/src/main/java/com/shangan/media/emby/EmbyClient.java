@@ -1,6 +1,7 @@
 package com.shangan.media.emby;
 
 import com.shangan.common.api.BusinessException;
+import com.shangan.common.integration.RuntimeIntegrationSettings;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -26,14 +27,15 @@ public class EmbyClient implements EmbyGateway {
   /** 查询固定父节点下的视频，并将 Emby ticks 转换成业务毫秒。 */
   @Override
   public List<EmbyDtos.MediaItem> listChildren(String parentItemId) {
-    if (!properties.configured()) {
+    RuntimeIntegrationSettings.Emby configuration = properties.current();
+    if (!configuration.configured()) {
       throw unavailable();
     }
     try {
       String body =
           RestClient.builder()
-              .baseUrl(properties.baseUrl())
-              .defaultHeader("X-Emby-Token", properties.apiKey())
+              .baseUrl(configuration.baseUrl())
+              .defaultHeader("X-Emby-Token", configuration.apiKey())
               .build()
               .get()
               .uri(
