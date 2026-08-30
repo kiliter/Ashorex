@@ -1,0 +1,35 @@
+README.md
+  s_4d8f86932c7463::t_43703806592900 1-20
+docs/adr/0002-modular-monolith-sqlite.md
+  s_4d8f86932c7463::t_43703806592900 1-29
+Makefile
+  s_4d8f86932c7463::t_43703806592900 1-20
+.editorconfig
+  s_4d8f86932c7463::t_43703806592900 1-24
+docs/adr/0004-read-only-ai.md
+  s_4d8f86932c7463::t_43703806592900 1-39
+.gitignore
+  s_4d8f86932c7463::t_43703806592900 1-33
+docs/adr/0001-ios-only-v1.md
+  s_4d8f86932c7463::t_43703806592900 1-25
+.env.example
+  s_4d8f86932c7463::t_43703806592900 1-37
+docs/adr/0003-emby-media-provider.md
+  s_4d8f86932c7463::t_43703806592900 1-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "a965da571bcc53fb2576024c089ae9f342390246",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
