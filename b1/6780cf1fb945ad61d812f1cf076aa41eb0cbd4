@@ -1,0 +1,72 @@
+apps/server/src/main/java/com/shangan/exam/infrastructure/ExamGoalRepository.java
+  s_4d8f86932c7463::t_857d88fba770bc 1-13
+apps/ios/integration_test/app_shell_smoke_test.dart
+  s_4d8f86932c7463::t_7b0def43fddd03 10-11,33,50-77
+  s_4d8f86932c7463::t_5c2585c38c8c38 78-79
+apps/server/src/main/java/com/shangan/exam/domain/ExamGoal.java
+  s_4d8f86932c7463::t_857d88fba770bc 1-20
+apps/server/src/main/java/com/shangan/exam/application/ExamProgressCalculator.java
+  s_4d8f86932c7463::t_857d88fba770bc 1-67
+apps/ios/lib/features/exam/data/exam_repository.dart
+  s_4d8f86932c7463::t_ad4d1dba57fdc8 1-95
+apps/server/src/main/resources/db/migration/V004__exam_goals.sql
+  s_4d8f86932c7463::t_857d88fba770bc 1-24
+apps/ios/lib/features/exam/presentation/exam_goal_page.dart
+  s_4d8f86932c7463::t_f469a2ffffa37c 89-92,162-166
+  s_4d8f86932c7463::t_ad4d1dba57fdc8 1-88,93-161,167-182
+apps/server/src/main/java/com/shangan/exam/application/EmptyExamLearningProgress.java
+  s_4d8f86932c7463::t_857d88fba770bc 1-14
+apps/server/src/main/java/com/shangan/dashboard/DashboardController.java
+  s_4d8f86932c7463::t_f469a2ffffa37c 28
+  s_4d8f86932c7463::t_857d88fba770bc 1-27,29-41
+apps/server/src/main/java/com/shangan/exam/application/ExamLearningProgressPort.java
+  s_4d8f86932c7463::t_857d88fba770bc 1-11
+apps/ios/lib/app/router.dart
+  s_4d8f86932c7463::t_ad4d1dba57fdc8 7,39-42
+apps/ios/lib/app/bootstrap.dart
+  s_4d8f86932c7463::t_ad4d1dba57fdc8 9-10,29-30,38-39
+apps/server/src/main/java/com/shangan/exam/application/ExamGoalService.java
+  s_4d8f86932c7463::t_857d88fba770bc 1-90,93-119
+  s_4d8f86932c7463::t_f469a2ffffa37c 91-92
+apps/ios/lib/features/dashboard/presentation/app_shell.dart
+  s_4d8f86932c7463::t_ad4d1dba57fdc8 6,20
+apps/ios/test/features/dashboard/home_page_test.dart
+  s_4d8f86932c7463::t_7b0def43fddd03 1-55
+apps/server/src/test/java/com/shangan/exam/ExamProgressCalculatorTest.java
+  s_4d8f86932c7463::t_f469a2ffffa37c 23
+  s_4d8f86932c7463::t_4c7e79df0b6f86 1-22,24-37
+apps/server/src/main/java/com/shangan/exam/api/ExamController.java
+  s_4d8f86932c7463::t_857d88fba770bc 1-86
+apps/ios/lib/features/dashboard/data/dashboard_repository.dart
+  s_4d8f86932c7463::t_ad4d1dba57fdc8 1-70,72-91,94-98
+  s_4d8f86932c7463::t_f469a2ffffa37c 71,92-93
+apps/ios/lib/core/api/api_client.dart
+  s_4d8f86932c7463::t_ad4d1dba57fdc8 60-72
+apps/server/src/main/java/com/shangan/exam/infrastructure/JdbcExamGoalRepository.java
+  s_4d8f86932c7463::t_857d88fba770bc 1-93
+apps/server/src/test/java/com/shangan/dashboard/DashboardApiTest.java
+  s_4d8f86932c7463::t_f469a2ffffa37c 116-117
+  s_4d8f86932c7463::t_4c7e79df0b6f86 1-50,64-115,118-122
+  s_4d8f86932c7463::t_37e60cd75562b5 51-63
+apps/ios/lib/features/dashboard/presentation/home_page.dart
+  s_4d8f86932c7463::t_ad4d1dba57fdc8 1-93
+apps/ios/test/features/dashboard/app_shell_test.dart
+  s_4d8f86932c7463::t_7b0def43fddd03 8,10,26,39-66
+  s_4d8f86932c7463::t_0ac7fab4b266e8 67-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "b16780cf1fb945ad61d812f1cf076aa41eb0cbd4",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
