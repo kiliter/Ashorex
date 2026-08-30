@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
 import 'package:shangan_ios/features/planning/data/plan_repository.dart';
 
-/// 展示课程课时；播放会话和加入计划由后续学习/计划 Task 接管。
+/// 展示课时并分别提供直接学习与加入今日 DRAFT 计划入口。
 final class CourseDetailPage extends ConsumerWidget {
   const CourseDetailPage({required this.courseId, super.key});
 
@@ -41,25 +42,21 @@ final class CourseDetailPage extends ConsumerWidget {
                   leading: const Icon(Icons.play_circle_outline),
                   title: Text(lesson.title),
                   subtitle: Text('${(lesson.durationMs / 60000).ceil()} 分钟'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () async {
-                    try {
-                      await ref
-                          .read(planRepositoryProvider)
-                          .addVideo(lesson.id);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('已加入今日 DRAFT 计划')),
-                        );
-                      }
-                    } catch (_) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('当前计划不可修改或加入失败')),
-                        );
-                      }
-                    }
-                  },
+                  trailing: IconButton(
+                    constraints: const BoxConstraints.tightFor(
+                      width: 48,
+                      height: 48,
+                    ),
+                    tooltip: '加入今日计划',
+                    icon: const Icon(Icons.playlist_add),
+                    onPressed: () => _addToPlan(context, ref, lesson.id),
+                  ),
+                  onTap: () => context.push(
+                    Uri(
+                      path: '/player/${lesson.id}',
+                      queryParameters: {'title': lesson.title},
+                    ).toString(),
+                  ),
                 ),
               ),
             ],
@@ -67,5 +64,24 @@ final class CourseDetailPage extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<void> _addToPlan(
+    BuildContext context,
+    WidgetRef ref,
+    String lessonId,
+  ) async {
+    try {
+      await ref.read(planRepositoryProvider).addVideo(lessonId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('已加入今日 DRAFT 计划')));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('当前计划不可修改或加入失败')));
+      }
+    }
   }
 }

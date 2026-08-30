@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/features/planning/data/plan_repository.dart';
 import 'package:shangan_ios/features/planning/presentation/abandon_plan_sheet.dart';
 import 'package:shangan_ios/features/planning/presentation/lock_plan_sheet.dart';
@@ -51,6 +52,17 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
                     '${item.itemType} · ${item.completedSeconds}/${item.plannedSeconds} 秒',
                   ),
                   trailing: Text(item.status),
+                  onTap: plan.status == 'LOCKED' && item.mediaItemId != null
+                      ? () => context.push(
+                          Uri(
+                            path: '/player/${item.mediaItemId}',
+                            queryParameters: {
+                              'planItemId': item.id,
+                              'title': item.title,
+                            },
+                          ).toString(),
+                        )
+                      : null,
                 ),
               ),
               if (plan.status == 'DRAFT') ...[

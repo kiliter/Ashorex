@@ -7,6 +7,7 @@ final class PlanItemData {
     required this.id,
     required this.itemType,
     required this.title,
+    required this.mediaItemId,
     required this.plannedSeconds,
     required this.completedSeconds,
     required this.status,
@@ -15,6 +16,7 @@ final class PlanItemData {
   final String id;
   final String itemType;
   final String title;
+  final String? mediaItemId;
   final int plannedSeconds;
   final int completedSeconds;
   final String status;
@@ -23,6 +25,7 @@ final class PlanItemData {
     id: json['id'] as String,
     itemType: json['itemType'] as String,
     title: json['title'] as String,
+    mediaItemId: json['mediaItemId'] as String?,
     plannedSeconds: (json['plannedSeconds'] as num).toInt(),
     completedSeconds: (json['completedSeconds'] as num).toInt(),
     status: json['status'] as String,
