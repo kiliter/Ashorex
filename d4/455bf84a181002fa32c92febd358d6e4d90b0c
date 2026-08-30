@@ -1,0 +1,19 @@
+docs/superpowers/specs/2026-08-30-admin-mobile-ui-design.md
+  s_4d8f86932c7463::t_a7986f6cf01c55 1-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "d4455bf84a181002fa32c92febd358d6e4d90b0c",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
