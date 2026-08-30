@@ -17,7 +17,7 @@
 - 后端只能运行一个实例，SQLite 文件必须位于本机磁盘。
 - AI 只读；禁止任何写工具。
 - 不使用 `langchain4j-agentic` 实验模块。
-- Emby、LLM、ASR、MCP 密钥不能进入 Flutter、日志或 API 响应。
+- Emby、LLM、ASR、MCP 密钥不能进入 Flutter、日志或业务 API 响应；仅允许存在于服务端存储和 ADMIN 配置页面。
 - 不使用 Redis、Kafka、向量数据库、微服务或对象存储。
 - 所有日期边界按用户时区处理，数据库时间统一 UTC Epoch Milliseconds。
 - 所有状态机和时间规则必须通过注入的 `java.time.Clock` 测试。
@@ -1830,6 +1830,86 @@ git commit -m "feat(ios): allow configuring the server address"
 
 ---
 
+### Task 18：Web 管理后台运行时外部服务配置
+
+**文件：**
+- 参考：`docs/adr/0006-admin-runtime-integration-settings.md`
+- 新建：`apps/server/src/main/java/com/shangan/common/integration/RuntimeIntegrationSettings.java`
+- 新建：`apps/server/src/main/java/com/shangan/common/integration/IntegrationSettingsProvider.java`
+- 新建：`apps/server/src/main/java/com/shangan/common/integration/RuntimeIntegrationSettingsRepository.java`
+- 新建：`apps/server/src/main/java/com/shangan/common/integration/JdbcRuntimeIntegrationSettingsRepository.java`
+- 新建：`apps/server/src/main/java/com/shangan/common/integration/RuntimeIntegrationSettingsService.java`
+- 新建：`apps/server/src/main/java/com/shangan/admin/IntegrationSettingsAdminController.java`
+- 新建：`apps/server/src/main/resources/templates/admin/integration-settings.html`
+- 新建：`apps/server/src/main/resources/db/migration/V012__runtime_integration_settings.sql`
+- 修改：`apps/server/src/main/java/com/shangan/ai/config/AiConfiguration.java`
+- 新建：`apps/server/src/main/java/com/shangan/ai/application/RuntimeAiChatEngine.java`
+- 修改：`apps/server/src/main/java/com/shangan/ai/transcript/OpenAiCompatibleTranscriptionProvider.java`
+- 修改：`apps/server/src/main/java/com/shangan/ai/transcript/OpenAiCompatibleSummaryProvider.java`
+- 修改：`apps/server/src/main/java/com/shangan/media/emby/EmbyProperties.java`
+- 修改：当前在启动时固定捕获配置的 Emby 适配器
+- 修改：`apps/server/src/main/java/com/shangan/admin/OperationsHealthService.java`
+- 修改：`apps/server/src/main/resources/templates/admin/fragments.html`
+- 测试：`apps/server/src/test/java/com/shangan/common/integration/RuntimeIntegrationSettingsServiceTest.java`
+- 测试：`apps/server/src/test/java/com/shangan/admin/IntegrationSettingsAdminTest.java`
+- 测试：`apps/server/src/test/java/com/shangan/ai/RuntimeAiConfigurationIntegrationTest.java`
+- 测试：`apps/server/src/test/java/com/shangan/ai/transcript/RuntimeTranscriptionConfigurationTest.java`
+- 测试：`apps/server/src/test/java/com/shangan/media/emby/RuntimeEmbyConfigurationTest.java`
+
+**接口：**
+- 提供 ADMIN Session 页面 `GET/POST /admin/settings/integrations`。
+- 为服务端外部适配器提供不可变的当前配置快照。
+- 不新增或修改 `/api/v1` 契约。
+
+- [ ] **步骤 1：编写配置来源优先级和持久化失败测试**
+
+断言：
+
+```text
+没有数据库记录 -> 使用整份环境变量快照
+存在数据库记录 -> 使用整份数据库快照
+数据库字段为空 -> 保持为空，不逐字段回退环境变量
+保存成功 -> 数据库和当前快照同时更新
+保存失败 -> 当前快照保持不变
+```
+
+- [ ] **步骤 2：增加追加式迁移和配置仓库**
+
+创建固定主键为 `default` 的单行模型，迁移时不预插入记录。`updated_at` 使用 UTC Epoch Milliseconds。Repository 方法仅负责读取和替换该行。
+
+- [ ] **步骤 3：实现校验和运行时原子刷新**
+
+校验固定 HTTP/HTTPS URL，不允许用户名、密码、Query 或 Fragment，但允许提供商固定路径。上下文 Token 数限制为 1,024–1,000,000，Temperature 为 0–2，LLM 超时为 1–600 秒，ASR 超时为 1–1,800 秒，MCP 超时为 1–120 秒。应用服务在一个短事务中写入整份配置，再原子发布不可变快照。不完整的服务配置仍可保存，但状态显示“未配置”。
+
+- [ ] **步骤 4：实现 ADMIN 配置页面**
+
+增加四个移动端优先配置区和一个统一保存操作。密码字段渲染当前值并提供显示/隐藏按钮。要求 ADMIN Session 和 CSRF，返回 `Cache-Control: no-store`，且不记录提交值。
+
+- [ ] **步骤 5：改造外部适配器读取配置快照**
+
+新的 AI 流、ASR 切片、摘要、MCP 连接和 Emby 请求在操作开始时读取当前快照。保留 Emby 和 MCP 固定目标校验。运行状态页面改为根据当前快照计算配置状态。
+
+- [ ] **步骤 6：运行窄测试和完整验证**
+
+```bash
+cd apps/server
+./mvnw -Dtest='*RuntimeIntegrationSettings*,IntegrationSettingsAdminTest,AdminSecurityTest' test
+cd ../..
+make format
+make verify
+```
+
+- [ ] **步骤 7：检查并提交**
+
+检查范围、CSRF、缓存响应头、日志、错误和密钥扫描，然后提交：
+
+```bash
+git add .
+git commit -m "feat(admin): configure runtime integrations"
+```
+
+---
+
 ## Cross-Task Review Gates
 
 After Tasks 1–4:
@@ -1896,6 +1976,15 @@ Unhealthy targets cannot replace the active address
 Switching server clears old credentials
 All Flutter repositories use one consistent origin
 Local Spring Boot health endpoint is reachable
+```
+
+Task 18 之后：
+
+```text
+ADMIN 可在一个页面配置 Emby、LLM、ASR 和 MCP
+保存后无需重启，新调用使用最新配置
+环境变量继续作为初始回退来源
+Flutter、业务 API、日志和错误不泄露密钥
 ```
 
 ---

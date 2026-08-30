@@ -102,6 +102,7 @@ V1 的价值判断标准：
 - 为视频配置单选题和判断题。
 - 查看并重试转写任务。
 - 查看基础运行状态。
+- 配置 Emby、LLM、ASR 和 MCP，保存后对新调用立即生效。
 
 ### 3.2 明确不做
 
@@ -447,7 +448,7 @@ AI 不直接接收每个长视频的全部原始文本。后端采用分段转�
 - 一个本机 SQLite 文件。
 - SQLite 文件不得放在 NFS 或远程共享盘。
 - Emby 可以是同机或独立 NAS。
-- 所有外部密钥只保存在服务端环境变量中。
+- 外部密钥的初始值来自服务端环境变量；管理员保存后可保存在服务端 SQLite 中。
 - iOS 不接触 Emby API Key、LLM Key、ASR Key 或 MCP 凭据。
 
 ---
@@ -982,6 +983,17 @@ PRAGMA synchronous = NORMAL;
 - `model_name`
 - `generated_at`
 
+#### `runtime_integration_settings`
+
+- `id`，固定为 `default`
+- Emby Base URL、API Key、用户 ID
+- LLM Base URL、API Key、模型、最大上下文 Token、Temperature、超时
+- ASR Base URL、API Key、模型、超时
+- MCP URL、Bearer Token、允许工具、超时
+- `updated_at`
+
+表中不存在记录时使用环境变量初始值；一旦管理员保存，数据库中的整份配置成为运行时来源。
+
 #### `ai_conversations`
 
 - `id`
@@ -1146,7 +1158,7 @@ error
 
 ### 12.1 配置
 
-服务端环境变量：
+服务端环境变量提供初始配置：
 
 ```text
 EMBY_BASE_URL
@@ -1160,6 +1172,7 @@ EMBY_USER_ID
 - 使用只允许访问学习媒体库的 Emby 用户。
 - Flutter 永远不能拿到 Emby API Key。
 - Emby 地址只允许配置一个固定可信源，防止 SSRF。
+- 管理员可在 `/admin/settings/integrations` 修改配置；保存后新请求立即使用新配置。
 
 ### 12.2 同步
 
@@ -1280,7 +1293,7 @@ public interface TranscriptionProvider {
 }
 ```
 
-V1 提供 OpenAI-compatible HTTP 实现，通过环境变量配置：
+V1 提供 OpenAI-compatible HTTP 实现，环境变量提供初始值，管理员后台可保存运行时配置：
 
 ```text
 ASR_BASE_URL
@@ -1330,6 +1343,8 @@ LLM_TEMPERATURE
 
 兼容 OpenAI 风格接口。
 
+环境变量提供初始值。管理员可在内部后台保存运行时配置；新的 AI 流读取保存后的不可变配置快照，无需重启服务。
+
 ### 14.3 内部只读工具
 
 ```text
@@ -1355,6 +1370,8 @@ WEB_SEARCH_MCP_ALLOWED_TOOLS
 ```
 
 V1 优先 Streamable HTTP。
+
+环境变量提供初始值，管理员后台保存后新建 MCP 连接使用最新配置。
 
 安全：
 
@@ -1543,6 +1560,7 @@ App 生命周期：
 /admin/lessons/{id}/questions
 /admin/transcriptions
 /admin/health
+/admin/settings/integrations
 ```
 
 权限：
@@ -1552,6 +1570,8 @@ App 生命周期：
 - Cookie 使用 HttpOnly、Secure、SameSite=Lax。
 - 登录失败有基本限速。
 - 首个管理员通过环境变量引导创建，首次启动后要求修改密码。
+- 管理员可统一配置 Emby、LLM、ASR 和 MCP；密码字段支持显示和隐藏。
+- 配置页面禁止缓存，保存操作使用 CSRF，保存成功后对新调用立即生效。
 
 V1 后台功能以可用为主，不做复杂设计系统。
 
@@ -1565,7 +1585,7 @@ V1 后台功能以可用为主，不做复杂设计系统。
 - JWT Secret 至少 32 字节随机值。
 - Refresh Token 数据库存哈希，不存明文。
 - 密码使用 BCrypt strength 12。
-- Emby API Key、LLM Key、ASR Key、MCP Token 只在后端。
+- Emby API Key、LLM Key、ASR Key、MCP Token 只允许存在于服务端存储和 ADMIN 配置页面，不得进入 Flutter、业务 API、日志或错误响应。
 - 播放代理固定目标，禁止用户传任意 URL。
 - HLS 路径重写需防目录穿越。
 - 所有资源查询校验当前用户所有权。
@@ -1808,7 +1828,7 @@ Spring Boot Container
 - Docker 容器限制 FFmpeg 和服务内存。
 - 媒体代理不设置过小的反向代理超时。
 
-环境变量：
+环境变量提供首次启动和未保存后台配置时的初始值：
 
 ```text
 APP_BASE_URL
@@ -1834,6 +1854,8 @@ QUIZ_DEBT_ESTIMATE_SECONDS
 DATA_DIR
 BACKUP_DIR
 ```
+
+管理员可通过 `/admin/settings/integrations` 将 Emby、LLM、ASR 和 MCP 配置保存到 SQLite。数据库中存在配置后，整份数据库配置优先于环境变量；SQLite 备份包含这些配置。
 
 ---
 
@@ -1955,6 +1977,15 @@ BACKUP_DIR
 5. App 无需进程重启即可重建全部网络依赖。
 6. 登录页显示新服务器，用户可使用新服务器账号登录。
 
+### 场景 G：后台配置外部服务
+
+1. 管理员进入服务配置页。
+2. 页面显示环境变量或数据库中的当前有效配置。
+3. 管理员修改 LLM、ASR、MCP 和 Emby 配置并保存。
+4. 配置无需重启即可供新调用使用。
+5. 非管理员、缺少 CSRF 和非法 URL 的写入被拒绝。
+6. Flutter、业务 API、日志和错误响应不包含密钥。
+
 ---
 
 ## 28. Definition of Done
@@ -1974,6 +2005,7 @@ V1 只有同时满足以下条件才完成：
 - 文档、环境变量和运行命令完整。
 - 没有 Android、Web、微服务、Redis、向量库等越界实现。
 - 服务端地址切换经过健康检查，且不会向新服务器发送旧 Token。
+- 管理员保存外部服务配置后，新调用无需重启即可使用最新配置。
 
 ---
 
@@ -1995,6 +2027,7 @@ V1 只有同时满足以下条件才完成：
 12. AI 普通问答、只读工具和 MCP。
 13. 视频 AI。
 14. 运维、备份、真机验收和 TestFlight。
+15. Web 后台运行时外部服务配置。
 
 每个切片必须独立测试、独立提交，不允许先铺满空壳再统一补实现。
 
