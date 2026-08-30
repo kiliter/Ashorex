@@ -1742,6 +1742,93 @@ git tag -a v0.1.0-rc1 -m "上岸 V1 release candidate 1"
 
 ---
 
+### Task 17: Configurable Flutter Server Address and Local Development Runtime
+
+**Files:**
+- Create: `apps/ios/lib/core/config/server_configuration.dart`
+- Create: `apps/ios/lib/core/config/server_configuration_store.dart`
+- Create: `apps/ios/lib/core/config/server_health_checker.dart`
+- Create: `apps/ios/lib/app/application_bootstrap.dart`
+- Create: `apps/ios/lib/features/auth/presentation/server_settings_page.dart`
+- Modify: `apps/ios/lib/main.dart`
+- Modify: `apps/ios/lib/app/bootstrap.dart`
+- Modify: `apps/ios/lib/features/auth/presentation/login_page.dart`
+- Test: `apps/ios/test/core/config/server_configuration_test.dart`
+- Test: `apps/ios/test/core/config/server_configuration_store_test.dart`
+- Test: `apps/ios/test/app/application_bootstrap_test.dart`
+- Test: `apps/ios/test/features/auth/server_settings_page_test.dart`
+- Update: `apps/ios/README.md`
+
+**Interfaces:**
+- Consumes public `/actuator/health`.
+- Produces a persisted, validated server origin and a root dependency rebuild callback.
+- Does not change the OpenAPI business contract.
+
+- [ ] **Step 1: Write failing configuration tests**
+
+Assert:
+
+```text
+http/https origin -> accepted and trailing slash removed
+missing host or unsupported scheme -> rejected
+userinfo/query/fragment/API subpath -> rejected
+saved address -> overrides API_BASE_URL
+empty saved address -> falls back to API_BASE_URL
+```
+
+- [ ] **Step 2: Implement server configuration and persistence**
+
+Use `SharedPreferences` only for the non-sensitive address. Do not persist Token or business data in this store.
+
+- [ ] **Step 3: Write health-check and switching tests**
+
+Assert:
+
+```text
+2xx + status UP -> address may be saved
+timeout/non-2xx/status not UP -> old address remains active
+successful switch -> Access/Refresh Token cleared
+successful switch -> all repositories use the new origin
+successful switch -> authentication state is unauthenticated
+```
+
+- [ ] **Step 4: Implement root dependency rebuild**
+
+Extract dependency construction from the one-shot `bootstrap()` function into a stateful root component. The root owns the current configuration, Token Store, AuthController and Repository graph. After a successful switch, dispose the old graph and rebuild all providers from the new address.
+
+- [ ] **Step 5: Implement login-page server settings**
+
+Add a top-right action on the login page. The configuration page validates input, performs unauthenticated `/actuator/health`, saves only after success, and displays Chinese error messages. The login page displays the current host and port.
+
+- [ ] **Step 6: Start and verify the local server**
+
+Start Spring Boot with non-committed development secrets and a workspace-local SQLite directory. Verify:
+
+```bash
+curl http://127.0.0.1:8080/actuator/health
+```
+
+Expected: HTTP 200 and `status=UP`.
+
+- [ ] **Step 7: Run verification**
+
+```bash
+cd apps/ios
+fvm flutter test test/core/config test/app/application_bootstrap_test.dart test/features/auth/server_settings_page_test.dart
+cd ../..
+make format
+make verify
+```
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add .
+git commit -m "feat(ios): allow configuring the server address"
+```
+
+---
+
 ## Cross-Task Review Gates
 
 After Tasks 1–4:
@@ -1798,6 +1885,16 @@ Backup restore proven
 Physical iPhone flow proven
 All acceptance tests pass
 Release candidate is reproducible
+```
+
+After Task 17:
+
+```text
+Server address is configurable before login
+Unhealthy targets cannot replace the active address
+Switching server clears old credentials
+All Flutter repositories use one consistent origin
+Local Spring Boot health endpoint is reachable
 ```
 
 ---
