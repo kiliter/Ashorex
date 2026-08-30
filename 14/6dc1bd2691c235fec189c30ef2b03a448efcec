@@ -1,0 +1,19 @@
+docs/superpowers/specs/2026-08-30-sdkman-java21-design.md
+  s_4d8f86932c7463::t_90e33cfe4e68e2 1-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "146dc1bd2691c235fec189c30ef2b03a448efcec",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
