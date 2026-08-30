@@ -247,8 +247,34 @@ public class DailyPlanService implements PlanProgressPort {
   @Override
   @Transactional
   public void markQuizCompleted(String userId, String planItemId) {
-    var update = plans.markQuizCompleted(userId, planItemId, clock.instant());
+    PlanItem item = plans.findOwnedItem(userId, planItemId).orElseThrow(() -> notFound("计划任务不存在"));
+    Instant now = clock.instant();
+    var update = plans.markQuizCompleted(userId, planItemId, now);
+    if (item.itemType().equals("DEBT_REPAYMENT") || item.itemType().equals("QUIZ")) {
+      update = plans.updateAbsoluteProgress(userId, planItemId, item.plannedSeconds(), now);
+      debts.reconcileRepayment(
+          userId, update.after().debtId(), planItemId, update.positiveDelta(), now);
+    }
     completePlanIfSatisfied(userId, update.after().planId());
+  }
+
+  /** 只接受普通视频题、独立题目任务或精确关联 QUIZ 欠债的还债任务。 */
+  @Override
+  @Transactional(readOnly = true)
+  public void validateQuizLink(String userId, String planItemId, String mediaItemId) {
+    if (planItemId == null) return;
+    PlanItem item = plans.findOwnedItem(userId, planItemId).orElseThrow(() -> notFound("计划任务不存在"));
+    boolean supported = item.itemType().equals("VIDEO") || item.itemType().equals("QUIZ");
+    if (item.itemType().equals("DEBT_REPAYMENT")) {
+      LearningDebt debt =
+          debts
+              .findDebt(userId, item.debtId())
+              .orElseThrow(() -> invalid("PLAN_DEBT_INVALID", "关联的答题欠债不存在"));
+      supported = debt.debtType().equals("QUIZ") && mediaItemId.equals(debt.mediaItemId());
+    }
+    if (!supported || !mediaItemId.equals(item.mediaItemId())) {
+      throw invalid("PLAN_ITEM_MEDIA_MISMATCH", "计划任务与答题课时不匹配");
+    }
   }
 
   @Transactional(readOnly = true)

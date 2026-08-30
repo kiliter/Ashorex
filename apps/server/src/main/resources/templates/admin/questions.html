@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>课后题管理 - 上岸</title>
+  </head>
+  <body>
+    <main>
+      <h1 th:text="|${lesson.title} · 课后题|">课后题管理</h1>
+      <p>
+        <a th:href="@{/admin/courses/{courseId}/lessons(courseId=${lesson.courseId})}">返回课时列表</a>
+        <a th:href="@{/admin/lessons/{lessonId}/questions/new(lessonId=${lesson.id})}">新增题目</a>
+      </p>
+      <p th:if="${#lists.isEmpty(questions)}">暂未配置题目；锁定计划时不会要求答题。</p>
+      <ol>
+        <li th:each="question : ${questions}">
+          <span th:text="${question.content}">题目</span>
+          <span th:text="${question.questionType == 'TRUE_FALSE' ? '判断题' : '单选题'}">题型</span>
+          <strong th:text="${question.enabled ? '已启用' : '已禁用'}">状态</strong>
+          <a
+            th:href="@{/admin/lessons/{lessonId}/questions/{questionId}(lessonId=${lesson.id},questionId=${question.id})}"
+            >编辑</a
+          >
+        </li>
+      </ol>
+    </main>
+  </body>
+</html>

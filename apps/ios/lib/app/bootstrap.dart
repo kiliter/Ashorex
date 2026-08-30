@@ -11,6 +11,7 @@ import 'package:shangan_ios/features/exam/data/exam_repository.dart';
 import 'package:shangan_ios/features/planning/data/plan_repository.dart';
 import 'package:shangan_ios/features/player/data/watch_repository.dart';
 import 'package:shangan_ios/features/profile/data/preferences_repository.dart';
+import 'package:shangan_ios/features/quiz/data/quiz_repository.dart';
 
 /// 初始化生产依赖；API 地址由构建参数提供，默认值仅用于本机开发。
 Future<void> bootstrap() async {
@@ -36,6 +37,7 @@ Future<void> bootstrap() async {
     baseUrl: baseUrl,
     deviceId: await loadOrCreatePlayerDeviceId(),
   );
+  final quizRepository = RemoteQuizRepository(apiClient);
 
   await authController.initialize();
   runApp(
@@ -47,6 +49,7 @@ Future<void> bootstrap() async {
         examRepositoryProvider.overrideWithValue(examRepository),
         planRepositoryProvider.overrideWithValue(planRepository),
         watchRepositoryProvider.overrideWithValue(watchRepository),
+        quizRepositoryProvider.overrideWithValue(quizRepository),
         preferencesRepositoryProvider.overrideWithValue(preferencesRepository),
       ],
       child: ShanganApp(authController: authController),

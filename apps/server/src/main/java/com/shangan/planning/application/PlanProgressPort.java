@@ -9,4 +9,7 @@ public interface PlanProgressPort {
       String userId, String planItemId, long absoluteCompletedSeconds, boolean watchCompleted);
 
   void markQuizCompleted(String userId, String planItemId);
+
+  /** 答题提交前校验任务所有权、任务组成类型以及关联视频。 */
+  void validateQuizLink(String userId, String planItemId, String mediaItemId);
 }

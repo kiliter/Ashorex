@@ -178,11 +178,25 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
                         ],
                       ),
                       const SizedBox(height: 12),
-                      if (state.completed)
+                      if (state.completed) ...[
                         const ListTile(
                           leading: Icon(Icons.check_circle_outline),
                           title: Text('已达到可信观看完成阈值'),
                         ),
+                        FilledButton.icon(
+                          onPressed: () => context.push(
+                            Uri(
+                              path: '/quiz/${widget.lessonId}',
+                              queryParameters: {
+                                if (widget.planItemId != null)
+                                  'planItemId': widget.planItemId!,
+                              },
+                            ).toString(),
+                          ),
+                          icon: const Icon(Icons.quiz_outlined),
+                          label: const Text('开始课后答题'),
+                        ),
+                      ],
                       if (state.networkError)
                         FilledButton.tonalIcon(
                           onPressed: _controller.play,

@@ -13,6 +13,8 @@ public interface DebtRepository {
 
   List<LearningDebt> findOpenVideoByMedia(String userId, String mediaItemId);
 
+  List<LearningDebt> findOpenQuizByMedia(String userId, String mediaItemId);
+
   void insertIfAbsent(LearningDebt debt, Instant now);
 
   long sumOpenSeconds(String userId);

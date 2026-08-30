@@ -9,6 +9,7 @@ import 'package:shangan_ios/features/exam/presentation/exam_goal_page.dart';
 import 'package:shangan_ios/features/planning/presentation/plan_page.dart';
 import 'package:shangan_ios/features/player/presentation/learning_player_page.dart';
 import 'package:shangan_ios/features/profile/presentation/settings_page.dart';
+import 'package:shangan_ios/features/quiz/presentation/quiz_page.dart';
 
 /// 创建受认证状态驱动的根路由，业务页面不自行判断 Token。
 GoRouter createRouter(AuthController authController) {
@@ -57,6 +58,13 @@ GoRouter createRouter(AuthController authController) {
         path: '/courses/:courseId',
         builder: (context, state) =>
             CourseDetailPage(courseId: state.pathParameters['courseId']!),
+      ),
+      GoRoute(
+        path: '/quiz/:lessonId',
+        builder: (context, state) => QuizPage(
+          lessonId: state.pathParameters['lessonId']!,
+          planItemId: state.uri.queryParameters['planItemId'],
+        ),
       ),
       GoRoute(
         path: '/settings',

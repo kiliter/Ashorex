@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,9 +76,24 @@ public class DefaultDebtService implements DebtService {
   }
 
   @Override
+  @Transactional
+  public void settleOpenQuizDebt(String userId, String mediaItemId, Instant now) {
+    for (LearningDebt debt : debts.findOpenQuizByMedia(userId, mediaItemId)) {
+      debts.repay(
+          ids.nextId(), userId, debt.id(), null, debt.remainingSeconds(), "DIRECT_QUIZ", now);
+    }
+  }
+
+  @Override
   @Transactional(readOnly = true)
   public List<LearningDebt> openDebts(String userId) {
     return debts.findOpenByUser(userId);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<LearningDebt> findDebt(String userId, String debtId) {
+    return debtId == null ? Optional.empty() : debts.findOwned(userId, debtId);
   }
 
   @Override
