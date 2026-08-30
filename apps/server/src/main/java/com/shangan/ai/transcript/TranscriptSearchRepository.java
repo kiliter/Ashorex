@@ -112,7 +112,8 @@ public class TranscriptSearchRepository {
     return java.util.Arrays.stream(query.trim().split("\\s+"))
         .filter(term -> !term.isBlank())
         .map(term -> "\"" + term.replace("\"", "\"\"") + "\"")
-        .collect(java.util.stream.Collectors.joining(" AND "));
+        // 视频问答需要让分散在不同片段的关键词分别参与 Top 8 排序，不能要求同段全命中。
+        .collect(java.util.stream.Collectors.joining(" OR "));
   }
 
   public record TranscriptMatch(

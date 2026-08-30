@@ -50,6 +50,14 @@ app:
       api-key: ${LLM_API_KEY:}
       model: ${LLM_MODEL:}
       timeout: ${LLM_TIMEOUT:PT2M}
+      max-context-tokens: ${LLM_MAX_CONTEXT_TOKENS:16000}
+      temperature: ${LLM_TEMPERATURE:0.2}
+    mcp:
+      url: ${WEB_SEARCH_MCP_URL:}
+      bearer-token: ${WEB_SEARCH_MCP_BEARER_TOKEN:}
+      allowed-tools: ${WEB_SEARCH_MCP_ALLOWED_TOOLS:web_search,web_extract}
+      timeout: ${WEB_SEARCH_MCP_TIMEOUT:PT20S}
+      max-response-characters: 50000
     transcription:
       ffmpeg-path: ${FFMPEG_PATH:ffmpeg}
       ffprobe-path: ${FFPROBE_PATH:ffprobe}

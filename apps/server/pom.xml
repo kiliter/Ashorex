@@ -24,7 +24,21 @@
     <spotless-maven-plugin.version>3.10.0</spotless-maven-plugin.version>
     <!-- WireMock 稳定版本来自官方 3.x 安装文档，仅用于外部服务契约测试。 -->
     <wiremock.version>3.13.2</wiremock.version>
+    <!-- AI 依赖统一由冻结的 LangChain4j BOM 管理，禁止各模块自行猜测版本。 -->
+    <langchain4j.version>1.19.0</langchain4j.version>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-bom</artifactId>
+        <version>${langchain4j.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <!-- Web、认证、持久化、校验和健康检查基础能力。 -->
@@ -63,6 +77,20 @@
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-oauth2-resource-server</artifactId>
+    </dependency>
+
+    <!-- 仅使用 LangChain4j 核心、OpenAI-compatible 模型和 MCP；不引入 Agentic。 -->
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-open-ai</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-mcp</artifactId>
     </dependency>
 
     <!-- SQLite 驱动与 Flyway SQLite 数据库支持必须使用冻结版本。 -->
