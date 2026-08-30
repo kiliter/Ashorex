@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/features/catalog/presentation/course_list_page.dart';
+import 'package:shangan_ios/features/dashboard/presentation/home_page.dart';
 
 /// 登录后的五 Tab 根壳层；后续业务 Task 在各占位页内逐步落地。
 final class AppShell extends ConsumerStatefulWidget {
@@ -16,11 +17,7 @@ final class _AppShellState extends ConsumerState<AppShell> {
   int _selectedIndex = 0;
 
   static const _pages = <Widget>[
-    _ShellPlaceholder(
-      icon: Icons.home_outlined,
-      title: '首页',
-      message: '考试目标、今日计划和学习欠债将在这里汇总。',
-    ),
+    HomePage(),
     CourseListPage(),
     _ShellPlaceholder(
       icon: Icons.auto_awesome_outlined,

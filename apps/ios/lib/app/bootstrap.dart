@@ -6,6 +6,8 @@ import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/core/auth/auth_repository.dart';
 import 'package:shangan_ios/core/storage/token_store.dart';
 import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
+import 'package:shangan_ios/features/dashboard/data/dashboard_repository.dart';
+import 'package:shangan_ios/features/exam/data/exam_repository.dart';
 import 'package:shangan_ios/features/profile/data/preferences_repository.dart';
 
 /// 初始化生产依赖；API 地址由构建参数提供，默认值仅用于本机开发。
@@ -24,6 +26,8 @@ Future<void> bootstrap() async {
   apiClient.onAuthenticationLost = authController.handleAuthenticationLost;
   final preferencesRepository = RemotePreferencesRepository(apiClient);
   final catalogRepository = RemoteCatalogRepository(apiClient);
+  final dashboardRepository = RemoteDashboardRepository(apiClient);
+  final examRepository = RemoteExamRepository(apiClient);
 
   await authController.initialize();
   runApp(
@@ -31,6 +35,8 @@ Future<void> bootstrap() async {
       overrides: [
         authControllerProvider.overrideWithValue(authController),
         catalogRepositoryProvider.overrideWithValue(catalogRepository),
+        dashboardRepositoryProvider.overrideWithValue(dashboardRepository),
+        examRepositoryProvider.overrideWithValue(examRepository),
         preferencesRepositoryProvider.overrideWithValue(preferencesRepository),
       ],
       child: ShanganApp(authController: authController),

@@ -7,6 +7,8 @@ import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/core/auth/auth_repository.dart';
 import 'package:shangan_ios/core/storage/token_store.dart';
 import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
+import 'package:shangan_ios/features/dashboard/data/dashboard_repository.dart';
+import 'package:shangan_ios/features/exam/data/exam_repository.dart';
 import 'package:shangan_ios/features/profile/data/preferences_repository.dart';
 
 void main() {
@@ -28,6 +30,7 @@ void main() {
         overrides: [
           authControllerProvider.overrideWithValue(controller),
           catalogRepositoryProvider.overrideWithValue(_CatalogRepository()),
+          dashboardRepositoryProvider.overrideWithValue(_DashboardRepository()),
           preferencesRepositoryProvider.overrideWithValue(
             _MemoryPreferencesRepository(),
           ),
@@ -42,6 +45,36 @@ void main() {
       expect(find.text(label), findsWidgets);
     }
   });
+}
+
+final class _DashboardRepository implements DashboardRepository {
+  @override
+  Future<DashboardData> load() async => DashboardData(
+    exam: ExamGoal(
+      id: 'goal-1',
+      name: '国考',
+      examDate: DateTime(2026, 11),
+      targetCompletionDate: DateTime(2026, 10, 18),
+      reviewBufferDays: 14,
+      timezone: 'Asia/Shanghai',
+      courseIds: const ['course-1'],
+    ),
+    progressPressure: ProgressPressure(
+      daysUntilExam: 63,
+      daysUntilTarget: 49,
+      totalLessons: 1,
+      completedLessons: 0,
+      remainingLessons: 1,
+      requiredDailyPace: 0.02,
+      actualDailyPace: 0,
+      projectedFinishDate: null,
+      riskStatus: 'AT_RISK',
+    ),
+    todayPlanStatus: 'NONE',
+    openDebtSeconds: 0,
+    studyTodaySeconds: 0,
+    answerAccuracy: 0,
+  );
 }
 
 final class _CatalogRepository implements CatalogRepository {

@@ -57,6 +57,19 @@ final class ApiClient {
     }
   }
 
+  /// 读取允许以 204 表示资源尚未创建的单资源接口。
+  Future<Map<String, dynamic>?> getOptionalJson(String path) async {
+    try {
+      final response = await _dio.get<dynamic>(path);
+      if (response.statusCode == 204 || response.data == null) {
+        return null;
+      }
+      return _asJson(response.data);
+    } on DioException catch (exception) {
+      throw ApiException.fromDio(exception);
+    }
+  }
+
   /// 读取直接数组响应，列表接口不得额外套无意义包装对象。
   Future<List<Map<String, dynamic>>> getJsonList(String path) async {
     try {
