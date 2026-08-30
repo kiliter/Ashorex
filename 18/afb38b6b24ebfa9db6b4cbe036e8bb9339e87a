@@ -1,0 +1,21 @@
+README.md
+  s_4d8f86932c7463::t_9657f2219efc01 12-26
+.sdkmanrc
+  s_4d8f86932c7463::t_9657f2219efc01 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "18afb38b6b24ebfa9db6b4cbe036e8bb9339e87a",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
