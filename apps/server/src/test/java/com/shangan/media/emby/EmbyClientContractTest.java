@@ -45,7 +45,9 @@ class EmbyClientContractTest {
     EmbyClient client =
         new EmbyClient(
             new EmbyProperties(
-                "http://127.0.0.1:" + server.getAddress().getPort(), "server-secret-token"),
+                "http://127.0.0.1:" + server.getAddress().getPort(),
+                "server-secret-token",
+                "test-user"),
             new ObjectMapper());
 
     EmbyDtos.MediaItem item = client.listChildren("parent-1").getFirst();

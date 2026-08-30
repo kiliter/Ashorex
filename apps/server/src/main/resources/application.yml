@@ -34,6 +34,7 @@ app:
   emby:
     base-url: ${EMBY_BASE_URL:}
     api-key: ${EMBY_API_KEY:}
+    user-id: ${EMBY_USER_ID:}
   security:
     jwt-secret: ${JWT_SECRET:}
     bootstrap-admin-username: ${ADMIN_BOOTSTRAP_USERNAME:}

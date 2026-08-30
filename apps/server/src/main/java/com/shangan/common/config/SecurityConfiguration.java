@@ -68,6 +68,8 @@ public class SecurityConfiguration {
                 requests
                     .requestMatchers("/api/v1/auth/**", "/actuator/health")
                     .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/playback/**")
+                    .permitAll()
                     .requestMatchers(HttpMethod.GET, "/admin/login")
                     .permitAll()
                     .requestMatchers("/api/v1/**")

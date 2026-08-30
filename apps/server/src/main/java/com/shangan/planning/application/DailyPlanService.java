@@ -254,6 +254,16 @@ public class DailyPlanService implements PlanProgressPort {
     return plans.findLockedPlans();
   }
 
+  /** 学习模块创建会话前校验计划任务所有权、类型和关联课时。 */
+  @Transactional(readOnly = true)
+  public void validateVideoLink(String userId, String planItemId, String mediaItemId) {
+    if (planItemId == null) return;
+    PlanItem item = plans.findOwnedItem(userId, planItemId).orElseThrow(() -> notFound("计划任务不存在"));
+    if (!item.itemType().equals("VIDEO") || !mediaItemId.equals(item.mediaItemId())) {
+      throw invalid("PLAN_ITEM_MEDIA_MISMATCH", "计划任务与课时不匹配");
+    }
+  }
+
   private void completePlanIfSatisfied(String userId, String planId) {
     DailyPlan plan = plans.findOwnedPlan(userId, planId).orElseThrow();
     if (plan.status() == PlanStatus.LOCKED
