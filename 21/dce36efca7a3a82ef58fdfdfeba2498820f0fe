@@ -1,0 +1,60 @@
+apps/server/.mvn/wrapper/maven-wrapper.properties
+  s_4d8f86932c7463::t_9dbb006333ec67 1-3
+apps/server/src/main/java/com/shangan/common/config/SqliteConfiguration.java
+  s_4d8f86932c7463::t_8f64d49221a2a1 9-10,16-33,35-36,38-44
+  s_4d8f86932c7463::t_08dc1815be801d 1-8,11-15,34,37,45
+apps/server/src/main/java/com/shangan/common/IdGenerator.java
+  s_4d8f86932c7463::t_08dc1815be801d 1-5,8
+  s_4d8f86932c7463::t_8f64d49221a2a1 6-7
+apps/server/src/main/java/com/shangan/common/api/ApiExceptionHandler.java
+  s_4d8f86932c7463::t_08dc1815be801d 1-16,27,42,48
+  s_4d8f86932c7463::t_8f64d49221a2a1 17-26,28-41,43-47
+apps/server/src/main/java/com/shangan/common/api/BusinessException.java
+  s_4d8f86932c7463::t_08dc1815be801d 1-7,10,23,27,31
+  s_4d8f86932c7463::t_8f64d49221a2a1 8-9,11-22,24-26,28-30
+apps/server/src/main/resources/application.yml
+  s_4d8f86932c7463::t_08dc1815be801d 1-25
+apps/server/src/test/java/com/shangan/common/ProblemDetailTest.java
+  s_4d8f86932c7463::t_8f64d49221a2a1 25,27-35,43,45
+  s_4d8f86932c7463::t_9170657433ebd1 20,22
+  s_4d8f86932c7463::t_598c7e9c074944 37-39,41-42
+  s_4d8f86932c7463::t_08dc1815be801d 1-19,21,23-24,26,36,40,44,46
+apps/server/src/test/java/com/shangan/common/DatabaseBootstrapTest.java
+  s_4d8f86932c7463::t_783a5213aae039 1-17,19,21,28,39
+  s_4d8f86932c7463::t_8f64d49221a2a1 18,20,22-27,29-38
+apps/server/src/main/java/com/shangan/ShanganApplication.java
+  s_4d8f86932c7463::t_08dc1815be801d 1-9,11,16
+  s_4d8f86932c7463::t_8f64d49221a2a1 10,12-15
+apps/server/src/main/java/com/shangan/common/UuidIdGenerator.java
+  s_4d8f86932c7463::t_8f64d49221a2a1 10-13
+  s_4d8f86932c7463::t_08dc1815be801d 1-9,14
+apps/server/src/main/java/com/shangan/common/config/ApplicationConfiguration.java
+  s_4d8f86932c7463::t_8f64d49221a2a1 11-15
+  s_4d8f86932c7463::t_08dc1815be801d 1-10,16
+apps/server/pom.xml
+  s_4d8f86932c7463::t_783a5213aae039 1-48,53-75,82-119
+  s_4d8f86932c7463::t_08dc1815be801d 49-52
+  s_4d8f86932c7463::t_ba4b1765917682 76-81
+apps/server/src/main/resources/db/migration/V001__baseline.sql
+  s_4d8f86932c7463::t_08dc1815be801d 1-28
+apps/server/mvnw
+  s_4d8f86932c7463::t_82cf4fcdc8f686 1-295
+apps/server/mvnw.cmd
+  s_4d8f86932c7463::t_8573853216e406 1-189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "21dce36efca7a3a82ef58fdfdfeba2498820f0fe",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
