@@ -1,0 +1,84 @@
+apps/server/src/main/java/com/shangan/ai/transcript/OpenAiCompatibleTranscriptionProvider.java
+  s_4d8f86932c7463::t_3227994706ac4e 38-41
+  s_4d8f86932c7463::t_1b2a2f2fbd7030 13-14,56-60,62,69
+  s_4d8f86932c7463::t_4fdd6bc76e0e14 1-12,15-37,42-55,61,63-68,70-111
+apps/server/src/main/java/com/shangan/ai/transcript/TranscriptionStore.java
+  s_4d8f86932c7463::t_d57b1fe1840207 1-66,68,70-221
+  s_4d8f86932c7463::t_f9856d5a4b2b78 67,69
+apps/server/src/test/java/com/shangan/ai/transcript/OpenAiCompatibleTranscriptionProviderTest.java
+  s_4d8f86932c7463::t_f9856d5a4b2b78 26-27,37-38,71-72,78
+  s_4d8f86932c7463::t_4fdd6bc76e0e14 1-6,8-9,12-25,28-36,39-70,73-77,79-80
+  s_4d8f86932c7463::t_d6784f1b4199d6 7,10-11
+apps/server/src/main/java/com/shangan/admin/TranscriptionAdminController.java
+  s_4d8f86932c7463::t_d669ec6de9d3a7 1-40
+apps/server/src/main/java/com/shangan/ai/transcript/VideoSummaryService.java
+  s_4d8f86932c7463::t_3a09390d9a479d 1-47,49-59,61-104,106-112
+  s_4d8f86932c7463::t_f9856d5a4b2b78 48,60,105
+apps/server/src/main/java/com/shangan/ai/transcript/TranscriptionStatusController.java
+  s_4d8f86932c7463::t_f9856d5a4b2b78 18,28-29
+  s_4d8f86932c7463::t_d669ec6de9d3a7 1-17,19-27,30-35
+apps/server/src/test/java/com/shangan/ai/transcript/FfmpegAudioExtractorTest.java
+  s_4d8f86932c7463::t_a390226a4042bf 9,17-19,28,44,57,102-110
+  s_4d8f86932c7463::t_7c5c01655343f3 1-8,10-16,20-27,29-42,45-56,58-87,89-101,111-112
+  s_4d8f86932c7463::t_f9856d5a4b2b78 43
+  s_4d8f86932c7463::t_a71436f73e8aa0 88
+apps/server/src/main/java/com/shangan/ai/transcript/OpenAiCompatibleSummaryProvider.java
+  s_4d8f86932c7463::t_3a09390d9a479d 1-65,67-91,94-104
+  s_4d8f86932c7463::t_f9856d5a4b2b78 66,92-93
+apps/server/src/main/java/com/shangan/ai/transcript/FfmpegAudioExtractor.java
+  s_4d8f86932c7463::t_a4cb82087f0598 1-43,45-106,109-150,152-178,182-186,189-263
+  s_4d8f86932c7463::t_f9856d5a4b2b78 44,107-108,151,179-181,187-188
+apps/server/src/test/java/com/shangan/ai/transcript/TranscriptSearchRepositoryTest.java
+  s_4d8f86932c7463::t_b5144076b37aa6 1-87
+apps/server/src/test/java/com/shangan/ai/transcript/TranscriptionJobServiceTest.java
+  s_4d8f86932c7463::t_2df7ec9ad7ee78 6,89
+  s_4d8f86932c7463::t_99ea361ec4573a 1-5,7-80,82-88,90-103,105-137
+  s_4d8f86932c7463::t_f9856d5a4b2b78 81,104
+apps/server/src/main/resources/application.yml
+  s_4d8f86932c7463::t_cfcc92b65ef6b5 42-58
+apps/server/src/main/resources/templates/admin/transcriptions.html
+  s_4d8f86932c7463::t_d669ec6de9d3a7 1-63
+apps/server/src/test/java/com/shangan/ai/transcript/VideoSummaryServiceTest.java
+  s_4d8f86932c7463::t_76db297efa35ab 1-61
+apps/server/src/main/java/com/shangan/ai/transcript/TranscriptionProvider.java
+  s_4d8f86932c7463::t_4fdd6bc76e0e14 1-19
+apps/server/src/main/java/com/shangan/catalog/application/CourseSyncService.java
+  s_4d8f86932c7463::t_d669ec6de9d3a7 73-80
+apps/server/pom.xml
+  s_4d8f86932c7463::t_4fdd6bc76e0e14 25-26,101-104
+  s_4d8f86932c7463::t_43dc949e41d07b 105-106
+apps/server/src/main/java/com/shangan/ai/transcript/EmbyTranscriptionMediaSource.java
+  s_4d8f86932c7463::t_cfcc92b65ef6b5 1-37
+apps/server/src/main/java/com/shangan/ai/transcript/TranscriptionJobService.java
+  s_4d8f86932c7463::t_f9856d5a4b2b78 13,98,109,213
+  s_4d8f86932c7463::t_cfcc92b65ef6b5 1-10,14-31,33-43,46-55,64-97,99-108,110-212,214-251
+  s_4d8f86932c7463::t_d669ec6de9d3a7 11-12,32,44-45,56-63
+apps/server/src/main/java/com/shangan/ai/transcript/TranscriptSearchRepository.java
+  s_4d8f86932c7463::t_c4e7ade2883ed0 1-74,76-120,122-125
+  s_4d8f86932c7463::t_f9856d5a4b2b78 75,121
+apps/server/src/main/resources/db/migration/V010__transcripts_and_fts.sql
+  s_4d8f86932c7463::t_c4e7ade2883ed0 1-39,42-79
+  s_4d8f86932c7463::t_1fc395ca84cc9c 40-41
+apps/server/src/test/java/com/shangan/ai/transcript/TranscriptionPipelineIntegrationTest.java
+  s_4d8f86932c7463::t_02de952b492f38 1-28,31-60,63-95,97-99,101-115,117,119-129,131-142,152-153
+  s_4d8f86932c7463::t_a390226a4042bf 29-30,61-62,130,143-151
+  s_4d8f86932c7463::t_f9856d5a4b2b78 96,100,116,118
+apps/server/src/main/resources/templates/admin/courses.html
+  s_4d8f86932c7463::t_d669ec6de9d3a7 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "2b7f2725fb9ab08e80b3bc5fe43cf38e938ae67b",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
