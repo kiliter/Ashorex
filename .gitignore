@@ -15,6 +15,7 @@ apps/server/target/
 
 # Flutter / Dart 构建产物
 apps/ios/.dart_tool/
+apps/ios/.fvm/
 apps/ios/.flutter-plugins
 apps/ios/.flutter-plugins-dependencies
 apps/ios/.packages

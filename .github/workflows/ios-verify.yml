@@ -1,0 +1,36 @@
+name: iOS 验证
+
+on:
+  push:
+    paths:
+      - "apps/ios/**"
+      - "Makefile"
+      - ".github/workflows/ios-verify.yml"
+  pull_request:
+    paths:
+      - "apps/ios/**"
+      - "Makefile"
+      - ".github/workflows/ios-verify.yml"
+
+jobs:
+  ios-verify:
+    runs-on: macos-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+      - name: 提供 Dart 与 Flutter 基础环境
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.7"
+          channel: stable
+          cache: true
+      - name: 安装 FVM
+        run: |
+          dart pub global activate fvm 4.3.0
+          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+      - name: 准备锁定的 Flutter SDK
+        run: cd apps/ios && fvm install
+      - name: 执行 iOS 静态检查和测试
+        run: make ios-test
+      - name: 构建 iOS Simulator 应用
+        run: cd apps/ios && fvm flutter build ios --simulator --no-codesign
