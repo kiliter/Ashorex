@@ -1,0 +1,41 @@
+apps/server/src/main/resources/templates/admin/question-form.html
+  s_4d8f86932c7463::t_51bd6e9a0c2b27 3-75,77-79,81-83
+apps/server/src/main/resources/templates/admin/transcriptions.html
+  s_4d8f86932c7463::t_17f28be2d65c0a 3-14,16-38,40-79
+apps/server/src/main/resources/static/assets/admin.css
+  s_4d8f86932c7463::t_2ef57e615b0e9d 179-183,342,392-397,758-761,784-787
+  s_4d8f86932c7463::t_313690a1c415b4 1-178,184-341,343-391,398-757,762-783,788-932
+apps/server/src/main/resources/templates/admin/courses.html
+  s_4d8f86932c7463::t_ae64404e87bf61 3-80
+apps/server/src/main/resources/templates/admin/health.html
+  s_4d8f86932c7463::t_bc590f92197508 3-47
+apps/server/src/main/resources/templates/admin/course-lessons.html
+  s_4d8f86932c7463::t_ca0340f3fb1ca4 3-48
+apps/server/src/main/resources/templates/admin/login.html
+  s_4d8f86932c7463::t_bd9be6452bffb7 3-44
+apps/server/src/main/resources/templates/admin/users.html
+  s_4d8f86932c7463::t_c4ad173b9d8767 3-14,16-40,42-76
+apps/server/src/main/resources/templates/admin/fragments.html
+  s_4d8f86932c7463::t_313690a1c415b4 1-62
+apps/server/src/main/resources/templates/admin/questions.html
+  s_4d8f86932c7463::t_eeb199a6a9277b 3-39
+apps/server/src/test/java/com/shangan/admin/AdminSecurityTest.java
+  s_4d8f86932c7463::t_4c1e9bbb1127af 11-14,16,36-38,55,74-114
+  s_4d8f86932c7463::t_ee9a1767a557c6 56-73,115-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "890a37070818ad7a9741afbc0f6c65f3676a8d70",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
