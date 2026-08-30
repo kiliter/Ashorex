@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>用户管理 - 上岸</title>
+  </head>
+  <body>
+    <main>
+      <h1>用户管理</h1>
+      <nav>
+        <a th:href="@{/admin/health}">运行状态</a>
+        <a th:href="@{/admin/courses}">课程管理</a>
+        <a th:href="@{/admin/transcriptions}">视频转写</a>
+      </nav>
+
+      <section>
+        <h2>创建普通用户</h2>
+        <form method="post" th:action="@{/admin/users}">
+          <label>用户名 <input name="username" required minlength="3" maxlength="64" /></label>
+          <label>显示名称 <input name="displayName" required maxlength="64" /></label>
+          <label>初始密码 <input name="password" type="password" required minlength="12" maxlength="128" /></label>
+          <button type="submit">创建用户</button>
+        </form>
+      </section>
+
+      <section>
+        <h2>现有用户</h2>
+        <table>
+          <thead>
+            <tr><th>用户名</th><th>显示名称</th><th>角色</th><th>状态</th><th>操作</th></tr>
+          </thead>
+          <tbody>
+            <tr th:each="user : ${users}">
+              <td th:text="${user.username}"></td>
+              <td th:text="${user.displayName}"></td>
+              <td th:text="${user.role}"></td>
+              <td th:text="${user.enabled ? '已启用' : '已禁用'}"></td>
+              <td>
+                <form
+                  th:if="${user.role != 'ADMIN'}"
+                  method="post"
+                  th:action="@{/admin/users/{id}/enabled(id=${user.id})}"
+                >
+                  <input type="hidden" name="enabled" th:value="${!user.enabled}" />
+                  <button type="submit" th:text="${user.enabled ? '禁用' : '启用'}"></button>
+                </form>
+                <span th:if="${user.role == 'ADMIN'}">管理员不可在此停用</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>

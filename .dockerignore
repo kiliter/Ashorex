@@ -1,0 +1,15 @@
+.git
+.dart_tool
+.fvm
+**/build
+# 仅保留服务端已验证的可执行 JAR，排除 Maven 其余中间产物。
+**/target/**
+!apps/server/target/
+!apps/server/target/shangan-server-*.jar
+**/.idea
+**/.DS_Store
+*.ipa
+*.xcarchive
+.env
+data
+backup

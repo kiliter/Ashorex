@@ -4,6 +4,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -25,6 +27,7 @@ class AdminSecurityTest {
   @TempDir static Path databaseDirectory;
 
   @Autowired MockMvc mockMvc;
+  @Autowired JdbcClient jdbc;
 
   @DynamicPropertySource
   static void configureApplication(DynamicPropertyRegistry registry) {
@@ -69,5 +72,54 @@ class AdminSecurityTest {
                 .param("password", "admin-test-password"))
         .andExpect(status().is3xxRedirection())
         .andExpect(redirectedUrl("/admin/health"));
+  }
+
+  @Test
+  void adminCanCreateAndDisableNormalUserWithoutExposingSecrets() throws Exception {
+    mockMvc
+        .perform(
+            post("/admin/users")
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .param("username", "student.one")
+                .param("displayName", "一号学员")
+                .param("password", "strong-password-123"))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/admin/users"));
+
+    String userId =
+        jdbc.sql("select id from users where username='student.one'").query(String.class).single();
+    mockMvc
+        .perform(
+            post("/admin/users/{id}/enabled", userId)
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .param("enabled", "false"))
+        .andExpect(status().is3xxRedirection());
+
+    mockMvc
+        .perform(get("/admin/users").with(user("admin").roles("ADMIN")))
+        .andExpect(status().isOk())
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("student.one")))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("已禁用")))
+        .andExpect(
+            content()
+                .string(
+                    org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("strong-password-123"))));
+  }
+
+  @Test
+  void healthPageShowsSafeOperationalStatusOnly() throws Exception {
+    mockMvc
+        .perform(get("/admin/health").with(user("admin").roles("ADMIN")))
+        .andExpect(status().isOk())
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("数据库路径")))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("Emby 状态")))
+        .andExpect(
+            content()
+                .string(
+                    org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("test-jwt-secret"))));
   }
 }

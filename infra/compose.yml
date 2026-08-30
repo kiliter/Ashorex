@@ -1,0 +1,60 @@
+# 上岸 V1 单服务进程、单 SQLite 实例部署；秘密仅在运行时从宿主环境注入。
+services:
+  server:
+    build:
+      context: ..
+      dockerfile: infra/docker/server.Dockerfile
+    image: shangan-server:local
+    restart: unless-stopped
+    environment:
+      DATA_DIR: /data
+      JWT_SECRET: ${JWT_SECRET:-}
+      PLAYBACK_TICKET_SECRET: ${PLAYBACK_TICKET_SECRET:-}
+      ADMIN_BOOTSTRAP_USERNAME: ${ADMIN_BOOTSTRAP_USERNAME:-}
+      ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
+      EMBY_BASE_URL: ${EMBY_BASE_URL:-}
+      EMBY_API_KEY: ${EMBY_API_KEY:-}
+      EMBY_USER_ID: ${EMBY_USER_ID:-}
+      ASR_BASE_URL: ${ASR_BASE_URL:-}
+      ASR_API_KEY: ${ASR_API_KEY:-}
+      ASR_MODEL: ${ASR_MODEL:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      WEB_SEARCH_MCP_URL: ${WEB_SEARCH_MCP_URL:-}
+      WEB_SEARCH_MCP_BEARER_TOKEN: ${WEB_SEARCH_MCP_BEARER_TOKEN:-}
+      WEB_SEARCH_MCP_ALLOWED_TOOLS: ${WEB_SEARCH_MCP_ALLOWED_TOOLS:-web_search,web_extract}
+    volumes:
+      - study-data:/data
+      - study-backup:/backup
+    expose:
+      - "8080"
+    networks:
+      - internal
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_started
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - internal
+
+volumes:
+  study-data:
+  study-backup:
+  caddy-data:
+  caddy-config:
+
+networks:
+  internal:

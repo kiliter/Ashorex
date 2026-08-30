@@ -1,5 +1,6 @@
 package com.shangan.common.config;
 
+import com.shangan.common.api.RequestLoggingInterceptor;
 import com.shangan.common.auth.CurrentUserArgumentResolver;
 import com.shangan.identity.application.AuthService;
 import com.shangan.identity.domain.User;
@@ -122,12 +123,18 @@ public class SecurityConfiguration {
   }
 
   @Bean
-  WebMvcConfigurer currentUserWebMvcConfigurer() {
+  WebMvcConfigurer currentUserWebMvcConfigurer(RequestLoggingInterceptor requestLogging) {
     CurrentUserArgumentResolver resolver = new CurrentUserArgumentResolver();
     return new WebMvcConfigurer() {
       @Override
       public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(resolver);
+      }
+
+      @Override
+      public void addInterceptors(
+          org.springframework.web.servlet.config.annotation.InterceptorRegistry registry) {
+        registry.addInterceptor(requestLogging);
       }
     };
   }

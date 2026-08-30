@@ -2,6 +2,7 @@ package com.shangan.identity.infrastructure;
 
 import com.shangan.identity.domain.User;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -37,6 +38,13 @@ public class JdbcUserRepository implements UserRepository {
         .param("id", id)
         .query(this::mapUser)
         .optional();
+  }
+
+  @Override
+  public List<User> findAll() {
+    return jdbc.sql("select " + USER_COLUMNS + " from users order by username")
+        .query(this::mapUser)
+        .list();
   }
 
   @Override
@@ -92,6 +100,22 @@ public class JdbcUserRepository implements UserRepository {
                 "dayEndLocalTime", dayEndLocalTime,
                 "updatedAt", now.toEpochMilli(),
                 "userId", userId))
+        .update();
+  }
+
+  @Override
+  public void setEnabled(String userId, boolean enabled, Instant now) {
+    jdbc.sql("update users set enabled = :enabled, updated_at = :now where id = :id")
+        .params(Map.of("enabled", enabled ? 1 : 0, "now", now.toEpochMilli(), "id", userId))
+        .update();
+  }
+
+  @Override
+  public void revokeRefreshTokensByUserId(String userId, Instant revokedAt) {
+    jdbc.sql(
+            "update refresh_tokens set revoked_at = :now "
+                + "where user_id = :userId and revoked_at is null")
+        .params(Map.of("now", revokedAt.toEpochMilli(), "userId", userId))
         .update();
   }
 

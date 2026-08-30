@@ -1,4 +1,4 @@
-.PHONY: format server-test ios-test verify
+.PHONY: format server-test ios-test operations-test verify
 
 # 格式化服务端 Java 代码和 iOS Dart 代码。
 format:
@@ -16,5 +16,9 @@ ios-test:
 	cd apps/ios && fvm flutter analyze
 	cd apps/ios && fvm flutter test
 
+# 验证 SQLite 在线备份、完整性检查和独立恢复。
+operations-test:
+	infra/scripts/backup_restore_smoke_test.sh
+
 # 执行仓库级完整验证。
-verify: server-test ios-test
+verify: server-test ios-test operations-test

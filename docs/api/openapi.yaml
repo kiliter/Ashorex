@@ -1,0 +1,1753 @@
+openapi: 3.1.0
+info:
+  title: 上岸 V1 API
+  description: iOS 客户端使用的只读与学习业务接口；所有业务路由统一使用 /api/v1 前缀。
+  version: 0.1.0-rc1
+servers:
+- url: http://localhost
+  description: Generated server url
+paths:
+  /api/v1/preferences:
+    get:
+      tags:
+      - auth-controller
+      operationId: preferences
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PreferencesResponse"
+      security:
+      - bearerAuth: []
+    put:
+      tags:
+      - auth-controller
+      operationId: updatePreferences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreferencesRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PreferencesResponse"
+      security:
+      - bearerAuth: []
+  /api/v1/plans/{date}/items/{itemId}:
+    put:
+      tags:
+      - daily-plan-controller
+      operationId: update
+      parameters:
+      - name: date
+        in: path
+        required: true
+        schema:
+          type: string
+          format: date
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateItemRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PlanView"
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - daily-plan-controller
+      operationId: delete
+      parameters:
+      - name: date
+        in: path
+        required: true
+        schema:
+          type: string
+          format: date
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PlanView"
+      security:
+      - bearerAuth: []
+  /api/v1/exam-goal:
+    get:
+      tags:
+      - exam-controller
+      operationId: goal
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ExamGoalResponse"
+      security:
+      - bearerAuth: []
+    put:
+      tags:
+      - exam-controller
+      operationId: save
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExamGoalRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ExamGoalResponse"
+      security:
+      - bearerAuth: []
+  /api/v1/watch-sessions/{sessionId}/stop:
+    post:
+      tags:
+      - watch-session-controller
+      operationId: stop
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WatchHeartbeatResponse"
+      security:
+      - bearerAuth: []
+  /api/v1/watch-sessions/{sessionId}/heartbeat:
+    post:
+      tags:
+      - watch-session-controller
+      operationId: heartbeat
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WatchHeartbeatRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WatchHeartbeatResponse"
+      security:
+      - bearerAuth: []
+  /api/v1/watch-sessions/{sessionId}/alive-check:
+    post:
+      tags:
+      - watch-session-controller
+      operationId: confirmAliveCheck
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WatchHeartbeatResponse"
+      security:
+      - bearerAuth: []
+  /api/v1/plans/{date}/lock:
+    post:
+      tags:
+      - daily-plan-controller
+      operationId: lock
+      parameters:
+      - name: date
+        in: path
+        required: true
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PlanView"
+      security:
+      - bearerAuth: []
+  /api/v1/plans/{date}/items:
+    post:
+      tags:
+      - daily-plan-controller
+      operationId: add
+      parameters:
+      - name: date
+        in: path
+        required: true
+        schema:
+          type: string
+          format: date
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PlanView"
+      security:
+      - bearerAuth: []
+  /api/v1/plans/{date}/debt-items:
+    post:
+      tags:
+      - daily-plan-controller
+      operationId: addDebtItems
+      parameters:
+      - name: date
+        in: path
+        required: true
+        schema:
+          type: string
+          format: date
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DebtItemsRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PlanView"
+      security:
+      - bearerAuth: []
+  /api/v1/plans/{date}/abandon:
+    post:
+      tags:
+      - daily-plan-controller
+      operationId: abandon
+      parameters:
+      - name: date
+        in: path
+        required: true
+        schema:
+          type: string
+          format: date
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AbandonRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PlanView"
+      security:
+      - bearerAuth: []
+  /api/v1/lessons/{lessonId}/watch-sessions:
+    post:
+      tags:
+      - watch-session-controller
+      operationId: create
+      parameters:
+      - name: lessonId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWatchSessionRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PlaybackSession"
+      security:
+      - bearerAuth: []
+  /api/v1/lessons/{lessonId}/quiz-attempts:
+    get:
+      tags:
+      - quiz-controller
+      operationId: attempts
+      parameters:
+      - name: lessonId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttemptSummary"
+      security:
+      - bearerAuth: []
+    post:
+      tags:
+      - quiz-controller
+      operationId: submit
+      parameters:
+      - name: lessonId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttemptRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AttemptResult"
+      security:
+      - bearerAuth: []
+  /api/v1/focus-sessions:
+    post:
+      tags:
+      - focus-session-controller
+      operationId: start
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FocusView"
+      security:
+      - bearerAuth: []
+  /api/v1/focus-sessions/{id}/resume:
+    post:
+      tags:
+      - focus-session-controller
+      operationId: resume
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FocusView"
+      security:
+      - bearerAuth: []
+  /api/v1/focus-sessions/{id}/pause:
+    post:
+      tags:
+      - focus-session-controller
+      operationId: pause
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FocusView"
+      security:
+      - bearerAuth: []
+  /api/v1/focus-sessions/{id}/finish:
+    post:
+      tags:
+      - focus-session-controller
+      operationId: finish
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FocusView"
+      security:
+      - bearerAuth: []
+  /api/v1/focus-sessions/{id}/cancel:
+    post:
+      tags:
+      - focus-session-controller
+      operationId: cancel
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FocusView"
+      security:
+      - bearerAuth: []
+  /api/v1/auth/refresh:
+    post:
+      tags:
+      - auth-controller
+      operationId: refresh
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+  /api/v1/auth/logout:
+    post:
+      tags:
+      - auth-controller
+      operationId: logout
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+  /api/v1/auth/login:
+    post:
+      tags:
+      - auth-controller
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+  /api/v1/ai/conversations:
+    get:
+      tags:
+      - ai-conversation-controller
+      operationId: list
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiConversation"
+      security:
+      - bearerAuth: []
+    post:
+      tags:
+      - ai-conversation-controller
+      operationId: create_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConversationRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AiConversation"
+      security:
+      - bearerAuth: []
+  /api/v1/ai/conversations/{id}/messages:stream:
+    post:
+      tags:
+      - ai-conversation-controller
+      operationId: stream
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StreamMessageRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            text/event-stream:
+              schema:
+                $ref: "#/components/schemas/SseEmitter"
+      security:
+      - bearerAuth: []
+  /api/v1/reports/weekly:
+    get:
+      tags:
+      - report-controller
+      operationId: weekly
+      parameters:
+      - name: weekStart
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WeeklyReportView"
+      security:
+      - bearerAuth: []
+  /api/v1/reports/daily:
+    get:
+      tags:
+      - report-controller
+      operationId: daily
+      parameters:
+      - name: date
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DailyReportView"
+      security:
+      - bearerAuth: []
+  /api/v1/playback/{ticket}/stream:
+    get:
+      tags:
+      - playback-proxy-controller
+      operationId: stream_1
+      parameters:
+      - name: ticket
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/StreamingResponseBody"
+  /api/v1/playback/{ticket}/proxy/**:
+    get:
+      tags:
+      - playback-proxy-controller
+      operationId: hlsChild
+      parameters:
+      - name: ticket
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+  /api/v1/playback/{ticket}/master.m3u8:
+    get:
+      tags:
+      - playback-proxy-controller
+      operationId: master
+      parameters:
+      - name: ticket
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: byte
+  /api/v1/plans/{date}:
+    get:
+      tags:
+      - daily-plan-controller
+      operationId: plan
+      parameters:
+      - name: date
+        in: path
+        required: true
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PlanView"
+      security:
+      - bearerAuth: []
+  /api/v1/plans/{date}/abandon-preview:
+    get:
+      tags:
+      - daily-plan-controller
+      operationId: preview
+      parameters:
+      - name: date
+        in: path
+        required: true
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AbandonPreview"
+      security:
+      - bearerAuth: []
+  /api/v1/me:
+    get:
+      tags:
+      - auth-controller
+      operationId: me
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+      security:
+      - bearerAuth: []
+  /api/v1/lessons/{lessonId}:
+    get:
+      tags:
+      - catalog-controller
+      operationId: lesson
+      parameters:
+      - name: lessonId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LessonResponse"
+      security:
+      - bearerAuth: []
+  /api/v1/lessons/{lessonId}/quiz:
+    get:
+      tags:
+      - quiz-controller
+      operationId: quiz
+      parameters:
+      - name: lessonId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/QuizView"
+      security:
+      - bearerAuth: []
+  /api/v1/lessons/{lessonId}/ai-status:
+    get:
+      tags:
+      - transcription-status-controller
+      operationId: status
+      parameters:
+      - name: lessonId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/StatusView"
+      security:
+      - bearerAuth: []
+  /api/v1/focus-sessions/active:
+    get:
+      tags:
+      - focus-session-controller
+      operationId: active
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FocusView"
+      security:
+      - bearerAuth: []
+  /api/v1/exam-progress:
+    get:
+      tags:
+      - exam-controller
+      operationId: progress
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Progress"
+      security:
+      - bearerAuth: []
+  /api/v1/debts:
+    get:
+      tags:
+      - debt-controller
+      operationId: list_1
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 50
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LearningDebt"
+      security:
+      - bearerAuth: []
+  /api/v1/dashboard:
+    get:
+      tags:
+      - dashboard-controller
+      operationId: dashboard
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DashboardResponse"
+      security:
+      - bearerAuth: []
+  /api/v1/courses:
+    get:
+      tags:
+      - catalog-controller
+      operationId: courses
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CourseResponse"
+      security:
+      - bearerAuth: []
+  /api/v1/courses/{courseId}:
+    get:
+      tags:
+      - catalog-controller
+      operationId: course
+      parameters:
+      - name: courseId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CourseDetailResponse"
+      security:
+      - bearerAuth: []
+  /api/v1/ai/conversations/{id}/messages:
+    get:
+      tags:
+      - ai-conversation-controller
+      operationId: messages
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+      security:
+      - bearerAuth: []
+components:
+  schemas:
+    PreferencesRequest:
+      type: object
+      properties:
+        timezone:
+          type: string
+          minLength: 1
+        aliveCheckLevel:
+          type: string
+          minLength: 1
+        dayEndLocalTime:
+          type: string
+          minLength: 1
+      required:
+      - aliveCheckLevel
+      - dayEndLocalTime
+      - timezone
+    PreferencesResponse:
+      type: object
+      properties:
+        timezone:
+          type: string
+        aliveCheckLevel:
+          type: string
+        dayEndLocalTime:
+          type: string
+    UpdateItemRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        plannedSeconds:
+          type: integer
+          format: int64
+          minimum: 1
+        sortOrder:
+          type: integer
+          format: int32
+      required:
+      - title
+    PlanItem:
+      type: object
+      properties:
+        id:
+          type: string
+        planId:
+          type: string
+        itemType:
+          type: string
+        title:
+          type: string
+        mediaItemId:
+          type: string
+        debtId:
+          type: string
+        plannedSeconds:
+          type: integer
+          format: int64
+        completedSeconds:
+          type: integer
+          format: int64
+        watchCompleted:
+          type: boolean
+        quizRequired:
+          type: boolean
+        quizCompleted:
+          type: boolean
+        status:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+        completedAt:
+          type: string
+          format: date-time
+    PlanView:
+      type: object
+      properties:
+        id:
+          type: string
+        date:
+          type: string
+          format: date
+        status:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanItem"
+    ExamGoalRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        examDate:
+          type: string
+          format: date
+        targetCompletionDate:
+          type: string
+          format: date
+        reviewBufferDays:
+          type: integer
+          format: int32
+          maximum: 365
+          minimum: 0
+        courseIds:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 1
+      required:
+      - courseIds
+      - examDate
+      - name
+      - targetCompletionDate
+    ExamGoalResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        examDate:
+          type: string
+          format: date
+        targetCompletionDate:
+          type: string
+          format: date
+        reviewBufferDays:
+          type: integer
+          format: int32
+        timezone:
+          type: string
+        courseIds:
+          type: array
+          items:
+            type: string
+    WatchHeartbeatResponse:
+      type: object
+      properties:
+        trustedPositionMs:
+          type: integer
+          format: int64
+        verifiedWatchMs:
+          type: integer
+          format: int64
+        seekAllowed:
+          type: boolean
+        aliveCheckRequired:
+          type: boolean
+        completed:
+          type: boolean
+        status:
+          type: string
+    WatchHeartbeatRequest:
+      type: object
+      properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
+        positionMs:
+          type: integer
+          format: int64
+          minimum: 0
+        playing:
+          type: boolean
+        foreground:
+          type: boolean
+    ItemRequest:
+      type: object
+      properties:
+        itemType:
+          type: string
+          minLength: 1
+        title:
+          type: string
+        mediaItemId:
+          type: string
+        debtId:
+          type: string
+        plannedSeconds:
+          type: integer
+          format: int64
+          minimum: 1
+        sortOrder:
+          type: integer
+          format: int32
+      required:
+      - itemType
+    DebtItemsRequest:
+      type: object
+      properties:
+        debtIds:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 1
+      required:
+      - debtIds
+    AbandonRequest:
+      type: object
+      properties:
+        reasonCode:
+          type: string
+          minLength: 1
+        reasonText:
+          type: string
+      required:
+      - reasonCode
+    CreateWatchSessionRequest:
+      type: object
+      properties:
+        planItemId:
+          type: string
+        deviceId:
+          type: string
+          minLength: 1
+      required:
+      - deviceId
+    PlaybackSession:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        ticketUrl:
+          type: string
+        trustedPositionMs:
+          type: integer
+          format: int64
+        durationMs:
+          type: integer
+          format: int64
+        heartbeatIntervalSeconds:
+          type: integer
+          format: int32
+    AnswerRequest:
+      type: object
+      properties:
+        questionId:
+          type: string
+          minLength: 1
+        selectedOptionId:
+          type: string
+          minLength: 1
+        durationMs:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+      - questionId
+      - selectedOptionId
+    AttemptRequest:
+      type: object
+      properties:
+        planItemId:
+          type: string
+        durationMs:
+          type: integer
+          format: int64
+          minimum: 0
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnswerRequest"
+          minItems: 1
+      required:
+      - answers
+    AnswerResult:
+      type: object
+      properties:
+        questionId:
+          type: string
+        selectedOptionId:
+          type: string
+        correct:
+          type: boolean
+        explanation:
+          type: string
+    AttemptResult:
+      type: object
+      properties:
+        id:
+          type: string
+        score:
+          type: integer
+          format: int32
+        correctCount:
+          type: integer
+          format: int32
+        totalCount:
+          type: integer
+          format: int32
+        durationMs:
+          type: integer
+          format: int64
+        submittedAt:
+          type: string
+          format: date-time
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnswerResult"
+    StartRequest:
+      type: object
+      properties:
+        planItemId:
+          type: string
+        mediaItemId:
+          type: string
+        focusType:
+          type: string
+          minLength: 1
+        plannedSeconds:
+          type: integer
+          format: int64
+          minimum: 1
+      required:
+      - focusType
+    FocusView:
+      type: object
+      properties:
+        id:
+          type: string
+        planItemId:
+          type: string
+        mediaItemId:
+          type: string
+        focusType:
+          type: string
+        status:
+          type: string
+        plannedSeconds:
+          type: integer
+          format: int64
+        actualSeconds:
+          type: integer
+          format: int64
+        startedAt:
+          type: string
+          format: date-time
+        runningSince:
+          type: string
+          format: date-time
+        pausedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+        serverNow:
+          type: string
+          format: date-time
+    RefreshTokenRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+      required:
+      - refreshToken
+    TokenPair:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresInSeconds:
+          type: integer
+          format: int64
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+      - password
+      - username
+    CreateConversationRequest:
+      type: object
+      properties:
+        scope:
+          type: string
+        mediaItemId:
+          type: string
+        title:
+          type: string
+    AiConversation:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        scope:
+          type: string
+        mediaItemId:
+          type: string
+        title:
+          type: string
+        historySummary:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    StreamMessageRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          maxLength: 8000
+          minLength: 0
+        currentPositionMs:
+          type: integer
+          format: int64
+          maximum: 9223372036854775807
+          minimum: 0
+      required:
+      - content
+    SseEmitter:
+      type: object
+      properties:
+        timeout:
+          type: integer
+          format: int64
+    DayTrend:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        effectiveStudySeconds:
+          type: integer
+          format: int64
+        completionRate:
+          type: integer
+          format: int32
+        newDebtSeconds:
+          type: integer
+          format: int64
+        repaidDebtSeconds:
+          type: integer
+          format: int64
+    WeeklyReportView:
+      type: object
+      properties:
+        weekStart:
+          type: string
+          format: date
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/DayTrend"
+        totalEffectiveStudySeconds:
+          type: integer
+          format: int64
+        videoStudySeconds:
+          type: integer
+          format: int64
+        focusSeconds:
+          type: integer
+          format: int64
+        videoCompletedCount:
+          type: integer
+          format: int32
+        answerCount:
+          type: integer
+          format: int32
+        answerAccuracy:
+          type: integer
+          format: int32
+        planCompletionRate:
+          type: integer
+          format: int32
+        newDebtSeconds:
+          type: integer
+          format: int64
+        repaidDebtSeconds:
+          type: integer
+          format: int64
+        abandonmentCount:
+          type: integer
+          format: int32
+        aliveCheckFailureCount:
+          type: integer
+          format: int32
+        previousWeekEffectiveStudySeconds:
+          type: integer
+          format: int64
+        effectiveStudySecondsChange:
+          type: integer
+          format: int64
+        previousWeekPlanCompletionRate:
+          type: integer
+          format: int32
+        planCompletionRateChange:
+          type: integer
+          format: int32
+    DailyReportView:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        planStatus:
+          type: string
+        plannedSeconds:
+          type: integer
+          format: int64
+        videoStudySeconds:
+          type: integer
+          format: int64
+        focusSeconds:
+          type: integer
+          format: int64
+        completedTasks:
+          type: integer
+          format: int32
+        totalTasks:
+          type: integer
+          format: int32
+        completionRate:
+          type: integer
+          format: int32
+        videoCompletedCount:
+          type: integer
+          format: int32
+        answerCount:
+          type: integer
+          format: int32
+        correctAnswerCount:
+          type: integer
+          format: int32
+        answerAccuracy:
+          type: integer
+          format: int32
+        aliveCheckFailureCount:
+          type: integer
+          format: int32
+        abandoned:
+          type: boolean
+        newDebtSeconds:
+          type: integer
+          format: int64
+        repaidDebtSeconds:
+          type: integer
+          format: int64
+        openDebtSeconds:
+          type: integer
+          format: int64
+        judgmentText:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+    StreamingResponseBody: {}
+    AbandonPreview:
+      type: object
+      properties:
+        debtCount:
+          type: integer
+          format: int32
+        addedDebtSeconds:
+          type: integer
+          format: int64
+        debts:
+          type: array
+          items:
+            $ref: "#/components/schemas/DebtPreview"
+    DebtPreview:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        seconds:
+          type: integer
+          format: int64
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+        timezone:
+          type: string
+    LessonResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        courseId:
+          type: string
+        title:
+          type: string
+        durationMs:
+          type: integer
+          format: int64
+        sortOrder:
+          type: integer
+          format: int32
+    OptionView:
+      type: object
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+    QuestionView:
+      type: object
+      properties:
+        id:
+          type: string
+        questionType:
+          type: string
+        content:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/OptionView"
+    QuizView:
+      type: object
+      properties:
+        mediaItemId:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionView"
+    AttemptSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        score:
+          type: integer
+          format: int32
+        correctCount:
+          type: integer
+          format: int32
+        totalCount:
+          type: integer
+          format: int32
+        durationMs:
+          type: integer
+          format: int64
+        submittedAt:
+          type: string
+          format: date-time
+    StatusView:
+      type: object
+      properties:
+        status:
+          type: string
+        videoContextAvailable:
+          type: boolean
+    Progress:
+      type: object
+      properties:
+        daysUntilExam:
+          type: integer
+          format: int64
+        daysUntilTarget:
+          type: integer
+          format: int64
+        totalLessons:
+          type: integer
+          format: int32
+        completedLessons:
+          type: integer
+          format: int32
+        remainingLessons:
+          type: integer
+          format: int32
+        requiredDailyPace:
+          type: number
+          format: double
+        actualDailyPace:
+          type: number
+          format: double
+        projectedFinishDate:
+          type: string
+          format: date
+        riskStatus:
+          type: string
+    LearningDebt:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        sourcePlanItemId:
+          type: string
+        debtType:
+          type: string
+        mediaItemId:
+          type: string
+        title:
+          type: string
+        originalSeconds:
+          type: integer
+          format: int64
+        remainingSeconds:
+          type: integer
+          format: int64
+        baselineCompletedSeconds:
+          type: integer
+          format: int64
+        status:
+          type: string
+        reason:
+          type: string
+        openedOn:
+          type: string
+          format: date
+        paidAt:
+          type: string
+          format: date-time
+    DashboardResponse:
+      type: object
+      properties:
+        exam:
+          $ref: "#/components/schemas/ExamGoalResponse"
+        todayPlan:
+          $ref: "#/components/schemas/TodayPlan"
+        openDebtSeconds:
+          type: integer
+          format: int64
+        studyTodaySeconds:
+          type: integer
+          format: int64
+        answerAccuracy:
+          type: number
+          format: double
+        continueLesson: {}
+        progressPressure:
+          $ref: "#/components/schemas/Progress"
+    TodayPlan:
+      type: object
+      properties:
+        status:
+          type: string
+        plannedSeconds:
+          type: integer
+          format: int64
+        completedSeconds:
+          type: integer
+          format: int64
+    CourseResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+    CourseDetailResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        lessons:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonResponse"
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        conversationId:
+          type: string
+        role:
+          type: string
+        content:
+          type: string
+        status:
+          type: string
+        citationsJson:
+          type: string
+        modelName:
+          type: string
+        inputTokens:
+          type: integer
+          format: int32
+        outputTokens:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

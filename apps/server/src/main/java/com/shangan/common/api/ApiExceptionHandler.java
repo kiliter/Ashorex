@@ -2,7 +2,6 @@ package com.shangan.common.api;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Optional;
-import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.validation.FieldError;
@@ -40,9 +39,13 @@ public class ApiExceptionHandler {
     return problem;
   }
 
-  /** 优先复用上游请求 ID；当前尚无过滤器时生成安全的临时请求 ID。 */
+  /** 优先复用过滤器生成的请求 ID；测试切片或特殊调用缺失时使用安全兜底值。 */
   private String requestId(HttpServletRequest request) {
-    String requestId = request.getHeader("X-Request-ID");
-    return requestId == null || requestId.isBlank() ? UUID.randomUUID().toString() : requestId;
+    Object requestId = request.getAttribute(RequestIdFilter.ATTRIBUTE);
+    if (requestId instanceof String value && !value.isBlank()) return value;
+    String upstream = request.getHeader(RequestIdFilter.HEADER);
+    return upstream == null || upstream.isBlank()
+        ? java.util.UUID.randomUUID().toString()
+        : upstream;
   }
 }

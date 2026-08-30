@@ -7,6 +7,7 @@ import com.shangan.identity.infrastructure.JwtService;
 import com.shangan.identity.infrastructure.UserRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -113,6 +114,51 @@ public class AuthService {
         now);
   }
 
+  /** 管理员创建普通用户；用户名唯一性与密码强度在服务端统一校验。 */
+  @Transactional
+  public User createManagedUser(String username, String displayName, String password) {
+    String normalizedUsername = username == null ? "" : username.trim();
+    String normalizedDisplayName = displayName == null ? "" : displayName.trim();
+    validateManagedUser(normalizedUsername, normalizedDisplayName, password);
+    if (users.findByUsername(normalizedUsername).isPresent()) {
+      throw new BusinessException(HttpStatus.CONFLICT, "USER_USERNAME_EXISTS", "用户名已存在");
+    }
+    Instant now = clock.instant();
+    User user =
+        new User(
+            idGenerator.nextId(),
+            normalizedUsername,
+            passwordEncoder.encode(password),
+            normalizedDisplayName,
+            "USER",
+            "Asia/Shanghai",
+            "NORMAL",
+            "23:59",
+            true);
+    users.insert(user, now);
+    return user;
+  }
+
+  /** 返回后台用户列表；页面必须避免渲染 passwordHash 字段。 */
+  @Transactional(readOnly = true)
+  public List<User> listManagedUsers() {
+    return users.findAll();
+  }
+
+  /** 管理员启停普通用户；禁用会立即撤销全部 Refresh Token。 */
+  @Transactional
+  public void setManagedUserEnabled(String userId, boolean enabled) {
+    User user = getUser(userId);
+    if ("ADMIN".equals(user.role())) {
+      throw new BusinessException(HttpStatus.CONFLICT, "ADMIN_DISABLE_FORBIDDEN", "不能在用户页停用管理员");
+    }
+    Instant now = clock.instant();
+    users.setEnabled(userId, enabled, now);
+    if (!enabled) {
+      users.revokeRefreshTokensByUserId(userId, now);
+    }
+  }
+
   private TokenPair issueTokenPair(User user) {
     Instant now = clock.instant();
     String refreshToken = jwtService.createRefreshToken();
@@ -144,6 +190,21 @@ public class AuthService {
     }
     if (!java.util.Set.of("OFF", "NORMAL", "STRICT", "INTENSE").contains(aliveCheckLevel)) {
       throw new BusinessException(HttpStatus.BAD_REQUEST, "PREFERENCES_INVALID", "验活等级不合法");
+    }
+  }
+
+  private void validateManagedUser(String username, String displayName, String password) {
+    if (!username.matches("[A-Za-z0-9._-]{3,64}")) {
+      throw new BusinessException(
+          HttpStatus.BAD_REQUEST, "USER_USERNAME_INVALID", "用户名需为 3 到 64 位字母、数字或 ._- 字符");
+    }
+    if (displayName.isBlank() || displayName.length() > 64) {
+      throw new BusinessException(
+          HttpStatus.BAD_REQUEST, "USER_DISPLAY_NAME_INVALID", "显示名称不能为空且最多 64 字");
+    }
+    if (password == null || password.length() < 12 || password.length() > 128) {
+      throw new BusinessException(
+          HttpStatus.BAD_REQUEST, "USER_PASSWORD_INVALID", "密码长度需为 12 到 128 位");
     }
   }
 
