@@ -1,0 +1,33 @@
+# 操作系统与 IDE 文件
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# 本地环境变量与敏感配置
+.env
+.env.*
+!.env.example
+
+# Java / Maven 构建产物
+apps/server/target/
+*.log
+
+# Flutter / Dart 构建产物
+apps/ios/.dart_tool/
+apps/ios/.flutter-plugins
+apps/ios/.flutter-plugins-dependencies
+apps/ios/.packages
+apps/ios/build/
+apps/ios/coverage/
+apps/ios/ios/Flutter/ephemeral/
+apps/ios/ios/Pods/
+apps/ios/ios/.symlinks/
+
+# 本地运行数据、备份和临时文件
+data/
+backup/
+*.db
+*.db-shm
+*.db-wal
+*.tmp
