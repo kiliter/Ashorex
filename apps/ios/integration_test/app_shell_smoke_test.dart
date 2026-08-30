@@ -6,6 +6,7 @@ import 'package:shangan_ios/app/app.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/core/auth/auth_repository.dart';
 import 'package:shangan_ios/core/storage/token_store.dart';
+import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
 import 'package:shangan_ios/features/profile/data/preferences_repository.dart';
 
 void main() {
@@ -26,6 +27,7 @@ void main() {
       ProviderScope(
         overrides: [
           authControllerProvider.overrideWithValue(controller),
+          catalogRepositoryProvider.overrideWithValue(_CatalogRepository()),
           preferencesRepositoryProvider.overrideWithValue(
             _MemoryPreferencesRepository(),
           ),
@@ -40,6 +42,16 @@ void main() {
       expect(find.text(label), findsWidgets);
     }
   });
+}
+
+final class _CatalogRepository implements CatalogRepository {
+  @override
+  Future<List<CourseSummary>> listCourses() async => const [];
+
+  @override
+  Future<CourseDetail> loadCourse(String courseId) {
+    throw UnimplementedError();
+  }
 }
 
 final class _MemoryTokenStore implements TokenStore {

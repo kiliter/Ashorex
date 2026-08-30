@@ -26,8 +26,8 @@ apps/ios/ios/Pods/
 apps/ios/ios/.symlinks/
 
 # 本地运行数据、备份和临时文件
-data/
-backup/
+/data/
+/backup/
 *.db
 *.db-shm
 *.db-wal

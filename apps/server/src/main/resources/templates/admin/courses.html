@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>课程管理 - 上岸</title>
+  </head>
+  <body>
+    <main>
+      <h1>课程管理</h1>
+      <form method="post" th:action="@{/admin/courses}">
+        <label>课程名称 <input name="name" required /></label>
+        <label>课程说明 <input name="description" /></label>
+        <label>Emby 父节点 ID <input name="embyParentItemId" required /></label>
+        <button type="submit">创建课程</button>
+      </form>
+      <table>
+        <thead>
+          <tr><th>课程</th><th>上次同步</th><th>结果</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+          <tr th:each="course : ${courses}">
+            <td th:text="${course.name}"></td>
+            <td th:text="${course.lastSyncedAt}"></td>
+            <td th:text="${course.lastSyncError ?: '正常'}"></td>
+            <td>
+              <a th:href="@{/admin/courses/{id}/lessons(id=${course.id})}">课时</a>
+              <form method="post" th:action="@{/admin/courses/{id}/sync(id=${course.id})}">
+                <button type="submit">立即同步</button>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

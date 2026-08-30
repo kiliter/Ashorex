@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/core/auth/auth_repository.dart';
 import 'package:shangan_ios/core/storage/token_store.dart';
+import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
 import 'package:shangan_ios/features/dashboard/presentation/app_shell.dart';
 
 void main() {
@@ -17,7 +18,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authControllerProvider.overrideWithValue(controller)],
+        overrides: [
+          authControllerProvider.overrideWithValue(controller),
+          catalogRepositoryProvider.overrideWithValue(_CatalogRepository()),
+        ],
         child: const MaterialApp(home: AppShell()),
       ),
     );
@@ -27,6 +31,16 @@ void main() {
       expect(find.text(label), findsWidgets);
     }
   });
+}
+
+final class _CatalogRepository implements CatalogRepository {
+  @override
+  Future<List<CourseSummary>> listCourses() async => const [];
+
+  @override
+  Future<CourseDetail> loadCourse(String courseId) {
+    throw UnimplementedError();
+  }
 }
 
 /// Widget 测试使用内存 Token，避免访问真机 Keychain。

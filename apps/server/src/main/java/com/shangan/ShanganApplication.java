@@ -2,9 +2,11 @@ package com.shangan;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /** 上岸 V1 模块化单体服务端入口。 */
 @SpringBootApplication
+@EnableScheduling
 public class ShanganApplication {
 
   private ShanganApplication() {}

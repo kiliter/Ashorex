@@ -31,6 +31,9 @@ server:
     include-stacktrace: never
 
 app:
+  emby:
+    base-url: ${EMBY_BASE_URL:}
+    api-key: ${EMBY_API_KEY:}
   security:
     jwt-secret: ${JWT_SECRET:}
     bootstrap-admin-username: ${ADMIN_BOOTSTRAP_USERNAME:}

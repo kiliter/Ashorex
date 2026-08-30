@@ -57,6 +57,26 @@ final class ApiClient {
     }
   }
 
+  /// 读取直接数组响应，列表接口不得额外套无意义包装对象。
+  Future<List<Map<String, dynamic>>> getJsonList(String path) async {
+    try {
+      final response = await _dio.get<dynamic>(path);
+      final data = response.data;
+      if (data is List) {
+        return data
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
+      }
+      throw const ApiException(
+        statusCode: null,
+        errorCode: 'INVALID_RESPONSE',
+        message: '服务端响应格式不正确',
+      );
+    } on DioException catch (exception) {
+      throw ApiException.fromDio(exception);
+    }
+  }
+
   Future<Map<String, dynamic>> postJson(
     String path, {
     Object? data,

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>课时管理 - 上岸</title>
+  </head>
+  <body>
+    <main>
+      <h1>课时管理</h1>
+      <p><a th:href="@{/admin/courses}">返回课程列表</a></p>
+      <form
+        th:each="lesson : ${lessons}"
+        method="post"
+        th:action="@{/admin/courses/{courseId}/lessons/{lessonId}(courseId=${courseId},lessonId=${lesson.id})}"
+      >
+        <strong th:text="${lesson.title}"></strong>
+        <span th:if="${!lesson.available}">Emby 中已不可用</span>
+        <label>
+          启用
+          <input type="checkbox" name="enabled" value="true" th:checked="${lesson.enabled}" />
+        </label>
+        <label>
+          排序
+          <input type="number" name="sortOrder" th:value="${lesson.sortOrder}" required />
+        </label>
+        <button type="submit">保存</button>
+      </form>
+    </main>
+  </body>
+</html>

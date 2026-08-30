@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/features/auth/presentation/login_page.dart';
+import 'package:shangan_ios/features/catalog/presentation/course_detail_page.dart';
 import 'package:shangan_ios/features/dashboard/presentation/app_shell.dart';
 import 'package:shangan_ios/features/profile/presentation/settings_page.dart';
 
@@ -34,6 +35,11 @@ GoRouter createRouter(AuthController authController) {
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(path: '/home', builder: (context, state) => const AppShell()),
+      GoRoute(
+        path: '/courses/:courseId',
+        builder: (context, state) =>
+            CourseDetailPage(courseId: state.pathParameters['courseId']!),
+      ),
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsPage(),
