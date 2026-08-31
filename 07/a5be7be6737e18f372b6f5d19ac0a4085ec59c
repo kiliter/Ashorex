@@ -1,0 +1,21 @@
+apps/server/src/test/java/com/shangan/media/emby/EmbyClientContractTest.java
+  s_4d8f86932c7463::t_31af8925934d08 28,34,58
+apps/server/src/main/java/com/shangan/media/emby/EmbyClient.java
+  s_4d8f86932c7463::t_283b95a223c460 7,40-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "07a5be7be6737e18f372b6f5d19ac0a4085ec59c",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
