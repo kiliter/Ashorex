@@ -1,12 +1,12 @@
 # 上岸 V1 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **执行要求：** 按 Task 顺序单线程实施，不使用多智能体。步骤使用 checkbox（`- [ ]`）跟踪。
 
-**Goal:** 构建一款 iOS-only 的学习监督 App，完成 Emby 视频学习、可信观看、计划锁定、开摆欠债、答题、计时、报表以及只读 AI/MCP 问答闭环。
+**Goal:** 构建一款 iOS-only 的学习监督 App，完成 Emby 视频学习、可信观看、计划锁定、开摆欠债、答题、计时、报表以及管理员维护的课程全文与摘要闭环。
 
-**Architecture:** 单仓库包含 Flutter iOS App 与 Spring Boot 模块化单体。服务端以 SQLite 为业务真相，Emby 提供媒体能力，AI Runtime、转写、摘要和 MCP 都运行在后端；Flutter 只负责交互、播放器、心跳和 SSE 渲染。
+**Architecture:** 单仓库包含 Flutter iOS App 与 Spring Boot 模块化单体。服务端以 SQLite 为业务真相，Emby 提供媒体能力；课程全文和 Markdown 摘要由管理员批量导入；Flutter 只负责交互、播放器和心跳。
 
-**Tech Stack:** Flutter 3.44.7、flutter_riverpod 3.0.2、go_router 17.5.0、Dio 5.11.0、video_player 2.14.0、flutter_chat_ui 2.11.0、Java 21、Spring Boot 4.1.1、Spring MVC、JdbcClient、sqlite-jdbc 3.53.4.0、SQLite WAL、Flyway 13.3.0、Thymeleaf、LangChain4j BOM 1.19.0、FFmpeg、MCP Streamable HTTP、Caddy。
+**Tech Stack:** Flutter 3.44.7、flutter_riverpod 3.0.2、go_router 17.5.0、Dio 5.11.0、video_player 2.14.0、Java 21、Spring Boot 4.1.1、Spring MVC、JdbcClient、sqlite-jdbc 3.53.4.0、SQLite WAL、Flyway 13.3.0、Thymeleaf、Caddy。
 
 **Spec:** `docs/specs/2026-08-27-shangan-v1-design.md`
 
@@ -15,9 +15,8 @@
 - V1 只实现 iOS；不要创建 Android、Web 或桌面客户端。
 - iOS 最低版本为 16。
 - 后端只能运行一个实例，SQLite 文件必须位于本机磁盘。
-- AI 只读；禁止任何写工具。
-- 不使用 `langchain4j-agentic` 实验模块。
-- Emby、LLM、ASR、MCP 密钥不能进入 Flutter、日志或业务 API 响应；仅允许存在于服务端存储和 ADMIN 配置页面。
+- 服务端和当前 Flutter V1 不包含 AI、ASR、MCP、自动转写或聊天能力。
+- Emby 密钥不能进入 Flutter、日志或业务 API 响应；仅允许存在于服务端存储和 ADMIN 配置页面。
 - 不使用 Redis、Kafka、向量数据库、微服务或对象存储。
 - 所有日期边界按用户时区处理，数据库时间统一 UTC Epoch Milliseconds。
 - 所有状态机和时间规则必须通过注入的 `java.time.Clock` 测试。
@@ -598,12 +597,12 @@ Requirements:
 - A retried 401 clears tokens and routes to login.
 - Never log Authorization header.
 
-- [ ] **Step 5: Implement login page and five-tab shell**
+- [ ] **Step 5: Implement login page and initial shell**
 
 Tabs:
 
 ```text
-首页 | 学习 | AI | 数据 | 我的
+首页 | 学习 | 数据 | 我的
 ```
 
 The non-authenticated route is `/login`. The authenticated initial route is `/home`.
@@ -617,7 +616,7 @@ PUT /api/v1/preferences
 
 - [ ] **Step 6: Add an integration-test shell**
 
-Create `integration_test/app_shell_smoke_test.dart` so the directory exists from V1 foundation onward. It launches the app with fake authentication and asserts the five-tab shell renders; Task 16 expands this into the full flow.
+Create `integration_test/app_shell_smoke_test.dart` so the directory exists from V1 foundation onward. It launches the app with fake authentication and asserts the four-tab shell renders; Task 16 expands this into the full flow.
 
 - [ ] **Step 7: Add CI workflows**
 
@@ -1334,6 +1333,8 @@ git commit -m "feat(reporting): add focus timing and study judgments"
 
 ### Task 13: Video Transcription, FTS5, and Hierarchical Summaries
 
+> **历史 Task，已被 Task 19 替代。** 已有实现由 Task 19 迁移可复用数据后删除，不得继续扩展。
+
 **Files:**
 - Create: `apps/server/src/main/java/com/shangan/ai/transcript/TranscriptionProvider.java`
 - Create: `apps/server/src/main/java/com/shangan/ai/transcript/OpenAiCompatibleTranscriptionProvider.java`
@@ -1404,6 +1405,8 @@ git commit -m "feat(ai): transcribe and summarize emby lessons"
 ---
 
 ### Task 14: Read-Only AI, MCP Web Search, Chat Persistence, and SSE
+
+> **历史 Task，已被 Task 19 替代。** 已有接口、依赖和数据表由 Task 19 删除。
 
 **Files:**
 - Create: `apps/server/src/main/java/com/shangan/ai/config/AiConfiguration.java`
@@ -1529,6 +1532,8 @@ git commit -m "feat(ai): add read-only chat with mcp web search"
 
 ### Task 15: iOS AI Tab and Video AI Bottom Sheet
 
+> **历史 Task，已被 Task 19 替代。** 已有 Flutter AI 入口与基础设施由 Task 19 删除。
+
 **Files:**
 - Create: `apps/ios/lib/features/ai_chat/domain/chat_models.dart`
 - Create: `apps/ios/lib/features/ai_chat/data/ai_chat_repository.dart`
@@ -1617,7 +1622,7 @@ git commit -m "feat(ios): add general and video ai chat"
 - Test: `apps/server/src/test/java/com/shangan/api/OpenApiContractTest.java`
 - Test: `apps/server/src/test/java/com/shangan/acceptance/FullLearningFlowAcceptanceTest.java`
 - Test: `apps/server/src/test/java/com/shangan/acceptance/AbandonAndDebtAcceptanceTest.java`
-- Test: `apps/server/src/test/java/com/shangan/acceptance/AiReadOnlyAcceptanceTest.java`
+- Test: `apps/server/src/test/java/com/shangan/acceptance/LessonStudyContentAcceptanceTest.java`
 - Test: `infra/scripts/backup_restore_smoke_test.sh`
 - Test: `apps/ios/integration_test/core_flow_test.dart`
 
@@ -1635,8 +1640,7 @@ database size
 WAL size
 Emby status
 last course sync
-active transcription job
-LLM/ASR/MCP configured status without secrets
+lesson study content count
 ```
 
 - [ ] **Step 2: Generate and freeze OpenAPI**
@@ -1663,7 +1667,6 @@ The server image must contain:
 
 ```text
 JRE 21
-ffmpeg
 sqlite3
 non-root user
 /data volume
@@ -1673,11 +1676,11 @@ No secrets in image layers.
 
 - [ ] **Step 5: Write end-to-end server acceptance tests**
 
-Cover the five V1 acceptance scenarios in the spec with fake Emby, ASR, LLM and MCP servers.
+Cover the V1 acceptance scenarios in the spec with a fake Emby server and temporary SQLite database.
 
 - [ ] **Step 6: Write iOS integration flow**
 
-Use fakes for media playback and AI in CI. Test:
+Use fakes for media playback in CI. Test:
 
 ```text
 login
@@ -1688,7 +1691,7 @@ simulate completion
 submit quiz
 abandon remaining item
 see debt
-open AI tab and receive stream
+read imported lesson study content
 ```
 
 - [ ] **Step 7: Run complete verification**
@@ -1718,8 +1721,8 @@ seek guard
 alive check
 quiz
 focus timer
-AI Tab
-video AI
+four-tab shell
+no player AI entry
 24-hour resume
 ```
 
@@ -1832,6 +1835,8 @@ git commit -m "feat(ios): allow configuring the server address"
 
 ### Task 18：Web 管理后台运行时外部服务配置
 
+> **部分被 Task 19 替代。** 仅保留 Emby 运行时配置；LLM、ASR 和 MCP 配置由 Task 19 删除。
+
 **文件：**
 - 参考：`docs/adr/0006-admin-runtime-integration-settings.md`
 - 新建：`apps/server/src/main/java/com/shangan/common/integration/RuntimeIntegrationSettings.java`
@@ -1910,6 +1915,101 @@ git commit -m "feat(admin): configure runtime integrations"
 
 ---
 
+### Task 19：移除服务端 AI 并增加课程学习内容导入
+
+**前置文档：**
+
+- `docs/adr/0007-remove-server-ai-runtime.md`
+- `docs/superpowers/specs/2026-08-31-remove-server-ai-and-import-study-content-design.md`
+
+**主要文件：**
+
+- 新建：`apps/server/src/main/resources/db/migration/V013__replace_ai_with_lesson_study_contents.sql`
+- 新建：`apps/server/src/main/java/com/shangan/catalog/domain/LessonStudyContent.java`
+- 新建：`apps/server/src/main/java/com/shangan/catalog/application/LessonStudyContentImportService.java`
+- 新建：`apps/server/src/main/java/com/shangan/catalog/infrastructure/LessonStudyContentZipParser.java`
+- 新建：`apps/server/src/main/java/com/shangan/catalog/infrastructure/JdbcLessonStudyContentRepository.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/api/CatalogController.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/application/CatalogQueryService.java`
+- 修改：`apps/server/src/main/java/com/shangan/admin/CourseAdminController.java`
+- 修改：`apps/server/src/main/resources/templates/admin/course-lessons.html`
+- 修改：`apps/server/src/main/java/com/shangan/common/integration/*`
+- 删除：`apps/server/src/main/java/com/shangan/ai/**`
+- 删除：`apps/server/src/main/java/com/shangan/admin/TranscriptionAdminController.java`
+- 删除：`apps/server/src/main/resources/templates/admin/transcriptions.html`
+- 删除：`apps/ios/lib/features/ai_chat/**`
+- 修改：Flutter Shell、路由、播放器和 `pubspec.yaml`
+- 修改：Maven、Docker、Compose、配置、CI、OpenAPI 和运行文档
+
+**接口：**
+
+- ADMIN：在课程课时页上传 ZIP 并批量导入。
+- App API：`GET /api/v1/lessons/{lessonId}/study-content`。
+- 运行时配置：只保留 Emby。
+
+- [ ] **步骤 1：先写 V013 迁移测试**
+
+从 V012 结构准备历史转写、全局摘要、聊天和四类运行时配置，执行迁移后精确断言：
+
+```text
+历史分段按 segment_index 合并为 full_text
+历史全局摘要进入 summary_markdown
+ai_messages、ai_conversations、转写、FTS 和旧摘要表已删除
+runtime_integration_settings 只保留 Emby 字段和值
+```
+
+- [ ] **步骤 2：实现追加式 V013**
+
+先迁移可复用数据，再删除旧表和触发器。不得修改 V010～V012。迁移 SQL 使用中文注释解释历史数据兼容策略。
+
+- [ ] **步骤 3：先写 ZIP 解析和原子导入测试**
+
+覆盖正确包、缺少文件、重复 Emby Item ID、非法 UTF-8、空内容、路径穿越、50 MiB 压缩包与 100 MiB 解压文本上限、非当前课程课时、任意一项失败零写入以及重复导入覆盖。测试使用固定 `Clock`，不使用任意睡眠。
+
+- [ ] **步骤 4：实现最小导入链路和后台入口**
+
+ZIP 解析器不落盘，只生成完全校验后的命令对象；应用服务校验课程归属并拥有单个事务；Repository 批量 Upsert。课程课时页显示上传入口、内容状态、更新时间和明确错误。所有新增类和非显然方法增加中文注释。
+
+- [ ] **步骤 5：先写只读 API 测试并实现接口**
+
+覆盖鉴权、正确 DTO、未导入错误码和无效课时。成功响应包含 `lessonId`、`fullText`、`summaryMarkdown`、`updatedAt`，并同步 `docs/api/openapi.yaml`。
+
+- [ ] **步骤 6：删除服务端 AI Runtime**
+
+删除 `ai` 模块、转写后台、AI 专属测试、LangChain4j/LLM/ASR/MCP/FFmpeg 依赖与配置。收缩运行时配置模型、后台表单和健康页面，只保留 Emby；更新现有配置测试，确保密钥仍不泄露。
+
+- [ ] **步骤 7：删除 Flutter AI 并改为四 Tab**
+
+删除 `ai_chat` Feature、AI 路由、播放器按钮、SSE 和聊天依赖。更新 Shell 与播放器 Widget 测试，断言四个 Tab 且无 AI 入口。
+
+- [ ] **步骤 8：清理部署与文档残留**
+
+从 Docker、Compose、`.env.example`、`application.yml`、CI 和运行手册移除 LLM、ASR、MCP、FFmpeg。使用 `rg` 复核残留只出现在历史迁移、已替代 ADR 和 Task 19 的删除说明中。
+
+- [ ] **步骤 9：运行窄测试和完整验证**
+
+```bash
+cd apps/server
+./mvnw -Dtest='*LessonStudyContent*,*Migration*,IntegrationSettingsAdminTest' test
+cd ../ios
+fvm flutter analyze
+fvm flutter test
+cd ../..
+make format
+make verify
+```
+
+- [ ] **步骤 10：检查并提交**
+
+检查 API 契约、迁移顺序、事务边界、敏感信息、临时 ZIP、依赖锁文件和范围。按用户已明确的工作方式直接在 `main` 提交：
+
+```bash
+git add .
+git commit -m "feat(catalog): import lesson study contents"
+```
+
+---
+
 ## Cross-Task Review Gates
 
 After Tasks 1–4:
@@ -1952,11 +2052,7 @@ Judgment uses rules, not AI
 After Tasks 13–15:
 
 ```text
-Transcript pipeline is retryable
-FTS5 and summary context work
-AI has no write tools
-MCP is allowlisted
-General and video chat stream on iOS
+Historical gate superseded by Task 19
 ```
 
 After Task 16:
@@ -1981,10 +2077,20 @@ Local Spring Boot health endpoint is reachable
 Task 18 之后：
 
 ```text
-ADMIN 可在一个页面配置 Emby、LLM、ASR 和 MCP
+ADMIN 可在一个页面配置 Emby；其余外部配置由 Task 19 删除
 保存后无需重启，新调用使用最新配置
 环境变量继续作为初始回退来源
-Flutter、业务 API、日志和错误不泄露密钥
+Flutter、业务 API、日志和错误不泄露 Emby 密钥
+```
+
+Task 19 之后：
+
+```text
+服务端不包含 AI、ASR、MCP、自动转写或聊天 Runtime
+Flutter 只有首页、学习、数据和我的四个 Tab，播放器无 AI 入口
+课程 ZIP 导入全包原子，重复上传覆盖旧内容
+课程学习内容只读接口与 OpenAPI 一致
+V013 保留历史全文和全局摘要，并删除废弃表
 ```
 
 ---
@@ -1995,7 +2101,7 @@ Codex must:
 
 1. Read `AGENTS.md`, the spec, and this plan before editing.
 2. Work on one Task at a time.
-3. Create a dedicated branch or worktree.
+3. 默认创建独立分支或 worktree；Task 19 按用户明确要求直接在 `main` 开发。
 4. Start each Task with the failing test described here.
 5. Run the narrow test first, then the full module test.
 6. Review the diff for scope expansion and secret leakage.
@@ -2013,7 +2119,8 @@ Codex must:
 - [ ] Every state transition has tests.
 - [ ] All external services have contract tests.
 - [ ] Playback proxy never buffers a full video.
-- [ ] AI tool set is provably read-only.
+- [ ] 服务端与 Flutter 不存在 AI、ASR、MCP、自动转写或聊天入口。
+- [ ] 课程学习内容导入全包原子，读取接口只读。
 - [ ] Secrets remain server-side.
 - [ ] SQLite backup and restore have been executed, not merely documented.
 - [ ] Physical iPhone acceptance is recorded.

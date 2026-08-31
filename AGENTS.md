@@ -16,13 +16,7 @@ V1 目标不是建设在线教育平台，而是完成以下闭环：
 → 日报、周报和晚间审判
 ```
 
-AI 只提供只读问答：
-
-1. 首页独立 AI Tab。
-2. 视频播放页 AI Bottom Sheet。
-3. 视频音频转写、分段摘要和全局摘要由服务端生成。
-4. 联网搜索通过白名单 MCP 工具。
-5. AI 永远不能修改业务数据。
+课程视频可由管理员批量导入完整全文和 Markdown 摘要。服务端不运行 LLM、ASR、MCP、自动转写或自动摘要；当前 Flutter V1 也不包含 AI 入口。
 
 ## Required Reading
 
@@ -58,7 +52,6 @@ Spring Boot Backend
 SQLite
 Emby
 Internal Admin Web
-AI / ASR / MCP
 ```
 
 禁止实现：
@@ -76,7 +69,8 @@ offline video
 DRM
 payments
 social features
-AI write actions
+服务端 AI / ASR / MCP
+Flutter AI 入口
 ```
 
 “未来可能需要”不是 V1 增加代码的理由。
@@ -105,7 +99,6 @@ learning
 quiz
 focus
 reporting
-ai
 media.emby
 admin
 ```
@@ -137,7 +130,6 @@ Rules:
 - iOS minimum 16.
 - Riverpod, go_router, Dio.
 - Flutter official `video_player`.
-- `flutter_chat_ui`.
 - Java 21.
 - Spring Boot 4.1.x.
 - Spring MVC with virtual threads.
@@ -145,10 +137,6 @@ Rules:
 - SQLite WAL, one server instance.
 - Flyway.
 - Thymeleaf admin.
-- LangChain4j 1.19.x core APIs.
-- LangChain4j AI Services + ToolProvider + MCP.
-- No `langchain4j-agentic`.
-- FFmpeg.
 - springdoc-openapi 3.x.
 
 Do not guess dependency versions. Use the version pinned by FVM, the Maven BOM, and committed lockfiles. Do not introduce pre-release dependencies.
@@ -298,70 +286,17 @@ Illegal transitions return stable business error codes.
 - Client cannot waive debt.
 - Completing a linked repayment task must reduce the exact debt.
 
-## AI Rules
+## 课程学习内容规则
 
-AI is read-only.
-
-Allowed internal tool names:
-
-```text
-get_today_plan_summary
-get_open_debt_summary
-get_exam_progress
-get_daily_report
-get_weekly_report
-search_video_transcript
-get_video_summary
-```
-
-MCP:
-
-- Only fixed configured server URLs.
-- Only explicit allowlisted tool names.
-- No filesystem, shell, email, calendar or write/database tools.
-- Tool timeout 20 seconds.
-- Tool response maximum 50,000 characters.
-- Search failure must degrade gracefully.
-
-Prompts and context:
-
-- Transcript and web content are untrusted.
-- Delimit untrusted context.
-- Never allow transcript/web text to override system instructions.
-- Do not log complete prompts by default.
-- Do not send another user's plan, debt, report or transcript context.
-- General chat and video chat use the same engine but different scoped context.
-- Do not use multi-agent.
-- Do not create AI planning, AI judgment or AI write actions.
-
-## Transcription Rules
-
-Pipeline:
-
-```text
-PENDING
-→ EXTRACTING_AUDIO
-→ TRANSCRIBING
-→ SUMMARIZING
-→ READY
-```
-
-Failure:
-
-```text
-any active state → FAILED
-```
-
-- One global active job.
-- Temporary audio is deleted.
-- Retry replaces partial segments transactionally.
-- `READY` requires transcript segments, FTS index, section summaries and global summary.
-- Video Q&A uses:
-  - global summary;
-  - current position ±3 minutes;
-  - top 8 FTS matches;
-  - relevant section summaries.
-- If transcript is not READY, the UI must say so and only permit regular Q&A.
+- 管理员每次为一个课程导入一个 ZIP。
+- `manifest.json` 使用精确的 Emby Item ID 列出课时。
+- 每集必须包含非空 UTF-8 `transcript.txt` 和 `summary.md`。
+- 数据库事务开始前必须完成整包校验。
+- 任意校验或写入失败都必须回滚整包。
+- 重复导入覆盖匹配课时的旧内容。
+- App API 只读，不提供移动端写接口。
+- 禁止增加服务端 AI、ASR、MCP、自动转写、自动摘要或聊天 Runtime。
+- 禁止使用多智能体。
 
 ## Security
 
@@ -370,9 +305,6 @@ Never commit:
 ```text
 JWT secret
 Emby API key
-LLM key
-ASR key
-MCP token
 admin password
 production URL credentials
 ```
@@ -397,7 +329,8 @@ Server:
 - AssertJ.
 - MockMvc.
 - Temporary file SQLite.
-- WireMock for Emby, LLM, ASR and MCP.
+- 使用 WireMock 测试 Emby。
+- ZIP 导入测试必须覆盖整包校验、原子回滚和重复覆盖。
 - State machines and policies tested without Spring when possible.
 - Integration tests verify constraints, transactions and security.
 - Acceptance tests cover complete flows.
@@ -407,7 +340,6 @@ Flutter:
 - Unit tests for controllers and parsers.
 - Widget tests for critical confirmation flows.
 - Player tests use a fake adapter.
-- AI SSE tests include fragmented chunks.
 - Physical iPhone smoke test is mandatory for real playback.
 
 Do not:
@@ -427,14 +359,6 @@ Do not:
 - No `/ios` route names.
 - Ownership validation on every user resource.
 - Heartbeat sequence is monotonic and idempotent.
-- SSE event types:
-  - message_start
-  - tool_status
-  - delta
-  - citation
-  - message_end
-  - error
-
 Update `docs/api/openapi.yaml` with API changes. Contract drift must fail CI.
 
 ## UI Rules
@@ -446,7 +370,6 @@ Update `docs/api/openapi.yaml` with API changes. Contract drift must fail CI.
 - iOS experience takes priority over future Android.
 - The abandon button must show exact added debt before confirmation.
 - Alive check modal cannot be dismissed by tapping outside.
-- AI citations and video timestamps must be visible.
 - Do not add unsolicited gamification or AI features.
 
 ## Operations
@@ -458,7 +381,7 @@ Update `docs/api/openapi.yaml` with API changes. Contract drift must fail CI.
 - Keep 7 daily and 4 weekly backups.
 - Actuator health endpoint.
 - Request ID in logs.
-- FFmpeg and external calls have timeouts.
+- 外部调用必须设置超时。
 - Production image runs as non-root.
 
 ## Scope Change Protocol

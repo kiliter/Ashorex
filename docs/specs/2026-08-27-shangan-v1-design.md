@@ -1,8 +1,8 @@
 # 上岸 V1 产品与技术设计规范
 
 **文档状态：** 已冻结，可进入实现
-**版本：** V1.0
-**日期：** 2026-08-27
+**版本：** V1.1
+**日期：** 2026-08-31
 **目标平台：** iOS
 **工作仓库名：** `shangan`
 **产品名：** 上岸
@@ -11,7 +11,7 @@
 
 ## 1. 文档目的
 
-本文档定义“上岸”V1 的产品边界、业务规则、系统架构、模块职责、数据模型、接口原则、媒体播放方案、AI 方案、测试要求、部署方式和验收标准。
+本文档定义“上岸”V1 的产品边界、业务规则、系统架构、模块职责、数据模型、接口原则、媒体播放方案、课程学习内容、测试要求、部署方式和验收标准。
 
 实现人员不需要依赖此前聊天记录。聊天中出现但未写入本文档的想法，均不属于 V1。
 
@@ -74,8 +74,6 @@ V1 的价值判断标准：
 - 查看学习欠债。
 - 每日晚间审判。
 - 每周学习报表。
-- 底部独立 AI Tab。
-- 视频播放页 AI 问答弹层。
 
 #### 服务端
 
@@ -85,9 +83,7 @@ V1 的价值判断标准：
 - 题目配置与答题记录。
 - 可信观看进度校验。
 - 日计划、锁定、开摆、欠债、报表规则。
-- 视频音频转写、分段摘要、全局摘要。
-- 只读 AI 问答。
-- MCP 联网搜索。
+- 课程视频全文文字和 Markdown 摘要的存储与只读查询。
 - 内部管理后台。
 - 数据库迁移、健康检查、日志、备份和恢复。
 
@@ -100,9 +96,9 @@ V1 的价值判断标准：
 - 手动同步课程。
 - 启用、禁用和排序视频。
 - 为视频配置单选题和判断题。
-- 查看并重试转写任务。
+- 按课程批量导入每集全文文字和 Markdown 摘要。
 - 查看基础运行状态。
-- 配置 Emby、LLM、ASR 和 MCP，保存后对新调用立即生效。
+- 配置 Emby，保存后对新请求立即生效。
 
 ### 3.2 明确不做
 
@@ -115,8 +111,8 @@ V1 的价值判断标准：
 - DRM。
 - 排行榜、社交、研友、监督人。
 - 推送通知和 Live Activity。
-- AI 修改计划、欠债、考试目标或任何业务数据。
-- AI 主动催学、AI 审判、AI 自动排计划。
+- 服务端 LLM、ASR、MCP、AI 聊天和自动转写摘要。
+- Flutter AI Tab 和视频 AI 问答；后续移动端 AI 另行设计。
 - 多智能体。
 - 向量数据库。
 - 微服务、Redis、Kafka、对象存储和 Kubernetes。
@@ -368,46 +364,18 @@ V1 题型：
 - 验活失败次数。
 - 与上周对比。
 
-### 4.10 AI 范围
+### 4.10 课程学习内容
 
-AI 只有两个入口。
+课程视频可以关联一份管理员提供的完整全文文字和一份 Markdown 摘要。服务端只负责校验、存储和读取，不调用 AI、ASR 或 FFmpeg 生成内容。
 
-#### 首页 AI Tab
+规则：
 
-能力：
-
-- 常规问答。
-- 通过只读工具查询用户的今日计划、欠债、考试进度和报表。
-- 通过 MCP 执行联网搜索。
-- 流式返回。
-- 返回可用的来源信息。
-
-禁止：
-
-- 新增、修改或删除任何业务数据。
-- 调用写工具。
-- 主动弹出。
-- 自动调整计划。
-- 自动开摆或核销欠债。
-
-#### 视频播放页 AI
-
-能力：
-
-- 当前视频问答。
-- 整体视频摘要。
-- 基于全部转写所生成的全局摘要和分段摘要回答。
-- 检索相关转写片段。
-- 优先加入当前播放时间附近的转写。
-- 常规问答。
-- MCP 联网搜索。
-
-回答应尽量返回：
-
-- 视频内时间戳引用。
-- 联网搜索来源。
-
-AI 不直接接收每个长视频的全部原始文本。后端采用分段转写、分段摘要、全局摘要和全文检索，在不超出上下文窗口的前提下构建等价的完整视频上下文。
+- 管理员按课程上传一个 ZIP 包。
+- 每集通过 Emby Item ID 与本地课时精确匹配。
+- 每集必须同时提供 UTF-8 `transcript.txt` 和 `summary.md`。
+- 全包校验成功后一次性写入；任意错误均不产生部分导入。
+- 重复上传覆盖对应课时旧内容。
+- App 只能通过受保护的只读接口获取内容，V1 不提供移动端编辑或 AI 问答。
 
 ---
 
@@ -417,10 +385,10 @@ AI 不直接接收每个长视频的全部原始文本。后端采用分段转�
 ┌──────────────────────────────────────┐
 │             iOS Flutter App          │
 │                                      │
-│ 首页 / 学习 / AI / 数据 / 我的       │
+│ 首页 / 学习 / 数据 / 我的            │
 │ 视频播放器 / 题目 / 计时 / 报表       │
 └───────────────┬──────────────────────┘
-                │ HTTPS REST + SSE
+                │ HTTPS REST
                 ▼
 ┌──────────────────────────────────────┐
 │       Spring Boot 模块化单体          │
@@ -428,7 +396,7 @@ AI 不直接接收每个长视频的全部原始文本。后端采用分段转�
 │ Identity  Exam      Catalog          │
 │ Planning  Debt      Learning         │
 │ Quiz      Focus     Reporting        │
-│ AI        Emby      Admin            │
+│           Emby      Admin            │
 └───────┬─────────────┬───────────────┘
         │             │
         ▼             ▼
@@ -436,10 +404,7 @@ AI 不直接接收每个长视频的全部原始文本。后端采用分段转�
         │             │
         │             └─ 视频 / 剧集 / 封面 / 转码
         │
-        └─ 业务数据 / 转写 / 摘要 / 聊天记录
-                │
-                ▼
-          LLM / ASR / MCP
+        └─ 业务数据 / 课程全文 / 摘要
 ```
 
 部署原则：
@@ -448,8 +413,8 @@ AI 不直接接收每个长视频的全部原始文本。后端采用分段转�
 - 一个本机 SQLite 文件。
 - SQLite 文件不得放在 NFS 或远程共享盘。
 - Emby 可以是同机或独立 NAS。
-- 外部密钥的初始值来自服务端环境变量；管理员保存后可保存在服务端 SQLite 中。
-- iOS 不接触 Emby API Key、LLM Key、ASR Key 或 MCP 凭据。
+- Emby 配置的初始值来自服务端环境变量；管理员保存后可保存在服务端 SQLite 中。
+- iOS 不接触 Emby API Key。
 
 ---
 
@@ -466,17 +431,12 @@ AI 不直接接收每个长视频的全部原始文本。后端采用分段转�
 | HTTP | Dio 5.11.0 |
 | Token 存储 | flutter_secure_storage 11.0.0 |
 | 视频 | Flutter 官方 video_player 2.14.0 |
-| AI 聊天 UI | flutter_chat_ui 2.11.0 |
 | 后端 | Java 21 LTS + Spring Boot 4.1.1 |
 | Web 模型 | Spring MVC + Virtual Threads |
 | 数据访问 | Spring JdbcClient / NamedParameterJdbcTemplate |
 | 数据库 | SQLite + WAL，sqlite-jdbc 3.53.4.0 |
 | 迁移 | Flyway Core 13.3.0 + flyway-database-nc-sqlite 13.3.0 |
 | Java 格式化 | Spotless Maven Plugin 3.10.0 + Google Java Format |
-| AI 框架 | LangChain4j BOM 1.19.0；由 BOM 管理的集成模块可能为 1.19.0-beta29 |
-| AI Agent 方式 | AI Services + ToolProvider，不使用实验性 multi-agent 模块 |
-| MCP | LangChain4j MCP Client，优先 Streamable HTTP |
-| 音频处理 | FFmpeg |
 | 管理后台 | Spring MVC + Thymeleaf + 少量原生 JavaScript |
 | API 文档 | springdoc-openapi 3.1.0 |
 | 构建 | Maven Wrapper、FVM |
@@ -488,7 +448,6 @@ AI 不直接接收每个长视频的全部原始文本。后端采用分段转�
 - Flutter 提交 `pubspec.lock`。
 - Maven 使用 BOM 管理依赖；Flyway Core 与 SQLite 数据库模块必须保持完全相同的版本。
 - 禁止使用 milestone、RC 和 SNAPSHOT。
-- LangChain4j 使用低层依赖与程序化 AI Services；不使用 `langchain4j-agentic` 实验模块，也不依赖自动扫描注册 Agent。
 - 每次升级只做一个依赖族，并运行完整测试。
 - 冻结版本优先选择已经稳定发布一段时间的版本；不因新主版本刚发布就自动追新。
 
@@ -580,7 +539,6 @@ com.shangan
 ├── quiz
 ├── focus
 ├── reporting
-├── ai
 ├── media
 │   └── emby
 └── admin
@@ -603,14 +561,13 @@ com.shangan
 | `common` | 错误模型、认证上下文、时钟、ID、分页、配置 |
 | `identity` | 用户、密码、登录、刷新 Token、管理员会话 |
 | `exam` | 考试目标、课程绑定、进度压力计算 |
-| `catalog` | 课程和视频本地快照 |
+| `catalog` | 课程和视频本地快照、课时全文与摘要 |
 | `planning` | 每日计划、任务和锁定状态机 |
 | `debt` | 欠债生成、偿还、查询 |
 | `learning` | 观看会话、可信进度、验活、播放票据 |
 | `quiz` | 题目、选项、答题记录 |
 | `focus` | 番茄钟和练习计时 |
 | `reporting` | 日报、周报、晚间审判 |
-| `ai` | 对话、流式输出、只读工具、转写与摘要 |
 | `media.emby` | Emby 客户端、同步、播放代理 |
 | `admin` | 内部管理页面 |
 
@@ -658,7 +615,7 @@ PRAGMA synchronous = NORMAL;
 ./data/study.db
 ```
 
-转写文本可以先存 SQLite；不单独引入对象存储。
+课程全文和摘要直接存 SQLite；不单独引入对象存储。
 
 ---
 
@@ -940,87 +897,28 @@ PRAGMA synchronous = NORMAL;
 
 周报 V1 可实时查询，不强制落表。
 
-### 10.9 AI、转写与摘要
+### 10.9 课程学习内容与运行时配置
 
-#### `transcription_jobs`
+#### `lesson_study_contents`
 
 - `id`
-- `media_item_id`
-- `status`
-- `attempt_count`
-- `last_error`
-- `started_at`
-- `finished_at`
-- `created_at`
+- `media_item_id`，唯一
+- `full_text`
+- `summary_markdown`
+- `imported_at`
 - `updated_at`
 
-#### `transcript_segments`
-
-- `id`
-- `media_item_id`
-- `segment_index`
-- `start_ms`
-- `end_ms`
-- `text`
-- `created_at`
-
-#### `video_section_summaries`
-
-- `id`
-- `media_item_id`
-- `section_index`
-- `start_ms`
-- `end_ms`
-- `summary`
-- `created_at`
-
-#### `video_summaries`
-
-- `id`
-- `media_item_id`
-- `summary`
-- `outline_json`
-- `model_name`
-- `generated_at`
+课程内容由管理员批量导入。新导入要求全文和摘要同时非空；重复导入保留 `imported_at` 并更新内容和 `updated_at`。
 
 #### `runtime_integration_settings`
 
 - `id`，固定为 `default`
 - Emby Base URL、API Key、用户 ID
-- LLM Base URL、API Key、模型、最大上下文 Token、Temperature、超时
-- ASR Base URL、API Key、模型、超时
-- MCP URL、Bearer Token、允许工具、超时
 - `updated_at`
 
 表中不存在记录时使用环境变量初始值；一旦管理员保存，数据库中的整份配置成为运行时来源。
 
-#### `ai_conversations`
-
-- `id`
-- `user_id`
-- `scope`：GENERAL / VIDEO
-- `media_item_id`
-- `title`
-- `created_at`
-- `updated_at`
-
-#### `ai_messages`
-
-- `id`
-- `conversation_id`
-- `role`
-- `content`
-- `citations_json`
-- `model_name`
-- `input_tokens`
-- `output_tokens`
-- `created_at`
-
-SQLite FTS5：
-
-- 为 `transcript_segments.text` 创建虚拟全文检索表。
-- 通过触发器保持主表和 FTS 表同步。
-- 启动时验证 FTS5 可用；不可用时阻止 AI 视频问答进入 READY。
+V013 将 V010 的历史转写片段按顺序合并为全文，将历史全局摘要迁入新表，并删除旧转写、摘要、FTS、聊天表。V012 的运行时配置表在 V013 中重建为仅含 Emby 字段。
 
 ---
 
@@ -1037,7 +935,6 @@ SQLite FTS5：
 - 所有写接口做 Bean Validation。
 - 心跳包含单调递增 `sequence`，重复序号幂等忽略。
 - 所有列表接口预留分页参数。
-- SSE Content-Type：`text/event-stream`。
 
 ### 11.2 主要接口
 
@@ -1067,6 +964,7 @@ GET /api/v1/exam-progress
 GET /api/v1/courses
 GET /api/v1/courses/{courseId}
 GET /api/v1/lessons/{lessonId}
+GET /api/v1/lessons/{lessonId}/study-content
 ```
 
 #### 每日计划
@@ -1129,27 +1027,6 @@ GET  /api/v1/focus-sessions/active
 ```text
 GET /api/v1/reports/daily?date=YYYY-MM-DD
 GET /api/v1/reports/weekly?weekStart=YYYY-MM-DD
-```
-
-#### AI
-
-```text
-POST /api/v1/ai/conversations
-GET  /api/v1/ai/conversations
-GET  /api/v1/ai/conversations/{id}/messages
-POST /api/v1/ai/conversations/{id}/messages:stream
-GET  /api/v1/lessons/{lessonId}/ai-status
-```
-
-SSE 事件：
-
-```text
-message_start
-tool_status
-delta
-citation
-message_end
-error
 ```
 
 ---
@@ -1235,161 +1112,37 @@ V1 媒体全部经过服务端代理，原因是并发低于 5，优先保护密
 
 ---
 
-## 13. 视频转写与摘要
+## 13. 课程学习内容导入
 
-### 13.1 处理流程
-
-```text
-发现或手动选择视频
-  ↓
-创建 transcription_job
-  ↓
-从 Emby 获取媒体流
-  ↓
-FFmpeg 抽取 16kHz 单声道音频
-  ↓
-按 10 分钟切片
-  ↓
-调用 ASR Provider
-  ↓
-保存带时间戳 transcript_segments
-  ↓
-按 5~10 分钟生成 section summary
-  ↓
-使用所有 section summary 生成 global summary
-  ↓
-构建 FTS5 索引
-  ↓
-READY
-```
-
-状态：
+### 13.1 ZIP 结构
 
 ```text
-PENDING
-EXTRACTING_AUDIO
-TRANSCRIBING
-SUMMARIZING
-READY
-FAILED
+manifest.json
+lessons/{embyItemId}/transcript.txt
+lessons/{embyItemId}/summary.md
 ```
 
-规则：
+`manifest.json` 固定包含 `version: 1` 和 `lessons` 数组，每项只包含 `embyItemId`。文件路径由该 ID 推导，不接受任意路径配置。
 
-- 同一媒体项最多一个活动任务。
-- 失败记录错误，可由管理员重试。
-- 任务重试不产生重复 segment。
-- 临时音频在完成或失败后删除。
-- 单任务并发 1，避免小服务器被打满。
-- FFmpeg 进程设置超时和输出大小限制。
+### 13.2 校验与写入
 
-### 13.2 ASR Provider
+- Emby Item ID 必须精确匹配当前课程的课时。
+- manifest 中不允许重复 ID。
+- 全文和摘要必须是非空 UTF-8 文本。
+- ZIP 不解压到磁盘，拒绝绝对路径和路径穿越。
+- 压缩包最大 50 MiB，累计解压文本最大 100 MiB。
+- 全包先校验，后在一个短事务中批量 Upsert。
+- 任意错误整包回滚；重复上传覆盖旧内容。
 
-定义接口，不把业务绑定到特定厂商：
+### 13.3 读取
 
-```java
-public interface TranscriptionProvider {
-    TranscriptionResult transcribe(Path audioChunk, TranscriptionRequest request);
-}
-```
-
-V1 提供 OpenAI-compatible HTTP 实现，环境变量提供初始值，管理员后台可保存运行时配置：
-
-```text
-ASR_BASE_URL
-ASR_API_KEY
-ASR_MODEL
-```
-
-### 13.3 视频问答上下文
-
-每次视频问答包含：
-
-1. 全局摘要。
-2. 当前时间前后 3 分钟转写。
-3. FTS5 根据问题检索的前 8 个片段。
-4. 与命中片段相关的 section summaries。
-5. 用户问题。
-6. 可选联网搜索结果。
-
-如果完整转写估算 Token 低于模型上下文阈值，可直接加入完整转写；否则使用上述分层上下文。
-
-视频转写和网页内容均视为不可信数据，不能覆盖系统指令。
+`GET /api/v1/lessons/{lessonId}/study-content` 返回 `lessonId`、`fullText`、`summaryMarkdown` 和 ISO-8601 `updatedAt`。未导入时返回 RFC Problem Details，稳定错误码 `LESSON_STUDY_CONTENT_NOT_FOUND`。
 
 ---
 
-## 14. AI 架构
+## 14. 服务端 AI 边界
 
-### 14.1 原则
-
-- Agent Runtime 在后端。
-- Flutter 只负责 Chat UI、会话列表、SSE 消费和引用展示。
-- 使用 LangChain4j 的 AI Services、Tool Calling 和 MCP ToolProvider。
-- 不自行实现模型工具循环。
-- 不使用实验性多智能体模块。
-- 所有工具只读。
-- 所有 MCP 工具必须显式白名单。
-- 单用户同时只允许一个 AI 流式请求。
-
-### 14.2 模型配置
-
-```text
-LLM_BASE_URL
-LLM_API_KEY
-LLM_MODEL
-LLM_MAX_CONTEXT_TOKENS
-LLM_TEMPERATURE
-```
-
-兼容 OpenAI 风格接口。
-
-环境变量提供初始值。管理员可在内部后台保存运行时配置；新的 AI 流读取保存后的不可变配置快照，无需重启服务。
-
-### 14.3 内部只读工具
-
-```text
-get_today_plan_summary
-get_open_debt_summary
-get_exam_progress
-get_daily_report
-get_weekly_report
-search_video_transcript
-get_video_summary
-```
-
-工具层不能注入 Repository 写接口。
-
-### 14.4 MCP
-
-配置：
-
-```text
-WEB_SEARCH_MCP_URL
-WEB_SEARCH_MCP_BEARER_TOKEN
-WEB_SEARCH_MCP_ALLOWED_TOOLS
-```
-
-V1 优先 Streamable HTTP。
-
-环境变量提供初始值，管理员后台保存后新建 MCP 连接使用最新配置。
-
-安全：
-
-- 只连接配置中的固定 URL。
-- 只暴露白名单搜索类工具。
-- 禁止 filesystem、shell、email、calendar、database write 等工具。
-- 工具响应长度有上限。
-- 工具超时默认 20 秒。
-- 搜索失败不导致整个对话失败，AI 必须说明未获得联网结果。
-
-### 14.5 聊天记忆
-
-- 会话与消息持久化到 SQLite。
-- 每次请求加载最近消息。
-- 超过上下文阈值时，保留最近消息并使用历史摘要。
-- 不把完整聊天历史无限塞入模型。
-- 记录模型名和 token 使用量。
-- 管理后台不展示用户聊天正文，除非将来明确增加审计功能。
+V1 服务端不包含 LLM、ASR、MCP、AI Chat/SSE、FFmpeg 自动转写或自动摘要。课程全文和摘要均视为管理员维护的只读内容。后续 Flutter 移动端 AI 必须另行完成需求、ADR 和安全设计，不能恢复本次删除的服务端 Runtime 作为隐式依赖。
 
 ---
 
@@ -1421,7 +1174,6 @@ lib/
     ├── quiz/
     ├── focus/
     ├── reporting/
-    ├── ai_chat/
     └── profile/
 ```
 
@@ -1445,7 +1197,6 @@ feature/
 - 播放器控制。
 - 前后台生命周期。
 - 心跳发送。
-- SSE 渲染。
 - Keychain Token 存储。
 - 少量偏好设置。
 
@@ -1458,7 +1209,6 @@ feature/
 - 视频是否完成。
 - 题目是否解锁。
 - 报表和压力计算。
-- AI 上下文与工具权限。
 
 ### 15.3 本地存储
 
@@ -1471,16 +1221,16 @@ V1 不引入 Drift 或本地 SQLite。
 
 原因：
 
-- 视频和 AI 本身需要联网。
+- 视频本身需要联网。
 - 业务数据以服务端为准。
 - 避免在 V1 提前实现复杂离线同步。
 
 ### 15.4 导航
 
-底部五个 Tab：
+底部四个 Tab：
 
 ```text
-首页 | 学习 | AI | 数据 | 我的
+首页 | 学习 | 数据 | 我的
 ```
 
 主要页面：
@@ -1495,7 +1245,6 @@ V1 不引入 Drift 或本地 SQLite。
 - 专注计时。
 - 欠债列表。
 - 日报和周报。
-- AI 对话。
 - 设置，包括验活等级和日终时间。
 
 ### 15.5 视频页面
@@ -1506,8 +1255,6 @@ V1 不引入 Drift 或本地 SQLite。
 - 标题和可信进度。
 - 只允许回看的进度条。
 - 播放、暂停、倍速。
-- AI 按钮。
-- AI 使用 Bottom Sheet。
 - 验活使用不可绕过的模态框。
 
 App 生命周期：
@@ -1557,8 +1304,8 @@ App 生命周期：
 /admin/emby
 /admin/courses
 /admin/courses/{id}/lessons
+/admin/courses/{id}/study-content/import
 /admin/lessons/{id}/questions
-/admin/transcriptions
 /admin/health
 /admin/settings/integrations
 ```
@@ -1570,8 +1317,9 @@ App 生命周期：
 - Cookie 使用 HttpOnly、Secure、SameSite=Lax。
 - 登录失败有基本限速。
 - 首个管理员通过环境变量引导创建，首次启动后要求修改密码。
-- 管理员可统一配置 Emby、LLM、ASR 和 MCP；密码字段支持显示和隐藏。
+- 管理员可配置 Emby；API Key 字段支持显示和隐藏。
 - 配置页面禁止缓存，保存操作使用 CSRF，保存成功后对新调用立即生效。
+- 课程课时页可上传 ZIP 批量导入全文和摘要；先全包校验，再在一个事务中写入。
 
 V1 后台功能以可用为主，不做复杂设计系统。
 
@@ -1585,15 +1333,11 @@ V1 后台功能以可用为主，不做复杂设计系统。
 - JWT Secret 至少 32 字节随机值。
 - Refresh Token 数据库存哈希，不存明文。
 - 密码使用 BCrypt strength 12。
-- Emby API Key、LLM Key、ASR Key、MCP Token 只允许存在于服务端存储和 ADMIN 配置页面，不得进入 Flutter、业务 API、日志或错误响应。
+- Emby API Key 只允许存在于服务端存储和 ADMIN 配置页面，不得进入 Flutter、业务 API、日志或错误响应。
 - 播放代理固定目标，禁止用户传任意 URL。
 - HLS 路径重写需防目录穿越。
 - 所有资源查询校验当前用户所有权。
-- AI 工具白名单。
-- AI 无写工具。
-- Transcript、搜索结果和 MCP 返回均不能作为系统指令执行。
 - 日志不记录 Token、密码、API Key 和完整媒体 URL。
-- AI 日志默认不记录完整 Prompt。
 - 管理后台开启 CSRF。
 - App 端不信任本地时间和本地完成状态。
 - 切换服务端地址时必须先清除旧服务器 Token，且地址不得嵌入认证信息。
@@ -1618,9 +1362,8 @@ ALIVE_CHECK_REQUIRED
 QUIZ_LOCKED
 EMBY_UNAVAILABLE
 MEDIA_NOT_AVAILABLE
-TRANSCRIPT_NOT_READY
-AI_PROVIDER_UNAVAILABLE
-MCP_SEARCH_UNAVAILABLE
+LESSON_STUDY_CONTENT_NOT_FOUND
+STUDY_CONTENT_IMPORT_INVALID
 ```
 
 客户端规则：
@@ -1628,8 +1371,7 @@ MCP_SEARCH_UNAVAILABLE
 - 展示可操作提示，不直接显示堆栈。
 - 网络错误支持重试。
 - 对 `SEEK_NOT_ALLOWED`，播放器回到服务端位置。
-- 对 `TRANSCRIPT_NOT_READY`，视频 AI 显示“视频内容仍在处理中”，常规问答仍可用。
-- AI 流中断保留已接收内容并允许重试。
+- 对 `STUDY_CONTENT_IMPORT_INVALID`，管理后台显示具体 Emby Item ID 和可修复原因，不显示堆栈。
 
 ---
 
@@ -1640,9 +1382,8 @@ MCP_SEARCH_UNAVAILABLE
 - Spring Boot Actuator `/actuator/health`。
 - 每个请求生成 `requestId`。
 - 日志包含用户 ID、会话 ID、模块和耗时，不包含敏感内容。
-- Emby、ASR、LLM、MCP 调用记录耗时和状态。
-- 转写任务可见状态和最后错误。
-- AI 记录 token 使用量。
+- Emby 调用记录耗时和状态。
+- 课程内容导入记录数量、耗时和结果，不记录正文。
 - SQLite WAL 文件大小监控日志。
 - 每日备份。
 - 至少保留 7 天备份。
@@ -1674,7 +1415,7 @@ sqlite3 /data/study.db ".backup '/backup/study-YYYYMMDD-HHMMSS.db'"
 4. 保留最近 7 份日备和 4 份周备。
 5. 定期做恢复演练。
 
-转写文本已经在数据库备份内。
+课程全文和摘要已经在数据库备份内。
 
 恢复：
 
@@ -1699,8 +1440,7 @@ sqlite3 /data/study.db ".backup '/backup/study-YYYYMMDD-HHMMSS.db'"
 - 验活调度。
 - 考试进度压力。
 - 日报和审判模板。
-- 视频上下文构建。
-- MCP 工具白名单。
+- ZIP 结构解析和导入校验。
 
 集成测试：
 
@@ -1709,9 +1449,8 @@ sqlite3 /data/study.db ".backup '/backup/study-YYYYMMDD-HHMMSS.db'"
 - 外键和唯一约束。
 - Spring Security。
 - REST API。
-- SSE。
 - Emby 使用 WireMock。
-- LLM、ASR、MCP 使用 Stub/WireMock。
+- 课程内容导入事务与 V013 旧数据迁移。
 - Range 转发和 HLS 重写。
 
 契约测试：
@@ -1728,7 +1467,6 @@ sqlite3 /data/study.db ".backup '/backup/study-YYYYMMDD-HHMMSS.db'"
 - Token 刷新。
 - 心跳状态机。
 - Seek Guard。
-- SSE parser。
 - 计时器。
 
 Widget 测试：
@@ -1739,7 +1477,8 @@ Widget 测试：
 - 欠债展示。
 - 验活弹窗。
 - 题目页面。
-- AI 对话增量渲染。
+- 四 Tab App Shell。
+- 播放页无 AI 入口。
 
 集成测试：
 
@@ -1748,7 +1487,7 @@ Widget 测试：
 - 启动学习会话。
 - 完成题目。
 - 开摆生成欠债。
-- AI 普通问答。
+- 读取已导入课程内容。
 
 真实视频播放需在至少一台物理 iPhone 做 smoke test。
 
@@ -1812,9 +1551,7 @@ CI 不负责 App Store 签名。
 Caddy
   ↓ HTTPS
 Spring Boot Container
-  ├─ /data/study.db
-  ├─ /data/tmp
-  └─ ffmpeg
+  └─ /data/study.db
        ↓
      Emby
 ```
@@ -1824,8 +1561,6 @@ Spring Boot Container
 - 数据卷必须是宿主机本地磁盘。
 - 服务实例数固定为 1。
 - Emby 和后端之间优先内网。
-- AI/ASR/MCP 通过出站 HTTPS。
-- Docker 容器限制 FFmpeg 和服务内存。
 - 媒体代理不设置过小的反向代理超时。
 
 环境变量提供首次启动和未保存后台配置时的初始值：
@@ -1839,23 +1574,12 @@ ADMIN_BOOTSTRAP_PASSWORD
 EMBY_BASE_URL
 EMBY_API_KEY
 EMBY_USER_ID
-LLM_BASE_URL
-LLM_API_KEY
-LLM_MODEL
-LLM_MAX_CONTEXT_TOKENS
-LLM_TEMPERATURE
-ASR_BASE_URL
-ASR_API_KEY
-ASR_MODEL
-WEB_SEARCH_MCP_URL
-WEB_SEARCH_MCP_BEARER_TOKEN
-WEB_SEARCH_MCP_ALLOWED_TOOLS
 QUIZ_DEBT_ESTIMATE_SECONDS
 DATA_DIR
 BACKUP_DIR
 ```
 
-管理员可通过 `/admin/settings/integrations` 将 Emby、LLM、ASR 和 MCP 配置保存到 SQLite。数据库中存在配置后，整份数据库配置优先于环境变量；SQLite 备份包含这些配置。
+管理员可通过 `/admin/settings/integrations` 将 Emby 配置保存到 SQLite。数据库中存在配置后，整份数据库配置优先于环境变量；SQLite 备份包含该配置。
 
 ---
 
@@ -1867,8 +1591,6 @@ BACKUP_DIR
 - Dashboard P95 小于 500ms。
 - 心跳处理 P95 小于 100ms。
 - 单用户同时仅一个观看会话。
-- 单用户同时仅一个 AI 流。
-- 转写并发固定 1。
 - 媒体代理不得整文件缓冲。
 - 后端稳定运行 7 天无锁死和数据库损坏。
 - 数据库出现 `SQLITE_BUSY` 时有 5 秒等待，并记录指标日志。
@@ -1881,7 +1603,6 @@ BACKUP_DIR
 
 - 所有业务规则在服务端。
 - API 不出现 `/ios`。
-- SSE 协议不依赖 Flutter。
 - 媒体播放票据不依赖 iOS。
 - 使用 `/api/v1` 版本化。
 - DTO 不包含 Flutter 类型。
@@ -1938,27 +1659,21 @@ BACKUP_DIR
 8. 第二天计划页优先展示该欠债。
 9. 完成还债任务后欠债变为 PAID。
 
-### 场景 C：AI 普通问答
+### 场景 C：批量导入课程学习内容
 
-1. 用户进入 AI Tab。
-2. 发送常规问题。
-3. AI 流式返回。
-4. 用户询问今日计划或欠债。
-5. AI 调用只读工具。
-6. 用户询问需要最新信息的问题。
-7. AI 调用 MCP 搜索并返回来源。
-8. AI 不能修改任何数据。
+1. 管理员进入一个课程的课时页。
+2. 上传 manifest、全文和摘要结构正确的 ZIP。
+3. 服务端按 Emby Item ID 精确匹配当前课程课时。
+4. 全包校验成功后一次导入全部内容。
+5. 重复上传后对应课时内容被覆盖，首次导入时间保留。
+6. 上传缺少摘要、包含其他课程课时或非法路径的 ZIP 时整包不写入。
 
-### 场景 D：视频 AI
+### 场景 D：读取课程学习内容
 
-1. 管理员触发视频转写。
-2. 任务生成时间戳转写、分段摘要和全局摘要。
-3. 用户播放视频并打开 AI Bottom Sheet。
-4. 用户问当前知识点。
-5. AI 使用当前时间附近文本和相关片段回答。
-6. 回答包含时间戳。
-7. 用户问视频整体内容，AI 使用全局和分段摘要回答。
-8. Transcript 未 READY 时明确提示，常规问答仍可用。
+1. 登录用户请求已导入课时的学习内容接口。
+2. 响应返回完整全文、Markdown 摘要和更新时间。
+3. 未导入内容的课时返回 `LESSON_STUDY_CONTENT_NOT_FOUND`。
+4. Flutter Shell 只有“首页 / 学习 / 数据 / 我的”，播放器没有 AI 入口。
 
 ### 场景 E：恢复与备份
 
@@ -1966,7 +1681,7 @@ BACKUP_DIR
 2. 校验备份完整性。
 3. 在独立目录恢复。
 4. 启动服务。
-5. 用户、课程、计划、进度、欠债和转写均存在。
+5. 用户、课程、计划、进度、欠债和课程学习内容均存在。
 
 ### 场景 F：切换开发服务端
 
@@ -1977,11 +1692,11 @@ BACKUP_DIR
 5. App 无需进程重启即可重建全部网络依赖。
 6. 登录页显示新服务器，用户可使用新服务器账号登录。
 
-### 场景 G：后台配置外部服务
+### 场景 G：后台配置 Emby
 
 1. 管理员进入服务配置页。
 2. 页面显示环境变量或数据库中的当前有效配置。
-3. 管理员修改 LLM、ASR、MCP 和 Emby 配置并保存。
+3. 管理员修改 Emby 配置并保存。
 4. 配置无需重启即可供新调用使用。
 5. 非管理员、缺少 CSRF 和非法 URL 的写入被拒绝。
 6. Flutter、业务 API、日志和错误响应不包含密钥。
@@ -1998,14 +1713,13 @@ V1 只有同时满足以下条件才完成：
 - Emby Key 未出现在 App 包、日志和 API 响应。
 - 未看区间无法通过正常 UI 和直接 API 心跳绕过。
 - 开摆和正常日终都会幂等生成欠债。
-- AI 所有工具均只读。
-- MCP 工具白名单测试通过。
-- 视频问答能引用时间戳。
+- 服务端与 Flutter 不包含 AI、ASR、MCP、自动转写和聊天入口。
+- 课程学习内容 ZIP 导入满足全包原子性，移动端接口只读。
 - 数据库可在线备份并成功恢复。
 - 文档、环境变量和运行命令完整。
 - 没有 Android、Web、微服务、Redis、向量库等越界实现。
 - 服务端地址切换经过健康检查，且不会向新服务器发送旧 Token。
-- 管理员保存外部服务配置后，新调用无需重启即可使用最新配置。
+- 管理员保存 Emby 配置后，新请求无需重启即可使用最新配置。
 
 ---
 
@@ -2023,11 +1737,10 @@ V1 只有同时满足以下条件才完成：
 8. 课后答题。
 9. 专注计时。
 10. 日报、周报和晚间审判。
-11. 转写和摘要。
-12. AI 普通问答、只读工具和 MCP。
-13. 视频 AI。
-14. 运维、备份、真机验收和 TestFlight。
-15. Web 后台运行时外部服务配置。
+11. 课程全文和摘要批量导入。
+12. 课程学习内容只读接口。
+13. 运维、备份、真机验收和 TestFlight。
+14. Web 后台 Emby 运行时配置。
 
 每个切片必须独立测试、独立提交，不允许先铺满空壳再统一补实现。
 
@@ -2041,7 +1754,6 @@ V1 只有同时满足以下条件才完成：
 - Flutter iOS Deployment。
 - Flutter `video_player` package。
 - Emby REST API、API Key Authentication、PlaybackInfo、Dynamic HLS 和 Playstate API。
-- SQLite WAL、Isolation 和 FTS5 文档。
+- SQLite WAL 和 Isolation 文档。
 - Spring Boot 4.1 System Requirements。
-- LangChain4j Spring Boot Integration、Tools、MCP 和 Chat Memory。
 - springdoc-openapi Spring Boot 4 compatibility documentation。
