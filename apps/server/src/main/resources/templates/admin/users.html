@@ -3,12 +3,12 @@
   <head th:replace="~{admin/fragments :: head('用户管理 - 上岸管理台')}"></head>
   <body class="admin-body">
     <div class="admin-shell">
-      <aside th:replace="~{admin/fragments :: navigation('users')}"></aside>
+      <header th:replace="~{admin/fragments :: navigation('users')}"></header>
       <main class="admin-main">
         <header class="page-header">
           <div>
             <p class="page-eyebrow">ACCESS CONTROL</p>
-            <h1>用户管理</h1>
+            <h1 data-code="USR/02">用户管理</h1>
             <p>创建学习账号，并控制普通用户是否可以继续登录。</p>
           </div>
         </header>

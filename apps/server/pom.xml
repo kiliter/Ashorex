@@ -24,6 +24,7 @@
     <spotless-maven-plugin.version>3.10.0</spotless-maven-plugin.version>
     <!-- WireMock 稳定版本来自官方 3.x 安装文档，仅用于外部服务契约测试。 -->
     <wiremock.version>3.13.2</wiremock.version>
+    <langchain4j.version>1.19.0</langchain4j.version>
   </properties>
 
   <dependencies>
@@ -69,6 +70,17 @@
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-oauth2-resource-server</artifactId>
+    </dependency>
+    <!-- 只使用稳定版 OpenAI-compatible ChatModel，不引入 Agentic、MCP 或向量能力。 -->
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-open-ai</artifactId>
+      <version>${langchain4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-http-client-jdk</artifactId>
+      <version>${langchain4j.version}</version>
     </dependency>
 
     <!-- SQLite 驱动与 Flyway SQLite 数据库支持必须使用冻结版本。 -->

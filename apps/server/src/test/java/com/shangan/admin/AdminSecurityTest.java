@@ -58,7 +58,7 @@ class AdminSecurityTest {
         .perform(get("/assets/admin.css"))
         .andExpect(status().isOk())
         .andExpect(content().contentTypeCompatibleWith("text/css"))
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("--color-tide")));
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("--accent")));
 
     mockMvc
         .perform(get("/admin/login"))
@@ -111,6 +111,15 @@ class AdminSecurityTest {
             get("/admin/lessons/{lessonId}/questions/{questionId}", lesson.id(), question.id())
                 .with(admin))
         .andExpect(status().isOk());
+    mockMvc.perform(get("/admin/content-jobs").with(admin)).andExpect(status().isOk());
+    mockMvc
+        .perform(get("/admin/lessons/{lessonId}/study-content", lesson.id()).with(admin))
+        .andExpect(status().isOk())
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("尚未生成全文")));
+    mockMvc
+        .perform(get("/admin/courses/{courseId}/quiz-drafts", course.id()).with(admin))
+        .andExpect(status().isOk())
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("暂无题目草稿")));
   }
 
   @Test
@@ -183,8 +192,8 @@ class AdminSecurityTest {
     mockMvc
         .perform(get("/admin/health").with(user("admin").roles("ADMIN")))
         .andExpect(status().isOk())
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("数据库路径")))
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("Emby 状态")))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("SQLite 数据库")))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("Emby 媒体")))
         .andExpect(
             content()
                 .string(

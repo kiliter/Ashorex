@@ -3,13 +3,13 @@
   <head th:replace="~{admin/fragments :: head('课后题管理 - 上岸管理台')}"></head>
   <body class="admin-body">
     <div class="admin-shell">
-      <aside th:replace="~{admin/fragments :: navigation('courses')}"></aside>
+      <header th:replace="~{admin/fragments :: navigation('courses')}"></header>
       <main class="admin-main">
         <a class="breadcrumb" th:href="@{/admin/courses/{courseId}/lessons(courseId=${lesson.courseId})}">← 返回课时列表</a>
         <header class="page-header">
           <div>
             <p class="page-eyebrow">QUIZ BUILDER</p>
-            <h1 th:text="|${lesson.title} · 课后题|">课后题管理</h1>
+            <h1 data-code="QST/08" th:text="|${lesson.title} · 课后题|">课后题管理</h1>
             <p>启用的题目将在可信观看完成后解锁。</p>
           </div>
           <a class="button" th:href="@{/admin/lessons/{lessonId}/questions/new(lessonId=${lesson.id})}">新增题目</a>

@@ -40,6 +40,9 @@ class RuntimeIntegrationSettingsServiceTest {
     registry.add("app.emby.base-url", () -> "https://env-emby.example.test");
     registry.add("app.emby.api-key", () -> "env-emby-key");
     registry.add("app.emby.user-id", () -> "env-user");
+    registry.add("app.asr.base-url", () -> "https://env-asr.example.test");
+    registry.add("app.llm.base-url", () -> "https://env-cpa.example.test/v1");
+    registry.add("app.llm.model", () -> "env-model");
   }
 
   @Test
@@ -47,6 +50,9 @@ class RuntimeIntegrationSettingsServiceTest {
     RuntimeIntegrationSettings current = settings.current();
 
     assertThat(current.emby().baseUrl()).isEqualTo("https://env-emby.example.test");
+    assertThat(current.asr().baseUrl()).isEqualTo("https://env-asr.example.test");
+    assertThat(current.llm().model()).isEqualTo("env-model");
+    assertThat(current.autoFill().enabled()).isFalse();
     assertThat(
             jdbc.sql("select count(*) from runtime_integration_settings")
                 .query(Long.class)
@@ -59,6 +65,8 @@ class RuntimeIntegrationSettingsServiceTest {
     RuntimeIntegrationSettings saved = settings.save(databaseSettings());
 
     assertThat(saved.emby().apiKey()).isEqualTo("database-emby-key");
+    assertThat(saved.asr().apiKey()).isEqualTo("database-asr-key");
+    assertThat(saved.llm().contextLength()).isEqualTo(65536);
     assertThat(settings.current()).isEqualTo(saved);
     assertThat(
             jdbc.sql("select emby_user_id from runtime_integration_settings where id='default'")
@@ -78,6 +86,24 @@ class RuntimeIntegrationSettingsServiceTest {
         .isInstanceOf(IntegrationSettingsValidationException.class)
         .hasMessageContaining("Emby Base URL");
     assertThat(settings.current()).isEqualTo(before);
+  }
+
+  @Test
+  void rejectsLlmOutputBudgetThatLeavesNoRoomForLessonText() {
+    RuntimeIntegrationSettings valid = databaseSettings();
+    RuntimeIntegrationSettings invalid =
+        new RuntimeIntegrationSettings(
+            valid.emby(),
+            valid.asr(),
+            new RuntimeIntegrationSettings.Llm(
+                valid.llm().baseUrl(), valid.llm().apiKey(), valid.llm().model(), 4096, 2048, 60),
+            valid.openRouter(),
+            valid.autoFill(),
+            0);
+
+    assertThatThrownBy(() -> settings.save(invalid))
+        .isInstanceOf(IntegrationSettingsValidationException.class)
+        .hasMessageContaining("正文至少预留 256 Tokens");
   }
 
   @Test
@@ -154,6 +180,22 @@ class RuntimeIntegrationSettingsServiceTest {
     return new RuntimeIntegrationSettings(
         new RuntimeIntegrationSettings.Emby(
             "https://database-emby.example.test", "database-emby-key", "database-user"),
+        new RuntimeIntegrationSettings.Asr(
+            "https://database-asr.example.test",
+            "database-asr-key",
+            RuntimeIntegrationSettings.DEFAULT_ASR_MODEL,
+            "Chinese",
+            30,
+            1800),
+        new RuntimeIntegrationSettings.Llm(
+            "https://database-cpa.example.test/v1",
+            "database-llm-key",
+            "database-model",
+            65536,
+            4096,
+            300),
+        new RuntimeIntegrationSettings.OpenRouter("database-openrouter-key"),
+        new RuntimeIntegrationSettings.AutoFill(false, 15),
         0);
   }
 }

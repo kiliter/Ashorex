@@ -3,34 +3,43 @@
   <head th:replace="~{admin/fragments :: head('运行状态 - 上岸管理台')}"></head>
   <body class="admin-body">
     <div class="admin-shell">
-      <aside th:replace="~{admin/fragments :: navigation('health')}"></aside>
+      <header th:replace="~{admin/fragments :: navigation('health')}"></header>
       <main class="admin-main">
-        <header class="page-header">
-          <div>
-            <p class="page-eyebrow">SYSTEM OVERVIEW</p>
-            <h1>运行状态</h1>
-            <p>快速确认数据库、媒体和课程内容是否已经就绪。</p>
-          </div>
-        </header>
-
-        <section class="panel" aria-labelledby="health-title">
-          <div class="panel-header">
-            <div>
-              <h2 id="health-title">服务概览</h2>
-              <p>只显示运行状态和配置结果，不展示密码、API Key、Token 或远端 URL。</p>
-            </div>
-            <span class="status-pill status-pill--ok">服务在线</span>
+        <section class="page-head"><div class="container page-head-row"><div><h1 class="page-title" data-code="SYS/01">运行状态</h1><p class="page-desc">数据库、媒体链路与内容生产队列的实时概览</p></div><a class="btn btn-secondary" th:href="@{/admin/content-jobs}">查看任务日志</a></div></section>
+        <div class="container workspace">
+          <div class="summary-strip">
+            <div class="summary-item"><div class="summary-label">等待任务</div><div class="summary-value" th:text="${health.contentQueue.queued}">0</div></div>
+            <div class="summary-item"><div class="summary-label">执行中</div><div class="summary-value" th:text="${health.contentQueue.running}">0</div></div>
+            <div class="summary-item"><div class="summary-label">近 24h 成功</div><div class="summary-value" th:text="${health.contentQueue.succeededSince}">0</div></div>
+            <div class="summary-item"><div class="summary-label">近 24h 失败</div><div class="summary-value" th:text="${health.contentQueue.failedSince}">0</div></div>
           </div>
 
-          <dl class="metric-grid">
-            <div class="metric"><dt>数据库路径</dt><dd th:text="${health.databasePath}"></dd></div>
-            <div class="metric"><dt>数据库大小（字节）</dt><dd th:text="${health.databaseSizeBytes}"></dd></div>
-            <div class="metric"><dt>WAL 大小（字节）</dt><dd th:text="${health.walSizeBytes}"></dd></div>
-            <div class="metric"><dt>Emby 状态</dt><dd th:text="${health.embyStatus}"></dd></div>
-            <div class="metric"><dt>最后课程同步</dt><dd th:text="${health.lastCourseSync ?: '尚未同步'}"></dd></div>
-            <div class="metric"><dt>已导入内容课时</dt><dd th:text="${health.lessonStudyContentCount}"></dd></div>
-          </dl>
-        </section>
+          <div class="status-layout">
+            <section class="panel">
+              <div class="panel-head"><h2 class="section-title">SERVICE / 服务链路</h2><span class="badge success">服务在线</span></div>
+              <div class="status-list">
+                <div class="status-row"><div><div class="status-key">SQLite 数据库</div><div class="status-meta num" th:text="${health.databasePath}">路径</div></div><span class="badge success">已连接</span></div>
+                <div class="status-row"><div><div class="status-key">Emby 媒体</div><div class="status-meta">课程同步与音频流来源</div></div><span class="badge" th:classappend="${health.embyStatus == 'UP' ? ' success' : ' danger'}" th:text="${health.embyStatus}">状态</span></div>
+                <div class="status-row"><div><div class="status-key">ASR 转写</div><div class="status-meta">OpenAI-compatible 音频转写</div></div><span class="badge" th:classappend="${health.asrConfigured ? ' success' : ' warning'}" th:text="${health.asrConfigured ? '已配置' : '未配置'}">状态</span></div>
+                <div class="status-row"><div><div class="status-key">LLM 摘要 / 出题</div><div class="status-meta">CPA OpenAI-compatible 上游</div></div><span class="badge" th:classappend="${health.llmConfigured ? ' success' : ' warning'}" th:text="${health.llmConfigured ? '已配置' : '未配置'}">状态</span></div>
+                <div class="status-row"><div><div class="status-key">课程学习内容</div><div class="status-meta">全文或摘要至少一项就绪</div></div><strong class="num" th:text="${health.lessonStudyContentCount}">0</strong></div>
+                <div class="status-row"><div><div class="status-key">最近课程同步</div><div class="status-meta">本地课程快照更新时间</div></div><time th:text="${health.lastCourseSync ?: '尚未同步'}">尚未同步</time></div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head"><h2 class="section-title">LATENCY / 平均耗时</h2><span class="muted">全部已完成任务</span></div>
+              <table><tbody>
+                <tr><td>获取音频</td><td class="right num" th:text="|${health.contentQueue.averageFetchMs} ms|">0 ms</td></tr>
+                <tr><td>ASR 转写</td><td class="right num" th:text="|${health.contentQueue.averageTranscribeMs} ms|">0 ms</td></tr>
+                <tr><td>AI 摘要</td><td class="right num" th:text="|${health.contentQueue.averageSummarizeMs} ms|">0 ms</td></tr>
+                <tr><td>任务总耗时</td><td class="right num" th:text="|${health.contentQueue.averageTotalMs} ms|">0 ms</td></tr>
+                <tr><td>ASR RTF</td><td class="right num" th:text="${health.contentQueue.averageAudioDurationMs > 0 ? #numbers.formatDecimal(health.contentQueue.averageTranscribeMs * 1.0 / health.contentQueue.averageAudioDurationMs, 1, 3) : '—'}">—</td></tr>
+                <tr><td>数据库 / WAL</td><td class="right num" th:text="|${health.databaseSizeBytes} / ${health.walSizeBytes} B|">0 / 0 B</td></tr>
+              </tbody></table>
+            </section>
+          </div>
+        </div>
       </main>
     </div>
   </body>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="~{admin/fragments :: head('题目草稿 - 上岸管理台')}"></head>
+  <body class="admin-body"><div class="admin-shell">
+    <header th:replace="~{admin/fragments :: navigation('courses')}"></header>
+    <main class="admin-main">
+      <section class="page-head"><div class="container"><div class="route"><a th:href="@{/admin/courses}">课程管理</a><span>/</span><a th:href="@{/admin/courses/{id}/lessons(id=${course.id})}" th:text="${course.name}">课程</a><span>/</span><span>题目草稿</span></div><div class="page-head-row"><div><h1 class="page-title" data-code="DRF/07">AI 题目草稿</h1><p class="page-desc">AI 结果必须经过人工审核，批量发布只追加正式题目</p></div><span class="badge" th:text="|${#lists.size(drafts)} 份草稿|">0 份草稿</span></div></div></section>
+      <div class="container workspace">
+        <div class="alert alert--success" th:if="${published}">所选草稿已完成批量发布；重复提交不会创建重复题目。</div>
+        <form id="publish-drafts-form" method="post" th:action="@{/admin/courses/{courseId}/quiz-drafts/publish(courseId=${course.id})}"></form>
+          <section class="panel">
+            <div class="panel-head"><div><h2>REVIEW / 课程草稿</h2><p>发布前会校验整批题型、选项、唯一答案和中文解析；任一无效则整批不写入。</p></div><button type="submit" form="publish-drafts-form">发布所选草稿</button></div>
+            <div class="empty-state" th:if="${#lists.isEmpty(drafts)}"><strong>暂无题目草稿</strong>从课时页或课程批量操作创建 AI 出题任务。</div>
+            <div th:each="draft : ${drafts}" class="draft-block">
+              <div class="panel-head"><label class="check-field"><input th:if="${draft.status.name() == 'READY_FOR_REVIEW'}" type="checkbox" name="draftId" th:value="${draft.id}" form="publish-drafts-form" /><strong class="num" th:text="${draft.mediaItemId}">lesson</strong></label><div class="actions"><span class="badge" th:classappend="${draft.status.name() == 'PUBLISHED' ? ' success' : ' warning'}" th:text="${draft.status}">状态</span><span class="muted num" th:text="|${#lists.size(draft.items)} ITEMS|">0 ITEMS</span></div></div>
+              <article class="draft-item" th:each="item, stat : ${draft.items}">
+                <form class="form-grid" method="post" th:action="@{/admin/courses/{courseId}/quiz-drafts/{draftId}/items/{itemId}(courseId=${course.id},draftId=${draft.id},itemId=${item.id})}">
+                  <div class="form-row">
+                    <label class="field">题型<select name="questionType"><option value="SINGLE_CHOICE" th:selected="${item.questionType == 'SINGLE_CHOICE'}">单选题</option><option value="TRUE_FALSE" th:selected="${item.questionType == 'TRUE_FALSE'}">判断题</option></select></label>
+                    <label class="field">排序值<input class="num" type="number" name="sortOrder" th:value="${item.sortOrder}" /></label>
+                  </div>
+                  <label class="field">题干<textarea name="content" required th:text="${item.content}"></textarea></label>
+                  <label class="field">中文解析<textarea name="explanation" required th:text="${item.explanation}"></textarea></label>
+                  <fieldset><legend>选项与唯一正确答案</legend><div class="option-list"><label class="option-row" th:each="option, optionStat : ${item.options}"><span><input type="radio" name="correctOptionIndex" th:value="${optionStat.index}" th:checked="${option.correct}" required /> 正确</span><input name="optionContent" th:value="${option.content}" required /></label></div></fieldset>
+                  <div class="actions"><button class="btn btn-secondary btn-sm" type="submit" th:disabled="${draft.status.name() == 'PUBLISHED'}">保存修改</button><button class="btn btn-danger btn-sm" type="submit" th:formaction="@{/admin/courses/{courseId}/quiz-drafts/{draftId}/items/{itemId}/delete(courseId=${course.id},draftId=${draft.id},itemId=${item.id})}" th:disabled="${draft.status.name() == 'PUBLISHED'}">删除题目</button><span class="muted num" th:text="|Q${#numbers.formatInteger(stat.count, 2)}|">Q01</span></div>
+                </form>
+              </article>
+            </div>
+          </section>
+      </div>
+    </main>
+  </div></body>
+</html>

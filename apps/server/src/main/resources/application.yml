@@ -45,6 +45,25 @@ app:
     base-url: ${EMBY_BASE_URL:}
     api-key: ${EMBY_API_KEY:}
     user-id: ${EMBY_USER_ID:}
+  asr:
+    base-url: ${ASR_BASE_URL:}
+    api-key: ${ASR_API_KEY:}
+    model: ${ASR_MODEL:mlx-community/Qwen3-ASR-1.7B-8bit}
+    language: ${ASR_LANGUAGE:Chinese}
+    chunk-duration-seconds: ${ASR_CHUNK_DURATION_SECONDS:30}
+    timeout-seconds: ${ASR_TIMEOUT_SECONDS:1800}
+  llm:
+    base-url: ${LLM_BASE_URL:}
+    api-key: ${LLM_API_KEY:}
+    model: ${LLM_MODEL:}
+    context-length: ${LLM_CONTEXT_LENGTH:131072}
+    max-completion-tokens: ${LLM_MAX_COMPLETION_TOKENS:8192}
+    timeout-seconds: ${LLM_TIMEOUT_SECONDS:300}
+  openrouter:
+    api-key: ${OPENROUTER_API_KEY:}
+  content-auto-fill:
+    enabled: ${CONTENT_AUTO_FILL_ENABLED:false}
+    interval-minutes: ${CONTENT_AUTO_FILL_INTERVAL_MINUTES:15}
   security:
     jwt-secret: ${JWT_SECRET:}
     bootstrap-admin-username: ${ADMIN_BOOTSTRAP_USERNAME:}

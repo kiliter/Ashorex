@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/** 校验、持久化并原子发布当前 Emby 运行时配置。 */
+/** 校验、持久化并原子发布当前外部服务运行时配置。 */
 @Service
 public class RuntimeIntegrationSettingsService implements IntegrationSettingsProvider {
 
@@ -56,8 +56,81 @@ public class RuntimeIntegrationSettingsService implements IntegrationSettingsPro
             url("embyBaseUrl", "Emby Base URL", submitted.emby().baseUrl(), errors),
             text(submitted.emby().apiKey()),
             text(submitted.emby().userId()));
+    RuntimeIntegrationSettings.Asr asr =
+        new RuntimeIntegrationSettings.Asr(
+            url("asrBaseUrl", "ASR Base URL", submitted.asr().baseUrl(), errors),
+            text(submitted.asr().apiKey()),
+            text(submitted.asr().model()),
+            text(submitted.asr().language()),
+            range(
+                "asrChunkDurationSeconds",
+                "ASR 分片秒数",
+                submitted.asr().chunkDurationSeconds(),
+                5,
+                600,
+                errors),
+            range(
+                "asrTimeoutSeconds",
+                "ASR 超时秒数",
+                submitted.asr().timeoutSeconds(),
+                1,
+                7200,
+                errors));
+    RuntimeIntegrationSettings.Llm llm =
+        new RuntimeIntegrationSettings.Llm(
+            url("llmBaseUrl", "LLM Base URL", submitted.llm().baseUrl(), errors),
+            text(submitted.llm().apiKey()),
+            text(submitted.llm().model()),
+            range(
+                "llmContextLength",
+                "LLM 上下文长度",
+                submitted.llm().contextLength(),
+                4096,
+                2_000_000,
+                errors),
+            range(
+                "llmMaxCompletionTokens",
+                "LLM 最大输出 Tokens",
+                submitted.llm().maxCompletionTokens(),
+                256,
+                200_000,
+                errors),
+            range(
+                "llmTimeoutSeconds",
+                "LLM 超时秒数",
+                submitted.llm().timeoutSeconds(),
+                1,
+                1800,
+                errors));
+    if (llm.contextLength() - llm.maxCompletionTokens() - 2048 < 256) {
+      errors.put("llmMaxCompletionTokens", "最大输出 Tokens 过大，必须为正文至少预留 256 Tokens");
+    }
+    RuntimeIntegrationSettings.AutoFill autoFill =
+        new RuntimeIntegrationSettings.AutoFill(
+            submitted.autoFill().enabled(),
+            range(
+                "autoFillIntervalMinutes",
+                "自动补全扫描间隔",
+                submitted.autoFill().intervalMinutes(),
+                1,
+                1440,
+                errors));
     if (!errors.isEmpty()) throw new IntegrationSettingsValidationException(errors);
-    return new RuntimeIntegrationSettings(emby, clock.instant().toEpochMilli());
+    return new RuntimeIntegrationSettings(
+        emby,
+        asr,
+        llm,
+        new RuntimeIntegrationSettings.OpenRouter(text(submitted.openRouter().apiKey())),
+        autoFill,
+        clock.instant().toEpochMilli());
+  }
+
+  private int range(
+      String field, String label, int value, int minimum, int maximum, Map<String, String> errors) {
+    if (value < minimum || value > maximum) {
+      errors.put(field, label + "必须在 " + minimum + " 到 " + maximum + " 之间");
+    }
+    return value;
   }
 
   private String url(String field, String label, String raw, Map<String, String> errors) {

@@ -1,7 +1,10 @@
 package com.shangan.admin;
 
+import com.shangan.ai.content.application.ContentGenerationJobService;
+import com.shangan.ai.content.infrastructure.ContentGenerationJobRepository;
 import com.shangan.catalog.application.CourseSyncService;
 import com.shangan.catalog.application.LessonStudyContentImportService;
+import com.shangan.common.integration.IntegrationSettingsProvider;
 import com.shangan.media.emby.EmbyHealthService;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,16 +23,22 @@ public class OperationsHealthService {
   private final EmbyHealthService emby;
   private final CourseSyncService courses;
   private final LessonStudyContentImportService studyContents;
+  private final ContentGenerationJobService contentJobs;
+  private final IntegrationSettingsProvider settings;
 
   public OperationsHealthService(
       @Value("${spring.datasource.url}") String datasourceUrl,
       EmbyHealthService emby,
       CourseSyncService courses,
-      LessonStudyContentImportService studyContents) {
+      LessonStudyContentImportService studyContents,
+      ContentGenerationJobService contentJobs,
+      IntegrationSettingsProvider settings) {
     this.datasourceUrl = datasourceUrl;
     this.emby = emby;
     this.courses = courses;
     this.studyContents = studyContents;
+    this.contentJobs = contentJobs;
+    this.settings = settings;
   }
 
   /** 在一个只读事务内获取数据库业务状态；文件大小读取失败时安全降级为 0。 */
@@ -42,13 +51,18 @@ public class OperationsHealthService {
             .filter(java.util.Objects::nonNull)
             .max(Comparator.naturalOrder())
             .orElse(null);
+    ContentGenerationJobRepository.QueueStats queue = contentJobs.stats();
+    var runtime = settings.current();
     return new Snapshot(
         database.toString(),
         fileSize(database),
         fileSize(Path.of(database + "-wal")),
         emby.status(),
         lastCourseSync,
-        studyContents.contentCount());
+        studyContents.contentCount(),
+        runtime.asr().configured(),
+        runtime.llm().configured(),
+        queue);
   }
 
   private Path databasePath() {
@@ -74,5 +88,8 @@ public class OperationsHealthService {
       long walSizeBytes,
       String embyStatus,
       Instant lastCourseSync,
-      long lessonStudyContentCount) {}
+      long lessonStudyContentCount,
+      boolean asrConfigured,
+      boolean llmConfigured,
+      ContentGenerationJobRepository.QueueStats contentQueue) {}
 }

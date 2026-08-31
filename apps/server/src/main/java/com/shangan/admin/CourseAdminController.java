@@ -90,13 +90,21 @@ public class CourseAdminController {
     List<MediaItem> lessons = courses.listAdminLessons(courseId);
     Map<String, Instant> contentUpdatedAtByLessonId =
         studyContents.contentUpdatedAtByLessonId(courseId);
+    var contentsByLessonId = studyContents.contentsByLessonId(courseId);
     model.addAttribute("courseId", courseId);
     model.addAttribute("course", courses.getAdminCourse(courseId));
     model.addAttribute("lessons", lessons);
     model.addAttribute("studyContentUpdatedAtByLessonId", contentUpdatedAtByLessonId);
+    model.addAttribute("studyContentsByLessonId", contentsByLessonId);
     model.addAttribute("lessonCount", lessons.size());
     model.addAttribute("enabledLessonCount", lessons.stream().filter(MediaItem::enabled).count());
     model.addAttribute("contentImportedCount", contentUpdatedAtByLessonId.size());
+    model.addAttribute(
+        "transcriptReadyCount",
+        contentsByLessonId.values().stream().filter(value -> value.transcriptReady()).count());
+    model.addAttribute(
+        "summaryReadyCount",
+        contentsByLessonId.values().stream().filter(value -> value.summaryReady()).count());
     model.addAttribute("imported", imported);
     model.addAttribute("importError", importError);
   }

@@ -3,13 +3,13 @@
   <head th:replace="~{admin/fragments :: head('编辑课后题 - 上岸管理台')}"></head>
   <body class="admin-body">
     <div class="admin-shell">
-      <aside th:replace="~{admin/fragments :: navigation('courses')}"></aside>
+      <header th:replace="~{admin/fragments :: navigation('courses')}"></header>
       <main class="admin-main">
         <a class="breadcrumb" th:href="@{/admin/lessons/{lessonId}/questions(lessonId=${lesson.id})}">← 返回题目列表</a>
         <header class="page-header">
           <div>
             <p class="page-eyebrow">QUESTION EDITOR</p>
-            <h1 th:text="${question == null ? '新增课后题' : '编辑课后题'}">编辑课后题</h1>
+            <h1 data-code="EDT/09" th:text="${question == null ? '新增课后题' : '编辑课后题'}">编辑课后题</h1>
             <p th:text="|${lesson.title} · 配置题目、正确答案与解析|">课时信息</p>
           </div>
         </header>

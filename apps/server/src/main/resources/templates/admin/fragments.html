@@ -1,62 +1,31 @@
 <!doctype html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
-  <!-- 后台页面共用的 Head，确保登录页与业务页使用同一套本地样式。 -->
+  <!-- 后台页面共用 Head；所有资源均随服务端发布，不依赖外部 CDN。 -->
   <head th:fragment="head(pageTitle)">
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#f4f6f9" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f2f6fa" />
     <title th:text="${pageTitle}">上岸管理后台</title>
     <link rel="stylesheet" th:href="@{/assets/admin.css}" />
   </head>
   <body>
-    <!-- 桌面端使用轻量侧栏，窄屏下收拢为可横向滚动的顶部导航。 -->
-    <aside th:fragment="navigation(activePage)" class="admin-rail">
-      <div class="brand-row">
-        <a class="brand" th:href="@{/admin/health}" aria-label="返回运行状态">
-          <span class="brand-mark" aria-hidden="true">岸</span>
-          <span class="brand-copy">
-            <strong>上岸管理台</strong>
-            <small>SHANGAN ADMIN</small>
-          </span>
-        </a>
-        <form class="logout-form logout-form--mobile" method="post" th:action="@{/admin/logout}">
-          <button class="quiet-button" type="submit">退出</button>
-        </form>
+    <!-- 高密度桌面后台统一使用顶部导航；小屏仅允许横向滚动，不切回侧栏。 -->
+    <header th:fragment="navigation(activePage)" class="topnav">
+      <div class="container topnav-inner">
+        <a class="logo" th:href="@{/admin/health}">上岸管理台 <small>SHANGAN / OPS</small></a>
+        <nav aria-label="管理功能">
+          <a class="nav-link" th:classappend="${activePage == 'health' ? ' active' : ''}" th:href="@{/admin/health}">运行状态</a>
+          <a class="nav-link" th:classappend="${activePage == 'users' ? ' active' : ''}" th:href="@{/admin/users}">用户管理</a>
+          <a class="nav-link" th:classappend="${activePage == 'courses' ? ' active' : ''}" th:href="@{/admin/courses}">课程管理</a>
+          <a class="nav-link" th:classappend="${activePage == 'jobs' ? ' active' : ''}" th:href="@{/admin/content-jobs}">内容任务</a>
+          <a class="nav-link" th:classappend="${activePage == 'settings' ? ' active' : ''}" th:href="@{/admin/settings/integrations}">服务配置</a>
+        </nav>
+        <div class="operator">
+          <span class="operator-dot" aria-hidden="true"></span>
+          <span>ADMIN</span>
+          <form method="post" th:action="@{/admin/logout}"><button type="submit">退出</button></form>
+        </div>
       </div>
-
-      <nav class="admin-nav" aria-label="管理功能">
-        <a
-          th:href="@{/admin/health}"
-          th:classappend="${activePage == 'health' ? 'is-active' : ''}"
-          th:attr="aria-current=${activePage == 'health' ? 'page' : null}"
-          >运行状态</a
-        >
-        <a
-          th:href="@{/admin/users}"
-          th:classappend="${activePage == 'users' ? 'is-active' : ''}"
-          th:attr="aria-current=${activePage == 'users' ? 'page' : null}"
-          >用户管理</a
-        >
-        <a
-          th:href="@{/admin/courses}"
-          th:classappend="${activePage == 'courses' ? 'is-active' : ''}"
-          th:attr="aria-current=${activePage == 'courses' ? 'page' : null}"
-          >课程管理</a
-        >
-        <a
-          th:href="@{/admin/settings/integrations}"
-          th:classappend="${activePage == 'settings' ? 'is-active' : ''}"
-          th:attr="aria-current=${activePage == 'settings' ? 'page' : null}"
-          >服务配置</a
-        >
-      </nav>
-
-      <div class="rail-footer">
-        <p>让每一条学习记录都可信。</p>
-        <form class="logout-form" method="post" th:action="@{/admin/logout}">
-          <button class="quiet-button quiet-button--wide" type="submit">安全退出</button>
-        </form>
-      </div>
-    </aside>
+    </header>
   </body>
 </html>

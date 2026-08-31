@@ -16,4 +16,10 @@ public interface LessonStudyContentRepository {
   long count();
 
   void upsertAll(List<LessonStudyContent> contents);
+
+  /** 转写成功后只替换全文，旧摘要继续保留。 */
+  void upsertTranscript(String id, String mediaItemId, String fullText, Instant updatedAt);
+
+  /** 摘要成功后只替换摘要，旧全文继续保留。 */
+  void upsertSummary(String id, String mediaItemId, String summaryMarkdown, Instant updatedAt);
 }

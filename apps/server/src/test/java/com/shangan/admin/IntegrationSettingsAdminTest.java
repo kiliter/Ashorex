@@ -56,12 +56,8 @@ class IntegrationSettingsAdminTest {
         .andExpect(content().string(org.hamcrest.Matchers.containsString("data-password-toggle")))
         .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"_csrf\"")))
         .andExpect(content().string(org.hamcrest.Matchers.containsString(currentEmbyKey)))
-        .andExpect(
-            content()
-                .string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("LLM"))))
-        .andExpect(
-            content()
-                .string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("ASR"))))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("LLM 摘要与出题")))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("ASR 转写服务")))
         .andExpect(
             content()
                 .string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("MCP"))));
@@ -74,7 +70,21 @@ class IntegrationSettingsAdminTest {
             .with(user("admin").roles("ADMIN"))
             .param("embyBaseUrl", "https://emby.saved.test")
             .param("embyApiKey", "saved-emby-key")
-            .param("embyUserId", "saved-user");
+            .param("embyUserId", "saved-user")
+            .param("asrBaseUrl", "https://asr.saved.test")
+            .param("asrApiKey", "saved-asr-key")
+            .param("asrModel", "mlx-community/Qwen3-ASR-1.7B-8bit")
+            .param("asrLanguage", "Chinese")
+            .param("asrChunkDurationSeconds", "30")
+            .param("asrTimeoutSeconds", "1800")
+            .param("llmBaseUrl", "https://cpa.saved.test/v1")
+            .param("llmApiKey", "saved-llm-key")
+            .param("llmModel", "openai/test-model")
+            .param("llmContextLength", "131072")
+            .param("llmMaxCompletionTokens", "8192")
+            .param("llmTimeoutSeconds", "300")
+            .param("openRouterApiKey", "saved-openrouter-key")
+            .param("autoFillIntervalMinutes", "15");
 
     mockMvc.perform(request).andExpect(status().isForbidden());
     mockMvc
@@ -84,6 +94,11 @@ class IntegrationSettingsAdminTest {
 
     org.assertj.core.api.Assertions.assertThat(settings.current().emby().apiKey())
         .isEqualTo("saved-emby-key");
+    org.assertj.core.api.Assertions.assertThat(settings.current().asr().baseUrl())
+        .isEqualTo("https://asr.saved.test");
+    org.assertj.core.api.Assertions.assertThat(settings.current().llm().model())
+        .isEqualTo("openai/test-model");
+    org.assertj.core.api.Assertions.assertThat(settings.current().autoFill().enabled()).isFalse();
   }
 
   @Test

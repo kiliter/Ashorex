@@ -73,6 +73,16 @@ public class LessonStudyContentImportService {
     return contents.findUpdatedAtByCourseId(courseId);
   }
 
+  /** 返回课程内各课时的部分就绪内容状态，供后台高密度台账展示。 */
+  @Transactional(readOnly = true)
+  public Map<String, LessonStudyContent> contentsByLessonId(String courseId) {
+    Map<String, LessonStudyContent> result = new LinkedHashMap<>();
+    for (MediaItem lesson : courses.findMediaItems(courseId, false)) {
+      contents.findByMediaItemId(lesson.id()).ifPresent(value -> result.put(lesson.id(), value));
+    }
+    return Map.copyOf(result);
+  }
+
   /** 按本地课时 ID 读取内容，供受保护的 App API 使用。 */
   @Transactional(readOnly = true)
   public Optional<LessonStudyContent> findByLessonId(String lessonId) {

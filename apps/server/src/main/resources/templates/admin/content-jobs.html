@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="~{admin/fragments :: head('内容任务 - 上岸管理台')}"></head>
+  <body class="admin-body"><div class="admin-shell">
+    <header th:replace="~{admin/fragments :: navigation('jobs')}"></header>
+    <main class="admin-main">
+      <section class="page-head"><div class="container page-head-row"><div><h1 class="page-title" data-code="JOB/04">内容任务</h1><p class="page-desc">转写、摘要与题目草稿共用一个持久化串行队列</p></div><a class="btn btn-secondary" th:href="@{/admin/settings/integrations}">检查服务配置</a></div></section>
+      <div class="container workspace">
+        <div class="summary-strip">
+          <div class="summary-item"><div class="summary-label">等待</div><div class="summary-value" th:text="${stats.queued}">0</div></div>
+          <div class="summary-item"><div class="summary-label">执行中</div><div class="summary-value" th:text="${stats.running}">0</div></div>
+          <div class="summary-item"><div class="summary-label">近 24h 成功</div><div class="summary-value" th:text="${stats.succeededSince}">0</div></div>
+          <div class="summary-item"><div class="summary-label">近 24h 失败</div><div class="summary-value" th:text="${stats.failedSince}">0</div></div>
+        </div>
+        <section class="panel">
+          <div class="panel-head"><form class="toolbar" method="get" th:action="@{/admin/content-jobs}">
+            <select name="courseId"><option value="">全部课程</option><option th:each="course : ${courses}" th:value="${course.id}" th:text="${course.name}" th:selected="${course.id == selectedCourseId}"></option></select>
+            <select name="type"><option value="">全部类型</option><option value="TRANSCRIBE" th:selected="${selectedType == 'TRANSCRIBE'}">转文本</option><option value="SUMMARIZE" th:selected="${selectedType == 'SUMMARIZE'}">AI 摘要</option><option value="GENERATE_QUIZ" th:selected="${selectedType == 'GENERATE_QUIZ'}">AI 出题</option></select>
+            <select name="status"><option value="">全部状态</option><option th:each="value : ${T(com.shangan.ai.content.domain.ContentGenerationJob.Status).values()}" th:value="${value}" th:text="${value}" th:selected="${value.name() == selectedStatus}"></option></select>
+            <button class="btn btn-secondary btn-sm" type="submit">筛选</button><a class="btn btn-secondary btn-sm" th:href="@{/admin/content-jobs}">清除</a>
+          </form><span class="muted num" th:text="|ROWS ${#lists.size(jobs)}|">ROWS 0</span></div>
+          <div class="empty-state" th:if="${#lists.isEmpty(jobs)}"><strong>没有匹配的内容任务</strong>从课程或课时页面创建转写、摘要或出题任务。</div>
+          <div class="table-wrap" th:unless="${#lists.isEmpty(jobs)}"><table class="ds-table">
+            <thead><tr><th>排队时间</th><th>类型</th><th>状态</th><th>课程 / 课时 ID</th><th>模型</th><th class="right">阶段耗时</th><th class="right">总耗时</th><th>错误</th><th class="right">操作</th></tr></thead>
+            <tbody><tr th:each="job : ${jobs}">
+              <td class="num" th:text="${job.queuedAt}">时间</td>
+              <td th:text="${job.type == T(com.shangan.ai.content.domain.ContentGenerationJob.Type).TRANSCRIBE ? '转文本' : (job.type == T(com.shangan.ai.content.domain.ContentGenerationJob.Type).SUMMARIZE ? 'AI 摘要' : 'AI 出题')}">类型</td>
+              <td><span class="badge" th:classappend="${job.status.name() == 'FAILED' ? ' danger' : (job.status.name() == 'READY' or job.status.name() == 'READY_FOR_REVIEW' ? ' success' : ' warning')}" th:text="${job.status}">状态</span></td>
+              <td><div class="cell-main num" th:text="${job.courseId}">course</div><div class="cell-sub num" th:text="${job.mediaItemId}">lesson</div></td>
+              <td class="num" th:text="${job.asrModel ?: job.llmModel ?: '—'}">—</td>
+              <td class="right num" th:text="${job.transcribeMs != null ? job.transcribeMs + ' ms' : (job.summarizeMs != null ? job.summarizeMs + ' ms' : (job.quizGenerateMs != null ? job.quizGenerateMs + ' ms' : '—'))}">—</td>
+              <td class="right num" th:text="${job.totalMs != null ? job.totalMs + ' ms' : '—'}">—</td>
+              <td><span class="danger" th:if="${job.errorCode != null}" th:text="${job.errorCode}">错误</span><span th:unless="${job.errorCode != null}">—</span></td>
+              <td><div class="row-actions"><a class="btn btn-secondary btn-sm" th:href="@{/admin/content-jobs/{id}(id=${job.id})}">日志</a><form th:if="${job.status.name() == 'FAILED'}" method="post" th:action="@{/admin/content-jobs/{id}/retry(id=${job.id})}"><button class="btn-sm" type="submit">重试</button></form></div></td>
+            </tr></tbody>
+          </table></div>
+          <div class="pagination"><span>最多显示最近 300 条任务</span><span>全局并发：<strong class="num">1</strong></span></div>
+        </section>
+      </div>
+    </main>
+  </div></body>
+</html>

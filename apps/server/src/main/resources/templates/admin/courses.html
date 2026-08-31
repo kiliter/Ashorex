@@ -3,79 +3,40 @@
   <head th:replace="~{admin/fragments :: head('课程管理 - 上岸管理台')}"></head>
   <body class="admin-body">
     <div class="admin-shell">
-      <aside th:replace="~{admin/fragments :: navigation('courses')}"></aside>
+      <header th:replace="~{admin/fragments :: navigation('courses')}"></header>
       <main class="admin-main">
-        <header class="page-header">
-          <div>
-            <p class="page-eyebrow">COURSE CATALOG</p>
-            <h1>课程管理</h1>
-            <p>连接 Emby 课程目录，维护课时顺序与课后题。</p>
-          </div>
-        </header>
+        <section class="page-head"><div class="container page-head-row"><div><h1 class="page-title" data-code="CRS/03">课程管理</h1><p class="page-desc">绑定 Emby 目录并维护课程、课时与内容生产链路</p></div><span class="badge" th:text="|${#lists.size(courses)} 门课程|">0 门课程</span></div></section>
+        <div class="container workspace">
+          <section class="panel">
+            <div class="panel-head"><div><h2>CREATE / 添加课程</h2><p>填写 Emby 父节点 ID 后即可同步视频课时。</p></div></div>
+            <form class="form-grid form-grid--two panel-body" method="post" th:action="@{/admin/courses}">
+              <label class="field">课程名称<input name="name" placeholder="例如 申论基础课" required /></label>
+              <label class="field">Emby 父节点 ID<input class="data-text" name="embyParentItemId" placeholder="输入 Emby Item ID" required /></label>
+              <label class="field form-grid__wide">课程说明<textarea name="description" placeholder="简要说明课程目标和适用阶段"></textarea></label>
+              <div class="actions form-grid__wide"><button type="submit">创建课程</button></div>
+            </form>
+          </section>
 
-        <section class="panel" aria-labelledby="create-course-title">
-          <div class="panel-header">
-            <div>
-              <h2 id="create-course-title">添加课程</h2>
-              <p>填写 Emby 父节点 ID 后，可以同步该目录下的视频课时。</p>
-            </div>
-          </div>
-          <form class="form-grid form-grid--two" method="post" th:action="@{/admin/courses}">
-            <label class="field">
-              课程名称
-              <input name="name" placeholder="例如 申论基础课" required />
-            </label>
-            <label class="field">
-              Emby 父节点 ID
-              <input class="data-text" name="embyParentItemId" placeholder="输入 Emby Item ID" required />
-            </label>
-            <label class="field form-grid__wide">
-              课程说明
-              <textarea name="description" placeholder="简要说明课程目标和适用阶段"></textarea>
-            </label>
-            <div class="actions form-grid__wide">
-              <button type="submit">创建课程</button>
-            </div>
-          </form>
-        </section>
-
-        <section class="panel panel--flush" aria-labelledby="course-list-title">
-          <div class="panel-header panel-header--padded">
-            <div>
-              <h2 id="course-list-title">课程目录</h2>
-              <p>同步只读取已配置的 Emby 节点。</p>
-            </div>
-            <span class="status-pill" th:text="|${#lists.size(courses)} 门课程|">课程数量</span>
-          </div>
-          <div class="empty-state empty-state--inset" th:if="${#lists.isEmpty(courses)}">
-            <strong>还没有课程</strong>
-            使用上方表单添加第一门课程。
-          </div>
-          <div class="table-scroll" th:unless="${#lists.isEmpty(courses)}">
-            <table>
-              <thead>
-                <tr><th>课程</th><th>上次同步</th><th>结果</th><th>操作</th></tr>
-              </thead>
-              <tbody>
-                <tr th:each="course : ${courses}">
-                  <td><strong th:text="${course.name}"></strong></td>
-                  <td class="data-text" th:text="${course.lastSyncedAt ?: '尚未同步'}"></td>
-                  <td>
-                    <span class="status-pill" th:classappend="${course.lastSyncError == null ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${course.lastSyncError ?: '正常'}"></span>
-                  </td>
-                  <td>
-                    <div class="table-actions">
-                      <a class="button button--secondary button--small" th:href="@{/admin/courses/{id}/lessons(id=${course.id})}">管理课时</a>
-                      <form method="post" th:action="@{/admin/courses/{id}/sync(id=${course.id})}">
-                        <button class="button--small" type="submit">立即同步</button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+          <section class="panel">
+            <div class="panel-head"><div><h2>COURSE / 课程目录</h2><p>同步失败会保留最后一次可用的本地课程快照。</p></div></div>
+            <div class="empty-state" th:if="${#lists.isEmpty(courses)}"><strong>还没有课程</strong>使用上方表单添加第一门课程。</div>
+            <div class="table-wrap" th:unless="${#lists.isEmpty(courses)}"><table class="ds-table">
+              <thead><tr><th>课程名称 / 说明</th><th>Emby 父节点 ID</th><th>最近同步</th><th>结果</th><th class="right">操作</th></tr></thead>
+              <tbody><tr th:each="course : ${courses}">
+                <td><div class="cell-main" th:text="${course.name}">课程</div><div class="cell-sub" th:text="${#strings.isEmpty(course.description) ? '未填写课程说明' : course.description}">说明</div></td>
+                <td class="num" th:text="${course.embyParentItemId}">ID</td>
+                <td class="num" th:text="${course.lastSyncedAt ?: '尚未同步'}">尚未同步</td>
+                <td><span class="badge" th:classappend="${course.lastSyncError == null ? ' success' : ' danger'}" th:text="${course.lastSyncError ?: '同步正常'}">状态</span></td>
+                <td><div class="row-actions">
+                  <a class="btn btn-secondary btn-sm" th:href="@{/admin/courses/{id}/lessons(id=${course.id})}">管理课时</a>
+                  <a class="btn btn-secondary btn-sm" th:href="@{/admin/courses/{id}/quiz-drafts(id=${course.id})}">题目草稿</a>
+                  <form method="post" th:action="@{/admin/courses/{id}/sync(id=${course.id})}"><button class="btn-sm" type="submit">立即同步</button></form>
+                </div></td>
+              </tr></tbody>
+            </table></div>
+            <div class="pagination"><span>课程按后台排序值展示</span><span class="num" th:text="|TOTAL ${#lists.size(courses)}|">TOTAL 0</span></div>
+          </section>
+        </div>
       </main>
     </div>
   </body>

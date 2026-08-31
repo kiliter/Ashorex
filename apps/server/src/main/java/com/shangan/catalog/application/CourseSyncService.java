@@ -79,6 +79,15 @@ public class CourseSyncService {
     return courses.findMediaItems(courseId, false);
   }
 
+  /** 读取管理员正在维护的课时，并通过应用层统一返回稳定业务错误。 */
+  @Transactional(readOnly = true)
+  public MediaItem getAdminLesson(String lessonId) {
+    return courses
+        .findMediaItem(lessonId)
+        .orElseThrow(
+            () -> new BusinessException(HttpStatus.NOT_FOUND, "LESSON_NOT_FOUND", "课时不存在"));
+  }
+
   /** 更新管理员可控字段，不修改 Emby 同步字段。 */
   @Transactional
   public void updateLessonControls(String lessonId, boolean enabled, int sortOrder) {

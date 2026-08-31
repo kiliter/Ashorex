@@ -1418,13 +1418,42 @@ components:
       properties:
         lessonId:
           type: string
+        transcriptStatus:
+          type: string
+          enum:
+          - READY
+          - MISSING
+        summaryStatus:
+          type: string
+          enum:
+          - READY
+          - MISSING
         fullText:
-          type: string
+          type:
+          - string
+          - "null"
         summaryMarkdown:
-          type: string
+          type:
+          - string
+          - "null"
+        transcriptUpdatedAt:
+          type:
+          - string
+          - "null"
+          format: date-time
+        summaryUpdatedAt:
+          type:
+          - string
+          - "null"
+          format: date-time
         updatedAt:
           type: string
           format: date-time
+      required:
+      - lessonId
+      - summaryStatus
+      - transcriptStatus
+      - updatedAt
     OptionView:
       type: object
       properties:

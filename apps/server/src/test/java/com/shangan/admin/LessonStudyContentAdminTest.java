@@ -61,7 +61,7 @@ class LessonStudyContentAdminTest {
         .update();
   }
 
-  /** 合法包必须要求 CSRF，成功后重定向并在列表展示已导入状态。 */
+  /** 合法包必须要求 CSRF，成功后重定向并分别展示全文和摘要就绪状态。 */
   @Test
   void importsZipAndShowsLessonStatus() throws Exception {
     MockMultipartFile file =
@@ -80,7 +80,8 @@ class LessonStudyContentAdminTest {
     mockMvc
         .perform(get("/admin/courses/course-1/lessons").with(user("admin").roles("ADMIN")))
         .andExpect(status().isOk())
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("已导入")));
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("全文已就绪")))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("摘要已就绪")));
   }
 
   /** 非法包在当前课程页显示安全中文错误，且数据库不得留下部分内容。 */

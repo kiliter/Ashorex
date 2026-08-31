@@ -61,8 +61,12 @@ class LessonStudyContentApiTest {
     jdbc.sql(
             """
             insert into lesson_study_contents (
-              id, media_item_id, full_text, summary_markdown, imported_at, updated_at
-            ) values ('content-1', 'lesson-1', '完整全文', '# 摘要', 1, :updatedAt)
+              id, media_item_id, full_text, summary_markdown,
+              transcript_updated_at, summary_updated_at, imported_at, updated_at
+            ) values (
+              'content-1', 'lesson-1', '完整全文', '# 摘要',
+              :updatedAt, :updatedAt, 1, :updatedAt
+            )
             """)
         .param("updatedAt", Instant.parse("2026-08-31T03:00:00Z").toEpochMilli())
         .update();
@@ -79,7 +83,27 @@ class LessonStudyContentApiTest {
         .andExpect(jsonPath("$.lessonId").value("lesson-1"))
         .andExpect(jsonPath("$.fullText").value("完整全文"))
         .andExpect(jsonPath("$.summaryMarkdown").value("# 摘要"))
+        .andExpect(jsonPath("$.transcriptStatus").value("READY"))
+        .andExpect(jsonPath("$.summaryStatus").value("READY"))
         .andExpect(jsonPath("$.updatedAt").value("2026-08-31T03:00:00Z"));
+  }
+
+  /** 转写先完成时接口应明确表达摘要仍缺失，而不是把整份内容判为不存在。 */
+  @Test
+  void returnsPartiallyReadyTranscript() throws Exception {
+    jdbc.sql(
+            "update lesson_study_contents set summary_markdown=null, summary_updated_at=null "
+                + "where media_item_id='lesson-1'")
+        .update();
+
+    mockMvc
+        .perform(
+            get("/api/v1/lessons/lesson-1/study-content")
+                .with(jwt().jwt(token -> token.subject("user-1"))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.transcriptStatus").value("READY"))
+        .andExpect(jsonPath("$.summaryStatus").value("MISSING"))
+        .andExpect(jsonPath("$.summaryMarkdown").doesNotExist());
   }
 
   /** 内容缺失和课时不可见分别返回稳定错误码，且不会泄露被禁用课时内容。 */

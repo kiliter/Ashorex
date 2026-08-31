@@ -3,154 +3,69 @@
   <head th:replace="~{admin/fragments :: head('课时管理 - 上岸管理台')}"></head>
   <body class="admin-body">
     <div class="admin-shell">
-      <aside th:replace="~{admin/fragments :: navigation('courses')}"></aside>
-      <main class="admin-main admin-main--wide">
-        <a class="breadcrumb" th:href="@{/admin/courses}">
-          <span aria-hidden="true">←</span>
-          返回课程列表
-        </a>
-
-        <header class="page-header lesson-page-header">
-          <div>
-            <p class="page-eyebrow">课程内容台账</p>
-            <h1 th:text="${course.name}">课程名称</h1>
-            <p>集中维护课时开放状态、展示顺序、课后题和学习资料。</p>
-          </div>
-          <dl class="lesson-summary" aria-label="课程课时汇总">
-            <div>
-              <dt>课时</dt>
-              <dd th:text="|${lessonCount} 个课时|">0 个课时</dd>
-            </div>
-            <div>
-              <dt>已启用</dt>
-              <dd th:text="|${enabledLessonCount} / ${lessonCount}|">0 / 0</dd>
-            </div>
-            <div>
-              <dt>已导入内容</dt>
-              <dd th:text="|${contentImportedCount} / ${lessonCount}|">0 / 0</dd>
-            </div>
-          </dl>
-        </header>
-
-        <div
-          class="alert alert--success"
-          th:if="${imported != null}"
-          th:text="|已成功导入 ${imported} 集学习内容。|"
-        ></div>
-        <div class="alert" th:if="${importError != null}" th:text="${importError}"></div>
-
-        <div class="lesson-workspace">
-          <section class="panel panel--flush lesson-ledger" aria-labelledby="lesson-list-title">
-            <div class="panel-header panel-header--padded lesson-ledger__header">
-              <div>
-                <h2 id="lesson-list-title">课时列表</h2>
-                <p>修改后按行保存；课时顺序会同步影响学习端展示。</p>
+      <header th:replace="~{admin/fragments :: navigation('courses')}"></header>
+      <main class="admin-main">
+        <section class="page-head">
+          <div class="container">
+            <div class="route"><a th:href="@{/admin/courses}">课程管理</a><span class="route-sep">/</span><span th:text="${course.name}">课程</span></div>
+            <div class="page-head-row">
+              <div><h1 class="page-title" data-code="LSN/04">课时管理</h1><p class="page-desc">课时状态、学习内容、AI 内容生产与题目入口</p></div>
+              <div class="actions">
+                <form method="post" th:action="@{/admin/courses/{id}/transcribe(id=${course.id})}"><button class="btn btn-secondary" type="submit">批量转文本</button></form>
+                <form method="post" th:action="@{/admin/courses/{id}/summarize(id=${course.id})}"><button class="btn btn-secondary" type="submit">批量 AI 摘要</button></form>
+                <form class="inline-form" method="post" th:action="@{/admin/courses/{id}/generate-quiz(id=${course.id})}"><input class="inline-input num" type="number" name="questionCount" min="1" max="20" value="5" aria-label="每课时生成题数" /><button type="submit">批量 AI 出题</button></form>
+                <a class="btn btn-secondary" th:href="@{/admin/courses/{id}/quiz-drafts(id=${course.id})}">审核题目草稿</a>
               </div>
-              <span class="status-pill" th:text="|共 ${lessonCount} 条|">共 0 条</span>
             </div>
+          </div>
+        </section>
 
-            <div class="empty-state empty-state--inset" th:if="${#lists.isEmpty(lessons)}">
-              <strong>暂时没有课时</strong>
-              返回课程列表执行一次 Emby 同步。
-            </div>
+        <div class="container workspace">
+          <div class="alert alert--success" th:if="${imported != null}" th:text="|已成功导入 ${imported} 集学习内容。|"></div>
+          <div class="alert" th:if="${importError != null}" th:text="${importError}"></div>
 
-            <div class="table-scroll lesson-table-scroll" th:unless="${#lists.isEmpty(lessons)}">
-              <table class="lesson-table">
-                <thead>
-                  <tr>
-                    <th scope="col">序号</th>
-                    <th scope="col">课时名称</th>
-                    <th scope="col">学习内容</th>
-                    <th scope="col">学习端</th>
-                    <th scope="col">排序</th>
-                    <th scope="col" class="lesson-table__actions-heading">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr th:each="lesson, lessonStat : ${lessons}">
-                    <td class="lesson-sequence" th:text="${#numbers.formatInteger(lessonStat.count, 2)}">01</td>
-                    <td class="lesson-title-cell">
-                      <strong th:text="${lesson.title}">课时名称</strong>
-                      <span class="lesson-media-warning" th:if="${!lesson.available}">Emby 已不可用</span>
-                    </td>
-                    <td>
-                      <span
-                        class="status-pill status-pill--ok"
-                        th:if="${studyContentUpdatedAtByLessonId.containsKey(lesson.id)}"
-                        th:title="${studyContentUpdatedAtByLessonId.get(lesson.id)}"
-                      >已导入</span>
-                      <span
-                        class="status-pill"
-                        th:unless="${studyContentUpdatedAtByLessonId.containsKey(lesson.id)}"
-                      >未导入</span>
-                    </td>
-                    <td>
-                      <label class="switch-control">
-                        <input
-                          type="checkbox"
-                          name="enabled"
-                          value="true"
-                          th:checked="${lesson.enabled}"
-                          th:form="|lesson-form-${lesson.id}|"
-                        />
-                        <span class="switch-control__track" aria-hidden="true"></span>
-                        <span th:text="${lesson.enabled ? '已启用' : '未启用'}">已启用</span>
-                      </label>
-                    </td>
-                    <td class="lesson-sort-cell">
-                      <label th:for="|sort-order-${lesson.id}|" class="visually-hidden">展示顺序</label>
-                      <input
-                        class="lesson-sort-input data-text"
-                        type="number"
-                        name="sortOrder"
-                        th:id="|sort-order-${lesson.id}|"
-                        th:value="${lesson.sortOrder}"
-                        th:form="|lesson-form-${lesson.id}|"
-                        required
-                      />
-                    </td>
-                    <td>
-                      <form
-                        th:id="|lesson-form-${lesson.id}|"
-                        method="post"
-                        th:action="@{/admin/courses/{courseId}/lessons/{lessonId}(courseId=${courseId},lessonId=${lesson.id})}"
-                      ></form>
-                      <div class="lesson-row-actions">
-                        <button class="button--small" type="submit" th:form="|lesson-form-${lesson.id}|">保存</button>
-                        <a
-                          class="button button--secondary button--small"
-                          th:href="@{/admin/lessons/{lessonId}/questions(lessonId=${lesson.id})}"
-                        >课后题</a>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <div class="summary-strip">
+            <div class="summary-item"><div class="summary-label">课时总数</div><div class="summary-value" th:text="${lessonCount}">0</div></div>
+            <div class="summary-item"><div class="summary-label">学习端已启用</div><div class="summary-value" th:text="|${enabledLessonCount}/${lessonCount}|">0/0</div></div>
+            <div class="summary-item"><div class="summary-label">全文已就绪</div><div class="summary-value" th:text="${transcriptReadyCount}">0</div></div>
+            <div class="summary-item"><div class="summary-label">摘要已就绪</div><div class="summary-value" th:text="${summaryReadyCount}">0</div></div>
+          </div>
+
+          <section class="panel">
+            <div class="panel-head"><div><h2>LESSON / 课时台账</h2><p>逐行保存学习端状态和排序；内容按钮只创建后台任务。</p></div><span class="muted num" th:text="|TOTAL ${lessonCount}|">TOTAL 0</span></div>
+            <div class="empty-state" th:if="${#lists.isEmpty(lessons)}"><strong>暂时没有课时</strong>返回课程列表执行一次 Emby 同步。</div>
+            <div class="table-wrap" th:unless="${#lists.isEmpty(lessons)}"><table class="ds-table">
+              <thead><tr><th class="right">顺序</th><th>课时名称 / Emby ID</th><th class="right">时长</th><th>全文</th><th>摘要</th><th>学习端</th><th class="right">排序值</th><th class="right">操作</th></tr></thead>
+              <tbody><tr th:each="lesson, stat : ${lessons}">
+                <td class="right num" th:text="${#numbers.formatInteger(stat.count, 2)}">01</td>
+                <td><div class="cell-main" th:text="${lesson.title}">课时</div><div class="cell-sub num" th:text="${lesson.embyItemId}">emby</div></td>
+                <td class="right num" th:text="${#numbers.formatDecimal(lesson.durationMs / 60000.0, 1, 1) + ' min'}">0 min</td>
+                <td><span class="badge" th:classappend="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).transcriptReady() ? ' success' : ''}" th:text="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).transcriptReady() ? '已就绪' : '缺失'}">缺失</span></td>
+                <td><span class="badge" th:classappend="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).summaryReady() ? ' success' : ''}" th:text="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).summaryReady() ? '已就绪' : '缺失'}">缺失</span></td>
+                <td><label class="switch-control"><input type="checkbox" name="enabled" value="true" th:checked="${lesson.enabled}" th:form="|lesson-form-${lesson.id}|" /><span th:text="${lesson.enabled ? '已启用' : '未启用'}">已启用</span></label></td>
+                <td class="right"><input class="inline-input num" type="number" name="sortOrder" th:value="${lesson.sortOrder}" th:form="|lesson-form-${lesson.id}|" required /></td>
+                <td><form th:id="|lesson-form-${lesson.id}|" method="post" th:action="@{/admin/courses/{courseId}/lessons/{lessonId}(courseId=${courseId},lessonId=${lesson.id})}"></form>
+                  <div class="row-actions">
+                    <button class="btn btn-secondary btn-sm" type="submit" th:form="|lesson-form-${lesson.id}|">保存</button>
+                    <form method="post" th:action="@{/admin/lessons/{id}/transcribe(id=${lesson.id})}"><input type="hidden" name="overwrite" th:value="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).transcriptReady()}" /><button class="btn btn-secondary btn-sm" type="submit" th:text="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).transcriptReady() ? '重新转写' : '一键转文本'}">一键转文本</button></form>
+                    <form method="post" th:action="@{/admin/lessons/{id}/summarize(id=${lesson.id})}"><input type="hidden" name="overwrite" th:value="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).summaryReady()}" /><button class="btn btn-secondary btn-sm" type="submit">AI 摘要</button></form>
+                    <form method="post" th:action="@{/admin/lessons/{id}/generate-quiz(id=${lesson.id})}"><input type="hidden" name="questionCount" value="5" /><button class="btn btn-secondary btn-sm" type="submit">AI 出题</button></form>
+                    <a class="btn btn-secondary btn-sm" th:href="@{/admin/lessons/{id}/study-content(id=${lesson.id})}">查看内容</a>
+                    <a class="btn btn-secondary btn-sm" th:href="@{/admin/lessons/{id}/questions(id=${lesson.id})}">正式题库</a>
+                  </div>
+                </td>
+              </tr></tbody>
+            </table></div>
+            <div class="pagination"><span>已有内容默认跳过；“重新转写”会保留旧内容直到新任务成功。</span><a th:href="@{/admin/content-jobs(courseId=${course.id})}">查看本课程任务 →</a></div>
           </section>
 
-          <aside class="panel lesson-import-panel" aria-labelledby="lesson-import-title">
-            <div class="lesson-import-panel__mark" aria-hidden="true">ZIP</div>
-            <div class="panel-header">
-              <div>
-                <h2 id="lesson-import-title">批量导入学习内容</h2>
-                <p>上传完整课程包，重复上传会覆盖对应课时的全文和摘要。</p>
-              </div>
-            </div>
-            <form
-              class="form-grid"
-              method="post"
-              enctype="multipart/form-data"
-              th:action="@{/admin/courses/{courseId}/study-content/import(courseId=${courseId})}"
-            >
-              <label class="file-drop-field">
-                <span>选择课程 ZIP</span>
-                <small>需包含 manifest.json、transcript.txt 和 summary.md</small>
-                <input type="file" name="file" accept=".zip,application/zip" required />
-              </label>
-              <button type="submit">导入学习内容</button>
+          <section class="panel">
+            <div class="panel-head"><div><h2>IMPORT / ZIP 故障兜底</h2><p>ZIP 必须同时提供 manifest、全文和摘要；全包校验后原子覆盖。</p></div></div>
+            <form class="form-row panel-body" method="post" enctype="multipart/form-data" th:action="@{/admin/courses/{id}/study-content/import(id=${course.id})}">
+              <label class="file-drop-field"><strong>选择课程 ZIP</strong><small>manifest.json / transcript.txt / summary.md</small><input type="file" name="file" accept=".zip,application/zip" required /></label>
+              <div class="field"><span>导入说明</span><p class="help">每个 Emby Item ID 必须精确属于当前课程。任意课时缺少文件、文本为空或路径非法时，整包不会写入。</p><button type="submit">导入学习内容</button></div>
             </form>
-          </aside>
+          </section>
         </div>
       </main>
     </div>

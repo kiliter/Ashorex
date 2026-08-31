@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="~{admin/fragments :: head('任务日志 - 上岸管理台')}"></head>
+  <body class="admin-body"><div class="admin-shell">
+    <header th:replace="~{admin/fragments :: navigation('jobs')}"></header>
+    <main class="admin-main">
+      <section class="page-head"><div class="container"><div class="route"><a th:href="@{/admin/content-jobs}">内容任务</a><span>/</span><span class="num" th:text="${job.id}">job</span></div><div class="page-head-row"><div><h1 class="page-title" data-code="LOG/05">任务日志</h1><p class="page-desc" th:text="|${course.name} / ${lesson.title}|">课程 / 课时</p></div><form th:if="${job.status.name() == 'FAILED'}" method="post" th:action="@{/admin/content-jobs/{id}/retry(id=${job.id})}"><button type="submit">重新排队</button></form></div></div></section>
+      <div class="container workspace">
+        <div class="summary-strip">
+          <div class="summary-item"><div class="summary-label">任务类型</div><div class="summary-value" th:text="${job.type}">TYPE</div></div>
+          <div class="summary-item"><div class="summary-label">当前状态</div><div class="summary-value" th:text="${job.status}">STATUS</div></div>
+          <div class="summary-item"><div class="summary-label">尝试次数</div><div class="summary-value" th:text="${job.attempt}">1</div></div>
+          <div class="summary-item"><div class="summary-label">总耗时</div><div class="summary-value" th:text="${job.totalMs != null ? job.totalMs + 'ms' : '—'}">—</div></div>
+        </div>
+        <section class="panel"><div class="panel-head"><h2>SNAPSHOT / 任务快照</h2><span class="badge" th:classappend="${job.status.name() == 'FAILED' ? ' danger' : (job.status.name() == 'READY' or job.status.name() == 'READY_FOR_REVIEW' ? ' success' : ' warning')}" th:text="${job.status}">状态</span></div>
+          <table><tbody>
+            <tr><td>课程 / 课时</td><td><strong th:text="${course.name}">课程</strong> · <span th:text="${lesson.title}">课时</span></td></tr>
+            <tr><td>任务 ID</td><td class="num" th:text="${job.id}">ID</td></tr>
+            <tr><td>模型快照</td><td class="num" th:text="${job.asrModel ?: job.llmModel ?: '—'}">—</td></tr>
+            <tr><td>上下文 / 最大输出</td><td class="num" th:text="${job.llmContextLength != null ? job.llmContextLength + ' / ' + job.llmMaxCompletionTokens : '—'}">—</td></tr>
+            <tr><td>音频获取 / 转写 / 摘要 / 出题</td><td class="num" th:text="|${job.fetchMs ?: '—'} / ${job.transcribeMs ?: '—'} / ${job.summarizeMs ?: '—'} / ${job.quizGenerateMs ?: '—'} ms|">—</td></tr>
+            <tr><td>Token usage</td><td class="num" th:text="|prompt ${job.promptTokens ?: '—'} / completion ${job.completionTokens ?: '—'}|">—</td></tr>
+            <tr th:if="${job.errorCode != null}"><td>失败原因</td><td class="danger"><strong th:text="${job.errorCode}">CODE</strong> · <span th:text="${job.errorMessage}">原因</span></td></tr>
+          </tbody></table>
+        </section>
+        <section class="panel"><div class="panel-head"><h2>EVENT / 阶段日志</h2><span class="muted">不记录正文、Prompt、密钥或完整上游响应</span></div>
+          <div class="empty-state" th:if="${#lists.isEmpty(logs)}"><strong>尚无阶段日志</strong>任务进入 Worker 后会在此记录安全事件。</div>
+          <div class="log-list" th:unless="${#lists.isEmpty(logs)}"><div class="log-row" th:each="entry : ${logs}"><time class="log-time" th:text="${entry.occurredAt}">time</time><span class="badge" th:classappend="${entry.level == 'ERROR' ? ' danger' : ' success'}" th:text="${entry.stage}">stage</span><span th:text="${entry.message}">message</span></div></div>
+        </section>
+      </div>
+    </main>
+  </div></body>
+</html>

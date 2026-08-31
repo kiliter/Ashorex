@@ -16,7 +16,7 @@ class V013MigrationIntegrationTest {
 
   @TempDir Path databaseDirectory;
 
-  /** 先停在 V012 写入历史数据，再升级到最新版本并核对保留与删除结果。 */
+  /** 先停在 V012 写入历史数据，再只升级到 V013 并核对该迁移自身的保留与删除结果。 */
   @Test
   void migratesLegacyStudyContentAndKeepsOnlyEmbySettings() {
     String jdbcUrl = "jdbc:sqlite:" + databaseDirectory.resolve("v013-upgrade.db");
@@ -24,7 +24,7 @@ class V013MigrationIntegrationTest {
     JdbcClient jdbc = JdbcClient.create(new DriverManagerDataSource(jdbcUrl));
     insertLegacyRows(jdbc);
 
-    Flyway.configure().dataSource(jdbcUrl, null, null).load().migrate();
+    Flyway.configure().dataSource(jdbcUrl, null, null).target("13").load().migrate();
 
     Map<String, Object> content =
         jdbc.sql(

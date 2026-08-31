@@ -61,23 +61,71 @@ public class JdbcLessonStudyContentRepository implements LessonStudyContentRepos
       jdbc.sql(
               """
               insert into lesson_study_contents (
-                id, media_item_id, full_text, summary_markdown, imported_at, updated_at
+                id, media_item_id, full_text, summary_markdown,
+                transcript_updated_at, summary_updated_at, imported_at, updated_at
               ) values (
-                :id, :mediaItemId, :fullText, :summaryMarkdown, :importedAt, :updatedAt
+                :id, :mediaItemId, :fullText, :summaryMarkdown,
+                :transcriptUpdatedAt, :summaryUpdatedAt, :importedAt, :updatedAt
               )
               on conflict(media_item_id) do update set
                 full_text = excluded.full_text,
                 summary_markdown = excluded.summary_markdown,
+                transcript_updated_at = excluded.transcript_updated_at,
+                summary_updated_at = excluded.summary_updated_at,
+                imported_at = coalesce(lesson_study_contents.imported_at, excluded.imported_at),
                 updated_at = excluded.updated_at
               """)
           .param("id", content.id())
           .param("mediaItemId", content.mediaItemId())
           .param("fullText", content.fullText())
           .param("summaryMarkdown", content.summaryMarkdown())
+          .param("transcriptUpdatedAt", content.transcriptUpdatedAt().toEpochMilli())
+          .param("summaryUpdatedAt", content.summaryUpdatedAt().toEpochMilli())
           .param("importedAt", content.importedAt().toEpochMilli())
           .param("updatedAt", content.updatedAt().toEpochMilli())
           .update();
     }
+  }
+
+  @Override
+  public void upsertTranscript(String id, String mediaItemId, String fullText, Instant updatedAt) {
+    jdbc.sql(
+            """
+            insert into lesson_study_contents (
+              id,media_item_id,full_text,summary_markdown,
+              transcript_updated_at,summary_updated_at,imported_at,updated_at
+            ) values (:id,:mediaItemId,:fullText,null,:updatedAt,null,null,:updatedAt)
+            on conflict(media_item_id) do update set
+              full_text=excluded.full_text,
+              transcript_updated_at=excluded.transcript_updated_at,
+              updated_at=excluded.updated_at
+            """)
+        .param("id", id)
+        .param("mediaItemId", mediaItemId)
+        .param("fullText", fullText.trim())
+        .param("updatedAt", updatedAt.toEpochMilli())
+        .update();
+  }
+
+  @Override
+  public void upsertSummary(
+      String id, String mediaItemId, String summaryMarkdown, Instant updatedAt) {
+    jdbc.sql(
+            """
+            insert into lesson_study_contents (
+              id,media_item_id,full_text,summary_markdown,
+              transcript_updated_at,summary_updated_at,imported_at,updated_at
+            ) values (:id,:mediaItemId,null,:summaryMarkdown,null,:updatedAt,null,:updatedAt)
+            on conflict(media_item_id) do update set
+              summary_markdown=excluded.summary_markdown,
+              summary_updated_at=excluded.summary_updated_at,
+              updated_at=excluded.updated_at
+            """)
+        .param("id", id)
+        .param("mediaItemId", mediaItemId)
+        .param("summaryMarkdown", summaryMarkdown.trim())
+        .param("updatedAt", updatedAt.toEpochMilli())
+        .update();
   }
 
   /** 将数据库 Epoch Milliseconds 映射为不可变领域数据。 */
@@ -87,8 +135,15 @@ public class JdbcLessonStudyContentRepository implements LessonStudyContentRepos
         row.getString("media_item_id"),
         row.getString("full_text"),
         row.getString("summary_markdown"),
-        Instant.ofEpochMilli(row.getLong("imported_at")),
+        instantOrNull(row, "transcript_updated_at"),
+        instantOrNull(row, "summary_updated_at"),
+        instantOrNull(row, "imported_at"),
         Instant.ofEpochMilli(row.getLong("updated_at")));
+  }
+
+  private Instant instantOrNull(ResultSet row, String column) throws SQLException {
+    Object value = row.getObject(column);
+    return value == null ? null : Instant.ofEpochMilli(row.getLong(column));
   }
 
   /** 后台课时列表所需的轻量更新时间行。 */

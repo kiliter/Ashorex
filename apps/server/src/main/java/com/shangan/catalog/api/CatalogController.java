@@ -6,6 +6,7 @@ import com.shangan.catalog.domain.Course;
 import com.shangan.catalog.domain.LessonStudyContent;
 import com.shangan.catalog.domain.MediaItem;
 import com.shangan.common.api.BusinessException;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -56,7 +57,7 @@ public class CatalogController {
             () -> new BusinessException(HttpStatus.NOT_FOUND, "LESSON_NOT_FOUND", "课时不存在"));
   }
 
-  /** 返回管理员导入的一集全文和 Markdown 摘要，不调用任何 AI 服务。 */
+  /** 返回一集已经就绪的全文或 Markdown 摘要，不在读取请求中调用外部服务。 */
   @GetMapping("/lessons/{lessonId}/study-content")
   LessonStudyContentResponse studyContent(@PathVariable String lessonId) {
     catalog
@@ -69,7 +70,7 @@ public class CatalogController {
             .orElseThrow(
                 () ->
                     new BusinessException(
-                        HttpStatus.NOT_FOUND, "LESSON_STUDY_CONTENT_NOT_FOUND", "该课时尚未导入学习内容"));
+                        HttpStatus.NOT_FOUND, "LESSON_STUDY_CONTENT_NOT_FOUND", "该课时尚无学习内容"));
     return LessonStudyContentResponse.from(content);
   }
 
@@ -91,12 +92,29 @@ public class CatalogController {
 
   /** App 读取的课程学习内容直接 DTO。 */
   record LessonStudyContentResponse(
-      String lessonId, String fullText, String summaryMarkdown, Instant updatedAt) {
+      @Schema(requiredMode = Schema.RequiredMode.REQUIRED) String lessonId,
+      @Schema(
+              requiredMode = Schema.RequiredMode.REQUIRED,
+              allowableValues = {"READY", "MISSING"})
+          String transcriptStatus,
+      @Schema(
+              requiredMode = Schema.RequiredMode.REQUIRED,
+              allowableValues = {"READY", "MISSING"})
+          String summaryStatus,
+      @Schema(nullable = true) String fullText,
+      @Schema(nullable = true) String summaryMarkdown,
+      @Schema(nullable = true) Instant transcriptUpdatedAt,
+      @Schema(nullable = true) Instant summaryUpdatedAt,
+      @Schema(requiredMode = Schema.RequiredMode.REQUIRED) Instant updatedAt) {
     static LessonStudyContentResponse from(LessonStudyContent content) {
       return new LessonStudyContentResponse(
           content.mediaItemId(),
+          content.transcriptReady() ? "READY" : "MISSING",
+          content.summaryReady() ? "READY" : "MISSING",
           content.fullText(),
           content.summaryMarkdown(),
+          content.transcriptUpdatedAt(),
+          content.summaryUpdatedAt(),
           content.updatedAt());
     }
   }
