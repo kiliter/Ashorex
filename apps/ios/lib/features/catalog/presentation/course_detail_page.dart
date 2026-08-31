@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shangan_ios/core/theme/shangan_theme.dart';
+import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
 import 'package:shangan_ios/features/planning/data/plan_repository.dart';
 
@@ -18,47 +20,120 @@ final class CourseDetailPage extends ConsumerWidget {
         future: ref.read(catalogRepositoryProvider).loadCourse(courseId),
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
+            return const ShanganLoading('正在读取课程课时');
           }
           if (snapshot.hasError || !snapshot.hasData) {
             return const Center(child: Text('课程详情加载失败'));
           }
           final course = snapshot.data!;
+          final totalSeconds = course.lessons.fold<int>(
+            0,
+            (sum, lesson) => sum + lesson.durationMs ~/ 1000,
+          );
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
             children: [
+              const ShanganEyebrow('课程详情'),
+              const SizedBox(height: 7),
               Text(
                 course.name,
-                style: Theme.of(context).textTheme.headlineSmall,
+                style: Theme.of(context).textTheme.headlineMedium,
               ),
               if (course.description.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(course.description),
               ],
-              const SizedBox(height: 20),
-              ...course.lessons.map(
-                (lesson) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.play_circle_outline),
-                  title: Text(lesson.title),
-                  subtitle: Text('${(lesson.durationMs / 60000).ceil()} 分钟'),
-                  trailing: IconButton(
-                    constraints: const BoxConstraints.tightFor(
-                      width: 48,
-                      height: 48,
-                    ),
-                    tooltip: '加入今日计划',
-                    icon: const Icon(Icons.playlist_add),
-                    onPressed: () => _addToPlan(context, ref, lesson.id),
+              const SizedBox(height: 18),
+              ShanganMetricGrid(
+                metrics: [
+                  (
+                    value: '${course.lessons.length}',
+                    label: '总课时',
+                    tone: ShanganTagTone.info,
                   ),
-                  onTap: () => context.push(
-                    Uri(
-                      path: '/player/${lesson.id}',
-                      queryParameters: {'title': lesson.title},
-                    ).toString(),
+                  (
+                    value: shanganDuration(totalSeconds),
+                    label: '课程总时长',
+                    tone: ShanganTagTone.success,
                   ),
-                ),
+                ],
               ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '课时列表',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  const ShanganStatusTag('服务端快照', tone: ShanganTagTone.info),
+                ],
+              ),
+              const SizedBox(height: 10),
+              const Divider(color: ShanganColors.ink, thickness: 2),
+              ...course.lessons.indexed.map((entry) {
+                final lesson = entry.$2;
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: ShanganColors.rule),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 34,
+                        child: Text(
+                          '${entry.$1 + 1}'.padLeft(2, '0'),
+                          style: shanganNumberStyle(
+                            context,
+                            fontSize: 12,
+                          ).copyWith(color: ShanganColors.mutedInk),
+                        ),
+                      ),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => context.push(
+                            Uri(
+                              path: '/player/${lesson.id}',
+                              queryParameters: {'title': lesson.title},
+                            ).toString(),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  lesson.title,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium,
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  '${(lesson.durationMs / 60000).ceil()} 分钟',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton.outlined(
+                        tooltip: '加入今日计划',
+                        icon: const Icon(
+                          Icons.playlist_add,
+                          color: ShanganColors.blue,
+                        ),
+                        onPressed: () => _addToPlan(context, ref, lesson.id),
+                      ),
+                    ],
+                  ),
+                );
+              }),
             ],
           );
         },

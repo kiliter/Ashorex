@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shangan_ios/core/config/server_configuration.dart';
 import 'package:shangan_ios/core/config/server_configuration_controller.dart';
 import 'package:shangan_ios/core/config/server_health_checker.dart';
+import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 
 /// 登录前可访问的服务器设置，只在健康检查通过后切换连接目标。
 final class ServerSettingsPage extends ConsumerStatefulWidget {
@@ -78,13 +79,21 @@ final class _ServerSettingsPageState extends ConsumerState<ServerSettingsPage> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
           children: [
-            Text(
-              '当前服务器：${current.baseUrl}',
-              style: Theme.of(context).textTheme.bodyMedium,
+            const ShanganNotice(
+              title: '高级部署设置',
+              message: '切换服务器会退出当前账号，并清除本机登录状态。',
+              tone: ShanganTagTone.risk,
             ),
             const SizedBox(height: 20),
+            const ShanganEyebrow('当前服务端地址'),
+            const SizedBox(height: 7),
+            SelectableText(
+              current.baseUrl,
+              style: shanganNumberStyle(context, fontSize: 13),
+            ),
+            const SizedBox(height: 22),
             TextFormField(
               key: const Key('serverAddressField'),
               controller: _addressController,
@@ -93,22 +102,18 @@ final class _ServerSettingsPageState extends ConsumerState<ServerSettingsPage> {
               autocorrect: false,
               enableSuggestions: false,
               decoration: const InputDecoration(
-                labelText: '服务端地址',
+                labelText: '新服务端地址',
                 hintText: 'http://127.0.0.1:8080',
                 helperText: '填写完整的 http:// 或 https:// 地址，不要包含 /api/v1',
-                prefixIcon: Icon(Icons.dns_outlined),
               ),
               validator: _validateAddress,
               onFieldSubmitted: _saving ? null : (_) => _testAndSave(),
             ),
             const SizedBox(height: 16),
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(
-                  'iOS 模拟器可使用 127.0.0.1；物理 iPhone 需要填写 Mac 的局域网地址或可访问的 HTTPS 域名。切换服务器会退出当前账号。',
-                ),
-              ),
+            const ShanganNotice(
+              title: '保存前会测试连接',
+              message:
+                  '模拟器可使用 127.0.0.1；物理 iPhone 需要填写 Mac 局域网地址或可访问的 HTTPS 域名。',
             ),
             if (_message != null) ...[
               const SizedBox(height: 12),
@@ -124,19 +129,16 @@ final class _ServerSettingsPageState extends ConsumerState<ServerSettingsPage> {
               ),
             ],
             const SizedBox(height: 24),
-            SizedBox(
-              height: 52,
-              child: FilledButton.icon(
-                key: const Key('testAndSaveServerButton'),
-                onPressed: _saving ? null : _testAndSave,
-                icon: _saving
-                    ? const SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.check_circle_outline),
-                label: Text(_saving ? '正在测试连接…' : '测试并保存'),
-              ),
+            FilledButton.icon(
+              key: const Key('testAndSaveServerButton'),
+              onPressed: _saving ? null : _testAndSave,
+              icon: _saving
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.check_circle_outline),
+              label: Text(_saving ? '正在测试连接…' : '测试并保存'),
             ),
           ],
         ),

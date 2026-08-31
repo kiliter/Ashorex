@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shangan_ios/core/theme/shangan_theme.dart';
+import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/player/data/watch_repository.dart';
 import 'package:shangan_ios/features/player/presentation/alive_check_dialog.dart';
 import 'package:shangan_ios/features/player/presentation/learning_player_controller.dart';
@@ -125,13 +127,13 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
             onPressed: _exit,
             icon: const Icon(Icons.arrow_back_ios_new),
           ),
-          title: Text(widget.title),
+          title: const Text('可信学习'),
         ),
         body: FutureBuilder<void>(
           future: _initialization,
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
+              return const ShanganLoading('正在创建可信观看会话');
             }
             if (snapshot.hasError) {
               return const Center(child: Text('暂时无法创建播放会话，请稍后重试。'));
@@ -139,31 +141,102 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
             return ListView(
               padding: const EdgeInsets.only(bottom: 32),
               children: [
-                _VideoSurface(adapter: _adapter),
+                Stack(
+                  children: [
+                    _VideoSurface(adapter: _adapter),
+                    Positioned(
+                      left: 12,
+                      top: 10,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: ShanganColors.ink.withValues(alpha: 0.72),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 5,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.wifi, size: 15, color: Colors.white),
+                              SizedBox(width: 5),
+                              Text(
+                                '服务端验证中',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        widget.title,
-                        style: Theme.of(context).textTheme.titleLarge,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const ShanganEyebrow('课程视频'),
+                                const SizedBox(height: 6),
+                                Text(
+                                  widget.title,
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                              ],
+                            ),
+                          ),
+                          ShanganStatusTag(
+                            state.isPlaying
+                                ? '播放中'
+                                : state.completed
+                                ? '已完成'
+                                : '已暂停',
+                            tone: state.completed
+                                ? ShanganTagTone.success
+                                : state.isPlaying
+                                ? ShanganTagTone.info
+                                : ShanganTagTone.warning,
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       VerifiedProgressBar(
                         duration: state.duration,
                         position: state.position,
                         maxVerifiedPosition: state.maxVerifiedPosition,
                         onSeek: _controller.seek,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          IconButton.filledTonal(
+                          IconButton.outlined(
                             constraints: const BoxConstraints.tightFor(
-                              width: 52,
-                              height: 52,
+                              width: 48,
+                              height: 48,
+                            ),
+                            tooltip: '快退 10 秒',
+                            onPressed: () => _controller.seek(
+                              state.position - const Duration(seconds: 10),
+                            ),
+                            icon: const Icon(Icons.replay_10),
+                          ),
+                          const SizedBox(width: 18),
+                          IconButton.filled(
+                            constraints: const BoxConstraints.tightFor(
+                              width: 58,
+                              height: 58,
                             ),
                             tooltip: state.isPlaying ? '暂停' : '播放',
                             onPressed: state.completed
@@ -175,14 +248,55 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
                               state.isPlaying ? Icons.pause : Icons.play_arrow,
                             ),
                           ),
+                          const SizedBox(width: 18),
+                          IconButton.outlined(
+                            constraints: const BoxConstraints.tightFor(
+                              width: 48,
+                              height: 48,
+                            ),
+                            tooltip: '快进 10 秒',
+                            onPressed: () => _controller.seek(
+                              state.position + const Duration(seconds: 10),
+                            ),
+                            icon: const Icon(Icons.forward_10),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 18),
+                      ShanganMetricGrid(
+                        metrics: [
+                          (
+                            value: _clock(state.position),
+                            label: '当前播放',
+                            tone: ShanganTagTone.info,
+                          ),
+                          (
+                            value: _clock(state.maxVerifiedPosition),
+                            label: '可信最大位置',
+                            tone: ShanganTagTone.success,
+                          ),
+                          (
+                            value: state.completed ? '已达到' : '未达到',
+                            label: '完成阈值',
+                            tone: state.completed
+                                ? ShanganTagTone.success
+                                : ShanganTagTone.warning,
+                          ),
+                          (
+                            value: _clock(state.duration),
+                            label: '总时长',
+                            tone: ShanganTagTone.risk,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
                       if (state.completed) ...[
-                        const ListTile(
-                          leading: Icon(Icons.check_circle_outline),
-                          title: Text('已达到可信观看完成阈值'),
+                        const ShanganNotice(
+                          title: '已达到可信观看完成阈值',
+                          message: '若本课配置了题目，提交完整答卷后计划任务才会完成。',
+                          tone: ShanganTagTone.success,
                         ),
+                        const SizedBox(height: 12),
                         FilledButton.icon(
                           onPressed: () => context.push(
                             Uri(
@@ -198,7 +312,7 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
                         ),
                       ],
                       if (state.networkError)
-                        FilledButton.tonalIcon(
+                        OutlinedButton.icon(
                           onPressed: _controller.play,
                           icon: const Icon(Icons.refresh),
                           label: const Text('网络恢复后继续'),
@@ -213,6 +327,15 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
       ),
     );
   }
+}
+
+String _clock(Duration value) {
+  final hours = value.inHours;
+  final minutes = value.inMinutes.remainder(60);
+  final seconds = value.inSeconds.remainder(60);
+  return hours > 0
+      ? '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}'
+      : '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 }
 
 /// 生产视频画面只读取适配器持有的官方 VideoPlayerController。

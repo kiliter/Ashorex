@@ -21,6 +21,10 @@ void main() {
     expect(find.text('距离考试 63 天'), findsOneWidget);
     expect(find.text('进度有风险'), findsOneWidget);
     expect(find.textContaining('剩余 81 课时'), findsOneWidget);
+    expect(find.text('今日追赶中'), findsOneWidget);
+    expect(find.text('今日作战单'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('学习欠债'), 240);
+    expect(find.text('学习欠债'), findsOneWidget);
   });
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/reporting/data/report_repository.dart';
 
 /// 数据 Tab 的日报首页，同时承载固定模板生成的晚间审判。
@@ -34,7 +35,7 @@ final class _DailyReportPageState extends ConsumerState<DailyReportPage> {
       future: _report,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return const ShanganLoading('正在生成学习日报');
         }
         if (snapshot.hasError || !snapshot.hasData) {
           return _ReportError(onRetry: () => setState(_load));
@@ -79,114 +80,114 @@ final class _DailyReportBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(16),
+    padding: shanganPagePadding,
     children: [
       Row(
         children: [
-          Text('数据', style: Theme.of(context).textTheme.headlineMedium),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const ShanganEyebrow('学习日报'),
+              const SizedBox(height: 5),
+              Text('数据', style: Theme.of(context).textTheme.headlineMedium),
+            ],
+          ),
           const Spacer(),
-          TextButton(onPressed: openWeekly, child: const Text('查看周报')),
+          ShanganStatusTag(
+            _planStatus(report.planStatus),
+            tone: report.abandoned ? ShanganTagTone.risk : ShanganTagTone.info,
+          ),
         ],
       ),
+      const SizedBox(height: 14),
       Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton(onPressed: previous, icon: const Icon(Icons.chevron_left)),
+          IconButton.outlined(
+            onPressed: previous,
+            icon: const Icon(Icons.chevron_left),
+          ),
+          const SizedBox(width: 12),
           Text(
             _formatDate(report.date),
-            style: Theme.of(context).textTheme.titleMedium,
+            style: shanganNumberStyle(context, fontSize: 15),
           ),
-          IconButton(onPressed: next, icon: const Icon(Icons.chevron_right)),
+          const SizedBox(width: 12),
+          IconButton.outlined(
+            onPressed: next,
+            icon: const Icon(Icons.chevron_right),
+          ),
         ],
       ),
-      const SizedBox(height: 12),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('晚间审判', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 10),
-              Text(
-                report.judgmentText,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-            ],
-          ),
-        ),
+      const SizedBox(height: 18),
+      ShanganNotice(
+        title: '晚间审判 · 规则生成',
+        message: report.judgmentText,
+        tone: report.abandoned || report.completionRate < 60
+            ? ShanganTagTone.risk
+            : report.completionRate >= 90
+            ? ShanganTagTone.success
+            : ShanganTagTone.warning,
       ),
-      const SizedBox(height: 12),
-      _MetricGrid(
+      const SizedBox(height: 20),
+      ShanganMetricGrid(
         metrics: [
-          ('计划完成', '${report.completionRate}%'),
           (
-            '有效学习',
-            _shortDuration(report.videoStudySeconds + report.focusSeconds),
+            value: '${report.completionRate}%',
+            label: '计划完成率',
+            tone: ShanganTagTone.info,
           ),
-          ('视频学习', _shortDuration(report.videoStudySeconds)),
-          ('专注计时', _shortDuration(report.focusSeconds)),
-          ('答题正确率', '${report.answerAccuracy}%'),
-          ('完成任务', '${report.completedTasks}/${report.totalTasks}'),
+          (
+            value: _shortDuration(
+              report.videoStudySeconds + report.focusSeconds,
+            ),
+            label: '有效学习',
+            tone: ShanganTagTone.success,
+          ),
+          (
+            value: _shortDuration(report.videoStudySeconds),
+            label: '视频学习',
+            tone: ShanganTagTone.warning,
+          ),
+          (
+            value: _shortDuration(report.focusSeconds),
+            label: '专注时长',
+            tone: ShanganTagTone.risk,
+          ),
+          (
+            value: '${report.completedTasks}/${report.totalTasks}',
+            label: '完成任务',
+            tone: ShanganTagTone.info,
+          ),
+          (
+            value: '${report.answerAccuracy}%',
+            label: '答题正确率',
+            tone: ShanganTagTone.success,
+          ),
+          (
+            value: _shortDuration(report.newDebtSeconds),
+            label: '新增欠债',
+            tone: ShanganTagTone.risk,
+          ),
+          (
+            value: '${report.aliveCheckFailureCount}',
+            label: '验活失败',
+            tone: ShanganTagTone.warning,
+          ),
         ],
       ),
-      const SizedBox(height: 12),
-      Card(
-        child: Column(
-          children: [
-            ListTile(
-              title: const Text('新增欠债'),
-              trailing: Text(_shortDuration(report.newDebtSeconds)),
-            ),
-            ListTile(
-              title: const Text('偿还欠债'),
-              trailing: Text(_shortDuration(report.repaidDebtSeconds)),
-            ),
-            ListTile(
-              title: const Text('当前欠债'),
-              trailing: Text(_shortDuration(report.openDebtSeconds)),
-            ),
-            ListTile(
-              title: const Text('验活失败'),
-              trailing: Text('${report.aliveCheckFailureCount} 次'),
-            ),
-          ],
-        ),
+      const SizedBox(height: 18),
+      ShanganNotice(
+        title: '当前欠债 ${_shortDuration(report.openDebtSeconds)}',
+        message:
+            '今日偿还 ${_shortDuration(report.repaidDebtSeconds)}，新增 ${_shortDuration(report.newDebtSeconds)}。',
+        tone: report.openDebtSeconds > 0
+            ? ShanganTagTone.risk
+            : ShanganTagTone.success,
       ),
+      const SizedBox(height: 18),
+      FilledButton(onPressed: openWeekly, child: const Text('查看本周学习周报')),
     ],
-  );
-}
-
-final class _MetricGrid extends StatelessWidget {
-  const _MetricGrid({required this.metrics});
-
-  final List<(String, String)> metrics;
-
-  @override
-  Widget build(BuildContext context) => GridView.count(
-    crossAxisCount: 2,
-    childAspectRatio: 1.8,
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    children: metrics
-        .map(
-          (metric) => Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    metric.$2,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  Text(metric.$1),
-                ],
-              ),
-            ),
-          ),
-        )
-        .toList(),
   );
 }
 
@@ -215,3 +216,11 @@ String _shortDuration(int seconds) {
   final minutes = (seconds % 3600) ~/ 60;
   return hours > 0 ? '$hours 小时 $minutes 分' : '$minutes 分钟';
 }
+
+String _planStatus(String status) => switch (status) {
+  'COMPLETED' => '已完成',
+  'ABANDONED' => '已开摆',
+  'CLOSED_WITH_DEBT' => '欠债结算',
+  'LOCKED' => '进行中',
+  _ => status,
+};

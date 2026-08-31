@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shangan_ios/core/theme/shangan_theme.dart';
+import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
 import 'package:shangan_ios/features/exam/data/exam_repository.dart';
 
@@ -37,22 +39,34 @@ final class _ExamGoalPageState extends ConsumerState<ExamGoalPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('设置考试目标')),
+      appBar: AppBar(
+        title: const Text('考试目标'),
+        automaticallyImplyLeading: false,
+      ),
       body: FutureBuilder<List<CourseSummary>>(
         future: ref.read(catalogRepositoryProvider).listCourses(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const ShanganLoading('正在读取可选课程');
           }
           final courses = snapshot.data!;
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
             children: [
+              const ShanganEyebrow('首次设置 · 01/03'),
+              const SizedBox(height: 7),
+              Text('把终点写清楚', style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(height: 8),
+              Text(
+                '课程完成日应早于考试日，为复习和模拟留出缓冲。',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 22),
               TextField(
                 controller: _name,
                 decoration: const InputDecoration(labelText: '考试名称'),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               _DateTile(
                 label: '考试日期',
                 value: _examDate,
@@ -64,24 +78,35 @@ final class _ExamGoalPageState extends ConsumerState<ExamGoalPage> {
                 onTap: () => _pickDate(isExamDate: false),
               ),
               const SizedBox(height: 16),
-              Text('参与进度计算的课程', style: Theme.of(context).textTheme.titleMedium),
+              ShanganNotice(
+                title: '当前复习缓冲 ${_examDate.difference(_targetDate).inDays} 天',
+                message: '这段时间用于二轮复习、模拟考试和错题回看。',
+              ),
+              const SizedBox(height: 20),
+              const ShanganEyebrow('参与进度计算的课程'),
               if (courses.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
                   child: Text('暂无课程，请先由管理员同步 Emby 课程。'),
                 ),
               ...courses.map(
-                (course) => CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(course.name),
-                  value: _courseIds.contains(course.id),
-                  onChanged: (selected) => setState(() {
-                    if (selected == true) {
-                      _courseIds.add(course.id);
-                    } else {
-                      _courseIds.remove(course.id);
-                    }
-                  }),
+                (course) => Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: ShanganSurface(
+                    padding: EdgeInsets.zero,
+                    child: CheckboxListTile(
+                      title: Text(course.name),
+                      value: _courseIds.contains(course.id),
+                      activeColor: ShanganColors.blue,
+                      onChanged: (selected) => setState(() {
+                        if (selected == true) {
+                          _courseIds.add(course.id);
+                        } else {
+                          _courseIds.remove(course.id);
+                        }
+                      }),
+                    ),
+                  ),
                 ),
               ),
               if (_message != null) ...[
@@ -171,12 +196,29 @@ final class _DateTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(label),
-      subtitle: Text('${value.year}-${value.month}-${value.day}'),
-      trailing: const Icon(Icons.calendar_today_outlined),
-      onTap: onTap,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: InputDecorator(
+          decoration: InputDecoration(labelText: label),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}',
+                  style: shanganNumberStyle(context, fontSize: 14),
+                ),
+              ),
+              const Icon(
+                Icons.calendar_today_outlined,
+                color: ShanganColors.blue,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

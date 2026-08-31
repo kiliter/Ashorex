@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shangan_ios/core/theme/shangan_theme.dart';
+import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/quiz/data/quiz_repository.dart';
 import 'package:shangan_ios/features/quiz/presentation/quiz_result_page.dart';
 
@@ -40,7 +42,7 @@ final class _QuizPageState extends ConsumerState<QuizPage> {
         future: _quiz,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
+            return const ShanganLoading('正在读取课后题');
           }
           if (snapshot.hasError || !snapshot.hasData) {
             return const Center(child: Text('题目暂时无法加载，请确认视频已完成后重试。'));
@@ -51,54 +53,111 @@ final class _QuizPageState extends ConsumerState<QuizPage> {
           }
           final complete = _answers.length == quiz.questions.length;
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
             children: [
-              Text('共 ${quiz.questions.length} 题，提交后可重复作答。'),
-              const SizedBox(height: 12),
-              ...quiz.questions.indexed.map(
-                (entry) => Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+              Row(
+                children: [
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          child: Text(
-                            '${entry.$1 + 1}. ${entry.$2.content}',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ),
-                        RadioGroup<String>(
-                          groupValue: _answers[entry.$2.id],
-                          onChanged: _submitting
-                              ? (_) {}
-                              : (value) {
-                                  if (value == null) return;
-                                  setState(() => _answers[entry.$2.id] = value);
-                                },
-                          child: Column(
-                            children: entry.$2.options
-                                .map(
-                                  (option) => RadioListTile<String>(
-                                    value: option.id,
-                                    enabled: !_submitting,
-                                    title: Text(option.content),
-                                  ),
-                                )
-                                .toList(),
-                          ),
+                        ShanganEyebrow('课后答题 · ${quiz.questions.length} 题'),
+                        const SizedBox(height: 6),
+                        Text(
+                          '基础检查',
+                          style: Theme.of(context).textTheme.headlineSmall,
                         ),
                       ],
                     ),
                   ),
+                  Text(
+                    '${_answers.length}/${quiz.questions.length}',
+                    style: shanganNumberStyle(context, fontSize: 16),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              ShanganProgress(value: _answers.length / quiz.questions.length),
+              const SizedBox(height: 20),
+              const Divider(color: ShanganColors.ink),
+              ...quiz.questions.indexed.map(
+                (entry) => Container(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: ShanganColors.rule),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ShanganEyebrow(
+                        '${(entry.$1 + 1).toString().padLeft(2, '0')} · '
+                        '${entry.$2.questionType == 'TRUE_FALSE' ? '判断题' : '单选题'}',
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        entry.$2.content,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      RadioGroup<String>(
+                        groupValue: _answers[entry.$2.id],
+                        onChanged: _submitting
+                            ? (_) {}
+                            : (value) {
+                                if (value == null) return;
+                                setState(() => _answers[entry.$2.id] = value);
+                              },
+                        child: Column(
+                          children: entry.$2.options.indexed.map((optionEntry) {
+                            final selected =
+                                _answers[entry.$2.id] == optionEntry.$2.id;
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Material(
+                                color: selected
+                                    ? ShanganColors.blueSoft
+                                    : ShanganColors.surface,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(11),
+                                  side: BorderSide(
+                                    color: selected
+                                        ? ShanganColors.ink
+                                        : ShanganColors.rule,
+                                  ),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: RadioListTile<String>(
+                                  value: optionEntry.$2.id,
+                                  enabled: !_submitting,
+                                  activeColor: ShanganColors.ink,
+                                  title: Text(optionEntry.$2.content),
+                                  secondary: Text(
+                                    String.fromCharCode(65 + optionEntry.$1),
+                                    style: shanganNumberStyle(
+                                      context,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 4),
+              if (!complete) ...[
+                const SizedBox(height: 14),
+                Text(
+                  '◇ 还有 ${quiz.questions.length - _answers.length} 题未完成，全部回答后才能提交。',
+                  style: const TextStyle(color: ShanganColors.red),
+                ),
+              ],
+              const SizedBox(height: 18),
               FilledButton(
                 key: const Key('submitQuiz'),
                 onPressed: complete && !_submitting

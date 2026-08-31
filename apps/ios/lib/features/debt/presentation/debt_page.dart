@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shangan_ios/core/theme/shangan_theme.dart';
+import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/planning/data/plan_repository.dart';
 
 /// 欠债页只能查询和加入 DRAFT 计划，不能直接核销。
@@ -14,36 +16,110 @@ final class DebtPage extends ConsumerWidget {
         future: ref.read(planRepositoryProvider).loadDebts(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const ShanganLoading('正在读取学习欠债');
           }
           final debts = snapshot.data!;
           if (debts.isEmpty) return const Center(child: Text('当前没有未还欠债'));
-          return ListView.separated(
-            itemCount: debts.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final debt = debts[index];
-              return ListTile(
-                minTileHeight: 72,
-                title: Text(debt.title),
-                subtitle: Text(
-                  '${debt.debtType} · 剩余 ${debt.remainingSeconds} 秒',
-                ),
-                trailing: TextButton(
-                  onPressed: () async {
-                    await ref.read(planRepositoryProvider).addDebtItems([
-                      debt.id,
-                    ]);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('已加入今日 DRAFT 计划')),
-                      );
-                    }
-                  },
-                  child: const Text('加入计划'),
-                ),
-              );
-            },
+          final total = debts.fold<int>(
+            0,
+            (sum, debt) => sum + debt.remainingSeconds,
+          );
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
+            children: [
+              const ShanganEyebrow('当前学习欠债'),
+              const SizedBox(height: 7),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      shanganDuration(total),
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                  ),
+                  ShanganStatusTag(
+                    '${debts.length} 项待偿还',
+                    tone: ShanganTagTone.risk,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '欠债来自未完成的真实任务，会保留来源与剩余量。',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 20),
+              const Divider(color: ShanganColors.ink, thickness: 2),
+              ...debts.indexed.map((entry) {
+                final debt = entry.$2;
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: ShanganColors.rule),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 34,
+                            child: Text(
+                              '${entry.$1 + 1}'.padLeft(2, '0'),
+                              style: shanganNumberStyle(
+                                context,
+                                fontSize: 11,
+                              ).copyWith(color: ShanganColors.mutedInk),
+                            ),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  debt.title,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium,
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  '${debt.debtType} · 剩余 ${debt.remainingSeconds} 秒',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                          ShanganStatusTag(
+                            debt.status,
+                            tone: ShanganTagTone.risk,
+                          ),
+                        ],
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () async {
+                            await ref.read(planRepositoryProvider).addDebtItems(
+                              [debt.id],
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('已加入今日 DRAFT 计划')),
+                              );
+                            }
+                          },
+                          child: const Text('加入今日计划 ›'),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
           );
         },
       ),

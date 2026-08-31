@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shangan_ios/core/theme/shangan_theme.dart';
+import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/focus/data/focus_repository.dart';
 
 /// 服务端计时的专注页；本地时钟只用于平滑展示，恢复前台时会重新同步服务端。
@@ -120,7 +122,7 @@ final class _FocusTimerPageState extends ConsumerState<FocusTimerPage>
         child: _error != null
             ? _ErrorState(message: _error.toString(), retry: _initialize)
             : session == null
-            ? const Center(child: CircularProgressIndicator())
+            ? const ShanganLoading('正在同步专注会话')
             : _buildSession(context, session),
       ),
     );
@@ -134,59 +136,80 @@ final class _FocusTimerPageState extends ConsumerState<FocusTimerPage>
     );
     final running = session.status == 'RUNNING';
     final active = running || session.status == 'PAUSED';
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Spacer(),
-          Icon(
-            running ? Icons.timer_outlined : Icons.pause_circle_outline,
-            size: 72,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(height: 20),
-          Text(
-            _formatDuration(actual),
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.displayMedium,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _statusLabel(session.status),
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '剩余 ${_formatDuration(remaining)}',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-          const Spacer(),
-          if (active) ...[
-            FilledButton.icon(
-              key: Key(running ? 'pauseFocus' : 'resumeFocus'),
-              onPressed: _busy
-                  ? null
-                  : () => _change(running ? 'pause' : 'resume'),
-              icon: Icon(running ? Icons.pause : Icons.play_arrow),
-              label: Text(running ? '暂停' : '继续'),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const ShanganEyebrow('专注任务'),
+                  const SizedBox(height: 6),
+                  Text(
+                    widget.title,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              key: const Key('finishFocus'),
-              onPressed: _busy ? null : () => _change('finish'),
-              child: const Text('结束并结算'),
-            ),
-            TextButton(
-              key: const Key('cancelFocus'),
-              onPressed: _busy ? null : () => _change('cancel'),
-              child: const Text('取消本次专注'),
+            ShanganStatusTag(
+              _statusLabel(session.status),
+              tone: session.status == 'FINISHED'
+                  ? ShanganTagTone.success
+                  : running
+                  ? ShanganTagTone.info
+                  : ShanganTagTone.warning,
             ),
           ],
+        ),
+        const SizedBox(height: 16),
+        _TimerDial(
+          progress: session.plannedSeconds == 0
+              ? 0
+              : actual / session.plannedSeconds,
+          actualLabel: _formatDuration(actual),
+          remainingLabel: _formatDuration(remaining),
+          running: running,
+        ),
+        ShanganMetricGrid(
+          metrics: [
+            (
+              value: shanganDuration(actual),
+              label: '已专注',
+              tone: ShanganTagTone.info,
+            ),
+            (
+              value: shanganDuration(session.plannedSeconds),
+              label: '计划时长',
+              tone: ShanganTagTone.success,
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        if (active) ...[
+          FilledButton.icon(
+            key: Key(running ? 'pauseFocus' : 'resumeFocus'),
+            onPressed: _busy
+                ? null
+                : () => _change(running ? 'pause' : 'resume'),
+            icon: Icon(running ? Icons.pause : Icons.play_arrow),
+            label: Text(running ? '暂停' : '继续'),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            key: const Key('finishFocus'),
+            onPressed: _busy ? null : () => _change('finish'),
+            child: const Text('结束并结算'),
+          ),
+          TextButton(
+            key: const Key('cancelFocus'),
+            onPressed: _busy ? null : () => _change('cancel'),
+            child: const Text('取消本次专注'),
+          ),
         ],
-      ),
+      ],
     );
   }
 
@@ -213,6 +236,80 @@ final class _FocusTimerPageState extends ConsumerState<FocusTimerPage>
       }
     }
   }
+}
+
+/// 与原型一致的圆形计时刻度，数值仍完全来自服务端会话快照。
+final class _TimerDial extends StatelessWidget {
+  const _TimerDial({
+    required this.progress,
+    required this.actualLabel,
+    required this.remainingLabel,
+    required this.running,
+  });
+
+  final double progress;
+  final String actualLabel;
+  final String remainingLabel;
+  final bool running;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 22),
+    child: Center(
+      child: SizedBox.square(
+        dimension: 252,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox.square(
+              dimension: 252,
+              child: CircularProgressIndicator(
+                value: progress.clamp(0, 1),
+                strokeWidth: 12,
+                strokeCap: StrokeCap.round,
+                color: ShanganColors.blue,
+                backgroundColor: ShanganColors.rule.withValues(alpha: 0.4),
+              ),
+            ),
+            Container(
+              width: 210,
+              height: 210,
+              decoration: BoxDecoration(
+                color: ShanganColors.surface,
+                shape: BoxShape.circle,
+                border: Border.all(color: ShanganColors.rule),
+                boxShadow: const [
+                  BoxShadow(
+                    color: ShanganColors.blueSoft,
+                    offset: Offset(5, 5),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  running ? Icons.timer_outlined : Icons.pause,
+                  color: ShanganColors.blue,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  actualLabel,
+                  style: shanganNumberStyle(context, fontSize: 34),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  '剩余 $remainingLabel',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 String _formatDuration(int totalSeconds) {

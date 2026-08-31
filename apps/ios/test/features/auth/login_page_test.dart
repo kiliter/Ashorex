@@ -36,6 +36,9 @@ void main() {
         child: const MaterialApp(home: LoginPage()),
       ),
     );
+    expect(find.text('今日学习凭证'), findsOneWidget);
+    expect(find.text('准入状态'), findsOneWidget);
+    expect(find.text('登录并领取今日计划'), findsOneWidget);
     await tester.enterText(find.byKey(const Key('usernameField')), 'alice');
     await tester.enterText(
       find.byKey(const Key('passwordField')),
