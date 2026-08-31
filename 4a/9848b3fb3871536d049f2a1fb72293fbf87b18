@@ -1,0 +1,27 @@
+apps/server/src/main/resources/templates/admin/fragments.html
+  s_4d8f86932c7463::t_dec9d42e5cbd26 7,12,17,19
+apps/server/src/main/java/com/shangan/catalog/application/CourseSyncService.java
+  s_4d8f86932c7463::t_dec9d42e5cbd26 68-76
+apps/server/src/main/resources/templates/admin/course-lessons.html
+  s_4d8f86932c7463::t_962125cf9e1985 7-13,15-17,19-32,35-39,42-49,52-55,57-128,130-138,140-154
+apps/server/src/main/java/com/shangan/admin/CourseAdminController.java
+  s_4d8f86932c7463::t_dec9d42e5cbd26 5,10-12,90-92,94-99
+apps/server/src/main/resources/static/assets/admin.css
+  s_4d8f86932c7463::t_cac68fb64ee40c 1,975-1520
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "4a9848b3fb3871536d049f2a1fb72293fbf87b18",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
