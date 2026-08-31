@@ -36,14 +36,20 @@
 | CONTENT-002 | 导入全包原子，重复上传覆盖 | 19 | 回滚、重复覆盖与固定 Clock 集成测试 | 任意错误零写入，成功覆盖且时间字段正确 |
 | CONTENT-003 | App 只读获取单集学习内容 | 19 | `LessonStudyContentApiIntegrationTest`、OpenAPI 契约测试 | 返回全文、摘要和更新时间，未导入错误码稳定 |
 | CONTENT-004 | 迁移保留历史全文和全局摘要并删除 AI 数据 | 19 | V013 迁移集成测试 | 旧内容可读，聊天/转写/FTS/旧摘要表已删除 |
-| ADMIN-001 | 用户、课程、题目、课程内容和运行状态管理 | 3、5、11、16、19 | MVC/安全集成测试 | 管理员完成全部配置流程 |
-| ADMIN-002 | Web 后台配置 Emby 并立即生效 | 18、19 | `RuntimeIntegrationSettingsServiceTest`、`IntegrationSettingsAdminTest`、Emby 适配器刷新测试 | 保存后不重启，新请求使用最新配置 |
+| CONTENT-005 | 从 Emby 直接取得音频并通过 OpenAI-compatible ASR 生成全文 | 20 | `EmbyAudioClientTest`、ASR NDJSON 契约测试 | 不下载视频，完整 text 顺序拼接，临时音频删除 |
+| CONTENT-006 | 通过 OpenAI-compatible LLM 生成 Markdown 摘要 | 20 | 摘要 Provider、递归分层和部分就绪集成测试 | 长视频不超过模型上下文，摘要失败不影响全文 |
+| CONTENT-007 | 内容任务持久化、全局串行、批量操作和默认关闭的定时补全 | 20 | 任务状态机、队列顺序、重启恢复和调度幂等测试 | 单任务执行，已有内容跳过，定时开关默认关闭 |
+| MODEL-001 | 从 OpenRouter 缓存模型名、上下文和输出上限 | 20 | `OpenRouterModelCatalogTest` | 刷新失败使用旧缓存，CPA 自定义模型可手动配置 |
+| QUIZ-AI-001 | 根据课时全文与摘要生成待审核题目草稿 | 20 | 结构化响应、超长文本、题型与唯一答案校验测试 | AI 结果不直接进入正式题库 |
+| QUIZ-AI-002 | 课程级选择并批量发布 AI 题目草稿 | 20 | `QuizDraftPublishIntegrationTest` | 全批校验、事务追加、重复提交幂等且不覆盖已有题目 |
+| ADMIN-001 | 用户、课程、题目、课程内容、内容任务和运行状态管理 | 3、5、11、16、19、20 | MVC/安全集成测试 | 管理员完成全部配置和内容生产流程 |
+| ADMIN-002 | Web 后台配置 Emby、ASR、LLM、OpenRouter 并立即生效 | 18、19、20 | 运行时配置、ADMIN、适配器配置快照测试 | 保存后不重启，新任务使用最新配置 |
 | OPS-001 | 健康检查、结构化日志 | 2、16 | Actuator/日志测试 | `/actuator/health` 正常 |
 | OPS-002 | SQLite 在线备份与恢复 | 16 | 备份脚本测试、恢复演练 | 恢复后核心表计数一致 |
-| SEC-001 | 外部密钥不泄露 | 3、5、8、16、19 | Secret 扫描与日志测试 | 客户端包、日志、API 均无密钥 |
+| SEC-001 | 外部密钥不泄露 | 3、5、8、16、19、20 | Secret 扫描与日志测试 | Emby、ASR、LLM、OpenRouter 密钥不进入客户端、日志和业务 API |
 | SEC-002 | 媒体代理防 SSRF | 8 | 代理目标白名单测试 | 非 Emby 主机被拒绝 |
-| SEC-003 | Emby 密钥仅在 ADMIN 页面和服务端存储中可见 | 18、19 | ADMIN/CSRF/禁止缓存/响应泄露测试 | Flutter、业务 API、日志和错误响应无密钥 |
-| SCOPE-001 | 服务端与 Flutter V1 不包含 AI、ASR、MCP、自动转写或聊天入口 | 19 | 依赖/路由/配置残留扫描、Flutter Widget 测试 | 四 Tab、播放器无 AI，服务端无相关接口和依赖 |
+| SEC-003 | 外部服务密钥仅在 ADMIN 页面和服务端存储中可见 | 18、19、20 | ADMIN/CSRF/禁止缓存/响应泄露测试 | Flutter、业务 API、任务日志和错误响应无密钥 |
+| SCOPE-001 | 服务端 AI 仅限课时转写、摘要和题目草稿 | 19、20 | 依赖/路由/配置边界扫描、Flutter Widget 测试 | 无 AI Chat、智能体、MCP、AI 业务写入口，Flutter 保持四 Tab |
 | DEV-001 | 登录前配置服务端地址并安全切换连接 | 17 | 地址配置单元测试、登录页 Widget 测试 | 健康检查通过后切换，旧 Token 被清除且无需重启 App |
 
 ## 追踪规则

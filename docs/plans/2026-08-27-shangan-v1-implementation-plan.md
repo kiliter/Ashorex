@@ -2,11 +2,11 @@
 
 > **执行要求：** 按 Task 顺序单线程实施，不使用多智能体。步骤使用 checkbox（`- [ ]`）跟踪。
 
-**Goal:** 构建一款 iOS-only 的学习监督 App，完成 Emby 视频学习、可信观看、计划锁定、开摆欠债、答题、计时、报表以及管理员维护的课程全文与摘要闭环。
+**Goal:** 构建一款 iOS-only 的学习监督 App，完成 Emby 视频学习、可信观看、计划锁定、开摆欠债、答题、计时、报表，以及课程自动转写、摘要和 AI 题目草稿闭环。
 
-**Architecture:** 单仓库包含 Flutter iOS App 与 Spring Boot 模块化单体。服务端以 SQLite 为业务真相，Emby 提供媒体能力；课程全文和 Markdown 摘要由管理员批量导入；Flutter 只负责交互、播放器和心跳。
+**Architecture:** 单仓库包含 Flutter iOS App 与 Spring Boot 模块化单体。服务端以 SQLite 为业务真相，Emby 提供媒体与音频流；课程全文和 Markdown 摘要可由管理员导入，也可由持久化串行任务调用 OpenAI-compatible ASR/LLM 生成；AI 题目只进入待审核草稿，管理员发布后才进入正式题库。Flutter 只负责交互、播放器、心跳和只读内容查询。
 
-**Tech Stack:** Flutter 3.44.7、flutter_riverpod 3.0.2、go_router 17.5.0、Dio 5.11.0、video_player 2.14.0、Java 21、Spring Boot 4.1.1、Spring MVC、JdbcClient、sqlite-jdbc 3.53.4.0、SQLite WAL、Flyway 13.3.0、Thymeleaf、Caddy。
+**Tech Stack:** Flutter 3.44.7、flutter_riverpod 3.0.2、go_router 17.5.0、Dio 5.11.0、video_player 2.14.0、Java 21、Spring Boot 4.1.1、Spring MVC、JdbcClient、sqlite-jdbc 3.53.4.0、SQLite WAL、Flyway 13.3.0、Thymeleaf、LangChain4j OpenAI 1.19.0、Caddy。
 
 **Spec:** `docs/specs/2026-08-27-shangan-v1-design.md`
 
@@ -15,7 +15,7 @@
 - V1 只实现 iOS；不要创建 Android、Web 或桌面客户端。
 - iOS 最低版本为 16。
 - 后端只能运行一个实例，SQLite 文件必须位于本机磁盘。
-- 服务端和当前 Flutter V1 不包含 AI、ASR、MCP、自动转写或聊天能力。
+- 服务端只允许课时转写、摘要和 AI 题目草稿；不包含 AI Chat、智能体、MCP、联网搜索或 AI 业务写能力。
 - Emby 密钥不能进入 Flutter、日志或业务 API 响应；仅允许存在于服务端存储和 ADMIN 配置页面。
 - 不使用 Redis、Kafka、向量数据库、微服务或对象存储。
 - 所有日期边界按用户时区处理，数据库时间统一 UTC Epoch Milliseconds。
@@ -1907,6 +1907,8 @@ git commit -m "feat(admin): configure runtime integrations"
 
 ### Task 19：移除服务端 AI 并增加课程学习内容导入
 
+> **部分被 Task 20 替代。** Task 19 删除通用 AI Runtime 的结果继续保留；Task 20 仅恢复课程内容转写、摘要和题目草稿能力。
+
 **前置文档：**
 
 - `docs/adr/0007-remove-server-ai-runtime.md`
@@ -2000,6 +2002,146 @@ git commit -m "feat(catalog): import lesson study contents"
 
 ---
 
+### Task 20：课程自动转写、摘要、AI 出题与内容任务后台
+
+**前置文档：**
+
+- `docs/adr/0008-server-course-content-generation.md`
+- `docs/superpowers/specs/2026-08-31-course-content-generation-design.md`
+
+**主要文件：**
+
+- 新建：`apps/server/src/main/resources/db/migration/V014__content_generation.sql`
+- 新建：`apps/server/src/main/java/com/shangan/ai/content/domain/*`
+- 新建：`apps/server/src/main/java/com/shangan/ai/content/application/*`
+- 新建：`apps/server/src/main/java/com/shangan/ai/content/infrastructure/*`
+- 新建：`apps/server/src/main/java/com/shangan/ai/content/api/*`
+- 新建：`apps/server/src/main/java/com/shangan/media/emby/EmbyAudioClient.java`
+- 新建：`apps/server/src/main/java/com/shangan/admin/ContentJobAdminController.java`
+- 新建：`apps/server/src/main/java/com/shangan/admin/QuizDraftAdminController.java`
+- 新建：`apps/server/src/main/resources/templates/admin/content-jobs.html`
+- 新建：`apps/server/src/main/resources/templates/admin/content-job-detail.html`
+- 新建：`apps/server/src/main/resources/templates/admin/quiz-drafts.html`
+- 修改：运行时配置模型、仓库、服务、表单和配置页面
+- 修改：课程、课时、运行状态页面以及共享样式和导航
+- 修改：`lesson_study_contents` Repository、查询 DTO 和 OpenAPI
+- 修改：`pom.xml`、`.env.example`、`application.yml` 和部署配置
+- 测试：Emby 音频、ASR NDJSON、LLM 分层处理、任务状态机、模型目录缓存、题目草稿和批量发布集成测试
+
+**接口：**
+
+- ADMIN：单课时和课程级转写、摘要、AI 出题，任务列表、详情、重试，题目草稿和批量发布，OpenRouter 模型目录刷新。
+- App API：扩展 `GET /api/v1/lessons/{lessonId}/study-content` 表达全文与摘要部分就绪。
+- 不增加 Flutter 写接口、聊天接口、MCP 或智能体。
+
+- [ ] **步骤 1：更新依赖并先写 V014 迁移测试**
+
+使用稳定版 `dev.langchain4j:langchain4j-open-ai:1.19.0`。不得使用当前仍为预发布版本的 Spring Boot 4 Starter，不引入 Agentic、MCP、Embedding 或向量库依赖。
+
+V014 集成测试从 V013 数据库升级并精确断言：
+
+```text
+已有全文和摘要完整迁移
+lesson_study_contents 允许两项独立就绪
+内容任务、日志、模型目录和题目草稿表存在
+运行时配置恢复 ASR、LLM、OpenRouter 和默认关闭的自动补全字段
+外键、唯一约束和幂等发布约束有效
+```
+
+- [ ] **步骤 2：实现 Emby 音频流和 ASR Provider**
+
+先使用 WireMock 覆盖 PlaybackInfo、`/Audio/{Id}/stream.mp3`、音频流中断、ASR multipart 和 NDJSON 分片。实现必须：
+
+```text
+请求 16 kHz / 单声道 / 64 kbps MP3
+边接收边写临时文件，不下载视频
+ASR stream=true、chunk_duration 可配置
+只按顺序拼接每行 text，不重复拼接 accumulated
+流内 error、空文本、非 2xx 和超时失败
+成功、失败、取消和超时后都删除临时音频
+```
+
+- [ ] **步骤 3：实现 OpenRouter 模型目录缓存和运行时配置**
+
+固定调用 `https://openrouter.ai/api/v1/models`，解析模型 ID、显示名、上下文、最大输出、Tokenizer 和支持参数。刷新使用短事务 Upsert，缺失旧模型标记 inactive；失败保留旧缓存。配置页支持缓存搜索选择和 CPA 自定义模型手工兜底。
+
+运行时配置使用现有原子快照模式。任务开始时冻结 Base URL、模型 ID、上下文和输出上限；页面保存后的新配置只影响新任务。任何密钥不得进入业务 API、任务日志和错误响应。
+
+- [ ] **步骤 4：实现共用上下文预算与递归分层处理器**
+
+先写极小上下文窗口和超长文本测试，证明摘要和出题都不会构造超过预算的输入。处理器按段落、句子边界切片，按预算分组归并，结果仍超预算时递归处理。
+
+使用：
+
+```text
+inputBudget = contextLength - maxCompletionTokens - 2048
+```
+
+无法可靠复现上游 Tokenizer 时使用保守字符估算，不声称精确 Token 数；记录上游实际 usage。不得把完整 Prompt 或正文写日志。
+
+- [ ] **步骤 5：实现持久化全局串行 Worker**
+
+状态：
+
+```text
+TRANSCRIBE：QUEUED → FETCHING_AUDIO → TRANSCRIBING → READY / FAILED
+SUMMARIZE：QUEUED → SUMMARIZING → READY / FAILED
+GENERATE_QUIZ：QUEUED → GENERATING_QUIZ → READY_FOR_REVIEW / FAILED
+```
+
+同课时同类型禁止重复未完成任务。批量任务按课程和课时排序创建。外部调用期间不持有事务；状态和日志使用短事务。服务重启将遗留执行态标记 `FAILED/SERVER_RESTARTED`。失败任务不自动重新消费，管理员可手动重试。
+
+- [ ] **步骤 6：实现摘要与 AI 题目草稿**
+
+摘要输出固定中文 Markdown。AI 出题默认 4 道单选和 1 道判断，创建任务时允许 1～20 题。支持结构化输出的模型优先使用 JSON Schema，否则使用严格 JSON；允许同一任务内一次格式修复。
+
+校验：
+
+```text
+题型合法
+单选题至少 2 个选项且唯一正确答案
+判断题固定 2 个选项且唯一正确答案
+题干、选项和中文解析非空
+草稿属于当前课时
+```
+
+生成结果只能写草稿表，不能直接调用正式题目 Repository。
+
+- [ ] **步骤 7：实现草稿审核和课程级批量发布**
+
+课时题目页可编辑、删除和选择草稿。课程草稿页可选择多个 `READY_FOR_REVIEW` 草稿执行批量发布。应用服务在事务外校验全部草稿，在一个短事务中追加正式题目和选项并标记草稿已发布。任一草稿无效整批不写入；重复提交不重复建题；已有正式题目不删除、不覆盖。
+
+- [ ] **步骤 8：复刻高保真后台并接入真实数据**
+
+严格以 `/Users/zhangjialin/Downloads/shangan-admin-prototype.html` 为视觉和交互基准，完成高密度桌面布局。增加内容任务导航、课程/课时按钮、题目草稿、批量发布、运行状态耗时和服务配置，不引入单独前端框架。
+
+- [ ] **步骤 9：实现默认关闭的定时补全**
+
+定时扫描代码存在，但 `enabled=false`。开启后只为缺失全文或摘要的课时创建任务，不覆盖已有内容，不自动生成题目草稿，并继续进入同一全局串行队列。重复扫描必须幂等。
+
+- [ ] **步骤 10：更新只读 API、OpenAPI 和验收测试**
+
+接口返回全文、摘要各自状态、可空内容和更新时间。两项都缺失时继续返回 `LESSON_STUDY_CONTENT_NOT_FOUND`。覆盖鉴权、部分就绪、完整就绪和无密钥泄露，同步 `docs/api/openapi.yaml`。
+
+- [ ] **步骤 11：验证并提交**
+
+运行内容模块窄测试、服务端验证和必要的 Flutter 契约测试：
+
+```bash
+cd apps/server
+./mvnw -Dtest='*ContentGeneration*,*EmbyAudio*,*OpenRouter*,*QuizDraft*,*LessonStudyContent*' test
+cd ../..
+make format
+make verify
+```
+
+检查临时音频、密钥、完整 Prompt、调试响应和范围后，在用户指定的 `main` 分支提交：
+
+```bash
+git add .
+git commit -m "feat(ai): generate lesson contents and quiz drafts"
+```
+
 ## Cross-Task Review Gates
 
 After Tasks 1–4:
@@ -2083,6 +2225,18 @@ Flutter 只有首页、学习、数据和我的四个 Tab，播放器无 AI 入�
 V013 保留历史全文和全局摘要，并删除废弃表
 ```
 
+Task 20 之后：
+
+```text
+服务端仅恢复课程转写、摘要和 AI 题目草稿能力，无聊天、智能体或 MCP
+Emby 只传输音频，ASR NDJSON text 正确拼接且临时文件可靠删除
+长视频摘要和出题使用上下文预算与递归分层处理
+OpenRouter 模型名称和上下文可刷新、缓存并供 CPA 模型配置选择
+任务持久化、全局串行，定时补全默认关闭且只补缺失内容
+AI 题目只能进入草稿，课程级批量发布原子且幂等
+后台严格复刻用户提供的高保真 HTML 风格
+```
+
 ---
 
 ## Codex Execution Rules
@@ -2109,8 +2263,9 @@ Codex must:
 - [ ] Every state transition has tests.
 - [ ] All external services have contract tests.
 - [ ] Playback proxy never buffers a full video.
-- [ ] 服务端与 Flutter 不存在 AI、ASR、MCP、自动转写或聊天入口。
+- [ ] 服务端只存在课时转写、摘要和 AI 题目草稿能力，不存在聊天、智能体、MCP 或 AI 业务写入口。
 - [ ] 课程学习内容导入全包原子，读取接口只读。
+- [ ] 长视频摘要和出题不会超过模型上下文预算，AI 题目批量发布原子且幂等。
 - [ ] Secrets remain server-side.
 - [ ] SQLite backup and restore have been executed, not merely documented.
 - [ ] Physical iPhone acceptance is recorded.

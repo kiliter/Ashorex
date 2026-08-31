@@ -1,7 +1,7 @@
 # 上岸 V1 产品与技术设计规范
 
 **文档状态：** 已冻结，可进入实现
-**版本：** V1.1
+**版本：** V1.2
 **日期：** 2026-08-31
 **目标平台：** iOS
 **工作仓库名：** `shangan`
@@ -80,6 +80,9 @@ V1 的价值判断标准：
 - 模块化单体后端。
 - SQLite 主数据库。
 - Emby API 集成、课程同步、视频播放代理。
+- 从 Emby 音频流生成课时全文，并通过 OpenAI-compatible LLM 生成 Markdown 摘要。
+- 基于课时全文和摘要生成待审核课后题草稿，并由管理员批量发布。
+- 持久化、全局串行的内容生成任务、阶段日志、失败重试和耗时统计。
 - 题目配置与答题记录。
 - 可信观看进度校验。
 - 日计划、锁定、开摆、欠债、报表规则。
@@ -97,8 +100,11 @@ V1 的价值判断标准：
 - 启用、禁用和排序视频。
 - 为视频配置单选题和判断题。
 - 按课程批量导入每集全文文字和 Markdown 摘要。
+- 按课时或课程批量触发转文本和 AI 摘要。
+- 按课时或课程批量生成 AI 题目草稿，并支持课程级批量发布。
+- 查看内容任务状态、阶段日志和耗时。
 - 查看基础运行状态。
-- 配置 Emby，保存后对新请求立即生效。
+- 配置 Emby、ASR、LLM 和 OpenRouter 模型目录，保存后对新请求立即生效。
 
 ### 3.2 明确不做
 
@@ -111,7 +117,7 @@ V1 的价值判断标准：
 - DRM。
 - 排行榜、社交、研友、监督人。
 - 推送通知和 Live Activity。
-- 服务端 LLM、ASR、MCP、AI 聊天和自动转写摘要。
+- 服务端 AI 聊天、智能体、MCP、联网搜索和 AI 业务写操作。
 - Flutter AI Tab 和视频 AI 问答；后续移动端 AI 另行设计。
 - 多智能体。
 - 向量数据库。
@@ -309,6 +315,9 @@ V1 题型：
 - V1 不以分数锁定下一节视频。
 - 保存每次答题、选项、正误、耗时和解释。
 - 允许重复答题，报表默认展示最新一次和历史最佳一次。
+- AI 可以根据当前课时全文和摘要生成单选、判断题草稿，但不能直接发布正式题目。
+- 管理员可以编辑草稿并在课程范围批量发布；发布前全批校验，任意草稿无效时整批不写入。
+- 批量发布只追加题目，不删除或覆盖已有正式题目；重复发布同一草稿必须幂等。
 
 ### 4.8 专注计时
 
@@ -366,11 +375,19 @@ V1 题型：
 
 ### 4.10 课程学习内容
 
-课程视频可以关联一份管理员提供的完整全文文字和一份 Markdown 摘要。服务端只负责校验、存储和读取，不调用 AI、ASR 或 FFmpeg 生成内容。
+课程视频可以关联一份完整全文文字和一份 Markdown 摘要。内容可以由管理员 ZIP 导入，也可以由服务端通过 Emby 音频流、OpenAI-compatible ASR 和 OpenAI-compatible LLM 生成。
 
 规则：
 
-- 管理员按课程上传一个 ZIP 包。
+- 课时级提供“一键转文本”和“AI 摘要”，课程级提供两个对应批量操作。
+- 转写和摘要是独立持久化任务；摘要必须已有全文。
+- 所有内容任务全局串行，批量任务按课时排序执行。
+- 已有内容默认跳过；重新生成必须显式触发，失败不得清空旧内容。
+- 定时补全任务实现但默认关闭；开启后只处理缺失内容，不覆盖已有内容。
+- 转写直接请求 Emby 音频流，不下载完整视频，不在上岸服务端执行 FFmpeg。
+- ASR 流式 NDJSON 响应按顺序收集 `text` 并拼接，完整成功后一次性保存全文。
+- 长全文根据所选模型上下文预算分段摘要，再合并最终 Markdown 摘要。
+- 管理员仍可按课程上传 ZIP 包作为人工覆盖和故障兜底。
 - 每集通过 Emby Item ID 与本地课时精确匹配。
 - 每集必须同时提供 UTF-8 `transcript.txt` 和 `summary.md`。
 - 全包校验成功后一次性写入；任意错误均不产生部分导入。
@@ -396,15 +413,15 @@ V1 题型：
 │ Identity  Exam      Catalog          │
 │ Planning  Debt      Learning         │
 │ Quiz      Focus     Reporting        │
-│           Emby      Admin            │
+│     AI Content      Emby      Admin  │
 └───────┬─────────────┬───────────────┘
         │             │
-        ▼             ▼
-     SQLite          Emby
-        │             │
-        │             └─ 视频 / 剧集 / 封面 / 转码
-        │
-        └─ 业务数据 / 课程全文 / 摘要
+        ▼             ▼              ▼
+     SQLite          Emby       ASR / LLM
+        │             │              │
+        │             └─ 视频 / 音频转码流
+        │                            └─ OpenAI-compatible API
+        └─ 业务数据 / 任务 / 全文 / 摘要 / 模型目录缓存
 ```
 
 部署原则：
@@ -438,6 +455,7 @@ V1 题型：
 | 迁移 | Flyway Core 13.3.0 + flyway-database-nc-sqlite 13.3.0 |
 | Java 格式化 | Spotless Maven Plugin 3.10.0 + Google Java Format |
 | 管理后台 | Spring MVC + Thymeleaf + 少量原生 JavaScript |
+| LLM SDK | LangChain4j 1.19.x OpenAI-compatible ChatModel，不使用 Agentic 模块 |
 | API 文档 | springdoc-openapi 3.1.0 |
 | 构建 | Maven Wrapper、FVM |
 | 部署 | Docker Compose 或 systemd + Caddy |
@@ -539,6 +557,8 @@ com.shangan
 ├── quiz
 ├── focus
 ├── reporting
+├── ai
+│   └── content
 ├── media
 │   └── emby
 └── admin
@@ -568,6 +588,7 @@ com.shangan
 | `quiz` | 题目、选项、答题记录 |
 | `focus` | 番茄钟和练习计时 |
 | `reporting` | 日报、周报、晚间审判 |
+| `ai.content` | 课时转写、摘要、任务队列、OpenRouter 模型目录缓存 |
 | `media.emby` | Emby 客户端、同步、播放代理 |
 | `admin` | 内部管理页面 |
 
@@ -615,7 +636,7 @@ PRAGMA synchronous = NORMAL;
 ./data/study.db
 ```
 
-课程全文和摘要直接存 SQLite；不单独引入对象存储。
+课程全文、摘要、生成任务、阶段日志和模型目录缓存直接存 SQLite；临时音频只写本机临时目录并在任务结束后删除，不引入对象存储。
 
 ---
 
@@ -903,22 +924,91 @@ PRAGMA synchronous = NORMAL;
 
 - `id`
 - `media_item_id`，唯一
-- `full_text`
-- `summary_markdown`
-- `imported_at`
+- `full_text`，可空
+- `summary_markdown`，可空
+- `transcript_updated_at`，可空
+- `summary_updated_at`，可空
+- `imported_at`，可空
 - `updated_at`
 
-课程内容由管理员批量导入。新导入要求全文和摘要同时非空；重复导入保留 `imported_at` 并更新内容和 `updated_at`。
+全文和摘要可由独立任务分别生成。ZIP 导入仍要求全文和摘要同时非空；重复导入保留 `imported_at` 并同时覆盖两项内容。
+
+#### `content_generation_jobs`
+
+- `id`
+- `course_id`
+- `media_item_id`
+- `job_type`：TRANSCRIBE / SUMMARIZE / GENERATE_QUIZ
+- `status`
+- `queued_at`
+- `started_at`
+- `finished_at`
+- `audio_duration_ms`
+- `fetch_ms`
+- `transcribe_ms`
+- `summarize_ms`
+- `quiz_generate_ms`
+- `total_ms`
+- `asr_model`
+- `llm_model`
+- `prompt_tokens`
+- `completion_tokens`
+- `attempt`
+- `error_code`
+- `error_message`
+- `created_by`
+
+同一课时、同一类型只能有一个未完成任务；一个服务实例全局同时只执行一个任务。
+
+#### `content_generation_job_logs`
+
+- `id`
+- `job_id`
+- `occurred_at`
+- `level`
+- `stage`
+- `message`
+
+#### `llm_model_catalog`
+
+- `model_id`，主键
+- `display_name`
+- `context_length`
+- `max_completion_tokens`
+- `tokenizer`
+- `supported_parameters_json`
+- `fetched_at`
+- `active`
+
+目录数据来自固定 OpenRouter Models API；实际摘要请求仍使用管理员配置的 LLM Base URL。
+
+#### `quiz_generation_drafts`
+
+- `id`
+- `job_id`
+- `course_id`
+- `media_item_id`
+- `status`：READY_FOR_REVIEW / PUBLISHED
+- `requested_question_count`
+- `created_at`
+- `published_at`
+
+草稿题目和选项使用独立明细表，字段与正式 `questions`、`question_options` 对齐，并保存可空的 `published_question_id` 保证重复发布幂等。草稿不能被学习端查询。
 
 #### `runtime_integration_settings`
 
 - `id`，固定为 `default`
 - Emby Base URL、API Key、用户 ID
+- ASR Base URL、API Key、模型、语言、Chunk Duration、超时
+- LLM Base URL、API Key、模型、上下文长度、最大输出 Tokens、超时
+- OpenRouter API Key
+- 内容自动补全开关，默认关闭
+- 自动补全扫描间隔
 - `updated_at`
 
 表中不存在记录时使用环境变量初始值；一旦管理员保存，数据库中的整份配置成为运行时来源。
 
-V013 将 V010 的历史转写片段按顺序合并为全文，将历史全局摘要迁入新表，并删除旧转写、摘要、FTS、聊天表。V012 的运行时配置表在 V013 中重建为仅含 Emby 字段。
+V013 将 V010 的历史转写片段按顺序合并为全文，将历史全局摘要迁入新表，并删除旧转写、摘要、FTS、聊天表。V012 的运行时配置表在 V013 中重建为仅含 Emby 字段。V014 以追加式迁移恢复内容生成配置和任务表，并调整课程内容表以允许全文和摘要独立就绪。
 
 ---
 
@@ -1112,9 +1202,19 @@ V1 媒体全部经过服务端代理，原因是并发低于 5，优先保护密
 
 ---
 
-## 13. 课程学习内容导入
+## 13. 课程学习内容生成与导入
 
-### 13.1 ZIP 结构
+### 13.1 自动生成
+
+转写任务从 Emby `/Audio/{Id}/stream.mp3` 获取 16 kHz、单声道、64 kbps 的完整音频流，写入临时 MP3 后调用 OpenAI-compatible `/v1/audio/transcriptions`。对 mlx-audio 使用 `stream=true` 和默认 30 秒 `chunk_duration`，只按顺序拼接每个 NDJSON 对象的 `text` 字段。完整请求成功后一次性保存全文；任意失败不覆盖旧全文。
+
+摘要任务只读取当前课时全文，通过稳定版 LangChain4j OpenAI-compatible ChatModel 调用 `/v1/chat/completions`。根据 OpenRouter 缓存或手动配置的上下文长度计算输入预算；长全文使用递归分层处理，先生成分段摘要，再按预算逐层归并为最终 Markdown。完整成功后一次性保存摘要；失败不影响全文或旧摘要。
+
+AI 出题任务读取当前课时全文和可选摘要，使用同一上下文预算和递归分层处理器从各片段提取候选知识点和候选题，再逐层归并、去重并选出目标数量。结果必须通过题型、选项、唯一正确答案、解析和归属校验后写入独立草稿。模型支持结构化输出时优先使用；否则使用严格 JSON 并允许在同一任务内进行一次格式修复。
+
+临时音频无论成功、失败或超时都必须删除。所有外部调用有超时，不记录完整正文、Prompt 或上游响应。
+
+### 13.2 ZIP 结构
 
 ```text
 manifest.json
@@ -1124,7 +1224,7 @@ lessons/{embyItemId}/summary.md
 
 `manifest.json` 固定包含 `version: 1` 和 `lessons` 数组，每项只包含 `embyItemId`。文件路径由该 ID 推导，不接受任意路径配置。
 
-### 13.2 校验与写入
+### 13.3 校验与写入
 
 - Emby Item ID 必须精确匹配当前课程的课时。
 - manifest 中不允许重复 ID。
@@ -1134,15 +1234,19 @@ lessons/{embyItemId}/summary.md
 - 全包先校验，后在一个短事务中批量 Upsert。
 - 任意错误整包回滚；重复上传覆盖旧内容。
 
-### 13.3 读取
+### 13.4 任务与读取
 
-`GET /api/v1/lessons/{lessonId}/study-content` 返回 `lessonId`、`fullText`、`summaryMarkdown` 和 ISO-8601 `updatedAt`。未导入时返回 RFC Problem Details，稳定错误码 `LESSON_STUDY_CONTENT_NOT_FOUND`。
+课时和课程批量操作只创建持久化任务，页面不等待外部调用完成。Worker 全局串行执行，失败任务由管理员手动重试。定时补全默认关闭，开启后只为缺失全文或摘要创建任务，不自动生成题目草稿。
+
+`GET /api/v1/lessons/{lessonId}/study-content` 返回 `lessonId`、全文与摘要状态、可空的 `fullText`、可空的 `summaryMarkdown`、各自更新时间和总更新时间。两项内容都不存在时返回 RFC Problem Details，稳定错误码 `LESSON_STUDY_CONTENT_NOT_FOUND`。
 
 ---
 
 ## 14. 服务端 AI 边界
 
-V1 服务端不包含 LLM、ASR、MCP、AI Chat/SSE、FFmpeg 自动转写或自动摘要。课程全文和摘要均视为管理员维护的只读内容。后续 Flutter 移动端 AI 必须另行完成需求、ADR 和安全设计，不能恢复本次删除的服务端 Runtime 作为隐式依赖。
+V1 服务端只允许 ASR 转写、LLM 摘要和 LLM 题目草稿三类课程内容生产调用。转写和摘要只能写入当前课时的 `full_text`、`summary_markdown`；AI 出题只能写入不可供学习端读取的草稿表。只有管理员明确发布后，确定性应用服务才能把已校验草稿写入正式题库。AI 不能读取或修改计划、欠债、可信进度、考试目标、答题记录、报表和用户偏好。
+
+V1 仍不包含 MCP、AI Chat/SSE、智能体、联网搜索、AI 计划、AI 审判或其他 AI 业务写能力。Flutter 只读课程内容，不持有 ASR、LLM、OpenRouter 或 Emby 密钥。
 
 ---
 
@@ -1305,6 +1409,8 @@ App 生命周期：
 /admin/courses
 /admin/courses/{id}/lessons
 /admin/courses/{id}/study-content/import
+/admin/content-jobs
+/admin/content-jobs/{id}
 /admin/lessons/{id}/questions
 /admin/health
 /admin/settings/integrations
@@ -1317,9 +1423,10 @@ App 生命周期：
 - Cookie 使用 HttpOnly、Secure、SameSite=Lax。
 - 登录失败有基本限速。
 - 首个管理员通过环境变量引导创建，首次启动后要求修改密码。
-- 管理员可配置 Emby；API Key 字段支持显示和隐藏。
+- 管理员可配置 Emby、ASR、LLM 和 OpenRouter 模型目录；API Key 字段支持显示和隐藏。
 - 配置页面禁止缓存，保存操作使用 CSRF，保存成功后对新调用立即生效。
 - 课程课时页可上传 ZIP 批量导入全文和摘要；先全包校验，再在一个事务中写入。
+- 课程课时页提供单课时和批量内容生成按钮；内容任务页提供状态、日志、耗时和重试。
 
 V1 后台功能以可用为主，不做复杂设计系统。
 
@@ -1334,6 +1441,7 @@ V1 后台功能以可用为主，不做复杂设计系统。
 - Refresh Token 数据库存哈希，不存明文。
 - 密码使用 BCrypt strength 12。
 - Emby API Key 只允许存在于服务端存储和 ADMIN 配置页面，不得进入 Flutter、业务 API、日志或错误响应。
+- ASR、LLM 和 OpenRouter API Key 只允许存在于服务端存储和 ADMIN 配置页面，不得进入 Flutter、业务 API、任务日志或错误响应。
 - 播放代理固定目标，禁止用户传任意 URL。
 - HLS 路径重写需防目录穿越。
 - 所有资源查询校验当前用户所有权。
@@ -1364,6 +1472,12 @@ EMBY_UNAVAILABLE
 MEDIA_NOT_AVAILABLE
 LESSON_STUDY_CONTENT_NOT_FOUND
 STUDY_CONTENT_IMPORT_INVALID
+EMBY_AUDIO_UNAVAILABLE
+ASR_NOT_CONFIGURED
+ASR_REQUEST_FAILED
+LLM_NOT_CONFIGURED
+TRANSCRIPT_NOT_READY
+SUMMARY_REQUEST_FAILED
 ```
 
 客户端规则：
@@ -1384,6 +1498,7 @@ STUDY_CONTENT_IMPORT_INVALID
 - 日志包含用户 ID、会话 ID、模块和耗时，不包含敏感内容。
 - Emby 调用记录耗时和状态。
 - 课程内容导入记录数量、耗时和结果，不记录正文。
+- 内容生成记录任务 ID、阶段、模型名和耗时，不记录完整音频 URL、正文、Prompt 或上游响应。
 - SQLite WAL 文件大小监控日志。
 - 每日备份。
 - 至少保留 7 天备份。
@@ -1441,6 +1556,7 @@ sqlite3 /data/study.db ".backup '/backup/study-YYYYMMDD-HHMMSS.db'"
 - 考试进度压力。
 - 日报和审判模板。
 - ZIP 结构解析和导入校验。
+- 内容任务状态机、ASR NDJSON 拼接、上下文预算和摘要分段合并。
 
 集成测试：
 
@@ -1450,7 +1566,9 @@ sqlite3 /data/study.db ".backup '/backup/study-YYYYMMDD-HHMMSS.db'"
 - Spring Security。
 - REST API。
 - Emby 使用 WireMock。
+- ASR、LLM 和 OpenRouter Models API 使用 WireMock。
 - 课程内容导入事务与 V013 旧数据迁移。
+- V014 内容任务、部分就绪内容和运行时配置迁移。
 - Range 转发和 HLS 重写。
 
 契约测试：
@@ -1574,12 +1692,19 @@ ADMIN_BOOTSTRAP_PASSWORD
 EMBY_BASE_URL
 EMBY_API_KEY
 EMBY_USER_ID
+ASR_BASE_URL
+ASR_API_KEY
+ASR_MODEL
+LLM_BASE_URL
+LLM_API_KEY
+LLM_MODEL
+OPENROUTER_API_KEY
 QUIZ_DEBT_ESTIMATE_SECONDS
 DATA_DIR
 BACKUP_DIR
 ```
 
-管理员可通过 `/admin/settings/integrations` 将 Emby 配置保存到 SQLite。数据库中存在配置后，整份数据库配置优先于环境变量；SQLite 备份包含该配置。
+管理员可通过 `/admin/settings/integrations` 将 Emby、ASR、LLM、OpenRouter 和自动补全配置保存到 SQLite。数据库中存在配置后，整份数据库配置优先于环境变量；SQLite 备份包含该配置和外部服务密钥。
 
 ---
 
@@ -1592,6 +1717,7 @@ BACKUP_DIR
 - 心跳处理 P95 小于 100ms。
 - 单用户同时仅一个观看会话。
 - 媒体代理不得整文件缓冲。
+- 内容任务全局同时只执行一个；音频和外部响应必须流式处理，不将完整视频读入内存。
 - 后端稳定运行 7 天无锁死和数据库损坏。
 - 数据库出现 `SQLITE_BUSY` 时有 5 秒等待，并记录指标日志。
 
@@ -1670,8 +1796,8 @@ BACKUP_DIR
 
 ### 场景 D：读取课程学习内容
 
-1. 登录用户请求已导入课时的学习内容接口。
-2. 响应返回完整全文、Markdown 摘要和更新时间。
+1. 登录用户请求已有课时内容的学习内容接口。
+2. 响应返回全文与摘要各自状态、可空内容和更新时间。
 3. 未导入内容的课时返回 `LESSON_STUDY_CONTENT_NOT_FOUND`。
 4. Flutter Shell 只有“首页 / 学习 / 数据 / 我的”，播放器没有 AI 入口。
 
@@ -1692,14 +1818,25 @@ BACKUP_DIR
 5. App 无需进程重启即可重建全部网络依赖。
 6. 登录页显示新服务器，用户可使用新服务器账号登录。
 
-### 场景 G：后台配置 Emby
+### 场景 G：后台配置外部服务
 
 1. 管理员进入服务配置页。
-2. 页面显示环境变量或数据库中的当前有效配置。
-3. 管理员修改 Emby 配置并保存。
+2. 页面显示环境变量或数据库中的 Emby、ASR、LLM、OpenRouter 和自动补全配置。
+3. 管理员修改配置并保存。
 4. 配置无需重启即可供新调用使用。
 5. 非管理员、缺少 CSRF 和非法 URL 的写入被拒绝。
 6. Flutter、业务 API、日志和错误响应不包含密钥。
+
+### 场景 H：自动转写、摘要与 AI 出题
+
+1. 管理员对一个长视频课时点击“一键转文本”。
+2. 服务端直接从 Emby 获取完整音频流，ASR 流式返回的 `text` 被按顺序拼接为全文。
+3. 管理员点击“AI 摘要”，服务端根据缓存的模型上下文对长全文递归分层摘要。
+4. 管理员点击“AI 出题”，服务端递归提取候选知识点并生成结构合法的题目草稿。
+5. 管理员在课程草稿页选择多个课时，批量发布后正式题库追加题目，重复提交不重复写入。
+6. 批量转写、摘要和出题均按课时顺序、全局串行执行。
+7. 定时补全默认关闭；开启后只补缺失全文或摘要，不生成题目，不覆盖已有内容。
+8. OpenRouter 模型目录刷新失败时仍可使用缓存模型或手动模型配置。
 
 ---
 
@@ -1713,13 +1850,15 @@ V1 只有同时满足以下条件才完成：
 - Emby Key 未出现在 App 包、日志和 API 响应。
 - 未看区间无法通过正常 UI 和直接 API 心跳绕过。
 - 开摆和正常日终都会幂等生成欠债。
-- 服务端与 Flutter 不包含 AI、ASR、MCP、自动转写和聊天入口。
+- 服务端只包含受限的课时转写、摘要和题目草稿能力；Flutter 不包含聊天、智能体、MCP 或外部服务密钥。
 - 课程学习内容 ZIP 导入满足全包原子性，移动端接口只读。
+- 内容任务持久化、全局串行，长文本不超过配置的模型上下文预算，临时音频可靠删除。
+- AI 题目必须经过管理员审核或批量发布，不能直接进入学习端。
 - 数据库可在线备份并成功恢复。
 - 文档、环境变量和运行命令完整。
 - 没有 Android、Web、微服务、Redis、向量库等越界实现。
 - 服务端地址切换经过健康检查，且不会向新服务器发送旧 Token。
-- 管理员保存 Emby 配置后，新请求无需重启即可使用最新配置。
+- 管理员保存外部服务配置后，新请求无需重启即可使用最新配置。
 
 ---
 
@@ -1741,6 +1880,7 @@ V1 只有同时满足以下条件才完成：
 12. 课程学习内容只读接口。
 13. 运维、备份、真机验收和 TestFlight。
 14. Web 后台 Emby 运行时配置。
+15. 课程自动转写、摘要、AI 出题、模型目录和内容任务后台。
 
 每个切片必须独立测试、独立提交，不允许先铺满空壳再统一补实现。
 

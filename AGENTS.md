@@ -16,7 +16,7 @@ V1 目标不是建设在线教育平台，而是完成以下闭环：
 → 日报、周报和晚间审判
 ```
 
-课程视频可由管理员批量导入完整全文和 Markdown 摘要。服务端不运行 LLM、ASR、MCP、自动转写或自动摘要；当前 Flutter V1 也不包含 AI 入口。
+课程视频可由管理员批量导入完整全文和 Markdown 摘要，也可由服务端从 Emby 音频流调用 OpenAI-compatible ASR/LLM 自动生成。AI 可以生成待审核题目草稿，但只有管理员明确发布后才能进入正式题库。服务端不提供 AI Chat、智能体、MCP、联网搜索或 AI 业务写入口；当前 Flutter V1 也不包含 AI 入口。
 
 ## Required Reading
 
@@ -52,6 +52,8 @@ Spring Boot Backend
 SQLite
 Emby
 Internal Admin Web
+ASR / LLM content generation
+OpenRouter model catalog cache
 ```
 
 禁止实现：
@@ -69,7 +71,8 @@ offline video
 DRM
 payments
 social features
-服务端 AI / ASR / MCP
+AI Chat / agents / MCP
+AI business writes
 Flutter AI 入口
 ```
 
@@ -99,6 +102,7 @@ learning
 quiz
 focus
 reporting
+ai.content
 media.emby
 admin
 ```
@@ -137,6 +141,7 @@ Rules:
 - SQLite WAL, one server instance.
 - Flyway.
 - Thymeleaf admin.
+- LangChain4j OpenAI 1.19.0 stable API；不使用预发布 Spring Boot Starter、Agentic、MCP 或向量库模块。
 - springdoc-openapi 3.x.
 
 Do not guess dependency versions. Use the version pinned by FVM, the Maven BOM, and committed lockfiles. Do not introduce pre-release dependencies.
@@ -295,7 +300,12 @@ Illegal transitions return stable business error codes.
 - 任意校验或写入失败都必须回滚整包。
 - 重复导入覆盖匹配课时的旧内容。
 - App API 只读，不提供移动端写接口。
-- 禁止增加服务端 AI、ASR、MCP、自动转写、自动摘要或聊天 Runtime。
+- 转写直接使用 Emby 音频流，不下载完整视频，不在上岸服务端运行 FFmpeg。
+- 内容任务全局串行；定时补全实现但默认关闭，开启后只补缺失全文或摘要。
+- 长视频摘要和出题必须根据模型上下文预算递归分层处理，不得把超预算全文强行放进一次请求。
+- OpenRouter 只缓存模型名称、上下文和能力；实际 LLM Base URL 可配置为 CPA。
+- AI 题目只能写入草稿，管理员可审核并课程级批量发布；发布必须全批校验、事务写入且幂等。
+- 禁止增加 AI Chat、智能体、MCP、联网搜索或 AI 对学习业务数据的写入。
 - 禁止使用多智能体。
 
 ## Security
@@ -305,6 +315,9 @@ Never commit:
 ```text
 JWT secret
 Emby API key
+ASR API key
+LLM API key
+OpenRouter API key
 admin password
 production URL credentials
 ```
@@ -329,8 +342,9 @@ Server:
 - AssertJ.
 - MockMvc.
 - Temporary file SQLite.
-- 使用 WireMock 测试 Emby。
+- 使用 WireMock 测试 Emby、ASR、LLM 和 OpenRouter。
 - ZIP 导入测试必须覆盖整包校验、原子回滚和重复覆盖。
+- 内容任务测试必须覆盖 NDJSON 拼接、全局串行、长文本分层、临时音频删除和题目草稿批量发布。
 - State machines and policies tested without Spring when possible.
 - Integration tests verify constraints, transactions and security.
 - Acceptance tests cover complete flows.
