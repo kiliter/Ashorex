@@ -25,11 +25,13 @@ class EmbyClientContractTest {
   @Test
   void sendsServerSideTokenAndConvertsRuntimeTicks() throws Exception {
     AtomicReference<String> receivedToken = new AtomicReference<>();
+    AtomicReference<String> receivedAcceptEncoding = new AtomicReference<>();
     server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
     server.createContext(
         "/Items",
         exchange -> {
           receivedToken.set(exchange.getRequestHeaders().getFirst("X-Emby-Token"));
+          receivedAcceptEncoding.set(exchange.getRequestHeaders().getFirst("Accept-Encoding"));
           byte[] body =
               """
               {"Items":[{"Id":"emby-ep-1","Name":"资料分析 01",\
@@ -53,6 +55,7 @@ class EmbyClientContractTest {
     EmbyDtos.MediaItem item = client.listChildren("parent-1").getFirst();
 
     assertThat(receivedToken.get()).isEqualTo("server-secret-token");
+    assertThat(receivedAcceptEncoding.get()).isEqualTo("identity");
     assertThat(item.id()).isEqualTo("emby-ep-1");
     assertThat(item.durationMs()).isEqualTo(3_600_000L);
     assertThat(item.toString()).doesNotContain("server-secret-token");

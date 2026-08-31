@@ -4,6 +4,7 @@ import com.shangan.common.api.BusinessException;
 import com.shangan.common.integration.RuntimeIntegrationSettings;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -36,6 +37,8 @@ public class EmbyClient implements EmbyGateway {
           RestClient.builder()
               .baseUrl(configuration.baseUrl())
               .defaultHeader("X-Emby-Token", configuration.apiKey())
+              // 部分 Emby 前置代理返回不兼容的 deflate 数据，元数据请求直接禁用压缩。
+              .defaultHeader(HttpHeaders.ACCEPT_ENCODING, "identity")
               .build()
               .get()
               .uri(
