@@ -4,19 +4,19 @@
   <head th:fragment="head(pageTitle)">
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#23437A" />
+    <meta name="theme-color" content="#f4f6f9" />
     <title th:text="${pageTitle}">上岸管理后台</title>
     <link rel="stylesheet" th:href="@{/assets/admin.css}" />
   </head>
   <body>
-    <!-- 移动端为顶部横向导航，桌面端通过 CSS 转为固定左侧工作台。 -->
+    <!-- 桌面端使用轻量侧栏，窄屏下收拢为可横向滚动的顶部导航。 -->
     <aside th:fragment="navigation(activePage)" class="admin-rail">
       <div class="brand-row">
         <a class="brand" th:href="@{/admin/health}" aria-label="返回运行状态">
           <span class="brand-mark" aria-hidden="true">岸</span>
-          <span>
+          <span class="brand-copy">
             <strong>上岸管理台</strong>
-            <small>学习监督系统</small>
+            <small>SHANGAN ADMIN</small>
           </span>
         </a>
         <form class="logout-form logout-form--mobile" method="post" th:action="@{/admin/logout}">

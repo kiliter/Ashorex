@@ -65,6 +65,15 @@ public class CourseSyncService {
     return courses.findAllCourses(false);
   }
 
+  /** 读取管理员正在维护的课程；不存在时返回稳定的业务错误，避免控制器接触仓储。 */
+  @Transactional(readOnly = true)
+  public Course getAdminCourse(String courseId) {
+    return courses
+        .findCourse(courseId)
+        .orElseThrow(
+            () -> new BusinessException(HttpStatus.NOT_FOUND, "COURSE_NOT_FOUND", "课程不存在"));
+  }
+
   @Transactional(readOnly = true)
   public List<MediaItem> listAdminLessons(String courseId) {
     return courses.findMediaItems(courseId, false);

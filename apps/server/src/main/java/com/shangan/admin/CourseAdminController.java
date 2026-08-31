@@ -2,10 +2,14 @@ package com.shangan.admin;
 
 import com.shangan.catalog.application.CourseSyncService;
 import com.shangan.catalog.application.LessonStudyContentImportService;
+import com.shangan.catalog.domain.MediaItem;
 import com.shangan.common.api.BusinessException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotBlank;
 import java.io.IOException;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.annotation.Validated;
@@ -83,10 +87,16 @@ public class CourseAdminController {
   /** 统一构造列表与导入反馈模型，保证 GET 和错误回显使用相同页面数据。 */
   private void populateLessonsModel(
       String courseId, Integer imported, String importError, Model model) {
+    List<MediaItem> lessons = courses.listAdminLessons(courseId);
+    Map<String, Instant> contentUpdatedAtByLessonId =
+        studyContents.contentUpdatedAtByLessonId(courseId);
     model.addAttribute("courseId", courseId);
-    model.addAttribute("lessons", courses.listAdminLessons(courseId));
-    model.addAttribute(
-        "studyContentUpdatedAtByLessonId", studyContents.contentUpdatedAtByLessonId(courseId));
+    model.addAttribute("course", courses.getAdminCourse(courseId));
+    model.addAttribute("lessons", lessons);
+    model.addAttribute("studyContentUpdatedAtByLessonId", contentUpdatedAtByLessonId);
+    model.addAttribute("lessonCount", lessons.size());
+    model.addAttribute("enabledLessonCount", lessons.stream().filter(MediaItem::enabled).count());
+    model.addAttribute("contentImportedCount", contentUpdatedAtByLessonId.size());
     model.addAttribute("imported", imported);
     model.addAttribute("importError", importError);
   }
