@@ -40,14 +40,6 @@ class RuntimeIntegrationSettingsServiceTest {
     registry.add("app.emby.base-url", () -> "https://env-emby.example.test");
     registry.add("app.emby.api-key", () -> "env-emby-key");
     registry.add("app.emby.user-id", () -> "env-user");
-    registry.add("app.ai.llm.base-url", () -> "https://env-llm.example.test/v1");
-    registry.add("app.ai.llm.api-key", () -> "env-llm-key");
-    registry.add("app.ai.llm.model", () -> "env-model");
-    registry.add("app.ai.asr.base-url", () -> "https://env-asr.example.test/v1");
-    registry.add("app.ai.asr.api-key", () -> "env-asr-key");
-    registry.add("app.ai.asr.model", () -> "env-asr-model");
-    registry.add("app.ai.mcp.url", () -> "https://env-mcp.example.test/mcp");
-    registry.add("app.ai.mcp.bearer-token", () -> "env-mcp-token");
   }
 
   @Test
@@ -55,9 +47,6 @@ class RuntimeIntegrationSettingsServiceTest {
     RuntimeIntegrationSettings current = settings.current();
 
     assertThat(current.emby().baseUrl()).isEqualTo("https://env-emby.example.test");
-    assertThat(current.llm().model()).isEqualTo("env-model");
-    assertThat(current.asr().model()).isEqualTo("env-asr-model");
-    assertThat(current.mcp().url()).isEqualTo("https://env-mcp.example.test/mcp");
     assertThat(
             jdbc.sql("select count(*) from runtime_integration_settings")
                 .query(Long.class)
@@ -69,25 +58,13 @@ class RuntimeIntegrationSettingsServiceTest {
   void savesCompleteDatabaseSnapshotAndPublishesItImmediately() {
     RuntimeIntegrationSettings saved = settings.save(databaseSettings());
 
-    assertThat(saved.llm().apiKey()).isEqualTo("database-llm-key");
+    assertThat(saved.emby().apiKey()).isEqualTo("database-emby-key");
     assertThat(settings.current()).isEqualTo(saved);
     assertThat(
-            jdbc.sql("select llm_model from runtime_integration_settings where id='default'")
+            jdbc.sql("select emby_user_id from runtime_integration_settings where id='default'")
                 .query(String.class)
                 .single())
-        .isEqualTo("database-model");
-
-    RuntimeIntegrationSettings withExplicitBlank =
-        new RuntimeIntegrationSettings(
-            saved.emby(),
-            new RuntimeIntegrationSettings.Llm("", "", "", 4096, 0.2, 120),
-            saved.asr(),
-            saved.mcp(),
-            0);
-    settings.save(withExplicitBlank);
-
-    assertThat(settings.current().llm().baseUrl()).isBlank();
-    assertThat(settings.current().llm().apiKey()).isBlank();
+        .isEqualTo("database-user");
   }
 
   @Test
@@ -95,11 +72,7 @@ class RuntimeIntegrationSettingsServiceTest {
     RuntimeIntegrationSettings before = settings.current();
     RuntimeIntegrationSettings invalid =
         new RuntimeIntegrationSettings(
-            new RuntimeIntegrationSettings.Emby("file:///tmp/media", "key", "user"),
-            before.llm(),
-            before.asr(),
-            before.mcp(),
-            0);
+            new RuntimeIntegrationSettings.Emby("file:///tmp/media", "key", "user"), 0);
 
     assertThatThrownBy(() -> settings.save(invalid))
         .isInstanceOf(IntegrationSettingsValidationException.class)
@@ -112,7 +85,7 @@ class RuntimeIntegrationSettingsServiceTest {
     RuntimeIntegrationSettings database = databaseSettings();
     RuntimeIntegrationSettingsRepository repository = fixedRepository(database, false);
     MockEnvironment environment =
-        new MockEnvironment().withProperty("app.ai.llm.model", "不应使用的环境模型");
+        new MockEnvironment().withProperty("app.emby.base-url", "https://env.example.test");
 
     var service =
         new RuntimeIntegrationSettingsService(
@@ -122,7 +95,7 @@ class RuntimeIntegrationSettingsServiceTest {
             transactionManager(new AtomicBoolean()));
 
     assertThat(service.current()).isEqualTo(database);
-    assertThat(service.current().llm().model()).isNotEqualTo("不应使用的环境模型");
+    assertThat(service.current().emby().baseUrl()).isNotEqualTo("https://env.example.test");
   }
 
   @Test
@@ -181,20 +154,6 @@ class RuntimeIntegrationSettingsServiceTest {
     return new RuntimeIntegrationSettings(
         new RuntimeIntegrationSettings.Emby(
             "https://database-emby.example.test", "database-emby-key", "database-user"),
-        new RuntimeIntegrationSettings.Llm(
-            "https://database-llm.example.test/v1",
-            "database-llm-key",
-            "database-model",
-            32_000,
-            0.3,
-            180),
-        new RuntimeIntegrationSettings.Asr(
-            "https://database-asr.example.test/v1", "database-asr-key", "database-asr", 600),
-        new RuntimeIntegrationSettings.Mcp(
-            "https://database-mcp.example.test/mcp",
-            "database-mcp-token",
-            "web_search,web_extract",
-            20),
         0);
   }
 }

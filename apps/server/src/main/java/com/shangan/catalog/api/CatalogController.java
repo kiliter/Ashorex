@@ -1,9 +1,12 @@
 package com.shangan.catalog.api;
 
 import com.shangan.catalog.application.CatalogQueryService;
+import com.shangan.catalog.application.LessonStudyContentImportService;
 import com.shangan.catalog.domain.Course;
+import com.shangan.catalog.domain.LessonStudyContent;
 import com.shangan.catalog.domain.MediaItem;
 import com.shangan.common.api.BusinessException;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,9 +20,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class CatalogController {
 
   private final CatalogQueryService catalog;
+  private final LessonStudyContentImportService studyContents;
 
-  public CatalogController(CatalogQueryService catalog) {
+  public CatalogController(
+      CatalogQueryService catalog, LessonStudyContentImportService studyContents) {
     this.catalog = catalog;
+    this.studyContents = studyContents;
   }
 
   @GetMapping("/courses")
@@ -50,6 +56,23 @@ public class CatalogController {
             () -> new BusinessException(HttpStatus.NOT_FOUND, "LESSON_NOT_FOUND", "课时不存在"));
   }
 
+  /** 返回管理员导入的一集全文和 Markdown 摘要，不调用任何 AI 服务。 */
+  @GetMapping("/lessons/{lessonId}/study-content")
+  LessonStudyContentResponse studyContent(@PathVariable String lessonId) {
+    catalog
+        .findLesson(lessonId)
+        .orElseThrow(
+            () -> new BusinessException(HttpStatus.NOT_FOUND, "LESSON_NOT_FOUND", "课时不存在"));
+    LessonStudyContent content =
+        studyContents
+            .findByLessonId(lessonId)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "LESSON_STUDY_CONTENT_NOT_FOUND", "该课时尚未导入学习内容"));
+    return LessonStudyContentResponse.from(content);
+  }
+
   record CourseResponse(String id, String name, String description) {
     static CourseResponse from(Course course) {
       return new CourseResponse(course.id(), course.name(), course.description());
@@ -63,6 +86,18 @@ public class CatalogController {
     static LessonResponse from(MediaItem item) {
       return new LessonResponse(
           item.id(), item.courseId(), item.title(), item.durationMs(), item.sortOrder());
+    }
+  }
+
+  /** App 读取的课程学习内容直接 DTO。 */
+  record LessonStudyContentResponse(
+      String lessonId, String fullText, String summaryMarkdown, Instant updatedAt) {
+    static LessonStudyContentResponse from(LessonStudyContent content) {
+      return new LessonStudyContentResponse(
+          content.mediaItemId(),
+          content.fullText(),
+          content.summaryMarkdown(),
+          content.updatedAt());
     }
   }
 }

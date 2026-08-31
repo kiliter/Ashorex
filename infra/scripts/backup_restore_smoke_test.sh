@@ -27,14 +27,14 @@ CREATE TABLE courses (id TEXT PRIMARY KEY, name TEXT);
 CREATE TABLE daily_plans (id TEXT PRIMARY KEY, status TEXT);
 CREATE TABLE video_progress (user_id TEXT, media_item_id TEXT, max_verified_position_ms INTEGER);
 CREATE TABLE learning_debts (id TEXT PRIMARY KEY, status TEXT);
-CREATE TABLE transcription_jobs (id TEXT PRIMARY KEY, status TEXT);
-INSERT INTO flyway_schema_history VALUES (11, '011', 1);
+CREATE TABLE lesson_study_contents (id TEXT PRIMARY KEY, media_item_id TEXT, full_text TEXT);
+INSERT INTO flyway_schema_history VALUES (13, '013', 1);
 INSERT INTO users VALUES ('user-1', 'tester');
 INSERT INTO courses VALUES ('course-1', '测试课程');
 INSERT INTO daily_plans VALUES ('plan-1', 'LOCKED');
 INSERT INTO video_progress VALUES ('user-1', 'lesson-1', 120000);
 INSERT INTO learning_debts VALUES ('debt-1', 'OPEN');
-INSERT INTO transcription_jobs VALUES ('job-1', 'READY');
+INSERT INTO lesson_study_contents VALUES ('content-1', 'lesson-1', '测试全文');
 SQL
 
 # 保持一个读连接存活，证明 .backup 不要求服务数据库关闭。
@@ -68,8 +68,8 @@ assert_scalar() {
   fi
 }
 
-assert_scalar "SELECT version FROM flyway_schema_history WHERE success=1 ORDER BY installed_rank DESC LIMIT 1;" "011"
-for table in users courses daily_plans video_progress learning_debts transcription_jobs; do
+assert_scalar "SELECT version FROM flyway_schema_history WHERE success=1 ORDER BY installed_rank DESC LIMIT 1;" "013"
+for table in users courses daily_plans video_progress learning_debts lesson_study_contents; do
   assert_scalar "SELECT count(*) FROM ${table};" "1"
 done
 assert_scalar "PRAGMA integrity_check;" "ok"

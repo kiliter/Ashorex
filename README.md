@@ -1,6 +1,6 @@
 # 上岸
 
-上岸 V1 是一款仅面向 iOS 的学习监督 App，围绕考试目标、每日计划、可信学习、学习欠债、报表和只读 AI 构建完整学习闭环。
+上岸 V1 是一款仅面向 iOS 的学习监督 App，围绕考试目标、每日计划、可信学习、学习欠债和报表构建完整学习闭环。
 
 ## 常用命令
 
@@ -30,6 +30,6 @@ cd apps/server && ./mvnw --version
 
 - 客户端只实现 Flutter iOS App，最低支持 iOS 16。
 - 服务端使用 Java 21、Spring Boot 模块化单体和本机 SQLite WAL。
-- Emby、LLM、ASR 与 MCP 的凭据仅保存在服务端。
-- AI 只允许只读问答，不能修改任何业务数据。
+- Emby 凭据仅保存在服务端，课程全文和摘要由管理员通过 ZIP 批量导入。
+- 服务端不运行 LLM、ASR、MCP、AI 对话或自动转写任务。
 - 不实现 Android、PC 学习 Web、桌面客户端、微服务、Redis、Kafka、向量数据库或多智能体。

@@ -61,11 +61,7 @@ class RuntimeEmbyConfigurationTest {
 
   private RuntimeIntegrationSettings snapshot(String baseUrl, String apiKey) {
     return new RuntimeIntegrationSettings(
-        new RuntimeIntegrationSettings.Emby(baseUrl, apiKey, "emby-user"),
-        new RuntimeIntegrationSettings.Llm("", "", "", 16_000, 0.2, 120),
-        new RuntimeIntegrationSettings.Asr("", "", "", 120),
-        new RuntimeIntegrationSettings.Mcp("", "", "web_search,web_extract", 20),
-        0);
+        new RuntimeIntegrationSettings.Emby(baseUrl, apiKey, "emby-user"), 0);
   }
 
   private String items(String id, String title) {

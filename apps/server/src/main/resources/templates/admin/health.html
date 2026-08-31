@@ -9,7 +9,7 @@
           <div>
             <p class="page-eyebrow">SYSTEM OVERVIEW</p>
             <h1>运行状态</h1>
-            <p>快速确认数据库、媒体与 AI 服务是否已经就绪。</p>
+            <p>快速确认数据库、媒体和课程内容是否已经就绪。</p>
           </div>
         </header>
 
@@ -28,19 +28,7 @@
             <div class="metric"><dt>WAL 大小（字节）</dt><dd th:text="${health.walSizeBytes}"></dd></div>
             <div class="metric"><dt>Emby 状态</dt><dd th:text="${health.embyStatus}"></dd></div>
             <div class="metric"><dt>最后课程同步</dt><dd th:text="${health.lastCourseSync ?: '尚未同步'}"></dd></div>
-            <div class="metric"><dt>活动转写任务</dt><dd th:text="${health.activeTranscription}"></dd></div>
-            <div class="metric">
-              <dt>LLM</dt>
-              <dd><span class="status-pill" th:classappend="${health.llmConfigured ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${health.llmConfigured ? '已配置' : '未配置'}"></span></dd>
-            </div>
-            <div class="metric">
-              <dt>ASR</dt>
-              <dd><span class="status-pill" th:classappend="${health.asrConfigured ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${health.asrConfigured ? '已配置' : '未配置'}"></span></dd>
-            </div>
-            <div class="metric">
-              <dt>MCP 搜索</dt>
-              <dd><span class="status-pill" th:classappend="${health.mcpConfigured ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${health.mcpConfigured ? '已配置' : '未配置'}"></span></dd>
-            </div>
+            <div class="metric"><dt>已导入内容课时</dt><dd th:text="${health.lessonStudyContentCount}"></dd></div>
           </dl>
         </section>
       </main>

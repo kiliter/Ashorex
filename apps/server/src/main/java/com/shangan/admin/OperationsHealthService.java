@@ -1,9 +1,7 @@
 package com.shangan.admin;
 
-import com.shangan.ai.transcript.TranscriptionJobService;
 import com.shangan.catalog.application.CourseSyncService;
-import com.shangan.common.integration.IntegrationSettingsProvider;
-import com.shangan.common.integration.RuntimeIntegrationSettings;
+import com.shangan.catalog.application.LessonStudyContentImportService;
 import com.shangan.media.emby.EmbyHealthService;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,26 +19,22 @@ public class OperationsHealthService {
   private final String datasourceUrl;
   private final EmbyHealthService emby;
   private final CourseSyncService courses;
-  private final TranscriptionJobService transcriptions;
-  private final IntegrationSettingsProvider integrationSettings;
+  private final LessonStudyContentImportService studyContents;
 
   public OperationsHealthService(
       @Value("${spring.datasource.url}") String datasourceUrl,
       EmbyHealthService emby,
       CourseSyncService courses,
-      TranscriptionJobService transcriptions,
-      IntegrationSettingsProvider integrationSettings) {
+      LessonStudyContentImportService studyContents) {
     this.datasourceUrl = datasourceUrl;
     this.emby = emby;
     this.courses = courses;
-    this.transcriptions = transcriptions;
-    this.integrationSettings = integrationSettings;
+    this.studyContents = studyContents;
   }
 
   /** 在一个只读事务内获取数据库业务状态；文件大小读取失败时安全降级为 0。 */
   @Transactional(readOnly = true)
   public Snapshot snapshot() {
-    RuntimeIntegrationSettings settings = integrationSettings.current();
     Path database = databasePath();
     Instant lastCourseSync =
         courses.listAdminCourses().stream()
@@ -48,22 +42,13 @@ public class OperationsHealthService {
             .filter(java.util.Objects::nonNull)
             .max(Comparator.naturalOrder())
             .orElse(null);
-    String activeTranscription =
-        transcriptions.list().stream()
-            .filter(job -> isActive(job.status()))
-            .findFirst()
-            .map(job -> job.mediaTitle() + "（" + job.status() + "）")
-            .orElse("无");
     return new Snapshot(
         database.toString(),
         fileSize(database),
         fileSize(Path.of(database + "-wal")),
         emby.status(),
         lastCourseSync,
-        activeTranscription,
-        settings.llm().configured(),
-        settings.asr().configured(),
-        settings.mcp().configured());
+        studyContents.contentCount());
   }
 
   private Path databasePath() {
@@ -82,11 +67,6 @@ public class OperationsHealthService {
     }
   }
 
-  private boolean isActive(String status) {
-    return java.util.Set.of("PENDING", "EXTRACTING_AUDIO", "TRANSCRIBING", "SUMMARIZING")
-        .contains(status);
-  }
-
   /** 后台健康快照不包含任何密钥、Token、远端 URL 或第三方响应正文。 */
   public record Snapshot(
       String databasePath,
@@ -94,8 +74,5 @@ public class OperationsHealthService {
       long walSizeBytes,
       String embyStatus,
       Instant lastCourseSync,
-      String activeTranscription,
-      boolean llmConfigured,
-      boolean asrConfigured,
-      boolean mcpConfigured) {}
+      long lessonStudyContentCount) {}
 }

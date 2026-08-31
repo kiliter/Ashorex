@@ -5,9 +5,6 @@ import 'package:integration_test/integration_test.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/core/auth/auth_repository.dart';
 import 'package:shangan_ios/core/storage/token_store.dart';
-import 'package:shangan_ios/features/ai_chat/data/ai_chat_repository.dart';
-import 'package:shangan_ios/features/ai_chat/domain/chat_models.dart';
-import 'package:shangan_ios/features/ai_chat/presentation/ai_chat_controller.dart';
 import 'package:shangan_ios/features/exam/data/exam_repository.dart';
 import 'package:shangan_ios/features/planning/data/plan_repository.dart';
 import 'package:shangan_ios/features/player/data/watch_repository.dart';
@@ -18,7 +15,7 @@ import 'package:shangan_ios/features/quiz/data/quiz_repository.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Fake 服务端下完成登录到 AI 流式回答的 V1 核心流程', (tester) async {
+  testWidgets('Fake 服务端下完成登录、学习、答题、开摆和欠债的 V1 核心流程', (tester) async {
     final tokens = _MemoryTokenStore();
     final auth = AuthController(
       repository: _FakeAuthRepository(),
@@ -75,18 +72,7 @@ void main() {
     expect((await plans.abandon('OPEN_PALM', '今日状态不佳')).status, 'ABANDONED');
     expect((await plans.loadDebts()).single.remainingSeconds, 900);
 
-    final ai = AiChatController(
-      repository: _FakeAiRepository(),
-      scope: ChatScope.general,
-    );
-    await ai.initialize();
-    await ai.send('告诉我今天的完成情况');
-    expect(ai.messages.last.content, '视频与答题已完成，剩余专注任务已形成欠债。');
-    expect(ai.messages.last.status, 'COMPLETED');
-    expect(plans.videoCompleted, isTrue, reason: '只读 AI 不能反向修改业务状态');
-
     await player.close();
-    ai.dispose();
     auth.dispose();
   });
 }
@@ -346,32 +332,5 @@ final class _FakeQuizRepository implements QuizRepository {
         ),
       ],
     );
-  }
-}
-
-final class _FakeAiRepository implements AiChatRepository {
-  @override
-  Future<Conversation> createConversation(
-    ChatScope scope, {
-    String? lessonId,
-  }) async => Conversation(id: 'conversation-1', scope: scope, title: '学习问答');
-
-  @override
-  Future<List<ChatMessage>> loadMessages(String conversationId) async =>
-      const [];
-
-  @override
-  Future<LessonAiStatus> loadLessonStatus(String lessonId) async =>
-      const LessonAiStatus(status: 'READY', videoContextAvailable: true);
-
-  @override
-  Stream<AiStreamEvent> sendMessage(
-    String conversationId,
-    String text, {
-    int currentPositionMs = 0,
-  }) async* {
-    yield const AiStreamEvent('message_start', {'messageId': 'assistant-1'});
-    yield const AiStreamEvent('delta', {'text': '视频与答题已完成，剩余专注任务已形成欠债。'});
-    yield const AiStreamEvent('message_end', {});
   }
 }

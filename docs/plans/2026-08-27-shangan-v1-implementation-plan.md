@@ -135,16 +135,6 @@ public interface DebtService {
 }
 ```
 
-```java
-package com.shangan.ai.application;
-
-public interface AiStreamSink {
-    void emit(AiStreamEvent event);
-    void complete();
-    void fail(String errorCode, String safeMessage);
-}
-```
-
 ---
 
 ### Task 1: Repository Foundation, Toolchain, and Guardrails
@@ -565,7 +555,7 @@ Run from `apps/ios`:
 ```bash
 fvm flutter pub add flutter_riverpod:3.0.2 go_router:17.5.0 dio:5.11.0
 fvm flutter pub add flutter_secure_storage:11.0.0 video_player:2.14.0
-fvm flutter pub add flutter_chat_ui:2.11.0 shared_preferences
+fvm flutter pub add shared_preferences
 fvm flutter pub add --dev mocktail
 ```
 
@@ -620,7 +610,7 @@ Create `integration_test/app_shell_smoke_test.dart` so the directory exists from
 
 - [ ] **Step 7: Add CI workflows**
 
-`server-verify.yml` runs on Ubuntu with Java 21, installs `ffmpeg` and `sqlite3`, then executes:
+`server-verify.yml` runs on Ubuntu with Java 21, installs `sqlite3`, then executes:
 
 ```bash
 make server-test

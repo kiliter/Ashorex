@@ -521,67 +521,6 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/TokenPair"
-  /api/v1/ai/conversations:
-    get:
-      tags:
-      - ai-conversation-controller
-      operationId: list
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AiConversation"
-      security:
-      - bearerAuth: []
-    post:
-      tags:
-      - ai-conversation-controller
-      operationId: create_1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateConversationRequest"
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/AiConversation"
-      security:
-      - bearerAuth: []
-  /api/v1/ai/conversations/{id}/messages:stream:
-    post:
-      tags:
-      - ai-conversation-controller
-      operationId: stream
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/StreamMessageRequest"
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            text/event-stream:
-              schema:
-                $ref: "#/components/schemas/SseEmitter"
-      security:
-      - bearerAuth: []
   /api/v1/reports/weekly:
     get:
       tags:
@@ -628,7 +567,7 @@ paths:
     get:
       tags:
       - playback-proxy-controller
-      operationId: stream_1
+      operationId: stream
       parameters:
       - name: ticket
         in: path
@@ -755,6 +694,26 @@ paths:
                 $ref: "#/components/schemas/LessonResponse"
       security:
       - bearerAuth: []
+  /api/v1/lessons/{lessonId}/study-content:
+    get:
+      tags:
+      - catalog-controller
+      operationId: studyContent
+      parameters:
+      - name: lessonId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LessonStudyContentResponse"
+      security:
+      - bearerAuth: []
   /api/v1/lessons/{lessonId}/quiz:
     get:
       tags:
@@ -773,26 +732,6 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/QuizView"
-      security:
-      - bearerAuth: []
-  /api/v1/lessons/{lessonId}/ai-status:
-    get:
-      tags:
-      - transcription-status-controller
-      operationId: status
-      parameters:
-      - name: lessonId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/StatusView"
       security:
       - bearerAuth: []
   /api/v1/focus-sessions/active:
@@ -827,7 +766,7 @@ paths:
     get:
       tags:
       - debt-controller
-      operationId: list_1
+      operationId: list
       parameters:
       - name: page
         in: query
@@ -902,28 +841,6 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/CourseDetailResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/ai/conversations/{id}/messages:
-    get:
-      tags:
-      - ai-conversation-controller
-      operationId: messages
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Message"
       security:
       - bearerAuth: []
 components:
@@ -1314,56 +1231,6 @@ components:
       required:
       - password
       - username
-    CreateConversationRequest:
-      type: object
-      properties:
-        scope:
-          type: string
-        mediaItemId:
-          type: string
-        title:
-          type: string
-    AiConversation:
-      type: object
-      properties:
-        id:
-          type: string
-        userId:
-          type: string
-        scope:
-          type: string
-        mediaItemId:
-          type: string
-        title:
-          type: string
-        historySummary:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-    StreamMessageRequest:
-      type: object
-      properties:
-        content:
-          type: string
-          maxLength: 8000
-          minLength: 0
-        currentPositionMs:
-          type: integer
-          format: int64
-          maximum: 9223372036854775807
-          minimum: 0
-      required:
-      - content
-    SseEmitter:
-      type: object
-      properties:
-        timeout:
-          type: integer
-          format: int64
     DayTrend:
       type: object
       properties:
@@ -1546,6 +1413,18 @@ components:
         sortOrder:
           type: integer
           format: int32
+    LessonStudyContentResponse:
+      type: object
+      properties:
+        lessonId:
+          type: string
+        fullText:
+          type: string
+        summaryMarkdown:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
     OptionView:
       type: object
       properties:
@@ -1595,13 +1474,6 @@ components:
         submittedAt:
           type: string
           format: date-time
-    StatusView:
-      type: object
-      properties:
-        status:
-          type: string
-        videoContextAvailable:
-          type: boolean
     Progress:
       type: object
       properties:
@@ -1717,35 +1589,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/LessonResponse"
-    Message:
-      type: object
-      properties:
-        id:
-          type: string
-        conversationId:
-          type: string
-        role:
-          type: string
-        content:
-          type: string
-        status:
-          type: string
-        citationsJson:
-          type: string
-        modelName:
-          type: string
-        inputTokens:
-          type: integer
-          format: int32
-        outputTokens:
-          type: integer
-          format: int32
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
   securitySchemes:
     bearerAuth:
       type: http

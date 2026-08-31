@@ -5,15 +5,13 @@ import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/core/auth/auth_repository.dart';
 import 'package:shangan_ios/core/storage/token_store.dart';
 import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
-import 'package:shangan_ios/features/ai_chat/data/ai_chat_repository.dart';
-import 'package:shangan_ios/features/ai_chat/domain/chat_models.dart';
 import 'package:shangan_ios/features/dashboard/data/dashboard_repository.dart';
 import 'package:shangan_ios/features/dashboard/presentation/app_shell.dart';
 import 'package:shangan_ios/features/exam/data/exam_repository.dart';
 import 'package:shangan_ios/features/reporting/data/report_repository.dart';
 
 void main() {
-  testWidgets('登录后根壳层渲染五个固定 Tab', (tester) async {
+  testWidgets('登录后根壳层渲染四个固定 Tab', (tester) async {
     final controller = AuthController(
       repository: _AuthenticatedRepository(),
       tokenStore: _MemoryTokenStore(),
@@ -28,43 +26,17 @@ void main() {
           catalogRepositoryProvider.overrideWithValue(_CatalogRepository()),
           dashboardRepositoryProvider.overrideWithValue(_DashboardRepository()),
           reportRepositoryProvider.overrideWithValue(_ReportRepository()),
-          aiChatRepositoryProvider.overrideWithValue(_AiRepository()),
         ],
         child: const MaterialApp(home: AppShell()),
       ),
     );
 
-    expect(find.byType(NavigationDestination), findsNWidgets(5));
-    for (final label in ['首页', '学习', 'AI', '数据', '我的']) {
+    expect(find.byType(NavigationDestination), findsNWidgets(4));
+    for (final label in ['首页', '学习', '数据', '我的']) {
       expect(find.text(label), findsWidgets);
     }
+    expect(find.text('AI'), findsNothing);
   });
-}
-
-final class _AiRepository implements AiChatRepository {
-  @override
-  Future<Conversation> createConversation(
-    ChatScope scope, {
-    String? lessonId,
-  }) async => Conversation(id: 'conversation-1', scope: scope, title: '测试');
-
-  @override
-  Future<LessonAiStatus> loadLessonStatus(String lessonId) async =>
-      const LessonAiStatus(
-        status: 'NOT_REQUESTED',
-        videoContextAvailable: false,
-      );
-
-  @override
-  Future<List<ChatMessage>> loadMessages(String conversationId) async =>
-      const [];
-
-  @override
-  Stream<AiStreamEvent> sendMessage(
-    String conversationId,
-    String text, {
-    int currentPositionMs = 0,
-  }) => const Stream.empty();
 }
 
 /// 根壳层会预创建数据 Tab，测试以固定日报避免访问真实接口。

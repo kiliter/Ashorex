@@ -14,7 +14,7 @@ import 'package:shangan_ios/features/profile/data/preferences_repository.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('已认证用户可以看到五 Tab 根壳层', (tester) async {
+  testWidgets('已认证用户可以看到四 Tab 根壳层', (tester) async {
     final tokenStore = _MemoryTokenStore(
       const TokenPair(accessToken: 'access', refreshToken: 'refresh'),
     );
@@ -40,10 +40,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(NavigationDestination), findsNWidgets(5));
-    for (final label in ['首页', '学习', 'AI', '数据', '我的']) {
+    expect(find.byType(NavigationDestination), findsNWidgets(4));
+    for (final label in ['首页', '学习', '数据', '我的']) {
       expect(find.text(label), findsWidgets);
     }
+    expect(find.text('AI'), findsNothing);
   });
 }
 

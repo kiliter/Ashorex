@@ -8,7 +8,6 @@ import 'package:shangan_ios/core/config/server_configuration.dart';
 import 'package:shangan_ios/core/config/server_configuration_controller.dart';
 import 'package:shangan_ios/core/config/server_configuration_store.dart';
 import 'package:shangan_ios/core/storage/token_store.dart';
-import 'package:shangan_ios/features/ai_chat/data/ai_chat_repository.dart';
 import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
 import 'package:shangan_ios/features/dashboard/data/dashboard_repository.dart';
 import 'package:shangan_ios/features/exam/data/exam_repository.dart';
@@ -148,7 +147,6 @@ final class _ConfiguredShanganApplicationState
   late final QuizRepository _quizRepository;
   late final FocusRepository _focusRepository;
   late final ReportRepository _reportRepository;
-  late final AiChatRepository _aiChatRepository;
   late final Future<void> _authenticationInitialization;
 
   @override
@@ -171,7 +169,6 @@ final class _ConfiguredShanganApplicationState
     _quizRepository = RemoteQuizRepository(_apiClient);
     _focusRepository = RemoteFocusRepository(_apiClient);
     _reportRepository = RemoteReportRepository(_apiClient);
-    _aiChatRepository = RemoteAiChatRepository(_apiClient);
     _authenticationInitialization = _initializeAuthenticationAndPlayer();
   }
 
@@ -219,7 +216,6 @@ final class _ConfiguredShanganApplicationState
             preferencesRepositoryProvider.overrideWithValue(
               _preferencesRepository,
             ),
-            aiChatRepositoryProvider.overrideWithValue(_aiChatRepository),
           ],
           child: ShanganApp(authController: _authController),
         );

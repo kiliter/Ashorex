@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-/** 管理员查看并整体保存 Emby、LLM、ASR 和 MCP 运行时配置。 */
+/** 管理员查看并保存 Emby 运行时配置。 */
 @Controller
 public class IntegrationSettingsAdminController {
 

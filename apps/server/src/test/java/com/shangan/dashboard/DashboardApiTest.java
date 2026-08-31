@@ -8,14 +8,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.shangan.planning.application.DailyPlanService;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -26,6 +33,7 @@ import tools.jackson.databind.ObjectMapper;
 /** 验证考试目标写入、用户隔离和首页聚合 DTO 的基础契约。 */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(DashboardApiTest.FixedClockConfiguration.class)
 class DashboardApiTest {
 
   private static final ObjectMapper JSON = new ObjectMapper();
@@ -134,5 +142,17 @@ class DashboardApiTest {
                     .claim("username", "alice")
                     .claim("role", "USER")
                     .claim("timezone", "Asia/Shanghai"));
+  }
+
+  /** 固定当前业务日，避免测试结果随执行日期变化。 */
+  @TestConfiguration(proxyBeanMethods = false)
+  static class FixedClockConfiguration {
+
+    /** 首页和计划服务共享同一个确定 UTC 时钟。 */
+    @Bean
+    @Primary
+    Clock fixedClock() {
+      return Clock.fixed(Instant.parse("2026-08-30T04:00:00Z"), ZoneOffset.UTC);
+    }
   }
 }

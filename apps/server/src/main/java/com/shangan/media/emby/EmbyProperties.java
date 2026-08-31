@@ -20,11 +20,7 @@ public class EmbyProperties {
     this(
         () ->
             new RuntimeIntegrationSettings(
-                new RuntimeIntegrationSettings.Emby(baseUrl, apiKey, userId),
-                new RuntimeIntegrationSettings.Llm("", "", "", 16_000, 0.2, 120),
-                new RuntimeIntegrationSettings.Asr("", "", "", 120),
-                new RuntimeIntegrationSettings.Mcp("", "", "web_search,web_extract", 20),
-                0));
+                new RuntimeIntegrationSettings.Emby(baseUrl, apiKey, userId), 0));
   }
 
   /** 取得单次 Emby 操作应使用的不可变配置快照。 */

@@ -67,11 +67,11 @@ sqlite3 /srv/shangan/data/study.db \
 sqlite3 /srv/shangan/data/study.db "PRAGMA integrity_check;"
 ```
 
-登录管理后台确认用户、课程、计划、可信进度、欠债和转写任务仍存在，再开放 Caddy 流量。若发现错误，立即停止服务，将归档目录中的原数据库恢复回原位，并保留现场文件用于排查。
+登录管理后台确认用户、课程、计划、可信进度、欠债和课程学习内容仍存在，再开放 Caddy 流量。若发现错误，立即停止服务，将归档目录中的原数据库恢复回原位，并保留现场文件用于排查。
 
 ## 自动化演练
 
-仓库 Smoke Test 会创建临时 WAL 数据库，在另一个连接保持打开时执行在线备份，再恢复到独立目录，并断言 Schema 版本及用户、课程、计划、进度、欠债、转写代表性行数：
+仓库 Smoke Test 会创建临时 WAL 数据库，在另一个连接保持打开时执行在线备份，再恢复到独立目录，并断言 Schema 版本及用户、课程、计划、进度、欠债、课程学习内容代表性行数：
 
 ```bash
 infra/scripts/backup_restore_smoke_test.sh

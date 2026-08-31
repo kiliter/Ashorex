@@ -111,7 +111,6 @@ class AdminSecurityTest {
             get("/admin/lessons/{lessonId}/questions/{questionId}", lesson.id(), question.id())
                 .with(admin))
         .andExpect(status().isOk());
-    mockMvc.perform(get("/admin/transcriptions").with(admin)).andExpect(status().isOk());
   }
 
   @Test

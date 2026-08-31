@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
-import 'package:shangan_ios/features/ai_chat/presentation/ai_tab_page.dart';
 import 'package:shangan_ios/features/catalog/presentation/course_list_page.dart';
 import 'package:shangan_ios/features/dashboard/presentation/home_page.dart';
 import 'package:shangan_ios/features/reporting/presentation/daily_report_page.dart';
 
-/// 登录后的五 Tab 根壳层；后续业务 Task 在各占位页内逐步落地。
+/// 登录后的四 Tab 根壳层，保留学习闭环、数据和个人设置入口。
 final class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
 
@@ -21,7 +20,6 @@ final class _AppShellState extends ConsumerState<AppShell> {
   static const _pages = <Widget>[
     HomePage(),
     CourseListPage(),
-    AiTabPage(),
     DailyReportPage(),
     _ProfileTab(),
   ];
@@ -39,10 +37,6 @@ final class _AppShellState extends ConsumerState<AppShell> {
           NavigationDestination(
             icon: Icon(Icons.play_circle_outline),
             label: '学习',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined),
-            label: 'AI',
           ),
           NavigationDestination(
             icon: Icon(Icons.insights_outlined),

@@ -10,9 +10,35 @@
           <div>
             <p class="page-eyebrow">LESSON CONTROL</p>
             <h1>课时管理</h1>
-            <p>控制课时是否开放、展示顺序以及课后题配置。</p>
+            <p>控制课时是否开放、展示顺序、课后题以及人工整理的学习内容。</p>
           </div>
         </header>
+
+        <div class="alert alert--success" th:if="${imported != null}" th:text="|已成功导入 ${imported} 集学习内容。|"></div>
+        <div class="alert" th:if="${importError != null}" th:text="${importError}"></div>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>批量导入学习内容</h2>
+              <p>上传包含 manifest.json、每集 transcript.txt 和 summary.md 的 ZIP；重复上传会覆盖对应课时内容。</p>
+            </div>
+          </div>
+          <form
+            class="form-grid"
+            method="post"
+            enctype="multipart/form-data"
+            th:action="@{/admin/courses/{courseId}/study-content/import(courseId=${courseId})}"
+          >
+            <label class="field">
+              课程学习内容 ZIP
+              <input type="file" name="file" accept=".zip,application/zip" required />
+            </label>
+            <div class="actions">
+              <button type="submit">导入学习内容</button>
+            </div>
+          </form>
+        </section>
 
         <div class="empty-state" th:if="${#lists.isEmpty(lessons)}">
           <strong>暂时没有课时</strong>
@@ -29,6 +55,15 @@
             <div class="item-card__title">
               <strong th:text="${lesson.title}"></strong>
               <span class="status-pill status-pill--danger" th:if="${!lesson.available}">Emby 已不可用</span>
+              <span
+                class="status-pill"
+                th:if="${studyContentUpdatedAtByLessonId.containsKey(lesson.id)}"
+                th:title="${studyContentUpdatedAtByLessonId.get(lesson.id)}"
+              >已导入</span>
+              <span
+                class="status-pill"
+                th:unless="${studyContentUpdatedAtByLessonId.containsKey(lesson.id)}"
+              >未导入</span>
             </div>
             <label class="check-field">
               <input type="checkbox" name="enabled" value="true" th:checked="${lesson.enabled}" />
