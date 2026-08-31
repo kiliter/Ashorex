@@ -1,0 +1,110 @@
+apps/server/src/main/resources/templates/admin/health.html
+  s_4d8f86932c7463::t_75e814271aba2c 12,31
+docs/api/openapi.yaml
+  s_4d8f86932c7463::t_0532150158ad7f 570,769
+  s_4d8f86932c7463::t_53ec3a44af270c 697,700-701,714,717,720-721,734,1416-1427
+.github/workflows/server-verify.yml
+  s_4d8f86932c7463::t_a68b680b9b4de7 27-28
+apps/ios/integration_test/core_flow_test.dart
+  s_4d8f86932c7463::t_22fbab042a5459 18
+apps/server/src/main/java/com/shangan/common/integration/RuntimeIntegrationSettingsService.java
+  s_4d8f86932c7463::t_90058be238be84 13,60
+apps/server/src/main/resources/templates/admin/integration-settings.html
+  s_4d8f86932c7463::t_75e814271aba2c 3,11-13,18,21-25,27-49,54,56
+apps/server/src/main/resources/db/migration/V013__replace_ai_with_lesson_study_contents.sql
+  s_4d8f86932c7463::t_be501db17592c2 1-10,12-41,43-63,65-73,75-76,78-84,86-90,92
+apps/server/src/main/java/com/shangan/catalog/infrastructure/LessonStudyContentRepository.java
+  s_4d8f86932c7463::t_03914f8ce60552 1,3-4,6-7,9-10,12,14,18
+  s_4d8f86932c7463::t_9052c7bd96f922 16-17
+apps/ios/integration_test/app_shell_smoke_test.dart
+  s_4d8f86932c7463::t_22fbab042a5459 17,43-44,47
+infra/docker/server.Dockerfile
+  s_4d8f86932c7463::t_a68b680b9b4de7 5,12,14
+apps/server/src/main/java/com/shangan/admin/CourseAdminController.java
+  s_4d8f86932c7463::t_b1c6db46cb6aa3 4-6,8,16,24,26-27,29,54-85,88-91
+infra/scripts/backup_restore_smoke_test.sh
+  s_4d8f86932c7463::t_a68b680b9b4de7 30-31,37,71-72
+apps/server/src/main/java/com/shangan/catalog/application/LessonStudyContentImportService.java
+  s_4d8f86932c7463::t_03914f8ce60552 1,3-4,6-7,13,15,19,22,24-25,27-28,33,35-36,39,41-42,48-64,66-67,70-73,76-79,88-92,94-97,99-105,107,110-111
+  s_4d8f86932c7463::t_9052c7bd96f922 82-85
+apps/server/src/test/java/com/shangan/catalog/infrastructure/LessonStudyContentZipParserTest.java
+  s_4d8f86932c7463::t_aadce660ca06c6 1-2,6-13,17-18,20-21,23,25-30,32-73,76,78-127,130-140
+apps/server/src/main/java/com/shangan/catalog/infrastructure/LessonStudyContentZipParser.java
+  s_4d8f86932c7463::t_55e5349636d366 81,87,89-91
+  s_4d8f86932c7463::t_7d2b88d9d45bf0 22-24,47,154
+  s_4d8f86932c7463::t_fa04f774b819bf 1,3-4,7-9,12-13,16-18,20,26,28,30-31,33-35,37,39-40,43-46,48-49,52-60,62-63,65-69,72-78,80,82-86,92-96,98,101-135,138-146,150-153,155,159-162,164-166,168-169,171-176,178-195,197-199,202-203,205-206,208-209,211-212
+  s_4d8f86932c7463::t_55f3bd198118c2 19,38
+apps/server/src/test/java/com/shangan/common/integration/RuntimeIntegrationSettingsServiceTest.java
+  s_4d8f86932c7463::t_704385f5dc38f2 61,64,67,75,88,98
+apps/server/src/test/java/com/shangan/admin/IntegrationSettingsAdminTest.java
+  s_4d8f86932c7463::t_704385f5dc38f2 39,44,58-67,77,96
+apps/server/src/main/java/com/shangan/admin/IntegrationSettingsForm.java
+  s_4d8f86932c7463::t_d1c2108807614b 5-6,17,20
+  s_4d8f86932c7463::t_4830d26d6ffe97 23
+apps/server/src/main/java/com/shangan/admin/OperationsHealthService.java
+  s_4d8f86932c7463::t_ce447f6905e383 4,22,28,32,51,77
+apps/server/src/main/java/com/shangan/admin/IntegrationSettingsAdminController.java
+  s_4d8f86932c7463::t_d1c2108807614b 16
+apps/server/src/main/resources/application.yml
+  s_4d8f86932c7463::t_9d40ef95e6a4ff 15-19
+apps/server/src/test/java/com/shangan/catalog/LessonStudyContentImportIntegrationTest.java
+  s_4d8f86932c7463::t_1fe7733085e074 1,6,8-10,15-18,32,34-38,41,44,49,53,55-77,79-80,83-95,98,100-101,103-111,114,116-126,128-132,135-195,198-199,203
+apps/server/src/main/resources/templates/admin/course-lessons.html
+  s_4d8f86932c7463::t_b1c6db46cb6aa3 13,17-20,22-27,29-42,58-63,65-66
+  s_4d8f86932c7463::t_ad755eab38bc0a 21,28,64
+docs/runbooks/backup-restore.md
+  s_4d8f86932c7463::t_a68b680b9b4de7 70,74
+README.md
+  s_4d8f86932c7463::t_a68b680b9b4de7 3,33-34
+apps/server/src/main/java/com/shangan/common/integration/EnvironmentIntegrationSettings.java
+  s_4d8f86932c7463::t_c8b02c8e5ab1e7 6
+apps/server/src/main/java/com/shangan/catalog/api/CatalogController.java
+  s_4d8f86932c7463::t_b1c6db46cb6aa3 4,6,9,23,25-26,28,59-75,91-100,102
+  s_4d8f86932c7463::t_d919a611a00c9d 101
+apps/server/src/test/java/com/shangan/common/V013MigrationIntegrationTest.java
+  s_4d8f86932c7463::t_9ea78cb7d8923e 1,6-8,12,14-15,17,19-58,61-62,64-67,70-71,74-76,79-108,112-118,121-125
+apps/server/src/test/java/com/shangan/catalog/LessonStudyContentApiTest.java
+  s_4d8f86932c7463::t_67c5275234acf8 1,3-6,9,15,19,21,23-25,28,31,36,40,42-43,47-59,62-67,71,73-82,85-102
+apps/server/src/test/java/com/shangan/admin/LessonStudyContentAdminTest.java
+  s_4d8f86932c7463::t_67c5275234acf8 1,3-9,11-12,14-15,21,23,26,28,30-32,35,38,43,47,49-56,58-60,64,66-72,74-78,80-83,86-101,104-110,112,115-119
+apps/ios/test/features/dashboard/app_shell_test.dart
+  s_4d8f86932c7463::t_22fbab042a5459 14,34-35,38
+apps/server/src/test/java/com/shangan/dashboard/DashboardApiTest.java
+  s_4d8f86932c7463::t_b917d96c44272e 11-12,14,21,23-25,36,146-156
+  s_4d8f86932c7463::t_e1615afaad7066 157
+apps/server/src/main/java/com/shangan/catalog/domain/LessonStudyContent.java
+  s_4d8f86932c7463::t_03914f8ce60552 1,5-6,9-12
+apps/server/src/main/java/com/shangan/catalog/infrastructure/JdbcLessonStudyContentRepository.java
+  s_4d8f86932c7463::t_03914f8ce60552 1,3-5,7,9,14,16-17,20,24-28,32-49,57-80,83-85,88-90,94-95
+  s_4d8f86932c7463::t_9052c7bd96f922 52-54
+apps/server/src/main/java/com/shangan/common/integration/JdbcRuntimeIntegrationSettingsRepository.java
+  s_4d8f86932c7463::t_da4606e7d6f74f 31,33
+apps/ios/lib/features/dashboard/presentation/app_shell.dart
+  s_4d8f86932c7463::t_22fbab042a5459 9
+docs/runbooks/v1-physical-device-acceptance.md
+  s_4d8f86932c7463::t_a68b680b9b4de7 21,23,41,43
+docs/plans/2026-08-27-shangan-v1-implementation-plan.md
+  s_4d8f86932c7463::t_43f1023973c083 558,613
+apps/server/src/main/java/com/shangan/common/integration/RuntimeIntegrationSettings.java
+  s_4d8f86932c7463::t_c8b02c8e5ab1e7 3-4
+apps/server/src/main/java/com/shangan/media/emby/EmbyProperties.java
+  s_4d8f86932c7463::t_3bb92cce7c3cdb 23
+apps/server/src/test/java/com/shangan/media/emby/RuntimeEmbyConfigurationTest.java
+  s_4d8f86932c7463::t_e13d82fb8f417f 64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "8591997bcae6f7b14ff8f0d5a1ab865c98f4ea39",
+  "prompts": {},
+  "sessions": {
+    "s_4d8f86932c7463": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0422c-cff7-7041-8825-10d32aac8989",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
