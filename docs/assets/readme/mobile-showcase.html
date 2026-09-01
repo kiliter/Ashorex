@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>上岸移动端产品预览</title>
+    <style>
+      :root {
+        --ink: #18345f;
+        --muted: #71829f;
+        --line: #9aaac0;
+        --blue: #2f6fc8;
+        --green: #2d8a62;
+        --red: #d3483d;
+        --gold: #8a6d24;
+        --paper: #f7f9fc;
+        --navy: #06111f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1680px;
+        height: 960px;
+        margin: 0;
+        overflow: hidden;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC",
+          "Microsoft YaHei", sans-serif;
+        color: var(--ink);
+        background: var(--navy);
+      }
+
+      /* 横幅只使用纯色与柔和光斑，避免喧宾夺主。 */
+      .canvas {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        isolation: isolate;
+      }
+
+      .canvas::before,
+      .canvas::after {
+        position: absolute;
+        z-index: -1;
+        width: 520px;
+        height: 520px;
+        border-radius: 50%;
+        background: #173a62;
+        content: "";
+        filter: blur(120px);
+        opacity: 0.34;
+      }
+
+      .canvas::before {
+        top: 35px;
+        left: 160px;
+      }
+
+      .canvas::after {
+        right: 130px;
+        bottom: -40px;
+        background: #0f2b49;
+        opacity: 0.3;
+      }
+
+      .brand {
+        position: absolute;
+        top: 64px;
+        left: 90px;
+        z-index: 8;
+        color: #f7fbff;
+      }
+
+      .brand-kicker {
+        margin-bottom: 8px;
+        color: #7da6d2;
+        font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: 0.22em;
+      }
+
+      .brand-title {
+        margin: 0;
+        font-size: 35px;
+        font-weight: 850;
+        letter-spacing: 0.04em;
+      }
+
+      .brand-title span {
+        margin-left: 10px;
+        color: #89b9eb;
+        font-size: 21px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+      }
+
+      .phone {
+        position: absolute;
+        width: 334px;
+        height: 724px;
+        padding: 10px;
+        border: 2px solid #263547;
+        border-radius: 54px;
+        background: #05080d;
+        box-shadow: 0 34px 70px rgb(0 0 0 / 42%);
+        transform-origin: center bottom;
+      }
+
+      .phone.plan {
+        top: 188px;
+        left: 210px;
+        z-index: 1;
+        opacity: 0.78;
+        transform: rotate(-7deg) scale(0.87);
+      }
+
+      .phone.home {
+        top: 106px;
+        left: 493px;
+        z-index: 5;
+        transform: rotate(-1.5deg) scale(1.02);
+      }
+
+      .phone.study {
+        top: 124px;
+        left: 825px;
+        z-index: 4;
+        transform: rotate(2.2deg) scale(0.99);
+      }
+
+      .phone.report {
+        top: 190px;
+        left: 1112px;
+        z-index: 2;
+        opacity: 0.78;
+        transform: rotate(7deg) scale(0.87);
+      }
+
+      .screen {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        border-radius: 43px;
+        background: var(--paper);
+      }
+
+      .statusbar {
+        display: flex;
+        height: 42px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 22px;
+        color: #0b1626;
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      .island {
+        position: absolute;
+        top: 9px;
+        left: 50%;
+        width: 96px;
+        height: 27px;
+        border-radius: 18px;
+        background: #050505;
+        transform: translateX(-50%);
+      }
+
+      .signals {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+      }
+
+      .signal {
+        width: 21px;
+        height: 8px;
+        border-bottom: 3px solid #101827;
+        border-radius: 50%;
+      }
+
+      .battery {
+        width: 20px;
+        height: 10px;
+        border: 1.5px solid #101827;
+        border-radius: 3px;
+        box-shadow: inset -13px 0 #101827;
+      }
+
+      .page-header {
+        display: flex;
+        height: 54px;
+        align-items: center;
+        justify-content: center;
+        border-bottom: 1px solid #9bacc3;
+        background: #fbfcfe;
+        font-size: 19px;
+        font-weight: 820;
+      }
+
+      .back {
+        position: absolute;
+        left: 21px;
+        color: var(--ink);
+        font-size: 31px;
+        font-weight: 400;
+      }
+
+      .content {
+        padding: 18px 18px 88px;
+      }
+
+      .eyebrow {
+        margin-bottom: 9px;
+        color: var(--muted);
+        font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.13em;
+      }
+
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h2 {
+        margin-bottom: 10px;
+        font-size: 25px;
+        line-height: 1.18;
+      }
+
+      h3 {
+        margin-bottom: 8px;
+        font-size: 17px;
+      }
+
+      .description {
+        margin-bottom: 15px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .card {
+        margin-bottom: 13px;
+        padding: 16px;
+        border: 1.6px solid var(--blue);
+        border-radius: 20px;
+        background: #fff;
+        box-shadow: 4px 5px 0 #dce6f3;
+      }
+
+      .card.warm {
+        border-color: #927428;
+        background: #fbf6e8;
+        box-shadow: 4px 5px 0 #e8e0ca;
+      }
+
+      .card.danger {
+        border-color: var(--red);
+        background: #fff1ee;
+        box-shadow: 4px 5px 0 #ead7d4;
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .chip {
+        display: inline-flex;
+        min-height: 26px;
+        align-items: center;
+        padding: 0 10px;
+        border: 1px solid #9fb5d2;
+        border-radius: 999px;
+        color: var(--blue);
+        background: #f5f8fc;
+        font-size: 11px;
+        font-weight: 760;
+      }
+
+      .chip.green {
+        border-color: #91b7a5;
+        color: var(--green);
+      }
+
+      .chip.red {
+        border-color: #dfa19a;
+        color: var(--red);
+        background: #fff4f2;
+      }
+
+      .big-number {
+        margin: 3px 0 0;
+        font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+        font-size: 64px;
+        font-weight: 850;
+        line-height: 1;
+      }
+
+      .big-number small {
+        margin-left: 5px;
+        font-family: inherit;
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .metrics {
+        display: grid;
+        overflow: hidden;
+        margin-bottom: 14px;
+        border: 1.5px solid var(--blue);
+        border-radius: 18px;
+        grid-template-columns: 1fr 1fr;
+        background: #fff;
+      }
+
+      .metric {
+        min-height: 76px;
+        padding: 13px;
+        border-right: 1px solid #9fb2ca;
+        border-bottom: 1px solid #9fb2ca;
+      }
+
+      .metric:nth-child(2n) {
+        border-right: 0;
+      }
+
+      .metric:nth-last-child(-n + 2) {
+        border-bottom: 0;
+      }
+
+      .metric strong {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--blue);
+        font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+        font-size: 22px;
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .lesson {
+        display: grid;
+        min-height: 68px;
+        align-items: center;
+        border-bottom: 1px solid #aebcd0;
+        grid-template-columns: 34px 1fr;
+      }
+
+      .lesson-index {
+        font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .lesson-title {
+        margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 760;
+      }
+
+      .lesson-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 10px;
+      }
+
+      .progress {
+        height: 5px;
+        overflow: hidden;
+        margin-top: 8px;
+        border-radius: 4px;
+        background: #d7e0eb;
+      }
+
+      .progress span {
+        display: block;
+        height: 100%;
+        background: var(--blue);
+      }
+
+      .order-item {
+        display: grid;
+        min-height: 78px;
+        align-items: center;
+        border-bottom: 1px solid #afbdd0;
+        grid-template-columns: 39px 1fr 28px;
+      }
+
+      .order-number {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border: 1.5px solid var(--blue);
+        border-radius: 11px;
+        color: var(--blue);
+        font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .button {
+        display: grid;
+        width: 100%;
+        min-height: 47px;
+        margin-top: 16px;
+        place-items: center;
+        border-radius: 15px;
+        color: #fff;
+        background: var(--ink);
+        font-size: 15px;
+        font-weight: 780;
+        box-shadow: 0 7px 14px rgb(24 52 95 / 22%);
+      }
+
+      .nav {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: grid;
+        height: 72px;
+        align-items: center;
+        border-top: 1px solid #d8e0ea;
+        background: #fff;
+        grid-template-columns: repeat(4, 1fr);
+      }
+
+      .nav-item {
+        display: grid;
+        justify-items: center;
+        gap: 4px;
+        color: #6b7d98;
+        font-size: 9px;
+      }
+
+      .nav-icon {
+        display: grid;
+        width: 28px;
+        height: 24px;
+        place-items: center;
+        border-radius: 11px;
+        font-size: 15px;
+        font-weight: 850;
+      }
+
+      .nav-item.active {
+        color: var(--blue);
+        font-weight: 760;
+      }
+
+      .nav-item.active .nav-icon {
+        border: 1px solid var(--blue);
+        background: #eff5fd;
+      }
+
+      .week {
+        display: grid;
+        margin: 12px 0;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+      }
+
+      .day {
+        display: grid;
+        height: 38px;
+        place-items: center;
+        border: 1px solid #c4cfdd;
+        border-radius: 9px;
+        color: var(--muted);
+        background: #fff;
+        font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+        font-size: 10px;
+      }
+
+      .day.current {
+        border-color: var(--ink);
+        color: #fff;
+        background: var(--ink);
+      }
+
+      .judgment {
+        padding: 13px 14px;
+        border-left: 4px solid var(--red);
+        color: var(--ink);
+        background: #fff;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .footer-mark {
+        position: absolute;
+        right: 90px;
+        bottom: 55px;
+        color: #6888aa;
+        font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="canvas" aria-label="上岸移动端四页面产品预览">
+      <header class="brand">
+        <div class="brand-kicker">TRUSTED STUDY LOOP</div>
+        <h1 class="brand-title">上岸 <span>ASHOREX</span></h1>
+      </header>
+
+      <!-- 左侧：作战单编排。 -->
+      <section class="phone plan" aria-label="作战单编排页面">
+        <div class="screen">
+          <div class="island"></div>
+          <div class="statusbar">
+            <span>09:41</span>
+            <div class="signals"><i class="signal"></i><i class="battery"></i></div>
+          </div>
+          <div class="page-header"><span class="back">‹</span>作战单编排区</div>
+          <div class="content">
+            <div class="eyebrow">2026/09/01 · 今日作战单</div>
+            <div class="row">
+              <h2>把今天要完成的<br />行动排好顺序</h2>
+              <span class="chip">执行中</span>
+            </div>
+            <p class="description">课时严格按照课程目录顺序排列，已开始的项目会保留。</p>
+            <div class="order-item">
+              <div class="order-number">01</div>
+              <div>
+                <div class="lesson-title">01_课程简介_蓝牙音箱</div>
+                <div class="lesson-meta"><span>视频学习 · 7 分钟</span><span>已开始</span></div>
+              </div>
+              <span>▣</span>
+            </div>
+            <div class="order-item">
+              <div class="order-number">02</div>
+              <div>
+                <div class="lesson-title">02_蓝牙音箱课程内容</div>
+                <div class="lesson-meta"><span>视频学习 · 14 分钟</span><span>待开始</span></div>
+              </div>
+              <span>○</span>
+            </div>
+            <div class="card warm" style="margin-top: 16px">
+              <div class="row"><strong>模拟考试 · 行测</strong><span class="chip">120 分钟</span></div>
+              <p class="description" style="margin: 8px 0 0">倒计时结束后上传试卷照片</p>
+            </div>
+            <div class="button">保存作战单</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 中间主视觉：首页。 -->
+      <section class="phone home" aria-label="首页页面">
+        <div class="screen">
+          <div class="island"></div>
+          <div class="statusbar">
+            <span>09:42</span>
+            <div class="signals"><i class="signal"></i><i class="battery"></i></div>
+          </div>
+          <div class="page-header">首页</div>
+          <div class="content">
+            <div class="card warm">
+              <div class="row"><span class="eyebrow" style="margin: 0">今日作战单</span><span class="chip">执行中</span></div>
+              <h2 style="margin-top: 14px">今天无做什么</h2>
+              <p class="description">当天可继续添加、删除尚未开始的项目。</p>
+              <div class="button">修改作战单</div>
+            </div>
+            <div class="card danger">
+              <div class="row"><strong style="color: var(--red)">今日追赶中</strong><span class="chip red">进度有风险</span></div>
+              <h3 style="margin-top: 13px; font-size: 21px">今天的缺口，不留给明天</h3>
+              <p class="description" style="margin: 0">当前剩余 31 课时，目标要求每天 0.4 课时。</p>
+            </div>
+            <div class="card">
+              <div class="row"><span class="eyebrow" style="margin: 0">国考</span><span class="chip green">追赶</span></div>
+              <h3 style="margin-top: 12px">距离考试 89 天</h3>
+              <div class="big-number">89<small>天</small></div>
+              <div class="progress"><span style="width: 18%"></span></div>
+              <div class="lesson-meta" style="margin-top: 9px"><span>课程推进压力</span><span>已完成 0 / 31</span></div>
+            </div>
+          </div>
+          <nav class="nav" aria-label="底部导航">
+            <div class="nav-item active"><span class="nav-icon">⌂</span><span>首页</span></div>
+            <div class="nav-item"><span class="nav-icon">▤</span><span>学习</span></div>
+            <div class="nav-item"><span class="nav-icon">▥</span><span>数据</span></div>
+            <div class="nav-item"><span class="nav-icon">○</span><span>我的</span></div>
+          </nav>
+        </div>
+      </section>
+
+      <!-- 中间右侧：课程与可信学习进度。 -->
+      <section class="phone study" aria-label="课程详情页面">
+        <div class="screen">
+          <div class="island"></div>
+          <div class="statusbar">
+            <span>09:43</span>
+            <div class="signals"><i class="signal"></i><i class="battery"></i></div>
+          </div>
+          <div class="page-header"><span class="back">‹</span>课程详情</div>
+          <div class="content">
+            <div class="eyebrow">COURSE / 课程详情</div>
+            <h2 style="font-size: 31px">STM32</h2>
+            <p class="description">单片机 · 服务端课程快照</p>
+            <div class="metrics">
+              <div class="metric"><strong>31</strong><span>总课时</span></div>
+              <div class="metric"><strong style="color: var(--green)">6h 31m</strong><span>课程总时长</span></div>
+              <div class="metric"><strong>3</strong><span>已学习</span></div>
+              <div class="metric"><strong style="color: var(--green)">10%</strong><span>可信进度</span></div>
+            </div>
+            <div class="row" style="border-bottom: 2px solid var(--ink); padding-bottom: 9px">
+              <h3 style="margin: 0">课时列表</h3><span class="chip">已学状态</span>
+            </div>
+            <div class="lesson">
+              <div class="lesson-index">01</div>
+              <div>
+                <div class="lesson-title">课程简介_蓝牙音箱</div>
+                <div class="lesson-meta"><span>7 分钟</span><span style="color: var(--green)">已看完</span></div>
+                <div class="progress"><span style="width: 100%; background: var(--green)"></span></div>
+              </div>
+            </div>
+            <div class="lesson">
+              <div class="lesson-index">02</div>
+              <div>
+                <div class="lesson-title">蓝牙音箱课程内容</div>
+                <div class="lesson-meta"><span>14 分钟</span><span>已观看 35%</span></div>
+                <div class="progress"><span style="width: 35%"></span></div>
+              </div>
+            </div>
+            <div class="lesson">
+              <div class="lesson-index">03</div>
+              <div>
+                <div class="lesson-title">蓝牙简介_发展背景</div>
+                <div class="lesson-meta"><span>14 分钟</span><span>未学习</span></div>
+                <div class="progress"><span style="width: 0%"></span></div>
+              </div>
+            </div>
+            <div class="lesson">
+              <div class="lesson-index">04</div>
+              <div>
+                <div class="lesson-title">蓝牙架构选择</div>
+                <div class="lesson-meta"><span>11 分钟</span><span>未学习</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 右侧：日报与晚间审判。 -->
+      <section class="phone report" aria-label="学习日报页面">
+        <div class="screen">
+          <div class="island"></div>
+          <div class="statusbar">
+            <span>09:44</span>
+            <div class="signals"><i class="signal"></i><i class="battery"></i></div>
+          </div>
+          <div class="page-header">学习日报</div>
+          <div class="content">
+            <div class="row">
+              <div>
+                <div class="eyebrow">REPORT / 数据</div>
+                <h2 style="margin-bottom: 0">2026年9月1日</h2>
+              </div>
+              <span class="chip">进行中</span>
+            </div>
+            <div class="week">
+              <div class="day">一</div><div class="day">二</div><div class="day current">三</div>
+              <div class="day">四</div><div class="day">五</div><div class="day">六</div><div class="day">日</div>
+            </div>
+            <div class="judgment">
+              <strong>晚间审判 · 规则生成</strong><br />今天的可信学习还没有达到作战单目标，先完成最小行动。
+            </div>
+            <div class="metrics" style="margin-top: 15px">
+              <div class="metric"><strong>35%</strong><span>计划完成率</span></div>
+              <div class="metric"><strong style="color: var(--green)">42m</strong><span>有效学习</span></div>
+              <div class="metric"><strong style="color: var(--gold)">1/3</strong><span>完成任务</span></div>
+              <div class="metric"><strong style="color: var(--red)">14m</strong><span>新增欠债</span></div>
+            </div>
+            <div class="card" style="box-shadow: none">
+              <div class="eyebrow">TODAY / 今日记录</div>
+              <div class="row"><span>视频学习</span><strong>42 分钟</strong></div>
+              <div class="row" style="margin-top: 11px"><span>答题正确率</span><strong style="color: var(--green)">80%</strong></div>
+              <div class="row" style="margin-top: 11px"><span>验活失败</span><strong>0</strong></div>
+            </div>
+          </div>
+          <nav class="nav" aria-label="底部导航">
+            <div class="nav-item"><span class="nav-icon">⌂</span><span>首页</span></div>
+            <div class="nav-item"><span class="nav-icon">▤</span><span>学习</span></div>
+            <div class="nav-item active"><span class="nav-icon">▥</span><span>数据</span></div>
+            <div class="nav-item"><span class="nav-icon">○</span><span>我的</span></div>
+          </nav>
+        </div>
+      </section>
+
+      <div class="footer-mark">PLAN · VERIFY · REVIEW</div>
+    </main>
+  </body>
+</html>

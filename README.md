@@ -23,10 +23,10 @@
 ### 移动学习端
 
 <p align="center">
-  <img src="docs/assets/readme/mobile-home.png" width="320" alt="上岸移动端首页：今日作战单、课程进度压力和考试倒计时">
+  <img src="docs/assets/readme/mobile-showcase.jpg" width="100%" alt="上岸移动端核心页面：作战单编排、首页、课程详情和学习日报">
 </p>
 
-<p align="center"><sub>今日作战单位于首页首屏；未完成承诺、进度压力与考试倒计时保持可见。</sub></p>
+<p align="center"><sub>从左到右：作战单编排、今日首页、课程可信进度与学习日报。</sub></p>
 
 ### 内部管理后台
 
