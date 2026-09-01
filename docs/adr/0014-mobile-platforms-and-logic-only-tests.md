@@ -8,11 +8,11 @@
 
 原 V1 只交付 iPhone 客户端，并使用真实 SQLite、Flyway 和 Spring Boot 上下文执行大量数据库集成测试。实际交付需要同一套 Flutter 代码后续覆盖 iPad 和 Android；同时，真实数据库测试会把业务断言与迁移、连接池、调度器和 SQLite 锁竞争混在一起，导致失败原因难以定位。
 
-Flutter 3.44.7 stable 自带 Dart 3.13.1，官方支持 iOS 与 Android。当前直接依赖均兼容 Dart 3.13 和 Flutter 3.44，因此不需要升级到尚未纳入项目稳定基线的新版本。
+GitHub 干净环境中的 Flutter 3.44.7 stable 自带 Dart 3.12.2，官方支持 iOS 与 Android。当前直接依赖均兼容 Dart 3.12 和 Flutter 3.44，因此不需要升级到尚未纳入项目稳定基线的新版本。
 
 ## 决策
 
-Flutter 移动端以 iPhone、iPad 和 Android 为目标平台，继续固定 Flutter 3.44.7 stable 与其配套的 Dart 3.13.x。iOS 最低版本保持 16；Android 使用 compileSdk 37，最低运行版本设为 API 24。移动端共享业务代码、Repository、Controller 和 API 合同，允许在布局、系统能力和播放器适配层做必要的平台差异处理。
+Flutter 移动端以 iPhone、iPad 和 Android 为目标平台，继续固定 Flutter 3.44.7 stable 与其配套的 Dart 3.12.x。iOS 最低版本保持 16；Android 使用 compileSdk 37，最低运行版本设为 API 24。移动端共享业务代码、Repository、Controller 和 API 合同，允许在布局、系统能力和播放器适配层做必要的平台差异处理。
 
 服务端自动化测试只保留不连接真实数据库的逻辑测试，包括领域状态机、应用服务编排、策略、解析器、外部服务协议、Controller 切片和安全规则。测试通过 Fake、Stub 或 Mock 表达 Repository 边界，不启动 SQLite、Flyway，也不验证具体 SQL、数据库约束、事务或迁移结果。现有数据库运行时测试删除；业务价值明确的场景改写为纯逻辑测试。
 

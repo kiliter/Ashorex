@@ -4,8 +4,8 @@ publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  # Flutter 3.44.7 stable 自带 Dart 3.13.1，三端统一使用这一稳定基线。
-  sdk: ">=3.13.0 <4.0.0"
+  # GitHub 干净环境中的 Flutter 3.44.7 stable 自带 Dart 3.12.2，三端统一使用这一稳定基线。
+  sdk: ">=3.12.0 <4.0.0"
   flutter: ">=3.44.7 <3.45.0"
 
 dependencies:

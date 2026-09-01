@@ -6,7 +6,7 @@
 
 **Architecture:** 单仓库包含 Flutter 移动端与 Spring Boot 模块化单体。服务端以 SQLite 为业务真相，Emby 提供媒体与音频流；课程全文和 Markdown 摘要可由管理员导入，也可由持久化串行任务调用 OpenAI-compatible ASR/LLM 生成；AI 题目只进入待审核草稿，管理员发布后才进入正式题库。Flutter 只负责交互、播放器、心跳和只读内容查询。
 
-**Tech Stack:** Flutter 3.44.7 stable、Dart 3.13.x、flutter_riverpod 3.0.2、go_router 17.5.0、Dio 5.11.0、video_player 2.14.0、Java 21、Spring Boot 4.1.1、Spring MVC、JdbcClient、sqlite-jdbc 3.53.4.0、SQLite WAL、Flyway 13.3.0、Thymeleaf、LangChain4j OpenAI 1.19.0、Caddy。
+**Tech Stack:** Flutter 3.44.7 stable、Dart 3.12.x、flutter_riverpod 3.0.2、go_router 17.5.0、Dio 5.11.0、video_player 2.14.0、Java 21、Spring Boot 4.1.1、Spring MVC、JdbcClient、sqlite-jdbc 3.53.4.0、SQLite WAL、Flyway 13.3.0、Thymeleaf、LangChain4j OpenAI 1.19.0、Caddy。
 
 **Spec:** `docs/specs/2026-08-27-shangan-v1-design.md`
 
@@ -2295,11 +2295,11 @@ make verify
 
 - [ ] **步骤 1：统一 Flutter 与 Dart 基线**
 
-固定 Flutter 3.44.7 stable 和其配套的 Dart 3.13.x，将项目 SDK 约束设为 `>=3.13.0 <4.0.0`。使用干净 SDK 重新解析锁文件，并输出 CI 实际版本，防止本机 FVM 缓存污染掩盖版本漂移。
+固定 Flutter 3.44.7 stable 和其配套的 Dart 3.12.x，将项目 SDK 约束设为 `>=3.12.0 <4.0.0`。使用干净 SDK 重新解析锁文件，并输出 CI 实际版本，防止本机 FVM 缓存污染掩盖版本漂移。
 
 - [ ] **步骤 2：确认移动端依赖与平台范围**
 
-保留已验证兼容 Flutter 3.44.7、Dart 3.13 的直接依赖。iOS 最低版本保持 16；Android 使用 compileSdk 37，最低运行版本为 API 24；iPad 复用 iOS 工程。移动端 CI 构建 iOS Simulator 和 Android APK。
+保留已验证兼容 Flutter 3.44.7、Dart 3.12 的直接依赖。iOS 最低版本保持 16；Android 使用 compileSdk 37，最低运行版本为 API 24；iPad 复用 iOS 工程。移动端 CI 构建无签名 IPA 和 Android APK。
 
 - [ ] **步骤 3：删除数据库运行时测试**
 
@@ -2441,7 +2441,7 @@ Task 22 之后：
 Task 23 之后：
 
 ```text
-Flutter 3.44.7、Dart 3.13.x、pubspec 和 CI 版本一致
+Flutter 3.44.7、Dart 3.12.x、pubspec 和 CI 版本一致
 移动端依赖覆盖 iPhone、iPad 和 Android
 服务端自动化测试不启动 SQLite、Flyway 或真实数据库
 日终分类等核心规则由纯逻辑测试覆盖

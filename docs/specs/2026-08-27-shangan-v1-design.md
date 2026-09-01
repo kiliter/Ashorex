@@ -475,7 +475,7 @@ PENDING → RUNNING → AWAITING_UPLOAD → COMPLETED
 | 区域 | 选择 |
 |---|---|
 | 移动客户端 | Flutter 3.44.7 stable，使用 FVM 固定版本 |
-| Dart | 3.13.x，项目约束 `>=3.13.0 <4.0.0` |
+| Dart | 3.12.x，项目约束 `>=3.12.0 <4.0.0` |
 | iOS 最低版本 | iOS 16 |
 | Android 最低版本 | API 24 |
 | Android 编译版本 | compileSdk 37 |

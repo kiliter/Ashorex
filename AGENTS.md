@@ -130,7 +130,7 @@ Rules:
 ## Technology Baseline
 
 - Flutter 3.44.x, locked with FVM.
-- Dart 3.13.x.
+- Dart 3.12.x.
 - iOS minimum 16.
 - Android minimum API 24.
 - Riverpod, go_router, Dio.
