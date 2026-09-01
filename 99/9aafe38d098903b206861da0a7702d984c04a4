@@ -1,0 +1,23 @@
+apps/ios/lib/features/planning/presentation/plan_page.dart
+  s_73dd1583cd0fea::t_8b78948839d758 189-192,235-239,257-261
+apps/ios/lib/features/reporting/presentation/daily_report_page.dart
+  s_73dd1583cd0fea::t_8b78948839d758 41-45
+apps/ios/lib/features/reporting/presentation/weekly_report_page.dart
+  s_73dd1583cd0fea::t_8b78948839d758 43-45,123-124,134-154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "999aafe38d098903b206861da0a7702d984c04a4",
+  "prompts": {},
+  "sessions": {
+    "s_73dd1583cd0fea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05895-5df5-7e93-a5e3-7560bc9c3d61",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
