@@ -1,0 +1,51 @@
+apps/ios/lib/features/debt/presentation/debt_page.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 84-86
+apps/ios/lib/features/focus/data/mock_exam_repository.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 114-116
+apps/ios/lib/features/quiz/data/quiz_repository.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 31-43
+apps/ios/lib/features/planning/data/plan_repository.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 192-194
+apps/ios/lib/features/catalog/presentation/course_detail_page.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 98-100
+apps/ios/lib/features/dashboard/presentation/home_page.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 190-192
+apps/ios/lib/core/widgets/shangan_ui.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 109-112,423-425
+apps/ios/lib/features/reporting/data/report_repository.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 172-210
+apps/ios/test/features/planning/plan_page_test.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 253-255
+apps/ios/lib/features/catalog/data/catalog_repository.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 123-125
+apps/ios/lib/features/quiz/presentation/quiz_page.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 192-194
+apps/ios/lib/features/focus/presentation/mock_exam_page.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 340-342
+apps/ios/lib/features/dashboard/presentation/app_shell.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 110-112
+apps/ios/lib/app/application_bootstrap.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 22-26
+apps/ios/test/features/catalog/course_detail_page_test.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 73-75
+apps/ios/lib/features/profile/presentation/settings_page.dart
+  s_73dd1583cd0fea::t_884355e17bf38c 130-132,173-175
+apps/ios/pubspec.lock
+  s_73dd1583cd0fea::t_0f3736b218932c 8,11,16,19,64,67,339,342,427,430,443,446,720,723,768,771,776,779,784,787,800,803
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "f634e7a3f6e02be03ef8ad18edab88a0002a4e07",
+  "prompts": {},
+  "sessions": {
+    "s_73dd1583cd0fea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05895-5df5-7e93-a5e3-7560bc9c3d61",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
