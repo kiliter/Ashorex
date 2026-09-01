@@ -1,0 +1,72 @@
+apps/ios/lib/app/bootstrap.dart
+  s_73dd1583cd0fea::t_dbb55b07087113 9
+docs/plans/2026-08-27-shangan-v1-implementation-plan.md
+  s_73dd1583cd0fea::t_dbb55b07087113 1802
+docs/adr/0010-local-port-and-admin-entry.md
+  s_73dd1583cd0fea::t_dbb55b07087113 1-21
+infra/Caddyfile
+  s_73dd1583cd0fea::t_dbb55b07087113 4
+apps/server/src/test/java/com/shangan/admin/AdminEntryControllerTest.java
+  s_73dd1583cd0fea::t_dbb55b07087113 1-29
+apps/server/src/main/java/com/shangan/admin/AdminEntryController.java
+  s_73dd1583cd0fea::t_dbb55b07087113 1-15
+apps/ios/test/features/auth/server_settings_page_test.dart
+  s_73dd1583cd0fea::t_f56ee814f277b2 31,54,98
+infra/docker/server.Dockerfile
+  s_73dd1583cd0fea::t_dbb55b07087113 17,21
+docs/runbooks/backup-restore.md
+  s_73dd1583cd0fea::t_dbb55b07087113 64
+apps/server/src/main/resources/application.yml
+  s_73dd1583cd0fea::t_dbb55b07087113 28-29
+docs/api/openapi.yaml
+  s_73dd1583cd0fea::t_dbb55b07087113 7
+.env.example
+  s_73dd1583cd0fea::t_dbb55b07087113 2,4
+apps/ios/test/core/config/server_configuration_test.dart
+  s_73dd1583cd0fea::t_f56ee814f277b2 8-9,40-41
+apps/ios/test/core/config/server_configuration_store_test.dart
+  s_73dd1583cd0fea::t_f56ee814f277b2 17,28-29,34
+docs/superpowers/specs/2026-08-30-configurable-server-address-design.md
+  s_73dd1583cd0fea::t_dbb55b07087113 72,142,147,176
+README.md
+  s_73dd1583cd0fea::t_2c54d2f918c56d 7-10
+apps/ios/README.md
+  s_73dd1583cd0fea::t_dbb55b07087113 18,20-21
+apps/ios/lib/features/auth/presentation/server_settings_page.dart
+  s_73dd1583cd0fea::t_dbb55b07087113 106
+docs/adr/0005-configurable-server-address.md
+  s_73dd1583cd0fea::t_dbb55b07087113 14-15
+test.sh
+  s_73dd1583cd0fea::t_e7242d46ab45ae 48-51
+  s_73dd1583cd0fea::t_2c54d2f918c56d 1-47,52-136
+infra/compose.yml
+  s_73dd1583cd0fea::t_dbb55b07087113 37
+run.sh
+  s_73dd1583cd0fea::t_dbb55b07087113 11-12,27-28,110,124-125,196
+  s_73dd1583cd0fea::t_e7242d46ab45ae 56-59,183,187
+  s_73dd1583cd0fea::t_2c54d2f918c56d 1-10,13-26,29-55,60-109,111-123,126-182,184-186,188-195,197-228
+apps/ios/test/app/application_bootstrap_test.dart
+  s_73dd1583cd0fea::t_f56ee814f277b2 12,23,38
+.gitignore
+  s_73dd1583cd0fea::t_2c54d2f918c56d 29
+apps/ios/test/features/auth/login_page_test.dart
+  s_73dd1583cd0fea::t_f56ee814f277b2 22
+docs/specs/2026-08-27-shangan-v1-design.md
+  s_73dd1583cd0fea::t_aae53b4faee62f 1387,1406-1407
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "a709fc1bacc5bddaa5d08c58a9a71ab59b948a8b",
+  "prompts": {},
+  "sessions": {
+    "s_73dd1583cd0fea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05895-5df5-7e93-a5e3-7560bc9c3d61",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
