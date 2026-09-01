@@ -22,7 +22,8 @@ public record PlanItem(
   public boolean complete() {
     return switch (itemType) {
       case "VIDEO" -> watchCompleted && (!quizRequired || quizCompleted);
-      case "FOCUS", "QUIZ", "DEBT_REPAYMENT" -> completedSeconds >= plannedSeconds;
+      case "FOCUS", "QUIZ", "MOCK_EXAM", "DEBT_REPAYMENT" -> completedSeconds >= plannedSeconds;
+      case "REVIEW_SHORTCUT" -> false;
       default -> false;
     };
   }

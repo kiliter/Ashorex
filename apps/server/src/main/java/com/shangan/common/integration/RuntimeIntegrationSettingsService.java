@@ -88,23 +88,11 @@ public class RuntimeIntegrationSettingsService implements IntegrationSettingsPro
                 4096,
                 2_000_000,
                 errors),
+            // 最大输出直接采用 OpenRouter 模型目录或管理员手工配置的值，不额外限制。
+            submitted.llm().maxCompletionTokens(),
             range(
-                "llmMaxCompletionTokens",
-                "LLM 最大输出 Tokens",
-                submitted.llm().maxCompletionTokens(),
-                256,
-                200_000,
-                errors),
-            range(
-                "llmTimeoutSeconds",
-                "LLM 超时秒数",
-                submitted.llm().timeoutSeconds(),
-                1,
-                1800,
-                errors));
-    if (llm.contextLength() - llm.maxCompletionTokens() - 2048 < 256) {
-      errors.put("llmMaxCompletionTokens", "最大输出 Tokens 过大，必须为正文至少预留 256 Tokens");
-    }
+                "llmTimeoutSeconds", "LLM 超时秒数", submitted.llm().timeoutSeconds(), 1, 1800, errors),
+            text(submitted.llm().reasoningEffort()));
     RuntimeIntegrationSettings.AutoFill autoFill =
         new RuntimeIntegrationSettings.AutoFill(
             submitted.autoFill().enabled(),
@@ -115,6 +103,10 @@ public class RuntimeIntegrationSettingsService implements IntegrationSettingsPro
                 1,
                 1440,
                 errors));
+    long inputBudget = (long) llm.contextLength() - llm.maxCompletionTokens() - 2048L;
+    if (llm.maxCompletionTokens() <= 0 || inputBudget < 256L) {
+      errors.put("llmMaxCompletionTokens", "LLM 输出预算必须为正文至少预留 256 Tokens");
+    }
     if (!errors.isEmpty()) throw new IntegrationSettingsValidationException(errors);
     return new RuntimeIntegrationSettings(
         emby,

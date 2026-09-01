@@ -8,6 +8,7 @@
         <h2 id="login-title">管理员登录</h2>
         <p class="login-card__intro">管理课程、内容任务、课后题与外部服务配置。</p>
         <p class="alert" th:if="${param.error}">用户名或密码错误，请重新输入。</p>
+        <p class="alert" th:if="${param.denied}">登录状态已失效或当前账号没有管理权限，请重新登录。</p>
         <p class="alert alert--success" th:if="${param.logout}">已安全退出管理后台。</p>
         <form class="form-grid" method="post" th:action="@{/admin/login}">
           <label class="field" for="username">

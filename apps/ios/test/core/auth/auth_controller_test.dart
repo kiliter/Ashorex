@@ -1,9 +1,29 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/core/auth/auth_repository.dart';
 import 'package:shangan_ios/core/storage/token_store.dart';
 
 void main() {
+  test('恢复登录超时后进入服务不可用状态且保留 Token', () async {
+    const tokens = TokenPair(
+      accessToken: 'saved-access',
+      refreshToken: 'saved-refresh',
+    );
+    final tokenStore = MemoryTokenStore(tokens);
+    final controller = AuthController(
+      repository: _UnavailableAuthRepository(),
+      tokenStore: tokenStore,
+      restoreTimeout: const Duration(milliseconds: 10),
+    );
+
+    await controller.initialize();
+
+    expect(controller.state.status, AuthStatus.serviceUnavailable);
+    expect(await tokenStore.read(), same(tokens));
+  });
+
   test('收到 401 后只刷新一次并重试原请求', () async {
     final tokenStore = MemoryTokenStore(
       const TokenPair(accessToken: 'expired-access', refreshToken: 'refresh-1'),
@@ -41,6 +61,25 @@ void main() {
     expect(repository.refreshCalls, 1);
     expect(controller.state.status, AuthStatus.unauthenticated);
   });
+}
+
+/// 永不返回的用户接口用于验证启动超时不会清除 Keychain 登录态。
+final class _UnavailableAuthRepository implements AuthRepository {
+  @override
+  Future<UserProfile> loadCurrentUser() => Completer<UserProfile>().future;
+
+  @override
+  Future<TokenPair> login(String username, String password) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> logout(String refreshToken) async {}
+
+  @override
+  Future<TokenPair> refresh(String refreshToken) {
+    throw UnimplementedError();
+  }
 }
 
 /// 在单元测试中模拟 Keychain，仅保存当前 Token 对。

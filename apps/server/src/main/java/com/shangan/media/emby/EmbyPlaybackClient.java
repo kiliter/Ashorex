@@ -47,10 +47,7 @@ public class EmbyPlaybackClient {
       JsonNode source = json.readTree(body).path("MediaSources").get(0);
       if (source == null) throw unavailable();
       String mediaSourceId = source.path("Id").asText();
-      String container = source.path("Container").asText("").toLowerCase();
-      boolean direct =
-          source.path("SupportsDirectStream").asBoolean(false)
-              && java.util.List.of("mp4", "m4v", "mov").contains(container);
+      boolean direct = supportsIosDirectPlayback(source);
       String path =
           direct
               ? "/Videos/"
@@ -84,6 +81,24 @@ public class EmbyPlaybackClient {
   private BusinessException unavailable() {
     return new BusinessException(
         HttpStatus.SERVICE_UNAVAILABLE, "EMBY_PLAYBACK_UNAVAILABLE", "暂时无法创建播放会话");
+  }
+
+  /**
+   * 只有容器和视频编码都能由 iOS AVPlayer 稳定解码时才直放。MP4 只是容器，内部若为 HEVC、VP9 或 AV1，模拟器会出现有声音、有进度但画面全黑，因此其余情况统一交给
+   * Emby 转成 H.264/AAC HLS。
+   */
+  static boolean supportsIosDirectPlayback(JsonNode source) {
+    String container = source.path("Container").asText("").toLowerCase();
+    if (!source.path("SupportsDirectStream").asBoolean(false)
+        || !java.util.List.of("mp4", "m4v", "mov").contains(container)) {
+      return false;
+    }
+    for (JsonNode stream : source.path("MediaStreams")) {
+      if (!"video".equalsIgnoreCase(stream.path("Type").asText())) continue;
+      String codec = stream.path("Codec").asText("").toLowerCase();
+      return "h264".equals(codec) || "avc".equals(codec) || "avc1".equals(codec);
+    }
+    return false;
   }
 
   public record Selection(

@@ -31,4 +31,14 @@ final class _CatalogRepository implements CatalogRepository {
   Future<CourseDetail> loadCourse(String courseId) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<LessonSummary> loadLesson(String lessonId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LessonStudyContentData> loadStudyContent(String lessonId) {
+    throw UnimplementedError();
+  }
 }

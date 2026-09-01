@@ -15,7 +15,7 @@ public class JdbcUserRepository implements UserRepository {
   private static final String USER_COLUMNS =
       """
             id, username, password_hash, display_name, role, timezone,
-            alive_check_level, day_end_local_time, enabled
+            alive_check_level, alive_check_interval_percent, day_end_local_time, enabled
             """;
 
   private final JdbcClient jdbc;
@@ -59,47 +59,53 @@ public class JdbcUserRepository implements UserRepository {
             """
                         insert into users (
                             id, username, password_hash, display_name, role, timezone,
-                            alive_check_level, day_end_local_time, enabled, created_at, updated_at
+                            alive_check_level, alive_check_interval_percent,
+                            day_end_local_time, enabled, created_at, updated_at
                         ) values (
                             :id, :username, :passwordHash, :displayName, :role, :timezone,
-                            :aliveCheckLevel, :dayEndLocalTime, :enabled, :createdAt, :updatedAt
+                            :aliveCheckLevel, :aliveCheckIntervalPercent,
+                            :dayEndLocalTime, :enabled, :createdAt, :updatedAt
                         )
                         """)
-        .params(
-            Map.ofEntries(
-                Map.entry("id", user.id()),
-                Map.entry("username", user.username()),
-                Map.entry("passwordHash", user.passwordHash()),
-                Map.entry("displayName", user.displayName()),
-                Map.entry("role", user.role()),
-                Map.entry("timezone", user.timezone()),
-                Map.entry("aliveCheckLevel", user.aliveCheckLevel()),
-                Map.entry("dayEndLocalTime", user.dayEndLocalTime()),
-                Map.entry("enabled", user.enabled() ? 1 : 0),
-                Map.entry("createdAt", createdAt.toEpochMilli()),
-                Map.entry("updatedAt", createdAt.toEpochMilli())))
+        .param("id", user.id())
+        .param("username", user.username())
+        .param("passwordHash", user.passwordHash())
+        .param("displayName", user.displayName())
+        .param("role", user.role())
+        .param("timezone", user.timezone())
+        .param("aliveCheckLevel", user.aliveCheckLevel())
+        .param("aliveCheckIntervalPercent", user.aliveCheckIntervalPercent())
+        .param("dayEndLocalTime", user.dayEndLocalTime())
+        .param("enabled", user.enabled() ? 1 : 0)
+        .param("createdAt", createdAt.toEpochMilli())
+        .param("updatedAt", createdAt.toEpochMilli())
         .update();
   }
 
   @Override
   public void updatePreferences(
-      String userId, String timezone, String aliveCheckLevel, String dayEndLocalTime, Instant now) {
+      String userId,
+      String timezone,
+      String aliveCheckLevel,
+      int aliveCheckIntervalPercent,
+      String dayEndLocalTime,
+      Instant now) {
     jdbc.sql(
             """
                         update users
                         set timezone = :timezone,
                             alive_check_level = :aliveCheckLevel,
+                            alive_check_interval_percent = :aliveCheckIntervalPercent,
                             day_end_local_time = :dayEndLocalTime,
                             updated_at = :updatedAt
                         where id = :userId
                         """)
-        .params(
-            Map.of(
-                "timezone", timezone,
-                "aliveCheckLevel", aliveCheckLevel,
-                "dayEndLocalTime", dayEndLocalTime,
-                "updatedAt", now.toEpochMilli(),
-                "userId", userId))
+        .param("timezone", timezone)
+        .param("aliveCheckLevel", aliveCheckLevel)
+        .param("aliveCheckIntervalPercent", aliveCheckIntervalPercent)
+        .param("dayEndLocalTime", dayEndLocalTime)
+        .param("updatedAt", now.toEpochMilli())
+        .param("userId", userId)
         .update();
   }
 
@@ -182,6 +188,7 @@ public class JdbcUserRepository implements UserRepository {
         resultSet.getString("role"),
         resultSet.getString("timezone"),
         resultSet.getString("alive_check_level"),
+        resultSet.getInt("alive_check_interval_percent"),
         resultSet.getString("day_end_local_time"),
         resultSet.getInt("enabled") == 1);
   }

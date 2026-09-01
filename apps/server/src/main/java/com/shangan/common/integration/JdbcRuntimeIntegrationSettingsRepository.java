@@ -32,7 +32,7 @@ public class JdbcRuntimeIntegrationSettingsRepository
               asr_base_url, asr_api_key, asr_model, asr_language,
               asr_chunk_duration_seconds, asr_timeout_seconds,
               llm_base_url, llm_api_key, llm_model, llm_context_length,
-              llm_max_completion_tokens, llm_timeout_seconds,
+              llm_max_completion_tokens, llm_timeout_seconds, llm_reasoning_effort,
               openrouter_api_key, content_auto_fill_enabled,
               content_auto_fill_interval_minutes, updated_at
             ) values (
@@ -40,7 +40,7 @@ public class JdbcRuntimeIntegrationSettingsRepository
               :asrBaseUrl, :asrApiKey, :asrModel, :asrLanguage,
               :asrChunkDurationSeconds, :asrTimeoutSeconds,
               :llmBaseUrl, :llmApiKey, :llmModel, :llmContextLength,
-              :llmMaxCompletionTokens, :llmTimeoutSeconds,
+              :llmMaxCompletionTokens, :llmTimeoutSeconds, :llmReasoningEffort,
               :openRouterApiKey, :autoFillEnabled, :autoFillIntervalMinutes, :updatedAt
             )
             on conflict(id) do update set
@@ -59,6 +59,7 @@ public class JdbcRuntimeIntegrationSettingsRepository
               llm_context_length = excluded.llm_context_length,
               llm_max_completion_tokens = excluded.llm_max_completion_tokens,
               llm_timeout_seconds = excluded.llm_timeout_seconds,
+              llm_reasoning_effort = excluded.llm_reasoning_effort,
               openrouter_api_key = excluded.openrouter_api_key,
               content_auto_fill_enabled = excluded.content_auto_fill_enabled,
               content_auto_fill_interval_minutes = excluded.content_auto_fill_interval_minutes,
@@ -79,6 +80,7 @@ public class JdbcRuntimeIntegrationSettingsRepository
         .param("llmContextLength", value.llm().contextLength())
         .param("llmMaxCompletionTokens", value.llm().maxCompletionTokens())
         .param("llmTimeoutSeconds", value.llm().timeoutSeconds())
+        .param("llmReasoningEffort", value.llm().reasoningEffort())
         .param("openRouterApiKey", value.openRouter().apiKey())
         .param("autoFillEnabled", value.autoFill().enabled() ? 1 : 0)
         .param("autoFillIntervalMinutes", value.autoFill().intervalMinutes())
@@ -105,7 +107,8 @@ public class JdbcRuntimeIntegrationSettingsRepository
             row.getString("llm_model"),
             row.getInt("llm_context_length"),
             row.getInt("llm_max_completion_tokens"),
-            row.getInt("llm_timeout_seconds")),
+            row.getInt("llm_timeout_seconds"),
+            row.getString("llm_reasoning_effort")),
         new RuntimeIntegrationSettings.OpenRouter(row.getString("openrouter_api_key")),
         new RuntimeIntegrationSettings.AutoFill(
             row.getInt("content_auto_fill_enabled") == 1,

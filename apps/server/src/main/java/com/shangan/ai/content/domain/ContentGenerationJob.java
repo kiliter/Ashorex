@@ -35,20 +35,33 @@ public record ContentGenerationJob(
     String createdBy) {
 
   public enum Type {
-    TRANSCRIBE,
-    SUMMARIZE,
-    GENERATE_QUIZ
+    TRANSCRIBE("转写全文"),
+    SUMMARIZE("生成摘要"),
+    GENERATE_QUIZ("生成题目");
+
+    private final String label;
+
+    Type(String label) {
+      this.label = label;
+    }
+
+    /** 返回管理后台使用的中文任务类型名称。 */
+    public String label() {
+      return label;
+    }
   }
 
   public enum Status {
-    QUEUED,
-    FETCHING_AUDIO,
-    TRANSCRIBING,
-    SUMMARIZING,
-    GENERATING_QUIZ,
-    READY,
-    READY_FOR_REVIEW,
-    FAILED;
+    QUEUED("等待执行"),
+    FETCHING_AUDIO("获取音频"),
+    TRANSCRIBING("正在转写"),
+    SUMMARIZING("正在生成摘要"),
+    GENERATING_QUIZ("正在生成题目"),
+    READY("已完成"),
+    READY_FOR_REVIEW("待审核"),
+    FAILED("失败");
+
+    private final String label;
 
     private static final Map<Type, Map<Status, Set<Status>>> TRANSITIONS =
         Map.of(
@@ -65,6 +78,15 @@ public record ContentGenerationJob(
                 Map.of(
                     QUEUED, EnumSet.of(GENERATING_QUIZ, FAILED),
                     GENERATING_QUIZ, EnumSet.of(READY_FOR_REVIEW, FAILED)));
+
+    Status(String label) {
+      this.label = label;
+    }
+
+    /** 返回管理后台使用的中文任务状态名称。 */
+    public String label() {
+      return label;
+    }
 
     public boolean canTransitionTo(Type type, Status target) {
       return TRANSITIONS.getOrDefault(type, Map.of()).getOrDefault(this, Set.of()).contains(target);

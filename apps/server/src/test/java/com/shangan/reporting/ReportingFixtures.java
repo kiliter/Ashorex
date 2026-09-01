@@ -12,12 +12,14 @@ final class ReportingFixtures {
     for (String table :
         List.of(
             "daily_reports",
+            "daily_day_outcomes",
             "focus_sessions",
             "quiz_answers",
             "quiz_attempts",
             "question_options",
             "questions",
             "alive_checks",
+            "lesson_review_events",
             "watch_sessions",
             "video_progress",
             "debt_repayments",
@@ -54,10 +56,18 @@ final class ReportingFixtures {
     jdbc.sql(
             "insert into daily_plan_items (id,plan_id,item_type,title,media_item_id,planned_seconds,completed_seconds,watch_completed,quiz_required,quiz_completed,status,sort_order,completed_at,created_at,updated_at) values "
                 + "('item-video','plan-1','VIDEO','资料分析','media-1',1000,1000,1,0,0,'COMPLETED',0,:done,:started,:done),"
-                + "('item-focus','plan-1','FOCUS','申论练习',null,500,300,0,0,0,'PENDING',1,null,:started,:abandoned)")
+                + "('item-focus','plan-1','FOCUS','申论练习',null,500,300,0,0,0,'PENDING',1,null,:started,:abandoned),"
+                + "('item-review','plan-1','VIDEO','资料分析复习','media-1',600,0,0,0,0,'PENDING',2,null,:started,:abandoned)")
         .param("done", started + 3_600_000)
         .param("started", started)
         .param("abandoned", abandoned)
+        .update();
+    jdbc.sql("update daily_plan_items set item_kind='REVIEW_SHORTCUT' where id='item-review'")
+        .update();
+    jdbc.sql(
+            "insert into daily_day_outcomes (id,user_id,outcome_date,outcome,generated_at) "
+                + "values ('outcome-1','user-1','2026-08-30','CLOSED_WITH_DEBT',:at)")
+        .param("at", abandoned)
         .update();
     jdbc.sql(
             "insert into plan_abandonments (id,plan_id,user_id,reason_code,reason_text,remaining_seconds,created_at) values ('abandon-1','plan-1','user-1','OPEN_PALM','今天状态很差',700,:abandoned)")
@@ -67,6 +77,16 @@ final class ReportingFixtures {
             "insert into watch_sessions (id,user_id,media_item_id,emby_item_id,plan_item_id,device_id,status,play_session_id,upstream_path,hls,duration_ms,started_position_ms,last_reported_position_ms,max_verified_position_ms,verified_watch_ms,last_sequence,last_heartbeat_at,alive_check_pending,started_at,ended_at,created_at,updated_at,synced_verified_watch_ms) values ('watch-1','user-1','media-1','emby-1','item-video','device-1','COMPLETED','play-1','/stream',0,600000,0,600000,600000,600000,1,:ended,0,:started,:ended,:started,:ended,600000)")
         .param("started", started)
         .param("ended", started + 3_600_000)
+        .update();
+    jdbc.sql(
+            "insert into watch_sessions (id,user_id,media_item_id,emby_item_id,plan_item_id,device_id,status,play_session_id,upstream_path,hls,duration_ms,started_position_ms,last_reported_position_ms,max_verified_position_ms,verified_watch_ms,last_sequence,last_heartbeat_at,alive_check_pending,started_at,ended_at,created_at,updated_at,synced_verified_watch_ms) values ('watch-review','user-1','media-1','emby-1','item-review','device-1','STOPPED','play-review','/stream',0,600000,600000,300000,600000,120000,1,:ended,0,:started,:ended,:started,:ended,120000)")
+        .param("started", started + 7_000_000)
+        .param("ended", started + 7_120_000)
+        .update();
+    jdbc.sql(
+            "insert into lesson_review_events (id,user_id,media_item_id,watch_session_id,reviewed_on,created_at) "
+                + "values ('review-1','user-1','media-1','watch-review','2026-08-30',:at)")
+        .param("at", started + 7_010_000)
         .update();
     jdbc.sql(
             "insert into video_progress (id,user_id,media_item_id,max_verified_position_ms,verified_watch_ms,completed_at,last_watched_at,created_at,updated_at) values ('progress-1','user-1','media-1',600000,600000,:done,:done,:started,:done)")

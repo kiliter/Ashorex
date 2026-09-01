@@ -5,18 +5,22 @@ import 'package:shangan_ios/core/api/api_client.dart';
 final class UserPreferences {
   const UserPreferences({
     required this.timezone,
-    required this.aliveCheckLevel,
+    required this.aliveCheckEnabled,
+    required this.aliveCheckIntervalPercent,
     required this.dayEndLocalTime,
   });
 
   final String timezone;
-  final String aliveCheckLevel;
+  final bool aliveCheckEnabled;
+  final int aliveCheckIntervalPercent;
   final String dayEndLocalTime;
 
   factory UserPreferences.fromJson(Map<String, dynamic> json) {
     return UserPreferences(
       timezone: json['timezone'] as String,
-      aliveCheckLevel: json['aliveCheckLevel'] as String,
+      aliveCheckEnabled: json['aliveCheckEnabled'] as bool,
+      aliveCheckIntervalPercent: (json['aliveCheckIntervalPercent'] as num)
+          .toInt(),
       dayEndLocalTime: json['dayEndLocalTime'] as String,
     );
   }
@@ -46,7 +50,8 @@ final class RemotePreferencesRepository implements PreferencesRepository {
       '/api/v1/preferences',
       data: {
         'timezone': preferences.timezone,
-        'aliveCheckLevel': preferences.aliveCheckLevel,
+        'aliveCheckEnabled': preferences.aliveCheckEnabled,
+        'aliveCheckIntervalPercent': preferences.aliveCheckIntervalPercent,
         'dayEndLocalTime': preferences.dayEndLocalTime,
       },
     );

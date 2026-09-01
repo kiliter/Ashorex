@@ -11,9 +11,7 @@
             <div class="page-head-row">
               <div><h1 class="page-title" data-code="LSN/04">课时管理</h1><p class="page-desc">课时状态、学习内容、AI 内容生产与题目入口</p></div>
               <div class="actions">
-                <form method="post" th:action="@{/admin/courses/{id}/transcribe(id=${course.id})}"><button class="btn btn-secondary" type="submit">批量转文本</button></form>
-                <form method="post" th:action="@{/admin/courses/{id}/summarize(id=${course.id})}"><button class="btn btn-secondary" type="submit">批量 AI 摘要</button></form>
-                <form class="inline-form" method="post" th:action="@{/admin/courses/{id}/generate-quiz(id=${course.id})}"><input class="inline-input num" type="number" name="questionCount" min="1" max="20" value="5" aria-label="每课时生成题数" /><button type="submit">批量 AI 出题</button></form>
+                <form id="course-ai-workflow-form" class="inline-form js-ai-workflow" method="post" th:action="@{/admin/courses/{id}/ai-workflow(id=${course.id})}"><label class="inline-number-field"><span>每课时题数</span><input class="inline-input num" type="number" name="questionCount" min="1" max="20" value="5" aria-label="每课时生成题数" /></label><button type="submit">批量 AI 一下</button></form>
                 <a class="btn btn-secondary" th:href="@{/admin/courses/{id}/quiz-drafts(id=${course.id})}">审核题目草稿</a>
               </div>
             </div>
@@ -27,36 +25,36 @@
           <div class="summary-strip">
             <div class="summary-item"><div class="summary-label">课时总数</div><div class="summary-value" th:text="${lessonCount}">0</div></div>
             <div class="summary-item"><div class="summary-label">学习端已启用</div><div class="summary-value" th:text="|${enabledLessonCount}/${lessonCount}|">0/0</div></div>
-            <div class="summary-item"><div class="summary-label">全文已就绪</div><div class="summary-value" th:text="${transcriptReadyCount}">0</div></div>
-            <div class="summary-item"><div class="summary-label">摘要已就绪</div><div class="summary-value" th:text="${summaryReadyCount}">0</div></div>
+            <div class="summary-item"><div class="summary-label">全文已就绪</div><div class="summary-value" data-transcript-ready-count th:text="${transcriptReadyCount}">0</div></div>
+            <div class="summary-item"><div class="summary-label">摘要已就绪</div><div class="summary-value" data-summary-ready-count th:text="${summaryReadyCount}">0</div></div>
           </div>
 
           <section class="panel">
-            <div class="panel-head"><div><h2>LESSON / 课时台账</h2><p>逐行保存学习端状态和排序；内容按钮只创建后台任务。</p></div><span class="muted num" th:text="|TOTAL ${lessonCount}|">TOTAL 0</span></div>
+            <div class="panel-head"><div><h2>LESSON / 课时台账</h2><p>“AI 一下”依次完成转写、摘要和出题；单阶段重做请进入“查看内容”。</p></div><span class="muted num" th:text="|TOTAL ${lessonCount}|">TOTAL 0</span></div>
             <div class="empty-state" th:if="${#lists.isEmpty(lessons)}"><strong>暂时没有课时</strong>返回课程列表执行一次 Emby 同步。</div>
-            <div class="table-wrap" th:unless="${#lists.isEmpty(lessons)}"><table class="ds-table">
-              <thead><tr><th class="right">顺序</th><th>课时名称 / Emby ID</th><th class="right">时长</th><th>全文</th><th>摘要</th><th>学习端</th><th class="right">排序值</th><th class="right">操作</th></tr></thead>
-              <tbody><tr th:each="lesson, stat : ${lessons}">
+            <div class="table-wrap" th:unless="${#lists.isEmpty(lessons)}"><table class="ds-table" th:attr="data-lessons-live-url=@{/admin/courses/{id}/lessons/live(id=${course.id})}">
+              <thead><tr><th><label class="check-field"><input type="checkbox" aria-label="全选课时" data-select-all-lessons /><span>全选</span></label></th><th class="right">顺序</th><th>课时名称 / Emby ID</th><th class="right">时长</th><th>全文</th><th>摘要</th><th>题目</th><th>学习端</th><th class="right">排序值</th><th class="right">操作</th></tr></thead>
+              <tbody><tr th:each="lesson, stat : ${lessons}" th:attr="data-lesson-row=${lesson.id}">
+                <td><input type="checkbox" name="lessonId" th:value="${lesson.id}" form="course-ai-workflow-form" data-lesson-selection /></td>
                 <td class="right num" th:text="${#numbers.formatInteger(stat.count, 2)}">01</td>
                 <td><div class="cell-main" th:text="${lesson.title}">课时</div><div class="cell-sub num" th:text="${lesson.embyItemId}">emby</div></td>
-                <td class="right num" th:text="${#numbers.formatDecimal(lesson.durationMs / 60000.0, 1, 1) + ' min'}">0 min</td>
-                <td><span class="badge" th:classappend="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).transcriptReady() ? ' success' : ''}" th:text="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).transcriptReady() ? '已就绪' : '缺失'}">缺失</span></td>
-                <td><span class="badge" th:classappend="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).summaryReady() ? ' success' : ''}" th:text="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).summaryReady() ? '已就绪' : '缺失'}">缺失</span></td>
+                <td class="right num" th:text="${T(com.shangan.admin.AdminDisplayFormatter).duration(lesson.durationMs)}">0 m</td>
+                <td><button class="lesson-preview-trigger" th:classappend="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).transcriptReady() ? ' is-ready' : ''}" type="button" th:attr="data-lesson-id=${lesson.id}" data-preview-type="transcript" data-transcript-status th:text="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).transcriptReady() ? '已就绪' : '缺失'}">缺失</button></td>
+                <td><button class="lesson-preview-trigger" th:classappend="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).summaryReady() ? ' is-ready' : ''}" type="button" th:attr="data-lesson-id=${lesson.id}" data-preview-type="summary" data-summary-status th:text="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).summaryReady() ? '已就绪' : '缺失'}">缺失</button></td>
+                <td><button class="lesson-preview-trigger" th:classappend="${questionCountsByLessonId.containsKey(lesson.id) and questionCountsByLessonId.get(lesson.id) > 0 ? ' is-ready' : ''}" type="button" th:attr="data-lesson-id=${lesson.id}" data-preview-type="questions" data-question-count th:text="|${questionCountsByLessonId.containsKey(lesson.id) ? questionCountsByLessonId.get(lesson.id) : 0} 道|">0 道</button></td>
                 <td><label class="switch-control"><input type="checkbox" name="enabled" value="true" th:checked="${lesson.enabled}" th:form="|lesson-form-${lesson.id}|" /><span th:text="${lesson.enabled ? '已启用' : '未启用'}">已启用</span></label></td>
                 <td class="right"><input class="inline-input num" type="number" name="sortOrder" th:value="${lesson.sortOrder}" th:form="|lesson-form-${lesson.id}|" required /></td>
                 <td><form th:id="|lesson-form-${lesson.id}|" method="post" th:action="@{/admin/courses/{courseId}/lessons/{lessonId}(courseId=${courseId},lessonId=${lesson.id})}"></form>
                   <div class="row-actions">
                     <button class="btn btn-secondary btn-sm" type="submit" th:form="|lesson-form-${lesson.id}|">保存</button>
-                    <form method="post" th:action="@{/admin/lessons/{id}/transcribe(id=${lesson.id})}"><input type="hidden" name="overwrite" th:value="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).transcriptReady()}" /><button class="btn btn-secondary btn-sm" type="submit" th:text="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).transcriptReady() ? '重新转写' : '一键转文本'}">一键转文本</button></form>
-                    <form method="post" th:action="@{/admin/lessons/{id}/summarize(id=${lesson.id})}"><input type="hidden" name="overwrite" th:value="${studyContentsByLessonId.containsKey(lesson.id) and studyContentsByLessonId.get(lesson.id).summaryReady()}" /><button class="btn btn-secondary btn-sm" type="submit">AI 摘要</button></form>
-                    <form method="post" th:action="@{/admin/lessons/{id}/generate-quiz(id=${lesson.id})}"><input type="hidden" name="questionCount" value="5" /><button class="btn btn-secondary btn-sm" type="submit">AI 出题</button></form>
+                    <form class="js-ai-workflow" method="post" th:action="@{/admin/lessons/{id}/ai-workflow(id=${lesson.id})}"><input type="hidden" name="questionCount" value="5" /><button class="btn btn-sm" type="submit">AI 一下</button></form>
                     <a class="btn btn-secondary btn-sm" th:href="@{/admin/lessons/{id}/study-content(id=${lesson.id})}">查看内容</a>
                     <a class="btn btn-secondary btn-sm" th:href="@{/admin/lessons/{id}/questions(id=${lesson.id})}">正式题库</a>
                   </div>
                 </td>
               </tr></tbody>
             </table></div>
-            <div class="pagination"><span>已有内容默认跳过；“重新转写”会保留旧内容直到新任务成功。</span><a th:href="@{/admin/content-jobs(courseId=${course.id})}">查看本课程任务 →</a></div>
+            <div class="pagination"><span><span data-selected-lesson-count>已选 0 个课时</span>；已有全文、摘要或待审核草稿默认跳过，工作流只补齐缺失阶段。</span><a th:href="@{/admin/content-jobs/courses/{id}(id=${course.id})}">查看本课程任务 →</a></div>
           </section>
 
           <section class="panel">
@@ -69,5 +67,232 @@
         </div>
       </main>
     </div>
+    <div class="lesson-preview-modal" data-lesson-preview-modal hidden>
+      <button class="lesson-preview-modal__backdrop" type="button" aria-label="关闭预览" data-preview-close></button>
+      <section class="lesson-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="lesson-preview-title">
+        <header class="lesson-preview-dialog__head"><div><span data-preview-lesson>课时</span><h2 id="lesson-preview-title" data-preview-title>内容预览</h2></div><button class="btn btn-secondary" type="button" data-preview-close>关闭</button></header>
+        <div class="lesson-preview-dialog__body" data-preview-body><div class="preview-loading">正在读取内容…</div></div>
+      </section>
+    </div>
+    <div class="toast-region" aria-live="polite" aria-atomic="true" data-toast-region></div>
+    <script>
+      // AI 工作流只局部提交并用右上角通知反馈，避免课时台账整页刷新。
+      const toastRegion = document.querySelector("[data-toast-region]");
+      const showToast = (message, success) => {
+        const toast = document.createElement("div");
+        toast.className = `toast ${success ? "toast--success" : "toast--error"}`;
+        toast.innerHTML = `<span class="toast__icon" aria-hidden="true"></span><div><strong>${success ? "已排队" : "操作失败"}</strong><p></p></div><button type="button" class="toast__close" aria-label="关闭通知">&times;</button>`;
+        toast.querySelector("p").textContent = message;
+        const close = () => toast.remove();
+        toast.querySelector(".toast__close").addEventListener("click", close);
+        toastRegion.appendChild(toast);
+        window.setTimeout(close, 5000);
+      };
+      document.querySelectorAll(".js-ai-workflow").forEach((form) => {
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const selectedLessons = lessonSelections.filter((checkbox) => checkbox.checked);
+          if (form.id === "course-ai-workflow-form" && selectedLessons.length === 0) {
+            showToast("请至少选择一个课时。", false);
+            return;
+          }
+          const button = form.querySelector("button[type='submit']");
+          button.disabled = true;
+          try {
+            // 批量表单显式写入选中课时，避免表单外关联控件在脚本查询时被遗漏。
+            const formData = new FormData(form);
+            if (form.id === "course-ai-workflow-form") {
+              formData.delete("lessonId");
+              selectedLessons.forEach((checkbox) => formData.append("lessonId", checkbox.value));
+            }
+            const response = await fetch(form.action, {
+              method: "POST",
+              body: formData,
+              headers: { Accept: "application/json" },
+            });
+            const contentType = response.headers.get("content-type") || "";
+            if (!contentType.includes("json")) {
+              window.location.assign("/admin/login");
+              return;
+            }
+            const payload = await response.json();
+            showToast(payload.detail || payload.message || "AI 工作流排队失败", response.ok && payload.success);
+          } catch (error) {
+            showToast("请求未完成，请检查服务端是否正在运行。", false);
+          } finally {
+            button.disabled = false;
+          }
+        });
+      });
+      const selectAllLessons = document.querySelector("[data-select-all-lessons]");
+      const lessonSelections = [...document.querySelectorAll("[data-lesson-selection]")];
+      const selectedLessonCount = document.querySelector("[data-selected-lesson-count]");
+      const courseWorkflowButton = document.querySelector("#course-ai-workflow-form button[type='submit']");
+
+      // 同步全选、半选、已选数量和批量按钮可用状态。
+      const syncLessonSelection = () => {
+        const selected = lessonSelections.filter((checkbox) => checkbox.checked);
+        if (selectAllLessons) {
+          selectAllLessons.checked = lessonSelections.length > 0 && selected.length === lessonSelections.length;
+          selectAllLessons.indeterminate = selected.length > 0 && selected.length < lessonSelections.length;
+          selectAllLessons.disabled = lessonSelections.length === 0;
+        }
+        selectedLessonCount.textContent = `已选 ${selected.length} 个课时`;
+        if (courseWorkflowButton) courseWorkflowButton.disabled = selected.length === 0;
+      };
+      selectAllLessons?.addEventListener("change", () => {
+        lessonSelections.forEach((checkbox) => checkbox.checked = selectAllLessons.checked);
+        syncLessonSelection();
+      });
+      lessonSelections.forEach((checkbox) => checkbox.addEventListener("change", syncLessonSelection));
+      syncLessonSelection();
+
+      const lessonTable = document.querySelector("[data-lessons-live-url]");
+      const transcriptReadyCount = document.querySelector("[data-transcript-ready-count]");
+      const summaryReadyCount = document.querySelector("[data-summary-ready-count]");
+
+      // 每两秒只刷新轻量状态和数量，不下载全文、摘要或题目明细。
+      const refreshLessonStatus = async () => {
+        if (!lessonTable || document.hidden) return;
+        try {
+          const response = await fetch(lessonTable.dataset.lessonsLiveUrl, {
+            headers: { Accept: "application/json" },
+          });
+          const contentType = response.headers.get("content-type") || "";
+          if (!contentType.includes("json")) {
+            window.location.assign("/admin/login");
+            return;
+          }
+          if (!response.ok) return;
+          const payload = await response.json();
+          let transcriptCount = 0;
+          let summaryCount = 0;
+          payload.lessons.forEach((lesson) => {
+            const row = document.querySelector(`[data-lesson-row="${CSS.escape(lesson.id)}"]`);
+            if (!row) return;
+            const transcript = row.querySelector("[data-transcript-status]");
+            const summary = row.querySelector("[data-summary-status]");
+            const questions = row.querySelector("[data-question-count]");
+            transcript.textContent = lesson.transcriptReady ? "已就绪" : "缺失";
+            summary.textContent = lesson.summaryReady ? "已就绪" : "缺失";
+            questions.textContent = `${lesson.questionCount} 道`;
+            transcript.classList.toggle("is-ready", lesson.transcriptReady);
+            summary.classList.toggle("is-ready", lesson.summaryReady);
+            questions.classList.toggle("is-ready", lesson.questionCount > 0);
+            if (lesson.transcriptReady) transcriptCount += 1;
+            if (lesson.summaryReady) summaryCount += 1;
+          });
+          transcriptReadyCount.textContent = transcriptCount;
+          summaryReadyCount.textContent = summaryCount;
+        } catch (error) {
+          // 短暂网络失败保持当前状态，下一轮自动恢复，不连续弹出干扰性通知。
+        }
+      };
+
+      const previewModal = document.querySelector("[data-lesson-preview-modal]");
+      const previewBody = document.querySelector("[data-preview-body]");
+      const previewTitle = document.querySelector("[data-preview-title]");
+      const previewLesson = document.querySelector("[data-preview-lesson]");
+      let previewTrigger = null;
+
+      // 使用 textContent 构造题目预览，避免题干或解析中的内容被当作 HTML 执行。
+      const renderQuestionPreview = (questions) => {
+        if (!questions.length) {
+          previewBody.innerHTML = '<div class="preview-empty"><strong>暂无正式题目</strong><span>题目草稿通过后会显示在这里。</span></div>';
+          return;
+        }
+        const list = document.createElement("div");
+        list.className = "lesson-question-preview-list";
+        questions.forEach((question, index) => {
+          const card = document.createElement("article");
+          card.className = "lesson-question-preview-card";
+          const head = document.createElement("header");
+          const number = document.createElement("strong");
+          number.textContent = `Q${String(index + 1).padStart(2, "0")}`;
+          const type = document.createElement("span");
+          type.textContent = `${question.questionTypeLabel} · ${question.enabled ? "已启用" : "已停用"}`;
+          head.append(number, type);
+          const content = document.createElement("h3");
+          content.textContent = question.content;
+          const options = document.createElement("ul");
+          question.options.forEach((option) => {
+            const item = document.createElement("li");
+            item.textContent = option.content;
+            item.classList.toggle("is-correct", option.correct);
+            options.appendChild(item);
+          });
+          const explanation = document.createElement("p");
+          explanation.textContent = question.explanation ? `解析：${question.explanation}` : "暂无解析";
+          card.append(head, content, options, explanation);
+          list.appendChild(card);
+        });
+        previewBody.replaceChildren(list);
+      };
+
+      const closePreview = () => {
+        previewModal.hidden = true;
+        document.body.classList.remove("modal-open");
+        previewBody.innerHTML = '<div class="preview-loading">正在读取内容…</div>';
+        previewTrigger?.focus();
+      };
+
+      const openPreview = async (trigger) => {
+        previewTrigger = trigger;
+        previewModal.hidden = false;
+        document.body.classList.add("modal-open");
+        previewTitle.textContent = "内容预览";
+        previewLesson.textContent = "正在读取课时…";
+        previewBody.innerHTML = '<div class="preview-loading">正在读取内容…</div>';
+        previewModal.querySelector("[data-preview-close]:not(.lesson-preview-modal__backdrop)").focus();
+        try {
+          const lessonId = trigger.dataset.lessonId;
+          const type = trigger.dataset.previewType;
+          const response = await fetch(`/admin/lessons/${encodeURIComponent(lessonId)}/preview?type=${encodeURIComponent(type)}`, {
+            headers: { Accept: "application/json" },
+          });
+          const contentType = response.headers.get("content-type") || "";
+          if (!contentType.includes("json")) {
+            window.location.assign("/admin/login");
+            return;
+          }
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.detail || "预览加载失败");
+          previewLesson.textContent = payload.lessonTitle;
+          previewTitle.textContent = payload.title;
+          if (payload.type === "questions") {
+            renderQuestionPreview(payload.questions || []);
+          } else if (payload.content) {
+            const text = document.createElement("pre");
+            text.className = payload.type === "summary" ? "lesson-preview-text is-markdown" : "lesson-preview-text";
+            text.textContent = payload.content;
+            previewBody.replaceChildren(text);
+          } else {
+            const empty = document.createElement("div");
+            empty.className = "preview-empty";
+            empty.innerHTML = `<strong>${payload.type === "summary" ? "暂无摘要" : "暂无全文"}</strong><span>完成对应内容任务后可在此预览。</span>`;
+            previewBody.replaceChildren(empty);
+          }
+        } catch (error) {
+          previewBody.innerHTML = '<div class="preview-empty"><strong>预览加载失败</strong><span></span></div>';
+          previewBody.querySelector("span").textContent = error.message || "请稍后重试";
+        }
+      };
+
+      document.addEventListener("click", (event) => {
+        const trigger = event.target.closest("[data-preview-type]");
+        if (trigger) openPreview(trigger);
+      });
+      document.querySelectorAll("[data-preview-close]").forEach((button) =>
+        button.addEventListener("click", closePreview)
+      );
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !previewModal.hidden) closePreview();
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) refreshLessonStatus();
+      });
+      window.setInterval(refreshLessonStatus, 2000);
+      refreshLessonStatus();
+    </script>
   </body>
 </html>

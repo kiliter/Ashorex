@@ -28,10 +28,12 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /** 验证单 Worker 的成功写入、失败隔离、重启恢复和临时音频清理。 */
 class ContentGenerationWorkerTest {
@@ -49,17 +51,37 @@ class ContentGenerationWorkerTest {
   private final IntegrationSettingsProvider settings = mock(IntegrationSettingsProvider.class);
   private final IdGenerator ids = mock(IdGenerator.class);
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+  private final ThreadPoolTaskExecutor asrExecutor = executor("test-asr-");
+  private final ThreadPoolTaskExecutor llmExecutor = executor("test-llm-");
   private ContentGenerationWorker worker;
 
   @BeforeEach
   void setUp() {
     worker =
         new ContentGenerationWorker(
-            jobs, courses, contents, drafts, embyAudio, asr, summaries, quizzes, settings, ids,
-            clock);
+            jobs,
+            courses,
+            contents,
+            drafts,
+            embyAudio,
+            asr,
+            summaries,
+            quizzes,
+            settings,
+            ids,
+            clock,
+            asrExecutor,
+            llmExecutor);
     when(ids.nextId()).thenReturn("generated-id");
     when(settings.current()).thenReturn(runtimeSettings());
     when(jobs.transition(any(), any(), any(), any())).thenReturn(true);
+  }
+
+  /** 每个测试结束后关闭专用线程，避免测试 JVM 残留非守护线程。 */
+  @AfterEach
+  void shutdownExecutors() {
+    asrExecutor.shutdown();
+    llmExecutor.shutdown();
   }
 
   /** 转写完成后一次性写全文，并由 try-with-resources 删除临时 MP3。 */
@@ -157,5 +179,15 @@ class ContentGenerationWorkerTest {
         new RuntimeIntegrationSettings.OpenRouter("router-secret"),
         RuntimeIntegrationSettings.AutoFill.defaults(),
         NOW.toEpochMilli());
+  }
+
+  /** 测试继续同步等待 Worker 完成，只替换实际外部调用所在线程。 */
+  private static ThreadPoolTaskExecutor executor(String prefix) {
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setThreadNamePrefix(prefix);
+    executor.setCorePoolSize(1);
+    executor.setMaxPoolSize(1);
+    executor.initialize();
+    return executor;
   }
 }

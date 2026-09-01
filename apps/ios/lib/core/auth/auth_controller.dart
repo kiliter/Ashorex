@@ -1,10 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shangan_ios/core/api/api_exception.dart';
 import 'package:shangan_ios/core/auth/auth_repository.dart';
 import 'package:shangan_ios/core/storage/token_store.dart';
 
-enum AuthStatus { initializing, unauthenticated, authenticating, authenticated }
+enum AuthStatus {
+  initializing,
+  unauthenticated,
+  authenticating,
+  authenticated,
+  serviceUnavailable,
+}
 
 /// 认证页面需要的最小状态，不在本地保存任何业务真相。
 final class AuthState {
@@ -22,44 +30,66 @@ final class AuthController extends ChangeNotifier {
   factory AuthController({
     required AuthRepository repository,
     required TokenStore tokenStore,
+    Duration restoreTimeout = const Duration(seconds: 8),
   }) {
-    return AuthController._(repository, tokenStore);
+    return AuthController._(repository, tokenStore, restoreTimeout);
   }
 
-  AuthController._(this._repository, this._tokenStore);
+  AuthController._(this._repository, this._tokenStore, this._restoreTimeout);
 
   final AuthRepository _repository;
   final TokenStore _tokenStore;
+  final Duration _restoreTimeout;
+  int _restoreGeneration = 0;
 
   AuthState _state = const AuthState.initializing();
   AuthState get state => _state;
 
   Future<void> initialize() async {
+    final generation = ++_restoreGeneration;
     final tokens = await _tokenStore.read();
     if (tokens == null) {
       _setState(const AuthState(status: AuthStatus.unauthenticated));
       return;
     }
     try {
-      await loadCurrentUser();
-    } on ApiException catch (exception) {
+      final user = await _repository.loadCurrentUser().timeout(_restoreTimeout);
+      if (generation != _restoreGeneration) return;
+      _setState(AuthState(status: AuthStatus.authenticated, user: user));
+    } on AuthException catch (exception) {
+      if (generation != _restoreGeneration) return;
+      await _tokenStore.clear();
       _setState(
         AuthState(
           status: AuthStatus.unauthenticated,
           message: exception.message,
         ),
       );
+    } on TimeoutException {
+      if (generation != _restoreGeneration) return;
+      _setServiceUnavailable();
+    } on ApiException {
+      if (generation != _restoreGeneration) return;
+      _setServiceUnavailable();
     } catch (_) {
-      // AuthException 已由 loadCurrentUser 清理；其他异常使用安全的兜底文案。
-      if (_state.status == AuthStatus.initializing) {
-        _setState(
-          const AuthState(
-            status: AuthStatus.unauthenticated,
-            message: '暂时无法恢复登录状态，请重新登录',
-          ),
-        );
-      }
+      if (generation != _restoreGeneration) return;
+      _setServiceUnavailable();
     }
+  }
+
+  /// 服务恢复页主动重试时复用本地 Token，不要求用户重新输入账号密码。
+  Future<void> retryConnection() async {
+    _setState(const AuthState(status: AuthStatus.initializing));
+    await initialize();
+  }
+
+  void _setServiceUnavailable() {
+    _setState(
+      const AuthState(
+        status: AuthStatus.serviceUnavailable,
+        message: '暂时无法连接服务端，本机登录凭据已保留',
+      ),
+    );
   }
 
   Future<UserProfile> loadCurrentUser() async {

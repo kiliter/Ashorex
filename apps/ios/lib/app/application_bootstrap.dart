@@ -12,6 +12,7 @@ import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
 import 'package:shangan_ios/features/dashboard/data/dashboard_repository.dart';
 import 'package:shangan_ios/features/exam/data/exam_repository.dart';
 import 'package:shangan_ios/features/focus/data/focus_repository.dart';
+import 'package:shangan_ios/features/focus/data/mock_exam_repository.dart';
 import 'package:shangan_ios/features/planning/data/plan_repository.dart';
 import 'package:shangan_ios/features/player/data/watch_repository.dart';
 import 'package:shangan_ios/features/profile/data/preferences_repository.dart';
@@ -146,6 +147,7 @@ final class _ConfiguredShanganApplicationState
   late final WatchRepository _watchRepository;
   late final QuizRepository _quizRepository;
   late final FocusRepository _focusRepository;
+  late final MockExamRepository _mockExamRepository;
   late final ReportRepository _reportRepository;
   late final Future<void> _authenticationInitialization;
 
@@ -168,6 +170,7 @@ final class _ConfiguredShanganApplicationState
     _planRepository = RemotePlanRepository(_apiClient);
     _quizRepository = RemoteQuizRepository(_apiClient);
     _focusRepository = RemoteFocusRepository(_apiClient);
+    _mockExamRepository = RemoteMockExamRepository(_apiClient);
     _reportRepository = RemoteReportRepository(_apiClient);
     _authenticationInitialization = _initializeAuthenticationAndPlayer();
   }
@@ -212,6 +215,7 @@ final class _ConfiguredShanganApplicationState
             watchRepositoryProvider.overrideWithValue(_watchRepository),
             quizRepositoryProvider.overrideWithValue(_quizRepository),
             focusRepositoryProvider.overrideWithValue(_focusRepository),
+            mockExamRepositoryProvider.overrideWithValue(_mockExamRepository),
             reportRepositoryProvider.overrideWithValue(_reportRepository),
             preferencesRepositoryProvider.overrideWithValue(
               _preferencesRepository,

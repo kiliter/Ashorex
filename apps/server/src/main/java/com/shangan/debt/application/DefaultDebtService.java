@@ -42,6 +42,7 @@ public class DefaultDebtService implements DebtService {
       if (item.itemType().equals("FOCUS") && remaining > 0) {
         insert(userId, openedOn, reason, item, "FOCUS", remaining, 0, now);
       }
+      // 模拟考试属于复习任务，只保留执行与审计记录，不纳入学习欠债。
     }
     return new ArrayList<>(debts.findOpenByUser(userId));
   }

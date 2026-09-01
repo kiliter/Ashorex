@@ -64,6 +64,9 @@ public class QuizDraftPublishService {
         throw new BusinessException(HttpStatus.BAD_REQUEST, "QUIZ_DRAFT_INVALID", "所选草稿不属于当前课程");
       }
       if (draft.status() == QuizGenerationDraft.Status.PUBLISHED) continue;
+      if (draft.status() != QuizGenerationDraft.Status.READY_FOR_REVIEW) {
+        throw new BusinessException(HttpStatus.BAD_REQUEST, "QUIZ_DRAFT_INVALID", "只有待审核草稿可以通过发布");
+      }
       draft.validate();
       prepared.add(prepare(draft));
     }

@@ -54,6 +54,7 @@ class DailyReportAggregationTest {
         reports.generate("user-1", LocalDate.of(2026, 8, 30));
 
     assertThat(report.planStatus()).isEqualTo("ABANDONED");
+    assertThat(report.dayOutcome()).isEqualTo("CLOSED_WITH_DEBT");
     assertThat(report.plannedSeconds()).isEqualTo(1500);
     assertThat(report.videoStudySeconds()).isEqualTo(600);
     assertThat(report.focusSeconds()).isEqualTo(300);
@@ -61,6 +62,8 @@ class DailyReportAggregationTest {
     assertThat(report.totalTasks()).isEqualTo(2);
     assertThat(report.completionRate()).isEqualTo(50);
     assertThat(report.videoCompletedCount()).isEqualTo(1);
+    assertThat(report.mockExamCompletedCount()).isZero();
+    assertThat(report.mockExamAwaitingUploadCount()).isZero();
     assertThat(report.answerCount()).isEqualTo(2);
     assertThat(report.answerAccuracy()).isEqualTo(50);
     assertThat(report.aliveCheckFailureCount()).isEqualTo(1);

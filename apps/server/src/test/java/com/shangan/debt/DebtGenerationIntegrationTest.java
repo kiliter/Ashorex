@@ -2,10 +2,14 @@ package com.shangan.debt;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.shangan.debt.application.DebtService;
 import com.shangan.planning.application.DailyPlanService;
 import com.shangan.planning.application.VideoTaskRequirementPort;
+import com.shangan.planning.domain.PlanItem;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -25,6 +29,7 @@ class DebtGenerationIntegrationTest {
   @TempDir static Path databaseDirectory;
 
   @Autowired DailyPlanService plans;
+  @Autowired DebtService debts;
   @Autowired JdbcClient jdbc;
 
   @DynamicPropertySource
@@ -150,6 +155,54 @@ class DebtGenerationIntegrationTest {
     assertThat(itemStatus(inverseItemId)).isEqualTo("PENDING");
     plans.updateProgress("user-1", inverseItemId, 1000);
     assertThat(itemStatus(inverseItemId)).isEqualTo("COMPLETED");
+  }
+
+  @Test
+  void unfinishedMockExamDoesNotCreateLearningDebt() {
+    // 模拟考试是复习任务，只保留执行与审计记录，日终不能把它转成学习欠债。
+    jdbc.sql(
+            """
+            insert into daily_plans (
+              id,user_id,plan_date,status,lifecycle_status,version,created_at,updated_at
+            ) values ('plan-1','user-1','2026-09-01','LOCKED','ACTIVE',1,1,1)
+            """)
+        .update();
+    jdbc.sql(
+            """
+            insert into daily_plan_items (
+              id,plan_id,item_type,item_kind,title,planned_seconds,completed_seconds,
+              watch_completed,quiz_required,quiz_completed,status,sort_order,created_at,updated_at
+            ) values (
+              'mock-exam-item','plan-1','FOCUS','MOCK_EXAM','行测',7200,0,
+              0,0,0,'PENDING',0,1,1
+            )
+            """)
+        .update();
+    PlanItem mockExam =
+        new PlanItem(
+            "mock-exam-item",
+            "plan-1",
+            "MOCK_EXAM",
+            "行测",
+            null,
+            null,
+            7200,
+            0,
+            false,
+            false,
+            false,
+            "PENDING",
+            0,
+            null);
+
+    debts.generate(
+        "user-1",
+        LocalDate.of(2026, 9, 1),
+        "DAY_END",
+        List.of(mockExam),
+        Instant.parse("2026-09-01T16:00:00Z"));
+
+    assertThat(jdbc.sql("select count(*) from learning_debts").query(Long.class).single()).isZero();
   }
 
   private String itemStatus(String itemId) {

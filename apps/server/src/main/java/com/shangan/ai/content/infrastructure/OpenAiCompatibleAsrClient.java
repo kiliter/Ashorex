@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.regex.Pattern;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -17,9 +18,13 @@ import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-/** 调用 OpenAI-compatible 音频转写接口，并按顺序拼接 mlx-audio NDJSON 的 text。 */
+/** 调用 OpenAI-compatible 音频转写接口，并按顺序拼接流式响应中的 text。 */
 @Component
 public class OpenAiCompatibleAsrClient {
+
+  private static final String ASR_TEXT_MARKER = "<asr_text>";
+  private static final Pattern REPEATED_ASR_SEGMENT_PREFIX =
+      Pattern.compile("(?i)(?:language\\s+[^<\\r\\n]*?)?<asr_text>\\s*");
 
   private final ObjectMapper json;
 
@@ -27,7 +32,7 @@ public class OpenAiCompatibleAsrClient {
     this.json = json;
   }
 
-  /** 只消费 text 字段，明确忽略 accumulated，避免流式累计结果被重复拼接。 */
+  /** 只拼接每条响应的 text 字段；单个 JSON 和 NDJSON 都使用同一条解析路径。 */
   public String transcribe(Path audioPath, RuntimeIntegrationSettings.Asr configuration) {
     if (!configuration.configured()) {
       throw new BusinessException(
@@ -37,11 +42,7 @@ public class OpenAiCompatibleAsrClient {
       var requestFactory = new SimpleClientHttpRequestFactory();
       requestFactory.setConnectTimeout(java.time.Duration.ofSeconds(15));
       requestFactory.setReadTimeout(java.time.Duration.ofSeconds(configuration.timeoutSeconds()));
-      RestClient client =
-          RestClient.builder()
-              .baseUrl(configuration.baseUrl())
-              .requestFactory(requestFactory)
-              .build();
+      RestClient client = RestClient.builder().requestFactory(requestFactory).build();
       MultiValueMap<String, Object> form = new LinkedMultiValueMap<>();
       form.add("file", new FileSystemResource(audioPath));
       form.add("model", configuration.model());
@@ -52,7 +53,7 @@ public class OpenAiCompatibleAsrClient {
       String transcript =
           client
               .post()
-              .uri("/v1/audio/transcriptions")
+              .uri(resolveTranscriptionUrl(configuration.baseUrl()))
               .contentType(MediaType.MULTIPART_FORM_DATA)
               .headers(
                   headers -> {
@@ -80,13 +81,33 @@ public class OpenAiCompatibleAsrClient {
                     }
                     return result.toString();
                   });
-      if (transcript == null || transcript.isBlank()) throw failed();
-      return transcript.trim();
+      String cleanedTranscript = cleanAsrText(transcript);
+      if (cleanedTranscript == null || cleanedTranscript.isBlank()) throw failed();
+      return cleanedTranscript;
     } catch (BusinessException exception) {
       throw exception;
     } catch (Exception exception) {
       throw failed();
     }
+  }
+
+  /** 清理 Qwen3-ASR 首段及长音频内部各片段重复返回的语言头和文本控制标记。 */
+  private String cleanAsrText(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return raw;
+    }
+    int firstMarker = raw.indexOf(ASR_TEXT_MARKER);
+    String transcript =
+        firstMarker >= 0 ? raw.substring(firstMarker + ASR_TEXT_MARKER.length()) : raw;
+    return REPEATED_ASR_SEGMENT_PREFIX.matcher(transcript).replaceAll("").trim();
+  }
+
+  /** 兼容配置项以服务根地址或 /v1 结尾，避免生成重复的 /v1/v1 路径。 */
+  private String resolveTranscriptionUrl(String configuredBaseUrl) {
+    String baseUrl = configuredBaseUrl.strip().replaceAll("/+$", "");
+    return baseUrl.endsWith("/v1")
+        ? baseUrl + "/audio/transcriptions"
+        : baseUrl + "/v1/audio/transcriptions";
   }
 
   private BusinessException failed() {

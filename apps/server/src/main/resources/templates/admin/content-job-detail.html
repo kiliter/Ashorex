@@ -1,33 +1,211 @@
 <!doctype html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
-  <head th:replace="~{admin/fragments :: head('任务日志 - 上岸管理台')}"></head>
+  <head th:replace="~{admin/fragments :: head('工作流日志 - 上岸管理台')}"></head>
   <body class="admin-body"><div class="admin-shell">
     <header th:replace="~{admin/fragments :: navigation('jobs')}"></header>
     <main class="admin-main">
-      <section class="page-head"><div class="container"><div class="route"><a th:href="@{/admin/content-jobs}">内容任务</a><span>/</span><span class="num" th:text="${job.id}">job</span></div><div class="page-head-row"><div><h1 class="page-title" data-code="LOG/05">任务日志</h1><p class="page-desc" th:text="|${course.name} / ${lesson.title}|">课程 / 课时</p></div><form th:if="${job.status.name() == 'FAILED'}" method="post" th:action="@{/admin/content-jobs/{id}/retry(id=${job.id})}"><button type="submit">重新排队</button></form></div></div></section>
-      <div class="container workspace">
+      <section class="page-head"><div class="container"><div class="route"><a th:href="@{/admin/content-jobs}">内容任务</a><span>/</span><a th:href="@{/admin/content-jobs/courses/{id}(id=${course.id})}" th:text="${course.name}">课程</a><span>/</span><span th:text="${lesson.title}">课时</span></div><div class="page-head-row"><div><h1 class="page-title" data-code="FLOW/06" th:text="${lesson.title}">课时工作流</h1><p class="page-desc" data-workflow-subtitle th:text="|${workflow.queuedAtLabel} 排队 · 转写、摘要、出题合并记录|">排队时间</p></div><a class="btn btn-secondary" th:href="@{/admin/lessons/{id}/study-content(id=${lesson.id})}">查看课时内容</a></div></div></section>
+      <div class="container workspace" data-workflow-live th:attr="data-live-url=@{/admin/content-jobs/workflows/{courseId}/{lessonId}/{queuedAt}/live(courseId=${workflow.courseId},lessonId=${workflow.lessonId},queuedAt=${workflow.queuedAt})},data-login-url=@{/admin/login},data-retry-base=@{/admin/content-jobs/},data-csrf-token=${_csrf.token},data-csrf-parameter=${_csrf.parameterName}">
         <div class="summary-strip">
-          <div class="summary-item"><div class="summary-label">任务类型</div><div class="summary-value" th:text="${job.type}">TYPE</div></div>
-          <div class="summary-item"><div class="summary-label">当前状态</div><div class="summary-value" th:text="${job.status}">STATUS</div></div>
-          <div class="summary-item"><div class="summary-label">尝试次数</div><div class="summary-value" th:text="${job.attempt}">1</div></div>
-          <div class="summary-item"><div class="summary-label">总耗时</div><div class="summary-value" th:text="${job.totalMs != null ? job.totalMs + 'ms' : '—'}">—</div></div>
+          <div class="summary-item"><div class="summary-label">工作流状态</div><div class="summary-value" data-workflow-status th:text="${workflow.statusLabel}">状态</div></div>
+          <div class="summary-item"><div class="summary-label">阶段数</div><div class="summary-value"><span data-stage-count th:text="${#lists.size(stages)}">0</span><small> / 3</small></div></div>
+          <div class="summary-item"><div class="summary-label">累计耗时</div><div class="summary-value num" data-workflow-total th:text="${workflow.totalDurationLabel}">—</div></div>
+          <div class="summary-item"><div class="summary-label">监测状态</div><div class="summary-value workflow-monitor" data-workflow-live-state>自动刷新中</div></div>
         </div>
-        <section class="panel"><div class="panel-head"><h2>SNAPSHOT / 任务快照</h2><span class="badge" th:classappend="${job.status.name() == 'FAILED' ? ' danger' : (job.status.name() == 'READY' or job.status.name() == 'READY_FOR_REVIEW' ? ' success' : ' warning')}" th:text="${job.status}">状态</span></div>
-          <table><tbody>
-            <tr><td>课程 / 课时</td><td><strong th:text="${course.name}">课程</strong> · <span th:text="${lesson.title}">课时</span></td></tr>
-            <tr><td>任务 ID</td><td class="num" th:text="${job.id}">ID</td></tr>
-            <tr><td>模型快照</td><td class="num" th:text="${job.asrModel ?: job.llmModel ?: '—'}">—</td></tr>
-            <tr><td>上下文 / 最大输出</td><td class="num" th:text="${job.llmContextLength != null ? job.llmContextLength + ' / ' + job.llmMaxCompletionTokens : '—'}">—</td></tr>
-            <tr><td>音频获取 / 转写 / 摘要 / 出题</td><td class="num" th:text="|${job.fetchMs ?: '—'} / ${job.transcribeMs ?: '—'} / ${job.summarizeMs ?: '—'} / ${job.quizGenerateMs ?: '—'} ms|">—</td></tr>
-            <tr><td>Token usage</td><td class="num" th:text="|prompt ${job.promptTokens ?: '—'} / completion ${job.completionTokens ?: '—'}|">—</td></tr>
-            <tr th:if="${job.errorCode != null}"><td>失败原因</td><td class="danger"><strong th:text="${job.errorCode}">CODE</strong> · <span th:text="${job.errorMessage}">原因</span></td></tr>
-          </tbody></table>
+        <section class="panel workflow-overview-panel"><div class="panel-head"><div><h2>PIPELINE / 三阶段工作流</h2><p class="muted">未创建代表该阶段已有结果或本次只执行单阶段任务</p></div><span class="badge" data-workflow-badge th:classappend="${workflow.status == 'FAILED' ? ' danger' : (workflow.status == 'COMPLETED' ? ' success' : ' warning')}" th:text="${workflow.statusLabel}">状态</span></div>
+          <div class="workflow-rail workflow-rail--detail" data-workflow-rail><div class="workflow-stage" th:each="stage,stageStat : ${workflow.stages}" th:attr="data-status=${stage.status}"><span class="workflow-stage__index num" th:text="${#numbers.formatInteger(stageStat.index + 1, 2)}">01</span><div><strong th:text="${stage.typeLabel}">阶段</strong><span th:text="${stage.statusLabel}">状态</span></div><time class="num" th:text="${stage.durationLabel}">—</time></div></div>
         </section>
-        <section class="panel"><div class="panel-head"><h2>EVENT / 阶段日志</h2><span class="muted">不记录正文、Prompt、密钥或完整上游响应</span></div>
-          <div class="empty-state" th:if="${#lists.isEmpty(logs)}"><strong>尚无阶段日志</strong>任务进入 Worker 后会在此记录安全事件。</div>
-          <div class="log-list" th:unless="${#lists.isEmpty(logs)}"><div class="log-row" th:each="entry : ${logs}"><time class="log-time" th:text="${entry.occurredAt}">time</time><span class="badge" th:classappend="${entry.level == 'ERROR' ? ' danger' : ' success'}" th:text="${entry.stage}">stage</span><span th:text="${entry.message}">message</span></div></div>
+        <section class="panel"><div class="panel-head"><div><h2>STAGE / 阶段快照</h2><p class="muted">模型、时间和耗时均为任务开始时的快照</p></div></div>
+          <div class="workflow-stage-cards" data-stage-cards>
+            <article class="workflow-stage-card" th:each="stage : ${stages}" th:attr="data-status=${stage.status}">
+              <div class="workflow-stage-card__head"><div><span class="eyebrow" th:text="${stage.typeLabel}">阶段</span><h3 th:text="${stage.statusLabel}">状态</h3></div><span class="badge" th:classappend="${stage.status == 'FAILED' ? ' danger' : (stage.status == 'READY' or stage.status == 'READY_FOR_REVIEW' ? ' success' : ' warning')}" th:text="${stage.statusLabel}">状态</span></div>
+              <dl class="workflow-stage-card__facts"><div><dt>任务模型</dt><dd class="num" th:text="${stage.asrModel ?: stage.llmModel ?: '—'}">—</dd></div><div><dt>开始 / 结束</dt><dd class="num" th:text="|${stage.startedAtLabel} / ${stage.finishedAtLabel}|">—</dd></div><div><dt>阶段 / 总耗时</dt><dd class="num" th:text="|${stage.stageDurationLabel} / ${stage.totalDurationLabel}|">—</dd></div><div><dt>Tokens</dt><dd class="num" th:text="|${stage.promptTokens ?: '—'} / ${stage.completionTokens ?: '—'}|">—</dd></div></dl>
+              <div class="workflow-stage-card__error" th:hidden="${stage.errorCode == null}"><strong th:text="${stage.errorCode}">错误码</strong><span th:text="${stage.errorMessage}">错误消息</span></div>
+              <button class="btn btn-secondary btn-sm" type="button" data-retry-job th:if="${stage.status == 'FAILED'}" th:attr="data-job-id=${stage.id}">重新排队此阶段</button>
+            </article>
+          </div>
+        </section>
+        <section class="panel"><div class="panel-head"><div><h2>EVENT / 合并日志</h2><p class="muted">三个阶段按发生时间汇总；不记录正文、Prompt、密钥或完整上游响应</p></div><span class="num" data-log-count th:text="|${#lists.size(logs)} 条|">0 条</span></div>
+          <div class="empty-state" data-workflow-logs-empty th:hidden="${!#lists.isEmpty(logs)}"><strong>尚无阶段日志</strong>任务进入 Worker 后会在此记录安全事件。</div>
+          <div class="workflow-log-list" data-workflow-logs th:hidden="${#lists.isEmpty(logs)}"><div class="workflow-log-row" th:each="entry : ${logs}"><time class="log-time" th:text="${entry.occurredAtLabel}">时间</time><span class="workflow-log-type" th:text="${entry.jobTypeLabel}">阶段</span><span class="badge" th:classappend="${entry.level == 'ERROR' ? ' danger' : ' success'}" th:text="${entry.stageLabel}">状态</span><span th:text="${entry.message}">消息</span></div></div>
         </section>
       </div>
+      <div class="toast-region" aria-live="polite" aria-atomic="true" data-toast-region></div>
     </main>
-  </div></body>
+  </div>
+  <script>
+    // 工作流详情只替换阶段快照和日志，避免自动刷新打断管理员查看。
+    const liveRoot = document.querySelector("[data-workflow-live]");
+    const toastRegion = document.querySelector("[data-toast-region]");
+    let liveTimer;
+    let liveRefreshing = false;
+    const scheduleLiveRefresh = (delay = 2000) => {
+      window.clearTimeout(liveTimer);
+      liveTimer = window.setTimeout(pollWorkflow, delay);
+    };
+    const badgeClass = (status) => status === "FAILED" ? "danger" : ["READY", "READY_FOR_REVIEW", "COMPLETED"].includes(status) ? "success" : "warning";
+    const showToast = (success, message) => {
+      const toast = document.createElement("div");
+      toast.className = `toast ${success ? "toast--success" : "toast--error"}`;
+      toast.innerHTML = `<span class="toast__icon" aria-hidden="true"></span><div><strong>${success ? "操作完成" : "操作失败"}</strong><p></p></div><button type="button" class="toast__close" aria-label="关闭通知">&times;</button>`;
+      toast.querySelector("p").textContent = message;
+      toast.querySelector(".toast__close").addEventListener("click", () => toast.remove());
+      toastRegion.appendChild(toast);
+      window.setTimeout(() => toast.remove(), 5000);
+    };
+    const buildRailStage = (stage, index) => {
+      const item = document.createElement("div");
+      item.className = "workflow-stage";
+      item.dataset.status = stage.status;
+      const sequence = document.createElement("span");
+      sequence.className = "workflow-stage__index num";
+      sequence.textContent = String(index + 1).padStart(2, "0");
+      const copy = document.createElement("div");
+      const name = document.createElement("strong");
+      name.textContent = stage.typeLabel;
+      const status = document.createElement("span");
+      status.textContent = stage.statusLabel;
+      copy.append(name, status);
+      const duration = document.createElement("time");
+      duration.className = "num";
+      duration.textContent = stage.durationLabel;
+      item.append(sequence, copy, duration);
+      return item;
+    };
+    const createRetryButton = (stage) => {
+      const button = document.createElement("button");
+      button.className = "btn btn-secondary btn-sm";
+      button.type = "button";
+      button.dataset.retryJob = "";
+      button.dataset.jobId = stage.id;
+      button.textContent = "重新排队此阶段";
+      return button;
+    };
+    const fact = (label, value) => {
+      const item = document.createElement("div");
+      const term = document.createElement("dt");
+      term.textContent = label;
+      const detail = document.createElement("dd");
+      detail.className = "num";
+      detail.textContent = value;
+      item.append(term, detail);
+      return item;
+    };
+    const buildStageCard = (stage) => {
+      const card = document.createElement("article");
+      card.className = "workflow-stage-card";
+      card.dataset.status = stage.status;
+      const head = document.createElement("div");
+      head.className = "workflow-stage-card__head";
+      const titleWrap = document.createElement("div");
+      const eyebrow = document.createElement("span");
+      eyebrow.className = "eyebrow";
+      eyebrow.textContent = stage.typeLabel;
+      const title = document.createElement("h3");
+      title.textContent = stage.statusLabel;
+      titleWrap.append(eyebrow, title);
+      const badge = document.createElement("span");
+      badge.className = `badge ${badgeClass(stage.status)}`;
+      badge.textContent = stage.statusLabel;
+      head.append(titleWrap, badge);
+      const facts = document.createElement("dl");
+      facts.className = "workflow-stage-card__facts";
+      facts.append(fact("任务模型", stage.asrModel || stage.llmModel || "—"), fact("开始 / 结束", `${stage.startedAtLabel} / ${stage.finishedAtLabel}`), fact("阶段 / 总耗时", `${stage.stageDurationLabel} / ${stage.totalDurationLabel}`), fact("Tokens", `${stage.promptTokens ?? "—"} / ${stage.completionTokens ?? "—"}`));
+      card.append(head, facts);
+      if (stage.errorCode) {
+        const error = document.createElement("div");
+        error.className = "workflow-stage-card__error";
+        const code = document.createElement("strong");
+        code.textContent = stage.errorCode;
+        const message = document.createElement("span");
+        message.textContent = stage.errorMessage || "任务失败";
+        error.append(code, message);
+        card.appendChild(error);
+      }
+      if (stage.status === "FAILED") card.appendChild(createRetryButton(stage));
+      return card;
+    };
+    const renderLogs = (logs) => {
+      const container = liveRoot.querySelector("[data-workflow-logs]");
+      container.replaceChildren();
+      logs.forEach((entry) => {
+        const row = document.createElement("div");
+        row.className = "workflow-log-row";
+        const time = document.createElement("time");
+        time.className = "log-time";
+        time.textContent = entry.occurredAtLabel;
+        const type = document.createElement("span");
+        type.className = "workflow-log-type";
+        type.textContent = entry.jobTypeLabel;
+        const stage = document.createElement("span");
+        stage.className = `badge ${entry.level === "ERROR" ? "danger" : "success"}`;
+        stage.textContent = entry.stageLabel;
+        const message = document.createElement("span");
+        message.textContent = entry.message;
+        row.append(time, type, stage, message);
+        container.appendChild(row);
+      });
+      liveRoot.querySelector("[data-workflow-logs-empty]").hidden = logs.length > 0;
+      container.hidden = logs.length === 0;
+      liveRoot.querySelector("[data-log-count]").textContent = `${logs.length} 条`;
+    };
+    const renderWorkflow = (payload) => {
+      const flow = payload.workflow;
+      liveRoot.querySelector("[data-workflow-status]").textContent = flow.statusLabel;
+      document.querySelector("[data-workflow-subtitle]").textContent = `${flow.queuedAtLabel} 排队 · 转写、摘要、出题合并记录`;
+      liveRoot.querySelector("[data-workflow-total]").textContent = flow.totalDurationLabel;
+      liveRoot.querySelector("[data-stage-count]").textContent = payload.stages.length;
+      const badge = liveRoot.querySelector("[data-workflow-badge]");
+      badge.className = `badge ${badgeClass(flow.status)}`;
+      badge.textContent = flow.statusLabel;
+      liveRoot.querySelector("[data-workflow-rail]").replaceChildren(...flow.stages.map(buildRailStage));
+      liveRoot.querySelector("[data-stage-cards]").replaceChildren(...payload.stages.map(buildStageCard));
+      renderLogs(payload.logs);
+    };
+    const retryStage = async (button) => {
+      button.disabled = true;
+      try {
+        const body = new URLSearchParams();
+        body.set(liveRoot.dataset.csrfParameter, liveRoot.dataset.csrfToken);
+        const response = await fetch(`${liveRoot.dataset.retryBase}${encodeURIComponent(button.dataset.jobId)}/retry-live`, {method: "POST", headers: {Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded"}, credentials: "same-origin", body});
+        const contentType = response.headers.get("content-type") || "";
+        if (response.redirected || !contentType.includes("application/json")) { window.location.assign(liveRoot.dataset.loginUrl); return; }
+        const payload = await response.json();
+        if (!response.ok || !payload.success) throw new Error(payload.detail || payload.message || "重新排队失败");
+        showToast(true, payload.message);
+        window.history.replaceState({}, "", payload.workflowUrl);
+        liveRoot.dataset.liveUrl = `${payload.workflowUrl}/live`;
+        scheduleLiveRefresh(0);
+      } catch (error) {
+        showToast(false, error.message || "重新排队失败");
+        button.disabled = false;
+      }
+    };
+    liveRoot.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-retry-job]");
+      if (button) retryStage(button);
+    });
+    const pollWorkflow = async () => {
+      if (liveRefreshing) return;
+      if (document.hidden) { scheduleLiveRefresh(); return; }
+      liveRefreshing = true;
+      const state = liveRoot.querySelector("[data-workflow-live-state]");
+      try {
+        const response = await fetch(liveRoot.dataset.liveUrl, {headers: {Accept: "application/json"}, credentials: "same-origin"});
+        const contentType = response.headers.get("content-type") || "";
+        if (response.redirected || !contentType.includes("application/json")) { window.location.assign(liveRoot.dataset.loginUrl); return; }
+        if (!response.ok) throw new Error("工作流状态读取失败");
+        renderWorkflow(await response.json());
+        state.textContent = "自动刷新中";
+      } catch (error) {
+        state.textContent = "刷新失败，正在重试";
+      } finally {
+        liveRefreshing = false;
+        scheduleLiveRefresh();
+      }
+    };
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) scheduleLiveRefresh(0); });
+    scheduleLiveRefresh(800);
+  </script>
+  </body>
 </html>

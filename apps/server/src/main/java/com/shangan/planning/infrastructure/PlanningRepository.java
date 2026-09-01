@@ -17,6 +17,8 @@ public interface PlanningRepository {
 
   Optional<PlanItem> findOwnedItem(String userId, String itemId);
 
+  boolean isActiveBattleOrder(String planId);
+
   void insertPlan(DailyPlan plan, Instant now);
 
   void insertItem(PlanItem item, Instant now);

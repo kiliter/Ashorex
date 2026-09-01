@@ -2,7 +2,7 @@
 
 > **执行要求：** 按 Task 顺序单线程实施，不使用多智能体。步骤使用 checkbox（`- [ ]`）跟踪。
 
-**Goal:** 构建一款 iOS-only 的学习监督 App，完成 Emby 视频学习、可信观看、计划锁定、开摆欠债、答题、计时、报表，以及课程自动转写、摘要和 AI 题目草稿闭环。
+**Goal:** 构建一款 iOS-only 的学习监督 App，完成 Emby 视频学习、可信观看、今日作战单编排、模拟考试、自动日终结算、欠债、答题、独立专注、报表，以及课程自动转写、摘要和 AI 题目草稿闭环。
 
 **Architecture:** 单仓库包含 Flutter iOS App 与 Spring Boot 模块化单体。服务端以 SQLite 为业务真相，Emby 提供媒体与音频流；课程全文和 Markdown 摘要可由管理员导入，也可由持久化串行任务调用 OpenAI-compatible ASR/LLM 生成；AI 题目只进入待审核草稿，管理员发布后才进入正式题库。Flutter 只负责交互、播放器、心跳和只读内容查询。
 
@@ -402,6 +402,8 @@ git commit -m "feat(server): bootstrap sqlite modular monolith"
 - Create: `apps/server/src/main/java/com/shangan/admin/AdminLoginController.java`
 - Create: `apps/server/src/main/resources/templates/admin/login.html`
 - Create: `apps/server/src/main/resources/db/migration/V002__identity_indexes.sql`
+- Create: `apps/server/src/main/resources/db/migration/V018__persistent_admin_sessions.sql`
+- Create: `docs/adr/0009-persistent-admin-session.md`
 - Test: `apps/server/src/test/java/com/shangan/identity/AuthFlowIntegrationTest.java`
 - Test: `apps/server/src/test/java/com/shangan/admin/AdminSecurityTest.java`
 
@@ -439,6 +441,8 @@ Expected: FAIL because endpoints do not exist.
 Add `spring-security-oauth2-jose` and use Spring Security's Nimbus JWT encoder/decoder. Use BCrypt strength 12.
 
 Store only SHA-256 hash of refresh tokens.
+
+管理后台使用 Spring Session JDBC 将认证上下文持久化到 SQLite，Flyway 负责 Session 表结构，七天无访问后失效。测试必须证明登录后 Session 已写入数据库；App API 的安全链继续保持 `STATELESS`。
 
 Persist user preferences:
 
@@ -597,12 +601,14 @@ Tabs:
 
 The non-authenticated route is `/login`. The authenticated initial route is `/home`.
 
-The My tab exposes settings for `aliveCheckLevel` and `dayEndLocalTime`, backed by:
+The My tab exposes learning preferences for `aliveCheckEnabled`, `aliveCheckIntervalPercent` and `dayEndLocalTime`, backed by:
 
 ```text
 GET /api/v1/preferences
 PUT /api/v1/preferences
 ```
+
+Every user may use a slider to update `aliveCheckIntervalPercent` in the range 1–50; the default is 50. The same page may disable alive checks without changing the saved percentage.
 
 - [ ] **Step 6: Add an integration-test shell**
 
@@ -828,6 +834,8 @@ git commit -m "feat(exam): add countdown and progress pressure"
 ---
 
 ### Task 7: Daily Plans, Locking, Abandonment, and Debt Ledger
+
+> **历史 Task，计划锁定和手动开摆由 Task 21 替代。** 已有欠债、日终调度和历史数据读取继续复用。
 
 **Files:**
 - Create: `apps/server/src/main/java/com/shangan/planning/domain/DailyPlan.java`
@@ -1060,9 +1068,9 @@ For each heartbeat:
 ```text
 elapsed = clamp(now - lastHeartbeat, 0, 15s)
 positionDelta = currentPosition - lastPosition
-allowedForwardDelta = elapsed × 1.25 + 3000ms
+allowedForwardDelta = elapsed × playbackSpeed × 1.25 + 3000ms
 acceptedForwardDelta = clamp(positionDelta, 0, allowedForwardDelta)
-countedWatch = min(elapsed, acceptedForwardDelta)
+countedWatch = min(elapsed, acceptedForwardDelta / playbackSpeed)
 ```
 
 Only apply when `playing && foreground && !aliveCheckPending`.
@@ -1101,6 +1109,8 @@ git commit -m "feat(learning): verify watch progress and require alive checks"
 ---
 
 ### Task 10: iOS Learning Player
+
+> **部分被 Task 22 替代。** 可信心跳、验活和 Seek Guard 继续保留；画面内控制层、横屏全屏、摘要和复习模式由 Task 22 实现。
 
 **Files:**
 - Create: `apps/ios/lib/features/player/domain/learning_player_state.dart`
@@ -1252,6 +1262,8 @@ git commit -m "feat(quiz): add post-video assessments"
 ---
 
 ### Task 12: Focus Timer, Daily Report, Weekly Report, and Judgment
+
+> **部分被 Task 21 和 Task 22 替代。** 专注状态机与报表聚合继续保留；专注不再绑定作战单，手动开摆改为自动日终结果，报表日期导航改用选择器。
 
 **Files:**
 - Create: `apps/server/src/main/java/com/shangan/focus/domain/FocusSession.java`
@@ -2030,7 +2042,7 @@ git commit -m "feat(catalog): import lesson study contents"
 
 **接口：**
 
-- ADMIN：单课时和课程级转写、摘要、AI 出题，任务列表、详情、重试，题目草稿和批量发布，OpenRouter 模型目录刷新。
+- ADMIN：课时“AI 一下”和多课时批量完整工作流，内容详情单阶段重做，任务列表、详情、重试，题目草稿批量通过、驳回和删除，OpenRouter 模型目录刷新。
 - App API：扩展 `GET /api/v1/lessons/{lessonId}/study-content` 表达全文与摘要部分就绪。
 - 不增加 Flutter 写接口、聊天接口、MCP 或智能体。
 
@@ -2055,8 +2067,8 @@ lesson_study_contents 允许两项独立就绪
 ```text
 请求 16 kHz / 单声道 / 64 kbps MP3
 边接收边写临时文件，不下载视频
-ASR stream=true、chunk_duration 可配置
-只按顺序拼接每行 text，不重复拼接 accumulated
+ASR stream=true，不发送 mlx-audio 专属 chunk_duration
+只按顺序拼接每行 text，不重复拼接 accumulated，并清理 vLLM Qwen3-ASR 返回的 `<asr_text>` 标记
 流内 error、空文本、非 2xx 和超时失败
 成功、失败、取消和超时后都删除临时音频
 ```
@@ -2065,7 +2077,9 @@ ASR stream=true、chunk_duration 可配置
 
 固定调用 `https://openrouter.ai/api/v1/models`，解析模型 ID、显示名、上下文、最大输出、Tokenizer 和支持参数。刷新使用短事务 Upsert，缺失旧模型标记 inactive；失败保留旧缓存。配置页支持缓存搜索选择和 CPA 自定义模型手工兜底。
 
-运行时配置使用现有原子快照模式。任务开始时冻结 Base URL、模型 ID、上下文和输出上限；页面保存后的新配置只影响新任务。任何密钥不得进入业务 API、任务日志和错误响应。
+运行时配置使用现有原子快照模式。任务开始时冻结 Base URL、模型 ID、上下文、输出上限和思考等级；页面保存后的新配置只影响新任务。任何密钥不得进入业务 API、任务日志和错误响应。
+
+配置页提供 ASR 与 LLM 连通性测试。ASR 使用服务端内置的“你好”MP3，测试后删除临时文件；LLM 只发送最小提示词。两个测试均使用已保存配置，结果不得包含密钥。
 
 - [ ] **步骤 4：实现共用上下文预算与递归分层处理器**
 
@@ -2091,9 +2105,11 @@ GENERATE_QUIZ：QUEUED → GENERATING_QUIZ → READY_FOR_REVIEW / FAILED
 
 同课时同类型禁止重复未完成任务。批量任务按课程和课时排序创建。外部调用期间不持有事务；状态和日志使用短事务。服务重启将遗留执行态标记 `FAILED/SERVER_RESTARTED`。失败任务不自动重新消费，管理员可手动重试。
 
+ASR 外部调用使用独立单线程池，摘要和出题共用独立 LLM 单线程池。全局 Worker 必须同步等待当前调用完成后再消费下一条任务，不能因此产生跨任务并发。两个线程池每 30 秒打印一次存活日志，包含 `IDLE/WAITING/RUNNING`、当前任务 ID、阶段、活跃线程数和排队数，不得包含正文、Prompt、请求参数或密钥。
+
 - [ ] **步骤 6：实现摘要与 AI 题目草稿**
 
-摘要输出固定中文 Markdown。AI 出题默认 4 道单选和 1 道判断，创建任务时允许 1～20 题。支持结构化输出的模型优先使用 JSON Schema，否则使用严格 JSON；允许同一任务内一次格式修复。
+摘要输出固定中文 Markdown，只整理视频全文中明确讲到的内容，分段和最终汇总阶段均禁止联想、推断、评价、补充外部知识或给出学习建议。AI 出题默认 4 道单选和 1 道判断，创建任务时允许 1～20 题。支持结构化输出的模型优先使用 JSON Schema，否则使用严格 JSON；允许同一任务内一次格式修复。
 
 校验：
 
@@ -2109,11 +2125,13 @@ GENERATE_QUIZ：QUEUED → GENERATING_QUIZ → READY_FOR_REVIEW / FAILED
 
 - [ ] **步骤 7：实现草稿审核和课程级批量发布**
 
-课时题目页可编辑、删除和选择草稿。课程草稿页可选择多个 `READY_FOR_REVIEW` 草稿执行批量发布。应用服务在事务外校验全部草稿，在一个短事务中追加正式题目和选项并标记草稿已发布。任一草稿无效整批不写入；重复提交不重复建题；已有正式题目不删除、不覆盖。
+课时题目页可编辑和删除单题。课程草稿页可选择多个草稿执行批量通过、驳回或删除。批量通过由应用服务在事务外校验全部草稿，再在一个短事务中追加正式题目和选项并标记草稿已发布；任一草稿无效整批不写入，重复提交不重复建题，已有正式题目不删除、不覆盖。驳回保留草稿内容，整份删除只允许未发布草稿。
 
 - [ ] **步骤 8：复刻高保真后台并接入真实数据**
 
-严格以 `/Users/zhangjialin/Downloads/shangan-admin-prototype.html` 为视觉和交互基准，完成高密度桌面布局。增加内容任务导航、课程/课时按钮、题目草稿、批量发布、运行状态耗时和服务配置，不引入单独前端框架。
+严格以 `/Users/zhangjialin/Downloads/shangan-admin-prototype.html` 为视觉和交互基准，完成高密度桌面布局。课时列表只保留“AI 一下”，支持勾选多个课时批量执行，单阶段重做放入内容详情；增加内容任务导航、题目草稿批量审核、运行状态耗时和服务配置，不引入单独前端框架。
+
+内容任务列表和详情使用每 2 秒一次的局部 JSON 轮询，不重新渲染完整页面；标签页重新可见时立即刷新，单次失败继续重试，Session 失效或响应不是 JSON 时跳转登录页。所有面向管理员显示的任务类型、任务状态、日志阶段、草稿状态、账号角色和内容就绪状态统一使用中文，筛选与状态判断仍使用原始枚举值。
 
 - [ ] **步骤 9：实现默认关闭的定时补全**
 
@@ -2140,6 +2158,124 @@ make verify
 ```bash
 git add .
 git commit -m "feat(ai): generate lesson contents and quiz drafts"
+```
+
+### Task 21：今日作战单、模拟考试、复习审计与自动日终结果
+
+**前置文档：**
+
+- `docs/adr/0011-mutable-battle-order-and-day-outcome.md`
+- `CONTEXT.md`
+
+**主要文件：**
+
+- 新建：`apps/server/src/main/resources/db/migration/V019__battle_orders_and_mock_exams.sql`
+- 修改：`planning`、`debt`、`focus`、`learning`、`reporting`、`catalog` Feature
+- 新建：`apps/server/src/main/java/com/shangan/planning/application/BattleOrderService.java`
+- 新建：`apps/server/src/main/java/com/shangan/focus/application/MockExamPresetService.java`
+- 新建：`apps/server/src/main/java/com/shangan/focus/application/MockExamService.java`
+- 新建：模拟考试预置、会话、附件和复习审计 Repository/Controller
+- 修改：`docs/api/openapi.yaml`
+- 测试：作战单快照、版本冲突、修订审计、模拟考试、复习事件、日终结果和附件安全测试
+
+**接口：**
+
+- `GET/PUT /api/v1/plans/{date}`
+- `GET/POST/PUT/DELETE /api/v1/mock-exam-presets[/{id}]`
+- `POST /api/v1/mock-exams/{planItemId}/start`
+- `POST /api/v1/mock-exams/{sessionId}/submit-early`
+- `POST /api/v1/mock-exams/{sessionId}/attachments`
+- 模拟考试会话和附件鉴权读取接口
+
+- [ ] **步骤 1：先写作战单完整快照失败测试**
+
+覆盖首次保存、修改未开始项目、删除后不产债、不可修改项目保护、版本冲突、同日课时去重、已学课时转复习快捷入口、整单校验失败零写入和修订审计。
+
+- [ ] **步骤 2：追加 V019 并迁移历史计划**
+
+将未结束 `LOCKED` 计划迁移为 `ACTIVE`，保留历史终态与 `plan_abandonments` 只读数据。追加版本、修订、模拟考试预置/会话/附件和复习事件结构；不得修改 V001～V018。
+
+- [ ] **步骤 3：实现作战单原子保存**
+
+`PUT` 接受 `expectedVersion` 和完整项目列表。应用服务在事务中校验不可修改项目、课时状态、考试预置快照和重复项，并按课程及课时固有顺序重排视频与复习快捷入口，再完成差异保存、版本递增及修订审计。客户端 `sortOrder` 不能改变课时固有顺序；`REVIEW_SHORTCUT` 不进入完成率或欠债计算。
+
+- [ ] **步骤 4：实现考试预置和模拟考试状态机**
+
+预置按用户隔离并支持排序。V022 为已有用户幂等补齐行测 120 分钟、申论 180 分钟和大作文 180 分钟，新用户创建事务通过显式初始化接口补齐同样数据。模拟考试截止时间使用注入 `Clock`，切后台不暂停；自然到时或提前交卷进入 `AWAITING_UPLOAD`，至少一个合法附件后完成。测试必须覆盖非法转换、重复提交和所有权。
+
+- [ ] **步骤 5：实现安全附件存储与备份**
+
+文件名由服务端生成，路径固定在数据目录下，校验文件签名、扩展名、大小、数量和 SHA-256；拒绝路径穿越和越权。数据库事务失败时清理临时文件，备份恢复脚本同时处理附件目录并校验清单。
+
+- [ ] **步骤 6：简化专注并记录复习审计**
+
+专注 API 不再接收或更新 `planItemId`。只有 `REVIEW_SHORTCUT` 关联会话的第一次有效心跳写一条复习事件；不累计复习完成率、欠债或有效学习时长。
+
+- [ ] **步骤 7：替换手动开摆和日终结算**
+
+删除新的 abandon 写入口。日终幂等产生 `COMPLETED`、`CLOSED_WITH_DEBT`、`FREE_STUDY` 或 `SLACKED` 结果；服务重启补算遗漏日期。报表列出复习审计，但不把它加入学习时长。
+
+- [ ] **步骤 8：更新 OpenAPI、运行窄测试和完整验证**
+
+```bash
+cd apps/server
+./mvnw -Dtest='*BattleOrder*,*MockExam*,*DayOutcome*,*ReviewEvent*' test
+cd ../..
+make format
+make verify
+```
+
+- [ ] **步骤 9：检查并提交**
+
+```bash
+git add CONTEXT.md docs/adr/0011-mutable-battle-order-and-day-outcome.md docs/api/openapi.yaml apps/server apps/ios
+git commit -m "feat(planning): replace locked plans with battle orders"
+```
+
+### Task 22：iOS 作战单编排与学习体验修复
+
+**主要文件：**
+
+- 修改：Flutter `planning`、`catalog`、`player`、`focus`、`reporting`、`auth` 和 `dashboard` Feature
+- 新建：作战单编排页、模拟考试预置设置、模拟考试执行与照片上传页面
+- 测试：对应 Controller、Parser 和关键确认流程 Widget 测试
+
+- [ ] **步骤 1：先写失败的 Widget 和 Controller 测试**
+
+覆盖作战单完整保存、考试预置选择、复习快捷入口、非作战单播放提醒、课时进度与摘要按钮、播放器控制层和全屏、启动超时恢复页、首页小工具菜单以及日报/周报日期选择器。
+
+- [ ] **步骤 2：实现作战单编排区**
+
+首页无作战单时显示“制定今日作战单”，已有作战单时显示“修改作战单”。编排页集中选择课时和考试预置，支持排序、删除和重新选择未开始模拟考试，只有“保存作战单”一次写操作；课程详情移除加入按钮。
+
+- [ ] **步骤 3：实现课程状态、摘要与播放提醒**
+
+课时列表使用服务端可信进度显示未学习、百分比或已学习；摘要可用时显示小眼睛并按需弹出 Markdown。非作战单播放先提示，继续观看保留可信记录但不完成作战单。
+
+- [ ] **步骤 4：实现播放器画面内控制和横屏全屏**
+
+控制层包含可信进度、时间、快退/播放暂停/快进、倍速和全屏，约 3 秒自动隐藏。心跳携带当前倍速，服务端按倍速校验内容位置但按真实时间累计学习时长。全屏复用同一 Controller/会话并正确恢复方向和系统 UI。播放器下方仅在摘要就绪且非空时显示摘要。
+
+- [ ] **步骤 5：实现首页小工具、我的菜单和模拟考试 UI**
+
+首页右滑或点击“小工具”打开专注入口。“模拟考试预置”作为“我的”页面独立菜单管理考试名称与时长，不放在学习偏好页；作战单选择项再次点击可取消，课时严格按视频固有顺序显示且不提供手动调序；模拟考试页面按服务端截止时间显示，支持提前交卷和最多 9 张试卷照片上传。所有用户的学习偏好使用 `1%～50%` 滑杆设置验活进度间隔，默认 `50%`，并可独立关闭验活。
+
+- [ ] **步骤 6：实现启动容错和报表日期选择**
+
+恢复登录 8 秒超时后显示可操作恢复页，网络失败不删除 Token。日报、周报移除左右箭头并使用日期选择器和回到今天/本周。
+
+- [ ] **步骤 7：视觉复核、测试和真机检查**
+
+使用现有轻色 iOS 设计令牌，状态同时使用文字与图形，所有关键点击区至少 44pt。运行 Flutter format/analyze/test、模拟器构建，并在物理 iPhone 验证真实播放和照片权限。
+
+```bash
+cd apps/ios
+fvm dart format lib test integration_test
+fvm flutter analyze
+fvm flutter test
+fvm flutter build ios --simulator --no-codesign
+cd ../..
+make verify
 ```
 
 ## Cross-Task Review Gates
@@ -2235,6 +2371,24 @@ OpenRouter 模型名称和上下文可刷新、缓存并供 CPA 模型配置选�
 任务持久化、全局串行，定时补全默认关闭且只补缺失内容
 AI 题目只能进入草稿，课程级批量发布原子且幂等
 后台严格复刻用户提供的高保真 HTML 风格
+```
+
+Task 21 之后：
+
+```text
+作战单通过完整快照和版本号原子保存，未开始项目可删除且不再产债
+模拟考试预置、服务端倒计时、试卷附件和恢复流程可用
+复习快捷入口只记录一次审计事件，不参与进度、时长、完成率或欠债
+专注不再绑定作战单，手动开摆入口消失，日终结果可幂等补算
+```
+
+Task 22 之后：
+
+```text
+播放器控制位于画面内，横屏全屏复用观看会话，摘要按条件显示
+课时列表显示可信进度并按需打开摘要，课程详情不再直接加入计划
+已登录启动在服务不可达时进入恢复页，不无限转圈
+日报和周报可通过日期选择器直接跳转
 ```
 
 ---

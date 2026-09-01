@@ -201,7 +201,9 @@ public class DailyPlanService implements PlanProgressPort {
     Instant now = clock.instant();
     learningClosers.forEach(closer -> closer.closeForPlan(userId, plan.id(), now));
     List<PlanItem> items = plans.findItems(plan.id());
-    if (items.stream().allMatch(item -> item.status().equals("COMPLETED"))) {
+    if (items.stream()
+        .filter(item -> !item.itemType().equals("REVIEW_SHORTCUT"))
+        .allMatch(item -> item.status().equals("COMPLETED"))) {
       plan.complete(now);
     } else {
       plan.closeWithDebt(now);
@@ -340,13 +342,25 @@ public class DailyPlanService implements PlanProgressPort {
   public void validateVideoLink(String userId, String planItemId, String mediaItemId) {
     if (planItemId == null) return;
     PlanItem item = plans.findOwnedItem(userId, planItemId).orElseThrow(() -> notFound("计划任务不存在"));
-    boolean videoTask = item.itemType().equals("VIDEO");
+    boolean videoTask =
+        item.itemType().equals("VIDEO") || item.itemType().equals("REVIEW_SHORTCUT");
     boolean videoDebtTask =
         item.itemType().equals("DEBT_REPAYMENT")
             && requireOpenVideoDebt(userId, item.debtId()).debtType().equals("VIDEO_WATCH");
     if ((!videoTask && !videoDebtTask) || !mediaItemId.equals(item.mediaItemId())) {
       throw invalid("PLAN_ITEM_MEDIA_MISMATCH", "计划任务与课时不匹配");
     }
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public boolean isReviewShortcut(String userId, String planItemId, String mediaItemId) {
+    if (planItemId == null) return false;
+    return plans
+        .findOwnedItem(userId, planItemId)
+        .filter(item -> item.itemType().equals("REVIEW_SHORTCUT"))
+        .filter(item -> mediaItemId.equals(item.mediaItemId()))
+        .isPresent();
   }
 
   private LearningDebt requireOpenVideoDebt(String userId, String debtId) {
@@ -358,7 +372,8 @@ public class DailyPlanService implements PlanProgressPort {
 
   private void completePlanIfSatisfied(String userId, String planId) {
     DailyPlan plan = plans.findOwnedPlan(userId, planId).orElseThrow();
-    if (plan.status() == PlanStatus.LOCKED
+    if (!plans.isActiveBattleOrder(planId)
+        && plan.status() == PlanStatus.LOCKED
         && plans.findItems(planId).stream().allMatch(item -> item.status().equals("COMPLETED"))) {
       plan.complete(clock.instant());
       plans.updatePlanState(plan, clock.instant());

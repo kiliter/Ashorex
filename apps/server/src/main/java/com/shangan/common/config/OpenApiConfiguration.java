@@ -5,6 +5,8 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
+import java.util.List;
 import org.springdoc.core.customizers.OperationCustomizer;
 import org.springdoc.core.customizers.ParameterCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -21,6 +23,8 @@ public class OpenApiConfiguration {
                 .title("上岸 V1 API")
                 .description("iOS 客户端使用的只读与学习业务接口；所有业务路由统一使用 /api/v1 前缀。")
                 .version("0.1.0-rc1"))
+        // 固定本地合同地址，避免 MockMvc 生成结果因请求上下文缺少端口而漂移。
+        .servers(List.of(new Server().url("http://localhost:18080").description("本地开发服务")))
         .components(
             new Components()
                 .addSecuritySchemes(

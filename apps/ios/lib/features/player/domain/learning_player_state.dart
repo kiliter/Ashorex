@@ -10,6 +10,9 @@ abstract interface class PlayerAdapter {
 
   Future<void> seek(Duration position);
 
+  /// 调整底层播放器倍速；可信观看仍由服务端心跳独立校验。
+  Future<void> setPlaybackSpeed(double speed);
+
   Future<void> dispose();
 }
 
@@ -26,8 +29,12 @@ final class LearningPlayerState {
     this.isForeground = true,
     this.aliveCheckRequired = false,
     this.networkError = false,
+    this.preparingPlayback = false,
+    this.playbackStartError = false,
     this.heartbeatFailures = 0,
     this.completed = false,
+    this.reviewMode = false,
+    this.playbackSpeed = 1.0,
     this.status = 'INITIALIZING',
   });
 
@@ -41,9 +48,33 @@ final class LearningPlayerState {
   final bool isForeground;
   final bool aliveCheckRequired;
   final bool networkError;
+  final bool preparingPlayback;
+  final bool playbackStartError;
   final int heartbeatFailures;
   final bool completed;
+  final bool reviewMode;
+  final double playbackSpeed;
   final String status;
+
+  /// 按可信最大位置计算观看百分比，达到完成阈值后统一显示 100%。
+  int get trustedWatchedPercent {
+    if (trustedWatchDone) return 100;
+    final durationMs = duration.inMilliseconds;
+    if (durationMs <= 0) return 0;
+    return (maxVerifiedPosition.inMilliseconds * 100 ~/ durationMs).clamp(
+      0,
+      99,
+    );
+  }
+
+  /// 与服务端规则一致：距离结尾不超过 30 秒或总时长 2% 即视为已看完。
+  bool get trustedWatchDone {
+    if (completed) return true;
+    final durationMs = duration.inMilliseconds;
+    if (durationMs <= 0) return false;
+    final allowanceMs = (durationMs * 0.02).round().clamp(0, 30000);
+    return maxVerifiedPosition.inMilliseconds >= durationMs - allowanceMs;
+  }
 
   LearningPlayerState copyWith({
     String? sessionId,
@@ -56,8 +87,12 @@ final class LearningPlayerState {
     bool? isForeground,
     bool? aliveCheckRequired,
     bool? networkError,
+    bool? preparingPlayback,
+    bool? playbackStartError,
     int? heartbeatFailures,
     bool? completed,
+    bool? reviewMode,
+    double? playbackSpeed,
     String? status,
   }) => LearningPlayerState(
     sessionId: sessionId ?? this.sessionId,
@@ -70,8 +105,12 @@ final class LearningPlayerState {
     isForeground: isForeground ?? this.isForeground,
     aliveCheckRequired: aliveCheckRequired ?? this.aliveCheckRequired,
     networkError: networkError ?? this.networkError,
+    preparingPlayback: preparingPlayback ?? this.preparingPlayback,
+    playbackStartError: playbackStartError ?? this.playbackStartError,
     heartbeatFailures: heartbeatFailures ?? this.heartbeatFailures,
     completed: completed ?? this.completed,
+    reviewMode: reviewMode ?? this.reviewMode,
+    playbackSpeed: playbackSpeed ?? this.playbackSpeed,
     status: status ?? this.status,
   );
 }

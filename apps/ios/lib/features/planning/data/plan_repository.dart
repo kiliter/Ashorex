@@ -1,55 +1,71 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shangan_ios/core/api/api_client.dart';
 
-/// 每日计划中的服务端任务快照。
+/// 服务端返回的作战单项目；不可修改标志是服务端状态机的直接投影。
 final class PlanItemData {
   const PlanItemData({
     required this.id,
     required this.itemType,
     required this.title,
     required this.mediaItemId,
+    required this.mockExamPresetId,
+    required this.mockExamName,
     required this.plannedSeconds,
     required this.completedSeconds,
     required this.status,
+    required this.sortOrder,
+    required this.immutable,
   });
 
   final String id;
   final String itemType;
   final String title;
   final String? mediaItemId;
+  final String? mockExamPresetId;
+  final String? mockExamName;
   final int plannedSeconds;
   final int completedSeconds;
   final String status;
+  final int sortOrder;
+  final bool immutable;
 
   factory PlanItemData.fromJson(Map<String, dynamic> json) => PlanItemData(
     id: json['id'] as String,
     itemType: json['itemType'] as String,
     title: json['title'] as String,
     mediaItemId: json['mediaItemId'] as String?,
+    mockExamPresetId: json['mockExamPresetId'] as String?,
+    mockExamName: json['mockExamName'] as String?,
     plannedSeconds: (json['plannedSeconds'] as num).toInt(),
     completedSeconds: (json['completedSeconds'] as num).toInt(),
     status: json['status'] as String,
+    sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
+    immutable: json['immutable'] as bool? ?? false,
   );
 }
 
+/// 今日作战单使用版本号和完整快照保存，避免多次局部写入产生半成品。
 final class DailyPlanData {
   const DailyPlanData({
     required this.id,
     required this.date,
     required this.status,
+    required this.version,
     required this.items,
   });
 
-  final String id;
+  final String? id;
   final DateTime date;
   final String status;
+  final int version;
   final List<PlanItemData> items;
 
   factory DailyPlanData.fromJson(Map<String, dynamic> json) => DailyPlanData(
-    id: json['id'] as String,
+    id: json['id'] as String?,
     date: DateTime.parse(json['date'] as String),
     status: json['status'] as String,
-    items: (json['items'] as List)
+    version: (json['version'] as num?)?.toInt() ?? 0,
+    items: (json['items'] as List<dynamic>? ?? const [])
         .map(
           (item) =>
               PlanItemData.fromJson(Map<String, dynamic>.from(item as Map)),
@@ -58,50 +74,51 @@ final class DailyPlanData {
   );
 }
 
-final class DebtPreviewData {
-  const DebtPreviewData({
-    required this.type,
+/// 编排区内的客户端草稿，保存前不代表任何服务端业务状态。
+final class BattleOrderDraft {
+  const BattleOrderDraft({
+    required this.existingItemId,
+    required this.itemType,
     required this.title,
-    required this.seconds,
+    required this.mediaItemId,
+    required this.mockExamPresetId,
+    required this.plannedSeconds,
+    required this.immutable,
+    required this.catalogOrder,
   });
 
-  final String type;
+  final String? existingItemId;
+  final String itemType;
   final String title;
-  final int seconds;
+  final String? mediaItemId;
+  final String? mockExamPresetId;
+  final int plannedSeconds;
+  final bool immutable;
 
-  factory DebtPreviewData.fromJson(Map<String, dynamic> json) =>
-      DebtPreviewData(
-        type: json['type'] as String,
-        title: json['title'] as String,
-        seconds: (json['seconds'] as num).toInt(),
-      );
+  /// 课时在服务端课程目录中的固有顺序；模拟考试为 null，并统一排在课时之后。
+  final int? catalogOrder;
+
+  factory BattleOrderDraft.fromSaved(PlanItemData item) => BattleOrderDraft(
+    existingItemId: item.id,
+    itemType: item.itemType,
+    title: item.title,
+    mediaItemId: item.mediaItemId,
+    mockExamPresetId: item.mockExamPresetId,
+    plannedSeconds: item.plannedSeconds,
+    immutable: item.immutable,
+    catalogOrder: item.mediaItemId == null ? null : item.sortOrder,
+  );
+
+  Map<String, dynamic> toJson(int sortOrder) => {
+    'existingItemId': existingItemId,
+    'itemType': itemType,
+    'mediaItemId': mediaItemId,
+    'mockExamPresetId': mockExamPresetId,
+    'sortOrder': sortOrder,
+  };
 }
 
-final class AbandonPreviewData {
-  const AbandonPreviewData({
-    required this.debtCount,
-    required this.addedDebtSeconds,
-    required this.debts,
-  });
-
-  final int debtCount;
-  final int addedDebtSeconds;
-  final List<DebtPreviewData> debts;
-
-  factory AbandonPreviewData.fromJson(Map<String, dynamic> json) =>
-      AbandonPreviewData(
-        debtCount: (json['debtCount'] as num).toInt(),
-        addedDebtSeconds: (json['addedDebtSeconds'] as num).toInt(),
-        debts: (json['debts'] as List)
-            .map(
-              (item) => DebtPreviewData.fromJson(
-                Map<String, dynamic>.from(item as Map),
-              ),
-            )
-            .toList(),
-      );
-}
-
+/// 学习欠债是服务端日终结算结果，客户端只能读取，不能直接核销或豁免。
 final class LearningDebtData {
   const LearningDebtData({
     required this.id,
@@ -129,16 +146,16 @@ final class LearningDebtData {
 
 abstract interface class PlanRepository {
   Future<DailyPlanData> loadToday();
-  Future<DailyPlanData> addVideo(String lessonId);
-  Future<DailyPlanData> addFocus(String title, int seconds);
-  Future<DailyPlanData> lockToday();
-  Future<AbandonPreviewData> previewAbandon();
-  Future<DailyPlanData> abandon(String reasonCode, String reasonText);
+
+  Future<DailyPlanData> saveToday({
+    required int expectedVersion,
+    required List<BattleOrderDraft> items,
+  });
+
   Future<List<LearningDebtData>> loadDebts();
-  Future<DailyPlanData> addDebtItems(List<String> debtIds);
 }
 
-/// 计划日期仅用于请求路径；状态和完成量始终以服务端返回为准。
+/// 作战单 API 只有读取与整单保存两个入口。
 final class RemotePlanRepository implements PlanRepository {
   RemotePlanRepository(this._api);
 
@@ -156,67 +173,26 @@ final class RemotePlanRepository implements PlanRepository {
       DailyPlanData.fromJson(await _api.getJson('/api/v1/plans/$_today'));
 
   @override
-  Future<DailyPlanData> addVideo(String lessonId) async =>
-      DailyPlanData.fromJson(
-        await _api.postJson(
-          '/api/v1/plans/$_today/items',
-          data: {
-            'itemType': 'VIDEO',
-            'title': '视频学习',
-            'mediaItemId': lessonId,
-            'plannedSeconds': 1,
-            'sortOrder': 0,
-          },
-        ),
-      );
-
-  @override
-  Future<DailyPlanData> addFocus(String title, int seconds) async =>
-      DailyPlanData.fromJson(
-        await _api.postJson(
-          '/api/v1/plans/$_today/items',
-          data: {
-            'itemType': 'FOCUS',
-            'title': title,
-            'plannedSeconds': seconds,
-            'sortOrder': 100,
-          },
-        ),
-      );
-
-  @override
-  Future<DailyPlanData> lockToday() async =>
-      DailyPlanData.fromJson(await _api.postJson('/api/v1/plans/$_today/lock'));
-
-  @override
-  Future<AbandonPreviewData> previewAbandon() async =>
-      AbandonPreviewData.fromJson(
-        await _api.getJson('/api/v1/plans/$_today/abandon-preview'),
-      );
-
-  @override
-  Future<DailyPlanData> abandon(String reasonCode, String reasonText) async =>
-      DailyPlanData.fromJson(
-        await _api.postJson(
-          '/api/v1/plans/$_today/abandon',
-          data: {'reasonCode': reasonCode, 'reasonText': reasonText},
-        ),
-      );
+  Future<DailyPlanData> saveToday({
+    required int expectedVersion,
+    required List<BattleOrderDraft> items,
+  }) async => DailyPlanData.fromJson(
+    await _api.putJson(
+      '/api/v1/plans/$_today',
+      data: {
+        'expectedVersion': expectedVersion,
+        'items': items.indexed
+            .map((entry) => entry.$2.toJson(entry.$1))
+            .toList(),
+      },
+    ),
+  );
 
   @override
   Future<List<LearningDebtData>> loadDebts() async =>
       (await _api.getJsonList('/api/v1/debts'))
           .map(LearningDebtData.fromJson)
           .toList();
-
-  @override
-  Future<DailyPlanData> addDebtItems(List<String> debtIds) async =>
-      DailyPlanData.fromJson(
-        await _api.postJson(
-          '/api/v1/plans/$_today/debt-items',
-          data: {'debtIds': debtIds},
-        ),
-      );
 }
 
 final planRepositoryProvider = Provider<PlanRepository>((ref) {

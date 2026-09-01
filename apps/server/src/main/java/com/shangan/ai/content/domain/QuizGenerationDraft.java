@@ -32,8 +32,20 @@ public record QuizGenerationDraft(
   }
 
   public enum Status {
-    READY_FOR_REVIEW,
-    PUBLISHED
+    READY_FOR_REVIEW("待审核"),
+    REJECTED("已驳回"),
+    PUBLISHED("已发布");
+
+    private final String label;
+
+    Status(String label) {
+      this.label = label;
+    }
+
+    /** 返回管理后台使用的中文草稿状态名称。 */
+    public String label() {
+      return label;
+    }
   }
 
   public record Item(

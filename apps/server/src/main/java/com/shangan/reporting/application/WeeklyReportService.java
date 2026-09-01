@@ -1,5 +1,6 @@
 package com.shangan.reporting.application;
 
+import com.shangan.reporting.infrastructure.ReportingRepository;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,9 +10,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class WeeklyReportService {
   private final DailyReportService daily;
+  private final ReportingRepository reports;
 
-  public WeeklyReportService(DailyReportService daily) {
+  public WeeklyReportService(DailyReportService daily, ReportingRepository reports) {
     this.daily = daily;
+    this.reports = reports;
   }
 
   public WeeklyReportView generate(String userId, LocalDate weekStart) {
@@ -44,6 +47,13 @@ public class WeeklyReportService {
         totals.newDebtSeconds(),
         totals.repaidDebtSeconds(),
         totals.abandonmentCount(),
+        (int) current.stream().filter(day -> day.dayOutcome().equals("SLACKED")).count(),
+        reports.reviewedLessons(userId, weekStart, weekStart.plusDays(7)).stream()
+            .map(
+                lesson ->
+                    new ReviewedLesson(
+                        lesson.mediaItemId(), lesson.lessonTitle(), lesson.reviewCount()))
+            .toList(),
         totals.aliveCheckFailureCount(),
         previousTotals.effectiveStudySeconds(),
         totals.effectiveStudySeconds() - previousTotals.effectiveStudySeconds(),
@@ -106,11 +116,16 @@ public class WeeklyReportService {
       long newDebtSeconds,
       long repaidDebtSeconds,
       int abandonmentCount,
+      int slackedDayCount,
+      List<ReviewedLesson> reviewedLessons,
       int aliveCheckFailureCount,
       long previousWeekEffectiveStudySeconds,
       long effectiveStudySecondsChange,
       int previousWeekPlanCompletionRate,
       int planCompletionRateChange) {}
+
+  /** 周报只列举复习课时和次数，不把复习时长混入有效学习指标。 */
+  public record ReviewedLesson(String mediaItemId, String lessonTitle, int reviewCount) {}
 
   private record Totals(
       long effectiveStudySeconds,

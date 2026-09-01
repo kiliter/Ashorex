@@ -36,6 +36,12 @@ void main() {
       expect(find.text(label), findsWidgets);
     }
     expect(find.text('AI'), findsNothing);
+
+    await tester.tap(find.text('我的').last);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('mockExamPresetEntry')), findsOneWidget);
+    expect(find.text('模拟考试预置'), findsOneWidget);
+    expect(find.byKey(const Key('settingsEntry')), findsOneWidget);
   });
 }
 
@@ -106,6 +112,16 @@ final class _CatalogRepository implements CatalogRepository {
 
   @override
   Future<CourseDetail> loadCourse(String courseId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LessonSummary> loadLesson(String lessonId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LessonStudyContentData> loadStudyContent(String lessonId) {
     throw UnimplementedError();
   }
 }

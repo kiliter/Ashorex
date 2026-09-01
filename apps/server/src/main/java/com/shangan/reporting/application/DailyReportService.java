@@ -62,6 +62,7 @@ public class DailyReportService {
         new DailyReportView(
             date,
             raw.planStatus(),
+            raw.dayOutcome(),
             raw.plannedSeconds(),
             raw.videoStudySeconds(),
             raw.focusSeconds(),
@@ -69,6 +70,8 @@ public class DailyReportService {
             raw.totalTasks(),
             completionRate,
             raw.videoCompletedCount(),
+            raw.mockExamCompletedCount(),
+            raw.mockExamAwaitingUploadCount(),
             raw.answerCount(),
             raw.correctAnswerCount(),
             answerAccuracy,
@@ -94,6 +97,7 @@ public class DailyReportService {
   public record DailyReportView(
       LocalDate date,
       String planStatus,
+      String dayOutcome,
       long plannedSeconds,
       long videoStudySeconds,
       long focusSeconds,
@@ -101,6 +105,8 @@ public class DailyReportService {
       int totalTasks,
       int completionRate,
       int videoCompletedCount,
+      int mockExamCompletedCount,
+      int mockExamAwaitingUploadCount,
       int answerCount,
       int correctAnswerCount,
       int answerAccuracy,

@@ -6,6 +6,7 @@ DATA_DIR="${DATA_DIR:-/data}"
 BACKUP_DIR="${BACKUP_DIR:-/backup}"
 STAMP="${STAMP:-$(date -u +%Y%m%d-%H%M%S)}"
 DATABASE="${DATA_DIR}/study.db"
+ATTACHMENTS_DIR="${DATA_DIR}/mock-exams"
 DAILY_BACKUP="${BACKUP_DIR}/study-${STAMP}.db"
 
 if [[ ! -f "${DATABASE}" ]]; then
@@ -17,9 +18,11 @@ if [[ "${DATABASE}" == *"'"* || "${BACKUP_DIR}" == *"'"* ]]; then
   exit 1
 fi
 mkdir -p "${BACKUP_DIR}"
+mkdir -p "${ATTACHMENTS_DIR}"
 
 create_backup() {
   local target="$1"
+  local attachment_archive="${target%.db}.attachments.tar.gz"
   local integrity
   sqlite3 "${DATABASE}" ".backup '${target}'"
   integrity="$(sqlite3 "${target}" "PRAGMA integrity_check;")"
@@ -27,6 +30,13 @@ create_backup() {
     echo "备份失败：完整性校验未返回 ok。" >&2
     exit 1
   fi
+  # 附件文件先于数据库事务提交落盘；数据库快照完成后再归档，可避免备份引用缺失文件。
+  tar -C "${DATA_DIR}" -czf "${attachment_archive}" mock-exams
+  (
+    cd "${BACKUP_DIR}"
+    sha256sum "$(basename "${attachment_archive}")" \
+      >"$(basename "${attachment_archive}").sha256"
+  )
 }
 
 prune_backups() {
@@ -57,5 +67,9 @@ if [[ "${CREATE_WEEKLY:-0}" == "1" || "$(date -u +%u)" == "7" ]]; then
 fi
 
 prune_backups "study-[0-9]*.db" 7
+prune_backups "study-[0-9]*.attachments.tar.gz" 7
+prune_backups "study-[0-9]*.attachments.tar.gz.sha256" 7
 prune_backups "weekly-study-[0-9]*.db" 4
+prune_backups "weekly-study-[0-9]*.attachments.tar.gz" 4
+prune_backups "weekly-study-[0-9]*.attachments.tar.gz.sha256" 4
 echo "备份完成：${DAILY_BACKUP}"

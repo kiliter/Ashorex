@@ -31,9 +31,12 @@ public class JdbcReportingRepository implements ReportingRepository {
         jdbc.sql(
                 """
                 select p.status,
-                  coalesce(sum(i.planned_seconds),0) planned,
-                  coalesce(sum(case when i.status='COMPLETED' then 1 else 0 end),0) completed,
-                  count(i.id) total
+                  coalesce(sum(case when coalesce(i.item_kind,i.item_type)<>'REVIEW_SHORTCUT'
+                    then i.planned_seconds else 0 end),0) planned,
+                  coalesce(sum(case when coalesce(i.item_kind,i.item_type)<>'REVIEW_SHORTCUT'
+                    and i.status='COMPLETED' then 1 else 0 end),0) completed,
+                  coalesce(sum(case when coalesce(i.item_kind,i.item_type)<>'REVIEW_SHORTCUT'
+                    then 1 else 0 end),0) total
                 from daily_plans p left join daily_plan_items i on i.plan_id=p.id
                 where p.user_id=:userId and p.plan_date=:date
                 group by p.id,p.status
@@ -49,10 +52,23 @@ public class JdbcReportingRepository implements ReportingRepository {
                         rs.getInt("total")))
             .optional()
             .orElse(new PlanStats("NONE", 0, 0, 0));
+    String dayOutcome =
+        jdbc.sql(
+                "select outcome from daily_day_outcomes "
+                    + "where user_id=:userId and outcome_date=:date")
+            .param("userId", userId)
+            .param("date", date.toString())
+            .query(String.class)
+            .optional()
+            .orElse("PENDING");
     long videoSeconds =
         scalarLong(
-            "select coalesce(sum(verified_watch_ms),0)/1000 from watch_sessions "
-                + "where user_id=:userId and started_at>=:start and started_at<:end",
+            """
+            select coalesce(sum(w.verified_watch_ms),0)/1000 from watch_sessions w
+            left join daily_plan_items i on i.id=w.plan_item_id
+            where w.user_id=:userId and w.started_at>=:start and w.started_at<:end
+              and coalesce(i.item_kind,'')<>'REVIEW_SHORTCUT'
+            """,
             userId,
             start,
             end);
@@ -71,6 +87,20 @@ public class JdbcReportingRepository implements ReportingRepository {
                 userId,
                 start,
                 end);
+    MockExamStats mockExams =
+        jdbc.sql(
+                """
+                select
+                  coalesce(sum(case when status='COMPLETED' then 1 else 0 end),0) completed,
+                  coalesce(sum(case when status='AWAITING_UPLOAD' then 1 else 0 end),0) awaiting
+                from mock_exam_sessions
+                where user_id=:userId and started_at>=:start and started_at<:end
+                """)
+            .param("userId", userId)
+            .param("start", start.toEpochMilli())
+            .param("end", end.toEpochMilli())
+            .query((rs, row) -> new MockExamStats(rs.getInt("completed"), rs.getInt("awaiting")))
+            .single();
     AnswerStats answers =
         jdbc.sql(
                 """
@@ -138,12 +168,15 @@ public class JdbcReportingRepository implements ReportingRepository {
             .single();
     return new RawDailyMetrics(
         plan.status(),
+        dayOutcome,
         plan.planned(),
         plan.completed(),
         plan.total(),
         videoSeconds,
         focusSeconds,
         videoCompleted,
+        mockExams.completed(),
+        mockExams.awaitingUpload(),
         answers.total(),
         answers.correct(),
         aliveFailures,
@@ -233,6 +266,30 @@ public class JdbcReportingRepository implements ReportingRepository {
         .list();
   }
 
+  @Override
+  public List<ReviewedLesson> reviewedLessons(
+      String userId, LocalDate start, LocalDate endExclusive) {
+    return jdbc.sql(
+            """
+            select r.media_item_id,m.title,count(*) review_count
+            from lesson_review_events r
+            join media_items m on m.id=r.media_item_id
+            where r.user_id=:userId and r.reviewed_on>=:start and r.reviewed_on<:end
+            group by r.media_item_id,m.title
+            order by max(r.created_at) desc,r.media_item_id
+            """)
+        .param("userId", userId)
+        .param("start", start.toString())
+        .param("end", endExclusive.toString())
+        .query(
+            (rs, row) ->
+                new ReviewedLesson(
+                    rs.getString("media_item_id"),
+                    rs.getString("title"),
+                    rs.getInt("review_count")))
+        .list();
+  }
+
   private long scalarLong(String sql, String userId, Instant start, Instant end) {
     return jdbc.sql(sql)
         .param("userId", userId)
@@ -245,6 +302,8 @@ public class JdbcReportingRepository implements ReportingRepository {
   private record PlanStats(String status, long planned, int completed, int total) {}
 
   private record AnswerStats(int total, int correct) {}
+
+  private record MockExamStats(int completed, int awaitingUpload) {}
 
   private record Abandonment(Instant at, String reason) {}
 }

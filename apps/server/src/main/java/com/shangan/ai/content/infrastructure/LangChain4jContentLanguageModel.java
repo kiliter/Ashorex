@@ -51,6 +51,10 @@ public class LangChain4jContentLanguageModel implements ContentLanguageModel {
               .maxRetries(0)
               .logRequests(false)
               .logResponses(false);
+      // 仅在管理员明确选择时发送，空值保持普通非推理模型兼容性。
+      if (configuration.reasoningEffort() != null && !configuration.reasoningEffort().isBlank()) {
+        builder.reasoningEffort(configuration.reasoningEffort());
+      }
       if (jsonResponse) builder.responseFormat("json_object");
       ChatResponse response =
           builder

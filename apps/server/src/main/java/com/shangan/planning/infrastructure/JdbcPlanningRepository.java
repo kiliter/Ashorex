@@ -58,6 +58,15 @@ public class JdbcPlanningRepository implements PlanningRepository {
   }
 
   @Override
+  public boolean isActiveBattleOrder(String planId) {
+    return jdbc.sql("select count(*) from daily_plans where id=:id and lifecycle_status='ACTIVE'")
+            .param("id", planId)
+            .query(Integer.class)
+            .single()
+        == 1;
+  }
+
+  @Override
   public void insertPlan(DailyPlan plan, Instant now) {
     jdbc.sql(
             "insert into daily_plans (id, user_id, plan_date, status, created_at, updated_at) "
@@ -127,8 +136,10 @@ public class JdbcPlanningRepository implements PlanningRepository {
   @Override
   public void updatePlanState(DailyPlan plan, Instant now) {
     jdbc.sql(
-            "update daily_plans set status=:status, locked_at=:lockedAt, closed_at=:closedAt, "
-                + "updated_at=:now where id=:id")
+            "update daily_plans set status=:status, "
+                + "lifecycle_status=case when :status in ('COMPLETED','CLOSED_WITH_DEBT') "
+                + "then :status else lifecycle_status end, "
+                + "locked_at=:lockedAt, closed_at=:closedAt, updated_at=:now where id=:id")
         .param("status", plan.status().name())
         .param("lockedAt", epoch(plan.lockedAt()))
         .param("closedAt", epoch(plan.closedAt()))
@@ -284,7 +295,7 @@ public class JdbcPlanningRepository implements PlanningRepository {
     return new PlanItem(
         rs.getString("id"),
         rs.getString("plan_id"),
-        rs.getString("item_type"),
+        rs.getString("item_kind") == null ? rs.getString("item_type") : rs.getString("item_kind"),
         rs.getString("title"),
         rs.getString("media_item_id"),
         rs.getString("debt_id"),

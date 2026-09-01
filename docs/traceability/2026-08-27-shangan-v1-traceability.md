@@ -7,15 +7,16 @@
 |---|---|---:|---|---|
 | PLAT-001 | 只交付 iOS Flutter App | 4、10、19 | Flutter analyze/test、iOS integration test | 真机启动、登录、完整流程 |
 | AUTH-001 | App JWT 登录、刷新、退出 | 3、4 | `AuthFlowIntegrationTest`、`auth_controller_test.dart` | Token 轮换且旧 Token 失效 |
-| AUTH-002 | 管理后台 Session 与 CSRF | 3、16 | `AdminSecurityTest` | 非管理员不可进入后台 |
+| AUTH-002 | 管理后台持久化 Session 与 CSRF | 3、16 | `AdminSecurityTest` | 非管理员不可进入后台；服务重启后有效 Session 仍可读取 |
 | EXAM-001 | 考试倒计时与目标完成日 | 6 | `ExamProgressCalculatorTest` | 固定日期计算结果正确 |
 | EXAM-002 | 根据剩余课程计算进度压力 | 6 | `ExamProgressCalculatorTest` | 显示所需速度、实际速度和风险状态 |
-| PLAN-001 | 创建、编辑和锁定每日计划 | 7 | `DailyPlanStateMachineTest` | 锁定后增删改被拒绝 |
-| PLAN-002 | 日终自动关闭计划 | 7、12 | 日终调度集成测试 | 跨用户时区正确结算 |
-| DEBT-001 | 未完成任务按组成部分生成欠债 | 7 | `DebtGenerationIntegrationTest` | VIDEO_WATCH、QUIZ、FOCUS 均正确记债 |
+| PLAN-001 | 在作战单编排区原子保存和修改今日作战单，未开始项目可再次点击取消，课时按视频固有顺序排列 | 21、22 | `BattleOrderSaveIntegrationTest`、作战单 Widget 测试 | 版本冲突、整单失败回滚、不可修改项目保护和服务端固有排序正确 |
+| PLAN-002 | 日终自动关闭作战单并补算遗漏日期 | 21 | `DayOutcomeSchedulerIntegrationTest` | 跨用户时区正确结算且重复执行幂等 |
+| PLAN-003 | 未开始项目可删除，删除后不再产生欠债 | 21、22 | 作战单修订与欠债集成测试 | 修订可审计，日终不为已删除项目产债 |
+| DEBT-001 | 未完成任务按组成部分生成欠债 | 7、21 | `DebtGenerationIntegrationTest` | VIDEO_WATCH、QUIZ、MOCK_EXAM 均正确记债 |
 | DEBT-002 | 重复关账不产生重复欠债 | 7 | 幂等关账测试 | `source_plan_item_id + debt_type` 唯一 |
-| ABANDON-001 | 开摆立即结束当日计划 | 7 | 状态机和事务集成测试 | 状态变为 `ABANDONED` |
-| ABANDON-002 | 开摆剩余任务全部转欠债 | 7 | `DebtGenerationIntegrationTest` | 确认页金额与落库一致 |
+| OUTCOME-001 | 无作战单且无有效学习活动时自动记为开摆日 | 21 | `DayOutcomeSchedulerIntegrationTest` | 不产生欠债，服务重启后可补算 |
+| OUTCOME-002 | 无作战单但存在可信观看、模拟考试或专注时记为自由学习 | 21 | `DayOutcomeAggregationTest` | 不误判开摆日 |
 | EMBY-001 | 绑定 Emby Series/Folder 并同步 | 5 | Emby WireMock 集成测试 | 新增剧集可同步成课程视频 |
 | EMBY-002 | Emby Key 仅存在服务端 | 5、8、16 | 配置和响应安全测试 | App 流量中不出现 Key |
 | PLAY-001 | 服务端签发短期播放票据 | 8 | `PlaybackTicketServiceTest` | 过期/越权票据被拒绝 |
@@ -23,26 +24,35 @@
 | WATCH-001 | 禁止跳入未验证观看区间 | 9、10 | `WatchProgressPolicyTest`、播放器 Widget 测试 | 拖动只能到可信边界 |
 | WATCH-002 | 心跳累计可信观看时间 | 9、10 | `WatchSessionIntegrationTest` | 暂停、后台、序号重复不累计 |
 | WATCH-003 | 退出后从可信进度恢复 | 9、10 | `WatchSessionIntegrationTest` | 重启 App 后边界一致 |
-| ALIVE-001 | 按监督等级随机验活 | 9、10 | `AliveCheckSchedulerTest` | 触发区间符合设置 |
+| WATCH-004 | 非作战单播放先提醒并且不完成作战单 | 21、22 | 播放提醒 Widget 测试、观看会话集成测试 | 可信进度保留，作战单状态不变 |
+| WATCH-005 | 复习快捷入口可自由回看且只记录审计事件 | 21、22 | `ReviewEventIntegrationTest` | 不计进度、时长、完成率或欠债 |
+| ALIVE-001 | 所有用户通过 1%～50% 滑杆设置视频进度验活间隔，默认 50% | 9、10、22 | `AliveCheckSchedulerTest`、`AuthFlowIntegrationTest`、学习偏好 Widget 测试 | 倍速下在相同内容位置触发；有效学习时长仍按真实时间累计 |
 | ALIVE-002 | 未响应验活停止累计 | 9、10 | 心跳/验活集成测试 | 超时后进度不再前进 |
 | QUIZ-001 | 管理后台配置单选和判断题 | 11 | 后台 Controller 测试 | 题目可创建、排序、禁用 |
 | QUIZ-002 | 视频完成后解锁答题 | 11 | `QuizUnlockIntegrationTest` | 未完成视频返回业务错误 |
 | QUIZ-003 | 保存答案、得分、正确率并结清 QUIZ 欠债 | 11、12 | `QuizAttemptIntegrationTest` | 日报、周报和欠债状态一致 |
-| FOCUS-001 | 番茄钟、练习和模拟考试计时 | 12 | `FocusSessionStateMachineTest` | 暂停、恢复、完成状态正确 |
+| FOCUS-001 | 首页小工具提供独立番茄钟和练习计时 | 12、21、22 | `FocusSessionStateMachineTest`、首页 Widget 测试 | 不绑定作战单，不产生欠债 |
+| MOCK-001 | 用户从“我的”独立菜单维护模拟考试名称与时长预置，系统补齐行测、申论和大作文默认项 | 21、22 | `MockExamPresetIntegrationTest`、“我的”菜单与保存 Widget 测试 | 入口不藏在学习偏好中；默认项幂等；作战单保存快照，预置变更不影响历史 |
+| MOCK-002 | 模拟考试按服务端时间倒计时并上传试卷照片 | 21、22 | `MockExamStateMachineTest`、附件安全测试 | 切后台继续，到时或提前交卷后上传才完成 |
 | REPORT-001 | 每日数据汇总 | 12 | `DailyReportAggregationTest` | 学习、答题、欠债、验活一致 |
 | REPORT-002 | 每日晚间审判 | 12 | 规则模板测试 | 完成/欠债/开摆文案符合规则 |
 | REPORT-003 | 每周报表 | 12 | `WeeklyReportAggregationTest` | 七日聚合与原始数据一致 |
+| REPORT-004 | 日报和周报使用日期选择器直接跳转 | 22 | 报表 Widget 测试 | 可跨月、跨周选择并回到今天或本周 |
+| PLAYER-001 | 播放控制位于视频画面内并支持横屏全屏 | 22 | 播放器 Widget/Controller 测试 | 横竖屏复用同一观看会话且恢复系统 UI |
+| PLAYER-002 | 播放器下方仅在摘要就绪时显示 Markdown 摘要 | 22 | 播放器 Widget 测试 | 无摘要时区域完全隐藏 |
+| CATALOG-001 | 课时列表显示可信学习进度并按需查看摘要 | 21、22 | Catalog API 与 Widget 测试 | 已学习标志、百分比和小眼睛状态正确 |
+| AUTH-003 | 已登录启动服务不可达时不无限转圈 | 22 | `auth_controller_test.dart`、恢复页 Widget 测试 | 8 秒内可重试、改服务器或退出，网络失败不删 Token |
 | CONTENT-001 | 按课程 ZIP 批量导入每集全文和 Markdown 摘要 | 19 | ZIP 解析单元测试、`LessonStudyContentImportIntegrationTest` | Emby Item ID 精确匹配且完整包导入成功 |
 | CONTENT-002 | 导入全包原子，重复上传覆盖 | 19 | 回滚、重复覆盖与固定 Clock 集成测试 | 任意错误零写入，成功覆盖且时间字段正确 |
 | CONTENT-003 | App 只读获取单集学习内容 | 19 | `LessonStudyContentApiIntegrationTest`、OpenAPI 契约测试 | 返回全文、摘要和更新时间，未导入错误码稳定 |
 | CONTENT-004 | 迁移保留历史全文和全局摘要并删除 AI 数据 | 19 | V013 迁移集成测试 | 旧内容可读，聊天/转写/FTS/旧摘要表已删除 |
 | CONTENT-005 | 从 Emby 直接取得音频并通过 OpenAI-compatible ASR 生成全文 | 20 | `EmbyAudioClientTest`、ASR NDJSON 契约测试 | 不下载视频，完整 text 顺序拼接，临时音频删除 |
 | CONTENT-006 | 通过 OpenAI-compatible LLM 生成 Markdown 摘要 | 20 | 摘要 Provider、递归分层和部分就绪集成测试 | 长视频不超过模型上下文，摘要失败不影响全文 |
-| CONTENT-007 | 内容任务持久化、全局串行、批量操作和默认关闭的定时补全 | 20 | 任务状态机、队列顺序、重启恢复和调度幂等测试 | 单任务执行，已有内容跳过，定时开关默认关闭 |
+| CONTENT-007 | 内容任务持久化、课时 AI 工作流、多课时批量、全局串行、ASR/LLM 独立单线程池和默认关闭的定时补全 | 20 | 任务状态机、工作流阶段与课时顺序、线程池隔离与存活日志、重启恢复和调度幂等测试 | 勾选课时可批量排入转写、摘要和出题，阶段不并发，线程池状态可从日志识别，已有内容跳过 |
 | MODEL-001 | 从 OpenRouter 缓存模型名、上下文和输出上限 | 20 | `OpenRouterModelCatalogTest` | 刷新失败使用旧缓存，CPA 自定义模型可手动配置 |
 | QUIZ-AI-001 | 根据课时全文与摘要生成待审核题目草稿 | 20 | 结构化响应、超长文本、题型与唯一答案校验测试 | AI 结果不直接进入正式题库 |
-| QUIZ-AI-002 | 课程级选择并批量发布 AI 题目草稿 | 20 | `QuizDraftPublishIntegrationTest` | 全批校验、事务追加、重复提交幂等且不覆盖已有题目 |
-| ADMIN-001 | 用户、课程、题目、课程内容、内容任务和运行状态管理 | 3、5、11、16、19、20 | MVC/安全集成测试 | 管理员完成全部配置和内容生产流程 |
+| QUIZ-AI-002 | 课程级选择并批量通过、驳回或删除 AI 题目草稿 | 20 | `QuizDraftPublishIntegrationTest`、草稿批量审核测试 | 通过时全批校验、事务追加且幂等；驳回保留记录；删除仅限未发布草稿 |
+| ADMIN-001 | 用户、课程、题目、课程内容、内容任务和运行状态管理，任务局部自动刷新且枚举状态中文显示 | 3、5、11、16、19、20 | MVC/安全集成测试、任务列表与详情轮询测试 | 管理员完成全部配置和内容生产流程；任务进度无需刷新整页即可更新 |
 | ADMIN-002 | Web 后台配置 Emby、ASR、LLM、OpenRouter 并立即生效 | 18、19、20 | 运行时配置、ADMIN、适配器配置快照测试 | 保存后不重启，新任务使用最新配置 |
 | OPS-001 | 健康检查、结构化日志 | 2、16 | Actuator/日志测试 | `/actuator/health` 正常 |
 | OPS-002 | SQLite 在线备份与恢复 | 16 | 备份脚本测试、恢复演练 | 恢复后核心表计数一致 |

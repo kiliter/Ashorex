@@ -60,19 +60,30 @@ public class PlaybackSessionService {
             .orElseThrow(
                 () -> new BusinessException(HttpStatus.NOT_FOUND, "LESSON_NOT_FOUND", "课时不存在"));
     plans.validateVideoLink(userId, planItemId, mediaItemId);
+    boolean review = plans.isReviewShortcut(userId, planItemId, mediaItemId);
     long trustedPosition =
-        progress
-            .find(userId, mediaItemId)
-            .map(VideoProgressRepository.Progress::maxVerifiedPositionMs)
-            .orElse(0L);
-    String aliveCheckLevel =
+        review
+            ? lesson.durationMs()
+            : progress
+                .find(userId, mediaItemId)
+                .map(VideoProgressRepository.Progress::maxVerifiedPositionMs)
+                .orElse(0L);
+    var user =
         users
             .findById(userId)
             .orElseThrow(
-                () -> new BusinessException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "用户不存在"))
-            .aliveCheckLevel();
+                () -> new BusinessException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "用户不存在"));
     Long aliveDue =
-        aliveChecks.nextDueWatchMs(aliveCheckLevel, 0).stream().boxed().findFirst().orElse(null);
+        aliveChecks
+            .nextDuePositionMs(
+                user.aliveCheckLevel(),
+                user.aliveCheckIntervalPercent(),
+                trustedPosition,
+                lesson.durationMs())
+            .stream()
+            .boxed()
+            .findFirst()
+            .orElse(null);
     EmbyPlaybackClient.Selection selection = emby.select(lesson.embyItemId(), trustedPosition);
     String sessionId = ids.nextId();
     String deviceId = selection.deviceId() + ":" + clientDeviceId;
@@ -93,7 +104,7 @@ public class PlaybackSessionService {
     String ticket = tickets.issue(userId, mediaItemId, sessionId, deviceId);
     String url = "/api/v1/playback/" + ticket + (selection.hls() ? "/master.m3u8" : "/stream");
     return new PlaybackSession(
-        sessionId, url, trustedPosition, lesson.durationMs(), HEARTBEAT_INTERVAL_SECONDS);
+        sessionId, url, trustedPosition, lesson.durationMs(), HEARTBEAT_INTERVAL_SECONDS, review);
   }
 
   @Transactional(readOnly = true)
@@ -119,7 +130,8 @@ public class PlaybackSessionService {
       String ticketUrl,
       long trustedPositionMs,
       long durationMs,
-      int heartbeatIntervalSeconds) {}
+      int heartbeatIntervalSeconds,
+      boolean review) {}
 
   public record PlaybackContext(String upstreamPath, String embyItemId, boolean hls) {
     public boolean allows(String path) {

@@ -21,6 +21,7 @@ public class AuthService {
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
   private final IdGenerator idGenerator;
+  private final List<NewUserInitializer> newUserInitializers;
   private final Clock clock;
 
   public AuthService(
@@ -28,11 +29,13 @@ public class AuthService {
       PasswordEncoder passwordEncoder,
       JwtService jwtService,
       IdGenerator idGenerator,
+      List<NewUserInitializer> newUserInitializers,
       Clock clock) {
     this.users = users;
     this.passwordEncoder = passwordEncoder;
     this.jwtService = jwtService;
     this.idGenerator = idGenerator;
+    this.newUserInitializers = newUserInitializers;
     this.clock = clock;
   }
 
@@ -82,9 +85,20 @@ public class AuthService {
   /** 更新经服务端验证的用户偏好，并返回最新用户快照。 */
   @Transactional
   public User updatePreferences(
-      String userId, String timezone, String aliveCheckLevel, String dayEndLocalTime) {
-    validatePreferences(timezone, aliveCheckLevel, dayEndLocalTime);
-    users.updatePreferences(userId, timezone, aliveCheckLevel, dayEndLocalTime, clock.instant());
+      String userId,
+      String timezone,
+      boolean aliveCheckEnabled,
+      int aliveCheckIntervalPercent,
+      String dayEndLocalTime) {
+    User user = getUser(userId);
+    validatePreferences(timezone, aliveCheckIntervalPercent, dayEndLocalTime);
+    users.updatePreferences(
+        userId,
+        timezone,
+        aliveCheckEnabled ? "NORMAL" : "OFF",
+        aliveCheckIntervalPercent,
+        dayEndLocalTime,
+        clock.instant());
     return getUser(userId);
   }
 
@@ -100,7 +114,7 @@ public class AuthService {
       return;
     }
     Instant now = clock.instant();
-    users.insert(
+    User administrator =
         new User(
             idGenerator.nextId(),
             username,
@@ -109,9 +123,11 @@ public class AuthService {
             "ADMIN",
             "Asia/Shanghai",
             "NORMAL",
+            50,
             "23:59",
-            true),
-        now);
+            true);
+    users.insert(administrator, now);
+    newUserInitializers.forEach(initializer -> initializer.initialize(administrator.id()));
   }
 
   /** 管理员创建普通用户；用户名唯一性与密码强度在服务端统一校验。 */
@@ -133,9 +149,11 @@ public class AuthService {
             "USER",
             "Asia/Shanghai",
             "NORMAL",
+            50,
             "23:59",
             true);
     users.insert(user, now);
+    newUserInitializers.forEach(initializer -> initializer.initialize(user.id()));
     return user;
   }
 
@@ -181,15 +199,16 @@ public class AuthService {
   }
 
   private void validatePreferences(
-      String timezone, String aliveCheckLevel, String dayEndLocalTime) {
+      String timezone, int aliveCheckIntervalPercent, String dayEndLocalTime) {
     try {
       java.time.ZoneId.of(timezone);
       java.time.LocalTime.parse(dayEndLocalTime);
     } catch (java.time.DateTimeException exception) {
       throw new BusinessException(HttpStatus.BAD_REQUEST, "PREFERENCES_INVALID", "时区或日终时间不合法");
     }
-    if (!java.util.Set.of("OFF", "NORMAL", "STRICT", "INTENSE").contains(aliveCheckLevel)) {
-      throw new BusinessException(HttpStatus.BAD_REQUEST, "PREFERENCES_INVALID", "验活等级不合法");
+    if (aliveCheckIntervalPercent < 1 || aliveCheckIntervalPercent > 50) {
+      throw new BusinessException(
+          HttpStatus.BAD_REQUEST, "PREFERENCES_INVALID", "验活进度间隔必须为 1% 到 50%");
     }
   }
 

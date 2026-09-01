@@ -4,7 +4,9 @@ import com.shangan.quiz.domain.Question;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -38,6 +40,24 @@ public class JdbcQuestionRepository implements QuestionRepository {
             .query(Integer.class)
             .single()
         == 1;
+  }
+
+  @Override
+  public Map<String, Integer> countByCourse(String courseId) {
+    Map<String, Integer> result = new LinkedHashMap<>();
+    jdbc.sql(
+            "select q.media_item_id,count(*) question_count from questions q "
+                + "join media_items m on m.id=q.media_item_id "
+                + "where m.course_id=:courseId group by q.media_item_id order by q.media_item_id")
+        .param("courseId", courseId)
+        .query(
+            row -> {
+              while (row.next()) {
+                result.put(row.getString("media_item_id"), row.getInt("question_count"));
+              }
+              return result;
+            });
+    return Map.copyOf(result);
   }
 
   @Override

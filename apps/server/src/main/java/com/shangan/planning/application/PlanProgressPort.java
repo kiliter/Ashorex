@@ -2,6 +2,11 @@ package com.shangan.planning.application;
 
 /** 学习、答题和专注模块更新计划完成量的显式接口。 */
 public interface PlanProgressPort {
+  /** 复习快捷入口只用于识别播放模式，默认实现兼容不关注该概念的测试替身。 */
+  default boolean isReviewShortcut(String userId, String planItemId, String mediaItemId) {
+    return false;
+  }
+
   void updateProgress(String userId, String planItemId, long absoluteCompletedSeconds);
 
   /** 使用视频绝对可信位置更新任务，并独立传入完成阈值结果。 */

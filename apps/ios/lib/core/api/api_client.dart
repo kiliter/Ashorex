@@ -116,6 +116,34 @@ final class ApiClient {
     }
   }
 
+  /// 上传单个二进制文件并读取 JSON 响应，业务页面不直接操作 Dio。
+  Future<Map<String, dynamic>> postFile(
+    String path, {
+    required String fieldName,
+    required String filename,
+    required List<int> bytes,
+  }) async {
+    try {
+      final response = await _dio.post<dynamic>(
+        path,
+        data: FormData.fromMap({
+          fieldName: MultipartFile.fromBytes(bytes, filename: filename),
+        }),
+      );
+      return _asJson(response.data);
+    } on DioException catch (exception) {
+      throw ApiException.fromDio(exception);
+    }
+  }
+
+  Future<void> deleteEmpty(String path) async {
+    try {
+      await _dio.delete<void>(path);
+    } on DioException catch (exception) {
+      throw ApiException.fromDio(exception);
+    }
+  }
+
   Future<void> postEmpty(
     String path, {
     Object? data,
@@ -175,10 +203,23 @@ final class ApiClient {
       request.headers['Authorization'] = 'Bearer ${tokens.accessToken}';
       final response = await _dio.fetch<dynamic>(request);
       handler.resolve(response);
-    } catch (_) {
-      await _expireSession();
-      handler.next(error);
+    } catch (refreshError) {
+      // 刷新接口明确拒绝凭据时才清 Token；断网、超时等连接错误必须保留本地登录态。
+      if (_isDefinitiveRefreshRejection(refreshError)) {
+        await _expireSession();
+        handler.next(error);
+      } else if (refreshError is DioException) {
+        handler.next(refreshError);
+      } else {
+        handler.next(error);
+      }
     }
+  }
+
+  bool _isDefinitiveRefreshRejection(Object error) {
+    if (error is! DioException) return false;
+    final status = error.response?.statusCode;
+    return status == 400 || status == 401 || status == 403;
   }
 
   /// 并发 401 共享同一个 Future，确保 Refresh Token 只轮换一次。

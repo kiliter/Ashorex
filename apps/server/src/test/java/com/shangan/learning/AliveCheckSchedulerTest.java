@@ -1,30 +1,38 @@
 package com.shangan.learning;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.shangan.learning.application.AliveCheckScheduler;
 import org.junit.jupiter.api.Test;
 
-/** 验证监督等级对应的加密随机验活区间和关闭语义。 */
+/** 验证百分比滑杆对应的视频绝对检查点、默认值和关闭语义。 */
 class AliveCheckSchedulerTest {
   private final AliveCheckScheduler scheduler = new AliveCheckScheduler();
 
   @Test
-  void schedulesDueTrustedWatchTimeInsideConfiguredRanges() {
-    assertInside("NORMAL", 40, 60);
-    assertInside("STRICT", 20, 40);
-    assertInside("INTENSE", 10, 25);
+  void schedulesCheckPointByVideoProgressPercent() {
+    assertThat(scheduler.nextDuePositionMs("NORMAL", 50, 0, 600_000).orElseThrow())
+        .isEqualTo(300_000);
+    assertThat(scheduler.nextDuePositionMs("NORMAL", 10, 120_000, 600_000).orElseThrow())
+        .isEqualTo(180_000);
   }
 
   @Test
   void offLevelDoesNotScheduleAliveCheck() {
-    assertThat(scheduler.nextDueWatchMs("OFF", 123_000)).isEmpty();
+    assertThat(scheduler.nextDuePositionMs("OFF", 50, 123_000, 600_000)).isEmpty();
   }
 
-  private void assertInside(String level, long minimumMinutes, long maximumMinutes) {
-    long baseline = 123_000;
-    long due = scheduler.nextDueWatchMs(level, baseline).orElseThrow();
-    assertThat(due)
-        .isBetween(baseline + minimumMinutes * 60_000, baseline + maximumMinutes * 60_000);
+  @Test
+  void doesNotScheduleCheckpointInsideCompletionTolerance() {
+    assertThat(scheduler.nextDuePositionMs("NORMAL", 10, 540_000, 600_000)).isEmpty();
+  }
+
+  @Test
+  void rejectsPercentageOutsideSliderRange() {
+    assertThatThrownBy(() -> scheduler.nextDuePositionMs("NORMAL", 0, 0, 600_000))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> scheduler.nextDuePositionMs("NORMAL", 51, 0, 600_000))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }

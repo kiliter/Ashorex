@@ -116,6 +116,61 @@ final class ShanganStatusTag extends StatelessWidget {
   }
 }
 
+/// 所有课时入口共用的观看进度样式，统一状态文字、时长和进度条。
+final class ShanganWatchProgress extends StatelessWidget {
+  const ShanganWatchProgress({
+    required this.progressPercent,
+    required this.completed,
+    super.key,
+    this.durationSeconds,
+    this.meta,
+  });
+
+  final int progressPercent;
+  final bool completed;
+  final int? durationSeconds;
+  final String? meta;
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = (completed ? 100 : progressPercent).clamp(0, 100);
+    final label = completed
+        ? '已看完'
+        : percent > 0
+        ? '已观看 $percent%'
+        : '未观看';
+    final tone = completed
+        ? ShanganTagTone.success
+        : percent > 0
+        ? ShanganTagTone.info
+        : ShanganTagTone.neutral;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 5,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            if (meta != null && meta!.isNotEmpty)
+              Text(meta!, style: Theme.of(context).textTheme.bodySmall),
+            ShanganStatusTag(label, tone: tone),
+            if (durationSeconds != null)
+              Text(
+                shanganDuration(durationSeconds!),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+          ],
+        ),
+        if (percent > 0 && !completed) ...[
+          const SizedBox(height: 7),
+          ShanganProgress(value: percent / 100),
+        ],
+      ],
+    );
+  }
+}
+
 /// 纸张表面容器；边框宽度和圆角直接来自原型规范。
 final class ShanganSurface extends StatelessWidget {
   const ShanganSurface({

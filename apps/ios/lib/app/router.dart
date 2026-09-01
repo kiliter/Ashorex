@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/features/auth/presentation/login_page.dart';
+import 'package:shangan_ios/features/auth/presentation/connection_recovery_page.dart';
 import 'package:shangan_ios/features/catalog/presentation/course_detail_page.dart';
 import 'package:shangan_ios/features/dashboard/presentation/app_shell.dart';
 import 'package:shangan_ios/features/debt/presentation/debt_page.dart';
 import 'package:shangan_ios/features/exam/presentation/exam_goal_page.dart';
 import 'package:shangan_ios/features/focus/presentation/focus_timer_page.dart';
+import 'package:shangan_ios/features/focus/presentation/mock_exam_page.dart';
+import 'package:shangan_ios/features/focus/presentation/mock_exam_preset_page.dart';
 import 'package:shangan_ios/features/planning/presentation/plan_page.dart';
 import 'package:shangan_ios/features/player/presentation/learning_player_page.dart';
 import 'package:shangan_ios/features/profile/presentation/settings_page.dart';
@@ -23,12 +26,17 @@ GoRouter createRouter(AuthController authController) {
       final status = authController.state.status;
       final onLogin = state.matchedLocation == '/login';
       final onLoading = state.matchedLocation == '/loading';
+      final onConnectionError =
+          state.matchedLocation == '/connection-unavailable';
       if (status == AuthStatus.initializing ||
           status == AuthStatus.authenticating) {
         return onLoading ? null : '/loading';
       }
       if (status == AuthStatus.unauthenticated) {
         return onLogin ? null : '/login';
+      }
+      if (status == AuthStatus.serviceUnavailable) {
+        return onConnectionError ? null : '/connection-unavailable';
       }
       if (onLogin || onLoading || state.matchedLocation == '/') {
         return '/home';
@@ -42,6 +50,10 @@ GoRouter createRouter(AuthController authController) {
         builder: (context, state) => const _LoadingPage(),
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      GoRoute(
+        path: '/connection-unavailable',
+        builder: (context, state) => const ConnectionRecoveryPage(),
+      ),
       GoRoute(path: '/home', builder: (context, state) => const AppShell()),
       GoRoute(
         path: '/exam-goal',
@@ -49,6 +61,13 @@ GoRouter createRouter(AuthController authController) {
       ),
       GoRoute(path: '/plan', builder: (context, state) => const PlanPage()),
       GoRoute(path: '/debts', builder: (context, state) => const DebtPage()),
+      GoRoute(
+        path: '/mock-exam',
+        builder: (context, state) => MockExamPage(
+          planItemId: state.uri.queryParameters['planItemId']!,
+          title: state.uri.queryParameters['title'] ?? '模拟考试',
+        ),
+      ),
       GoRoute(
         path: '/focus',
         builder: (context, state) => FocusTimerPage(
@@ -83,6 +102,10 @@ GoRouter createRouter(AuthController authController) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: '/mock-exam-presets',
+        builder: (context, state) => const MockExamPresetPage(),
       ),
       GoRoute(
         path: '/reports/daily',

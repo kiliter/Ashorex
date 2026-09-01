@@ -8,4 +8,5 @@ public record WatchHeartbeatRequest(
     @Positive long sequence,
     @PositiveOrZero long positionMs,
     boolean playing,
-    boolean foreground) {}
+    boolean foreground,
+    @Positive double playbackSpeed) {}

@@ -28,6 +28,10 @@ final class LessonSummary {
     required this.title,
     required this.durationMs,
     required this.sortOrder,
+    required this.maxVerifiedPositionMs,
+    required this.progressPercent,
+    required this.learningStatus,
+    required this.summaryAvailable,
   });
 
   final String id;
@@ -35,6 +39,10 @@ final class LessonSummary {
   final String title;
   final int durationMs;
   final int sortOrder;
+  final int maxVerifiedPositionMs;
+  final int progressPercent;
+  final String learningStatus;
+  final bool summaryAvailable;
 
   factory LessonSummary.fromJson(Map<String, dynamic> json) => LessonSummary(
     id: json['id'] as String,
@@ -42,7 +50,29 @@ final class LessonSummary {
     title: json['title'] as String,
     durationMs: (json['durationMs'] as num).toInt(),
     sortOrder: (json['sortOrder'] as num).toInt(),
+    maxVerifiedPositionMs:
+        (json['maxVerifiedPositionMs'] as num?)?.toInt() ?? 0,
+    progressPercent: (json['progressPercent'] as num?)?.toInt() ?? 0,
+    learningStatus: json['learningStatus'] as String? ?? 'NOT_STARTED',
+    summaryAvailable: json['summaryAvailable'] as bool? ?? false,
   );
+}
+
+/// 课时学习内容按需读取，课程列表不携带可能很长的全文或摘要。
+final class LessonStudyContentData {
+  const LessonStudyContentData({
+    required this.summaryStatus,
+    required this.summaryMarkdown,
+  });
+
+  final String summaryStatus;
+  final String? summaryMarkdown;
+
+  factory LessonStudyContentData.fromJson(Map<String, dynamic> json) =>
+      LessonStudyContentData(
+        summaryStatus: json['summaryStatus'] as String,
+        summaryMarkdown: json['summaryMarkdown'] as String?,
+      );
 }
 
 final class CourseDetail {
@@ -75,6 +105,11 @@ abstract interface class CatalogRepository {
   Future<List<CourseSummary>> listCourses();
 
   Future<CourseDetail> loadCourse(String courseId);
+
+  /// 进入播放器时只读取课时元数据，不创建观看会话或改变作战单状态。
+  Future<LessonSummary> loadLesson(String lessonId);
+
+  Future<LessonStudyContentData> loadStudyContent(String lessonId);
 }
 
 /// 课程页面只读取上岸服务端快照，从不直接连接 Emby。
@@ -96,6 +131,16 @@ final class RemoteCatalogRepository implements CatalogRepository {
       await _api.getJson('/api/v1/courses/$courseId'),
     );
   }
+
+  @override
+  Future<LessonSummary> loadLesson(String lessonId) async =>
+      LessonSummary.fromJson(await _api.getJson('/api/v1/lessons/$lessonId'));
+
+  @override
+  Future<LessonStudyContentData> loadStudyContent(String lessonId) async =>
+      LessonStudyContentData.fromJson(
+        await _api.getJson('/api/v1/lessons/$lessonId/study-content'),
+      );
 }
 
 final catalogRepositoryProvider = Provider<CatalogRepository>((ref) {

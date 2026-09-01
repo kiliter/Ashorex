@@ -15,11 +15,16 @@ public interface QuizGenerationDraftRepository {
 
   List<QuizGenerationDraft> findByCourse(String courseId);
 
-  boolean hasReadyDraft(String mediaItemId);
+  /** 待审核或已发布都表示该课时已完成出题阶段，普通批量工作流不得重复生成。 */
+  boolean hasCompletedGeneration(String mediaItemId);
 
   void markPublished(String draftId, Map<String, String> questionIdsByItemId, Instant publishedAt);
 
   void updateItem(QuizGenerationDraft.Item item);
 
   void deleteItem(String itemId);
+
+  void markRejected(String draftId);
+
+  void deleteDraft(String draftId);
 }

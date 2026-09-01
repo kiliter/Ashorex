@@ -23,6 +23,9 @@ final class DailyReportData {
     required this.openDebtSeconds,
     required this.judgmentText,
     required this.generatedAt,
+    this.dayOutcome = 'NONE',
+    this.mockExamCompletedCount = 0,
+    this.mockExamAwaitingUploadCount = 0,
   });
 
   final DateTime date;
@@ -44,6 +47,9 @@ final class DailyReportData {
   final int openDebtSeconds;
   final String judgmentText;
   final DateTime generatedAt;
+  final String dayOutcome;
+  final int mockExamCompletedCount;
+  final int mockExamAwaitingUploadCount;
 
   factory DailyReportData.fromJson(Map<String, dynamic> json) =>
       DailyReportData(
@@ -66,6 +72,31 @@ final class DailyReportData {
         openDebtSeconds: (json['openDebtSeconds'] as num).toInt(),
         judgmentText: json['judgmentText'] as String,
         generatedAt: DateTime.parse(json['generatedAt'] as String),
+        dayOutcome: json['dayOutcome'] as String? ?? 'NONE',
+        mockExamCompletedCount:
+            (json['mockExamCompletedCount'] as num?)?.toInt() ?? 0,
+        mockExamAwaitingUploadCount:
+            (json['mockExamAwaitingUploadCount'] as num?)?.toInt() ?? 0,
+      );
+}
+
+/// 周报中的复习审计只统计课时和次数，不包含复习时长。
+final class ReviewedLessonData {
+  const ReviewedLessonData({
+    required this.mediaItemId,
+    required this.lessonTitle,
+    required this.reviewCount,
+  });
+
+  final String mediaItemId;
+  final String lessonTitle;
+  final int reviewCount;
+
+  factory ReviewedLessonData.fromJson(Map<String, dynamic> json) =>
+      ReviewedLessonData(
+        mediaItemId: json['mediaItemId'] as String,
+        lessonTitle: json['lessonTitle'] as String,
+        reviewCount: (json['reviewCount'] as num).toInt(),
       );
 }
 
@@ -114,6 +145,8 @@ final class WeeklyReportData {
     required this.effectiveStudySecondsChange,
     required this.previousWeekPlanCompletionRate,
     required this.planCompletionRateChange,
+    this.slackedDayCount = 0,
+    this.reviewedLessons = const [],
   });
 
   final DateTime weekStart;
@@ -133,6 +166,8 @@ final class WeeklyReportData {
   final int effectiveStudySecondsChange;
   final int previousWeekPlanCompletionRate;
   final int planCompletionRateChange;
+  final int slackedDayCount;
+  final List<ReviewedLessonData> reviewedLessons;
 
   factory WeeklyReportData.fromJson(Map<String, dynamic> json) =>
       WeeklyReportData(
@@ -164,6 +199,14 @@ final class WeeklyReportData {
             (json['previousWeekPlanCompletionRate'] as num).toInt(),
         planCompletionRateChange: (json['planCompletionRateChange'] as num)
             .toInt(),
+        slackedDayCount: (json['slackedDayCount'] as num?)?.toInt() ?? 0,
+        reviewedLessons: (json['reviewedLessons'] as List<dynamic>? ?? const [])
+            .map(
+              (item) => ReviewedLessonData.fromJson(
+                Map<String, dynamic>.from(item as Map),
+              ),
+            )
+            .toList(),
       );
 }
 

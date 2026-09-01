@@ -29,7 +29,14 @@ final class VideoPlayerAdapter implements PlayerAdapter {
       httpHeaders: headers,
     );
     _controller = controller;
-    await controller.initialize();
+    try {
+      // AVPlayer 遇到损坏或不可达的 HLS 分片时可能长期不回调，超时后交给页面显示失败状态。
+      await controller.initialize().timeout(const Duration(seconds: 20));
+    } catch (_) {
+      if (identical(_controller, controller)) _controller = null;
+      await controller.dispose();
+      rethrow;
+    }
     controller.addListener(_emitPosition);
     _emitPosition();
   }
@@ -48,6 +55,10 @@ final class VideoPlayerAdapter implements PlayerAdapter {
 
   @override
   Future<void> seek(Duration position) async => _controller?.seekTo(position);
+
+  @override
+  Future<void> setPlaybackSpeed(double speed) async =>
+      _controller?.setPlaybackSpeed(speed);
 
   @override
   Future<void> dispose() async {
@@ -77,50 +88,137 @@ final class LearningPlayerController extends ChangeNotifier {
 
   StreamSubscription<Duration>? _positionSubscription;
   Timer? _heartbeatTimer;
+  Future<void>? _sessionStartFuture;
+  String? _lessonId;
+  String? _planItemId;
   int _sequence = 0;
-  bool _heartbeatInFlight = false;
+  Future<void>? _heartbeatOperation;
   bool _stopped = false;
   bool _closed = false;
 
   Future<void> initialize({
     required String lessonId,
     String? planItemId,
+    Duration duration = Duration.zero,
+    Duration trustedPosition = Duration.zero,
   }) async {
+    _lessonId = lessonId;
+    _planItemId = planItemId;
     _positionSubscription = _player.positionStream.listen((position) {
       _setState(_state.copyWith(position: position));
     });
-    final session = await _repository.createSession(
-      lessonId,
-      planItemId: planItemId,
-    );
-    await _player.open(session.ticketUri);
-    final trusted = Duration(milliseconds: session.trustedPositionMs);
-    if (trusted > Duration.zero) await _player.seek(trusted);
+    // 进入播放页只准备本地状态；服务端会话必须等用户第一次点击播放后再创建。
     _setState(
       _state.copyWith(
-        sessionId: session.sessionId,
-        ticketUri: session.ticketUri,
-        duration: Duration(milliseconds: session.durationMs),
-        position: trusted,
-        maxVerifiedPosition: trusted,
+        duration: duration,
+        position: trustedPosition,
+        maxVerifiedPosition: trustedPosition,
         initialized: true,
-        status: 'ACTIVE',
+        status: 'READY',
       ),
-    );
-    _heartbeatTimer = Timer.periodic(
-      Duration(seconds: session.heartbeatIntervalSeconds),
-      (_) => unawaited(sendHeartbeat()),
     );
   }
 
+  /// 首次点击播放时原子创建会话，避免连续点击创建多个可信观看会话。
+  Future<void> _startSession() async {
+    final lessonId = _lessonId;
+    if (lessonId == null) throw StateError('播放器尚未初始化');
+    _setState(
+      _state.copyWith(
+        preparingPlayback: true,
+        playbackStartError: false,
+        status: 'STARTING',
+      ),
+    );
+    try {
+      final session = await _repository.createSession(
+        lessonId,
+        planItemId: _planItemId,
+      );
+      if (_closed || _stopped) {
+        // 用户在会话创建返回前已经退出时，立即回收服务端会话，不能遗留幽灵学习记录。
+        await _repository.stop(session.sessionId);
+        return;
+      }
+      await _player.open(session.ticketUri);
+      if (_closed || _stopped) {
+        await _repository.stop(session.sessionId);
+        return;
+      }
+      if (_state.playbackSpeed != 1.0) {
+        await _player.setPlaybackSpeed(_state.playbackSpeed);
+      }
+      final trusted = Duration(milliseconds: session.trustedPositionMs);
+      // 复习快捷入口从头打开且允许全程拖动，不把已完成位置当成续播点。
+      final initialPosition = session.review ? Duration.zero : trusted;
+      if (initialPosition > Duration.zero) await _player.seek(initialPosition);
+      _setState(
+        _state.copyWith(
+          sessionId: session.sessionId,
+          ticketUri: session.ticketUri,
+          duration: Duration(milliseconds: session.durationMs),
+          position: initialPosition,
+          maxVerifiedPosition: trusted,
+          reviewMode: session.review,
+          initialized: true,
+          preparingPlayback: false,
+          playbackStartError: false,
+          status: 'ACTIVE',
+        ),
+      );
+      _heartbeatTimer = Timer.periodic(
+        Duration(seconds: session.heartbeatIntervalSeconds),
+        (_) => unawaited(sendHeartbeat()),
+      );
+    } catch (_) {
+      _setState(
+        _state.copyWith(
+          preparingPlayback: false,
+          playbackStartError: true,
+          status: 'READY',
+        ),
+      );
+      rethrow;
+    }
+  }
+
   Future<void> play() async {
-    if (_state.aliveCheckRequired || _state.completed || !_state.isForeground) {
+    if (_state.aliveCheckRequired ||
+        _state.completed ||
+        !_state.isForeground ||
+        _state.preparingPlayback) {
       return;
     }
-    await _player.play();
-    _setState(
-      _state.copyWith(isPlaying: true, networkError: false, status: 'ACTIVE'),
-    );
+    if (_state.sessionId == null) {
+      final pending = _sessionStartFuture;
+      if (pending != null) return;
+      late final Future<void> created;
+      created = _startSession().whenComplete(() {
+        if (identical(_sessionStartFuture, created)) {
+          _sessionStartFuture = null;
+        }
+      });
+      _sessionStartFuture = created;
+      try {
+        await created;
+      } catch (_) {
+        return;
+      }
+    }
+    if (_state.sessionId == null || _closed || _stopped) return;
+    try {
+      await _player.play();
+      _setState(
+        _state.copyWith(
+          isPlaying: true,
+          networkError: false,
+          playbackStartError: false,
+          status: 'ACTIVE',
+        ),
+      );
+    } catch (_) {
+      _setState(_state.copyWith(playbackStartError: true, isPlaying: false));
+    }
   }
 
   Future<void> pause() async {
@@ -137,19 +235,50 @@ final class LearningPlayerController extends ChangeNotifier {
 
   /// 客户端拖动也做第一层限制；最终可信位置仍由服务端心跳裁决。
   Future<void> seek(Duration target) async {
+    final maximum = _state.reviewMode
+        ? _state.duration
+        : _state.maxVerifiedPosition;
     final safeTarget = target < Duration.zero
         ? Duration.zero
-        : target > _state.maxVerifiedPosition
-        ? _state.maxVerifiedPosition
+        : target > maximum
+        ? maximum
         : target;
     await _player.seek(safeTarget);
     _setState(_state.copyWith(position: safeTarget));
   }
 
-  Future<void> sendHeartbeat() async {
+  /// 在常用倍速之间循环，避免播放器控制层再弹出遮挡画面的菜单。
+  Future<void> cyclePlaybackSpeed() async {
+    const speeds = <double>[1.0, 1.25, 1.5, 2.0];
+    final currentIndex = speeds.indexOf(_state.playbackSpeed);
+    final next = speeds[(currentIndex + 1) % speeds.length];
+    if (_state.isPlaying && _state.sessionId != null) {
+      // 先用旧倍速结算当前区间，避免服务端把整个心跳间隔误按新倍速计算。
+      final pending = _heartbeatOperation;
+      if (pending != null) await pending;
+      await sendHeartbeat();
+    }
+    await _player.setPlaybackSpeed(next);
+    _setState(_state.copyWith(playbackSpeed: next));
+  }
+
+  Future<void> sendHeartbeat() {
     final sessionId = _state.sessionId;
-    if (sessionId == null || _closed || _heartbeatInFlight || _stopped) return;
-    _heartbeatInFlight = true;
+    if (sessionId == null || _closed || _stopped) return Future<void>.value();
+    final pending = _heartbeatOperation;
+    if (pending != null) return pending;
+    late final Future<void> operation;
+    operation = _sendHeartbeat(sessionId).whenComplete(() {
+      if (identical(_heartbeatOperation, operation)) {
+        _heartbeatOperation = null;
+      }
+    });
+    _heartbeatOperation = operation;
+    return operation;
+  }
+
+  /// 实际执行一次心跳；公开入口负责把并发调用合并到同一个 Future。
+  Future<void> _sendHeartbeat(String sessionId) async {
     final sequence = ++_sequence;
     try {
       final response = await _repository.heartbeat(
@@ -159,6 +288,7 @@ final class LearningPlayerController extends ChangeNotifier {
           positionMs: _state.position.inMilliseconds,
           playing: _state.isPlaying,
           foreground: _state.isForeground,
+          playbackSpeed: _state.playbackSpeed,
         ),
       );
       final trusted = Duration(milliseconds: response.trustedPositionMs);
@@ -194,8 +324,6 @@ final class LearningPlayerController extends ChangeNotifier {
           isPlaying: failures >= 3 ? false : _state.isPlaying,
         ),
       );
-    } finally {
-      _heartbeatInFlight = false;
     }
   }
 

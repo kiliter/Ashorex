@@ -6,21 +6,60 @@
       <header th:replace="~{admin/fragments :: navigation('settings')}"></header>
 
       <main class="admin-main">
-        <header class="page-header">
-          <div>
-            <p class="page-eyebrow">RUNTIME INTEGRATION / 05</p>
-            <h1 data-code="CFG/10">服务配置</h1>
-            <p>统一管理 Emby、ASR、LLM 与 OpenRouter。保存后只影响新任务，无需重启服务。</p>
+        <section class="page-head">
+          <div class="container page-head-row">
+            <div>
+              <p class="page-eyebrow">RUNTIME INTEGRATION / 05</p>
+              <h1 class="page-title" data-code="CFG/10">服务配置</h1>
+              <p class="page-desc">统一管理 Emby、ASR、LLM 与 OpenRouter。保存后只影响新任务，无需重启服务。</p>
+            </div>
           </div>
-        </header>
+        </section>
 
-        <div class="alert alert--success" th:if="${saved}">配置已保存并立即生效。</div>
-        <div class="alert alert--success" th:if="${refreshed}" th:text="|模型目录已刷新，共 ${catalogCount} 个模型。|"></div>
-        <div class="alert" th:if="${refreshError != null and !refreshError.isBlank()}" th:text="${refreshError}"></div>
-        <div class="alert" th:if="${!fieldErrors.isEmpty()}">配置未保存，请修正标记的字段。</div>
+        <div class="container workspace">
+          <div class="alert alert--success" th:if="${saved}">配置已保存并立即生效。</div>
+          <div class="alert alert--success" th:if="${refreshed}" th:text="|模型目录已刷新，共 ${catalogCount} 个模型。|"></div>
+          <div class="alert" th:if="${refreshError != null and !refreshError.isBlank()}" th:text="${refreshError}"></div>
+          <div class="alert" data-validation-summary th:if="${!fieldErrors.isEmpty()}">配置未保存，请修正标记的字段。</div>
+          <!-- 所有配置仍由一个表单统一保存；左侧分组只负责切换当前编辑区域。 -->
+          <form class="settings-workspace" method="post" th:action="@{/admin/settings/integrations}" th:object="${settingsForm}" data-settings-form>
+            <aside class="settings-groups" aria-label="服务配置分组">
+              <div class="settings-groups__head">
+                <p class="page-eyebrow">CONFIG GROUPS</p>
+                <strong>配置组</strong>
+                <span>选择一项进行编辑</span>
+              </div>
+              <div class="settings-groups__list" role="tablist" aria-orientation="vertical">
+                <button class="settings-group is-active" type="button" role="tab" aria-selected="true" aria-controls="settings-emby" data-settings-target="settings-emby">
+                  <span class="settings-group__code">01</span>
+                  <span><strong>Emby</strong><small>媒体服务</small></span>
+                  <i th:classappend="${currentSettings.emby.configured() ? ' is-ok' : ' is-danger'}" aria-hidden="true"></i>
+                </button>
+                <button class="settings-group" type="button" role="tab" aria-selected="false" aria-controls="settings-asr" data-settings-target="settings-asr">
+                  <span class="settings-group__code">02</span>
+                  <span><strong>ASR</strong><small>语音转文字</small></span>
+                  <i th:classappend="${currentSettings.asr.configured() ? ' is-ok' : ' is-danger'}" aria-hidden="true"></i>
+                </button>
+                <button class="settings-group" type="button" role="tab" aria-selected="false" aria-controls="settings-llm" data-settings-target="settings-llm">
+                  <span class="settings-group__code">03</span>
+                  <span><strong>LLM</strong><small>摘要与出题</small></span>
+                  <i th:classappend="${currentSettings.llm.configured() ? ' is-ok' : ' is-danger'}" aria-hidden="true"></i>
+                </button>
+                <button class="settings-group" type="button" role="tab" aria-selected="false" aria-controls="settings-openrouter" data-settings-target="settings-openrouter">
+                  <span class="settings-group__code">04</span>
+                  <span><strong>OpenRouter</strong><small>模型目录</small></span>
+                  <i th:classappend="${catalogCount > 0 ? ' is-ok' : ''}" aria-hidden="true"></i>
+                </button>
+                <button class="settings-group" type="button" role="tab" aria-selected="false" aria-controls="settings-scheduler" data-settings-target="settings-scheduler">
+                  <span class="settings-group__code">05</span>
+                  <span><strong>定时补全</strong><small>自动扫描</small></span>
+                  <i th:classappend="${currentSettings.autoFill.enabled() ? ' is-ok' : ''}" aria-hidden="true"></i>
+                </button>
+              </div>
+            </aside>
 
-        <form method="post" th:action="@{/admin/settings/integrations}" th:object="${settingsForm}">
-          <section class="panel config-panel">
+            <div class="settings-editor">
+          <section id="settings-emby" class="panel config-panel settings-panel" role="tabpanel" data-settings-panel>
             <div class="panel-header">
               <div><p class="page-eyebrow">01 / MEDIA</p><h2>Emby 媒体服务</h2></div>
               <span class="status-pill" th:classappend="${currentSettings.emby.configured() ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${currentSettings.emby.configured() ? '已配置' : '未配置'}"></span>
@@ -37,46 +76,92 @@
             </div>
           </section>
 
-          <section class="panel config-panel">
+          <section id="settings-asr" class="panel config-panel settings-panel" role="tabpanel" data-settings-panel hidden>
             <div class="panel-header">
               <div><p class="page-eyebrow">02 / SPEECH TO TEXT</p><h2>ASR 转写服务</h2></div>
-              <span class="status-pill" th:classappend="${currentSettings.asr.configured() ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${currentSettings.asr.configured() ? '已配置' : '未配置'}"></span>
+              <div class="panel-header-actions"><span class="status-pill" th:classappend="${currentSettings.asr.configured() ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${currentSettings.asr.configured() ? '已配置' : '未配置'}"></span><button class="button button--secondary button--small" type="submit" form="test-asr-connection" data-test-button data-idle-label="测试 ASR">测试 ASR</button></div>
             </div>
             <div class="form-grid">
               <label class="field">Base URL<input type="url" th:field="*{asrBaseUrl}" placeholder="http://127.0.0.1:8000" /><small class="field-error" th:if="${fieldErrors.containsKey('asrBaseUrl')}" th:text="${fieldErrors.get('asrBaseUrl')}"></small></label>
               <label class="field">API Key（本地服务可留空）<span class="password-field"><input id="asrApiKey" name="asrApiKey" type="password" th:value="*{asrApiKey}" autocomplete="off" /><button type="button" class="button button--secondary button--small" data-password-toggle="asrApiKey">显示</button></span></label>
               <label class="field">模型名<input type="text" th:field="*{asrModel}" /></label>
               <label class="field">语言<input type="text" th:field="*{asrLanguage}" /></label>
-              <label class="field">Chunk Duration（秒）<input type="number" min="5" max="600" th:field="*{asrChunkDurationSeconds}" /><small class="field-error" th:if="${fieldErrors.containsKey('asrChunkDurationSeconds')}" th:text="${fieldErrors.get('asrChunkDurationSeconds')}"></small></label>
-              <label class="field">请求超时（秒）<input type="number" min="1" max="7200" th:field="*{asrTimeoutSeconds}" /><small class="field-error" th:if="${fieldErrors.containsKey('asrTimeoutSeconds')}" th:text="${fieldErrors.get('asrTimeoutSeconds')}"></small></label>
+              <label class="field">请求超时（分钟）
+                <input id="asrTimeoutMinutes" type="number" min="1" max="120" step="1" data-timeout-input="asrTimeoutSeconds" />
+                <input type="hidden" th:field="*{asrTimeoutSeconds}" />
+                <small class="field-error" th:if="${fieldErrors.containsKey('asrTimeoutSeconds')}" th:text="${fieldErrors.get('asrTimeoutSeconds')}"></small>
+              </label>
             </div>
           </section>
 
-          <section class="panel config-panel">
+          <section id="settings-llm" class="panel config-panel settings-panel" role="tabpanel" data-settings-panel hidden>
             <div class="panel-header">
               <div><p class="page-eyebrow">03 / CONTENT MODEL</p><h2>LLM 摘要与出题</h2></div>
-              <span class="status-pill" th:classappend="${currentSettings.llm.configured() ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${currentSettings.llm.configured() ? '已配置' : '未配置'}"></span>
+              <div class="panel-header-actions"><span class="status-pill" th:classappend="${currentSettings.llm.configured() ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${currentSettings.llm.configured() ? '已配置' : '未配置'}"></span><button class="button button--secondary button--small" type="submit" form="test-llm-connection" data-test-button data-idle-label="测试 LLM">测试 LLM</button></div>
             </div>
             <div class="form-grid">
               <label class="field">CPA / OpenAI-compatible Base URL<input type="url" th:field="*{llmBaseUrl}" placeholder="https://your-cpa.example/v1" /><small class="field-error" th:if="${fieldErrors.containsKey('llmBaseUrl')}" th:text="${fieldErrors.get('llmBaseUrl')}"></small></label>
               <label class="field">API Key<span class="password-field"><input id="llmApiKey" name="llmApiKey" type="password" th:value="*{llmApiKey}" autocomplete="off" /><button type="button" class="button button--secondary button--small" data-password-toggle="llmApiKey">显示</button></span></label>
-              <label class="field">模型名<input type="text" list="llm-model-catalog" th:field="*{llmModel}" placeholder="openai/gpt-5-mini" /></label>
-              <label class="field">上下文长度<input type="number" min="4096" max="2000000" th:field="*{llmContextLength}" /><small class="field-error" th:if="${fieldErrors.containsKey('llmContextLength')}" th:text="${fieldErrors.get('llmContextLength')}"></small></label>
-              <label class="field">最大输出 Tokens<input type="number" min="256" max="200000" th:field="*{llmMaxCompletionTokens}" /><small class="field-error" th:if="${fieldErrors.containsKey('llmMaxCompletionTokens')}" th:text="${fieldErrors.get('llmMaxCompletionTokens')}"></small></label>
-              <label class="field">请求超时（秒）<input type="number" min="1" max="1800" th:field="*{llmTimeoutSeconds}" /><small class="field-error" th:if="${fieldErrors.containsKey('llmTimeoutSeconds')}" th:text="${fieldErrors.get('llmTimeoutSeconds')}"></small></label>
+              <div class="field">
+                <label for="llmModel">模型名</label>
+                <!-- 自定义模型选择器允许搜索缓存目录，也保留手工输入 CPA 模型名。 -->
+                <div class="model-picker" data-model-picker>
+                  <div class="model-picker__control">
+                    <input id="llmModel" type="text" th:field="*{llmModel}" placeholder="输入或选择模型" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="llm-model-options" autocomplete="off" />
+                    <button class="model-picker__toggle" type="button" aria-label="展开模型目录" data-model-picker-toggle><span aria-hidden="true"></span></button>
+                  </div>
+                  <div id="llm-model-options" class="model-picker__menu" role="listbox" data-model-picker-menu hidden>
+                    <div class="model-picker__search">
+                      <span aria-hidden="true"></span>
+                      <input type="search" placeholder="搜索模型 ID 或名称" aria-label="搜索模型 ID 或名称" data-model-picker-search autocomplete="off" />
+                    </div>
+                    <button class="model-picker__option" type="button" role="option" th:each="catalogModel : ${catalogModels}" th:attr="data-value=${catalogModel.modelId.substring(catalogModel.modelId.indexOf('/') + 1)},data-context=${catalogModel.contextLength},data-output=${catalogModel.maxCompletionTokens},data-search=|${catalogModel.modelId} ${catalogModel.displayName}|">
+                      <span class="model-picker__main"><strong th:text="${catalogModel.modelId.substring(catalogModel.modelId.indexOf('/') + 1)}">model</strong><small th:text="${catalogModel.displayName}">模型名称</small></span>
+                      <span class="model-picker__meta"><span data-token-number th:attr="data-token-number=${catalogModel.contextLength}">0</span> CTX · <span data-token-number th:attr="data-token-number=${catalogModel.maxCompletionTokens}">0</span> OUT</span>
+                    </button>
+                    <div class="model-picker__empty" data-model-picker-empty hidden>没有匹配的缓存模型，可继续手工输入。</div>
+                  </div>
+                </div>
+              </div>
+              <label class="field">上下文长度
+                <input id="llmContextLengthDisplay" type="text" inputmode="decimal" placeholder="例如 128K" data-token-input="llmContextLength" />
+                <input type="hidden" th:field="*{llmContextLength}" />
+                <small class="field-error" th:if="${fieldErrors.containsKey('llmContextLength')}" th:text="${fieldErrors.get('llmContextLength')}"></small>
+              </label>
+              <label class="field">最大输出 Tokens
+                <input id="llmMaxCompletionTokensDisplay" type="text" inputmode="decimal" placeholder="例如 8K" data-token-input="llmMaxCompletionTokens" />
+                <input type="hidden" th:field="*{llmMaxCompletionTokens}" />
+                <small class="field-error" th:if="${fieldErrors.containsKey('llmMaxCompletionTokens')}" th:text="${fieldErrors.get('llmMaxCompletionTokens')}"></small>
+              </label>
+              <fieldset class="reasoning-field">
+                <legend>思考等级</legend>
+                <div class="reasoning-options">
+                  <label><input type="radio" th:field="*{llmReasoningEffort}" value="" /><span>不指定</span></label>
+                  <label><input type="radio" th:field="*{llmReasoningEffort}" value="minimal" /><span>Minimal</span></label>
+                  <label><input type="radio" th:field="*{llmReasoningEffort}" value="low" /><span>Low</span></label>
+                  <label><input type="radio" th:field="*{llmReasoningEffort}" value="medium" /><span>Medium</span></label>
+                  <label><input type="radio" th:field="*{llmReasoningEffort}" value="high" /><span>High</span></label>
+                  <label><input type="radio" th:field="*{llmReasoningEffort}" value="xhigh" /><span>XHigh</span></label>
+                </div>
+              </fieldset>
+              <label class="field">请求超时（分钟）
+                <input id="llmTimeoutMinutes" type="number" min="1" max="30" step="1" data-timeout-input="llmTimeoutSeconds" />
+                <input type="hidden" th:field="*{llmTimeoutSeconds}" />
+                <small class="field-error" th:if="${fieldErrors.containsKey('llmTimeoutSeconds')}" th:text="${fieldErrors.get('llmTimeoutSeconds')}"></small>
+              </label>
             </div>
           </section>
 
-          <section class="panel config-panel">
-            <div class="panel-header"><div><p class="page-eyebrow">04 / MODEL CATALOG</p><h2>OpenRouter 模型目录</h2></div><button class="button button--secondary button--small" type="submit" form="refresh-models">刷新目录</button></div>
+          <section id="settings-openrouter" class="panel config-panel settings-panel" role="tabpanel" data-settings-panel hidden>
+            <div class="panel-header"><div><p class="page-eyebrow">04 / MODEL CATALOG</p><h2>OpenRouter 模型目录</h2></div><button class="button button--secondary button--small" type="submit" form="refresh-models" data-refresh-button data-idle-label="刷新目录">刷新目录</button></div>
             <div class="form-grid">
               <label class="field">OpenRouter API Key<span class="password-field"><input id="openRouterApiKey" name="openRouterApiKey" type="password" th:value="*{openRouterApiKey}" autocomplete="off" /><button type="button" class="button button--secondary button--small" data-password-toggle="openRouterApiKey">显示</button></span></label>
               <p class="section-note">目录地址固定为 https://openrouter.ai/api/v1/models，只缓存模型元数据，不改变上面的 CPA 推理地址。</p>
-              <p class="section-note" th:text="|当前缓存 ${catalogCount} 个可用模型；选择缓存模型时会自动回填上下文和最大输出 Tokens。|"></p>
+              <p class="section-note" data-catalog-count th:text="|当前缓存 ${catalogCount} 个可用模型；选择缓存模型时会自动回填上下文和最大输出 Tokens。|"></p>
             </div>
           </section>
 
-          <section class="panel config-panel">
+          <section id="settings-scheduler" class="panel config-panel settings-panel" role="tabpanel" data-settings-panel hidden>
             <div class="panel-header"><div><p class="page-eyebrow">05 / SCHEDULER</p><h2>定时补全</h2></div><span class="status-pill" th:classappend="${currentSettings.autoFill.enabled() ? 'status-pill--ok' : ''}" th:text="${currentSettings.autoFill.enabled() ? '已开启' : '默认关闭'}"></span></div>
             <div class="form-grid">
               <label class="field field--checkbox"><input type="checkbox" th:field="*{autoFillEnabled}" /> 开启缺失内容扫描</label>
@@ -85,19 +170,155 @@
             </div>
           </section>
 
-          <section class="panel save-panel">
-            <div><h2>保存运行时配置</h2><p class="section-note">SQLite 配置优先于环境变量，并随数据库备份；密钥不会进入任务日志和移动端接口。</p></div>
-            <button type="submit">保存全部配置</button>
+          <section class="panel save-panel settings-save-panel">
+            <div><h2>保存全部配置</h2><p class="section-note">保存后，新任务立即使用当前配置。</p></div>
+            <button type="submit" data-save-button data-idle-label="保存全部配置">保存全部配置</button>
           </section>
-        </form>
-        <form id="refresh-models" method="post" th:action="@{/admin/settings/models/refresh}"></form>
-        <datalist id="llm-model-catalog">
-          <option th:each="catalogModel : ${catalogModels}" th:value="${catalogModel.modelId}" th:attr="data-context=${catalogModel.contextLength},data-output=${catalogModel.maxCompletionTokens}" th:text="${catalogModel.displayName}"></option>
-        </datalist>
+            </div>
+          </form>
+        </div>
+        <form id="refresh-models" method="post" th:action="@{/admin/settings/models/refresh}" data-model-refresh></form>
+        <form id="test-asr-connection" method="post" th:action="@{/admin/settings/integrations/test/asr}" data-connection-test></form>
+        <form id="test-llm-connection" method="post" th:action="@{/admin/settings/integrations/test/llm}" data-connection-test></form>
       </main>
     </div>
 
+    <!-- 异步操作结果集中显示在右上角，不打断配置编辑上下文。 -->
+    <div class="toast-region" aria-live="polite" aria-atomic="true" data-toast-region></div>
+
     <script>
+      // 左侧配置组只切换当前面板，不清空其他分组中尚未保存的输入。
+      const settingsTabs = [...document.querySelectorAll("[data-settings-target]")];
+      const settingsPanels = [...document.querySelectorAll("[data-settings-panel]")];
+      const activateSettingsGroup = (panelId) => {
+        settingsTabs.forEach((tab) => {
+          const active = tab.dataset.settingsTarget === panelId;
+          tab.classList.toggle("is-active", active);
+          tab.setAttribute("aria-selected", String(active));
+        });
+        settingsPanels.forEach((panel) => {
+          panel.hidden = panel.id !== panelId;
+        });
+      };
+      settingsTabs.forEach((tab) => {
+        tab.addEventListener("click", () => activateSettingsGroup(tab.dataset.settingsTarget));
+      });
+      // 地址锚点用于外部链接直接打开指定配置分组。
+      const requestedSettingsPanel = window.location.hash.slice(1);
+      if (settingsPanels.some((panel) => panel.id === requestedSettingsPanel)) {
+        activateSettingsGroup(requestedSettingsPanel);
+      }
+      // 保存校验失败时自动打开包含首个错误字段的分组。
+      const firstInvalidPanel = document.querySelector("[data-settings-panel] .field-error");
+      if (firstInvalidPanel) activateSettingsGroup(firstInvalidPanel.closest("[data-settings-panel]").id);
+
+      // ASR/LLM 测试通过 fetch 局部提交，只更新按钮和右上角通知，不重新渲染页面。
+      const toastRegion = document.querySelector("[data-toast-region]");
+      const showToast = (message, success) => {
+        const toast = document.createElement("div");
+        toast.className = `toast ${success ? "toast--success" : "toast--error"}`;
+        toast.setAttribute("role", success ? "status" : "alert");
+        toast.innerHTML = `<span class="toast__icon" aria-hidden="true"></span><div><strong>${success ? "测试成功" : "测试失败"}</strong><p></p></div><button type="button" class="toast__close" aria-label="关闭通知">&times;</button>`;
+        toast.querySelector("p").textContent = message;
+        const close = () => {
+          toast.classList.add("is-leaving");
+          window.setTimeout(() => toast.remove(), 160);
+        };
+        toast.querySelector(".toast__close").addEventListener("click", close);
+        toastRegion.appendChild(toast);
+        window.setTimeout(close, 3800);
+      };
+      // 配置保存改为局部提交；错误原位标记并自动切换到首个错误所属分组。
+      const settingsForm = document.querySelector("[data-settings-form]");
+      const clearFieldErrors = () => {
+        settingsForm.querySelectorAll(".field-error").forEach((error) => error.remove());
+        document.querySelector("[data-validation-summary]")?.remove();
+      };
+      const visibleFieldFor = (fieldName) =>
+        settingsForm.querySelector(`[data-token-input="${fieldName}"], [data-timeout-input="${fieldName}"]`)
+        || settingsForm.querySelector(`[name="${fieldName}"]`);
+      const renderFieldErrors = (fieldErrors) => {
+        let firstPanel = null;
+        Object.entries(fieldErrors || {}).forEach(([fieldName, message]) => {
+          const field = visibleFieldFor(fieldName);
+          if (!field) return;
+          const wrapper = field.closest(".field, .reasoning-field") || field.parentElement;
+          const error = document.createElement("small");
+          error.className = "field-error";
+          error.textContent = message;
+          wrapper.appendChild(error);
+          firstPanel ||= field.closest("[data-settings-panel]");
+        });
+        if (firstPanel) activateSettingsGroup(firstPanel.id);
+      };
+      settingsForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        clearFieldErrors();
+        const button = settingsForm.querySelector("[data-save-button]");
+        button.disabled = true;
+        button.textContent = "保存中…";
+        try {
+          const response = await fetch(settingsForm.action, {
+            method: "POST",
+            body: new FormData(settingsForm),
+            headers: { Accept: "application/json" },
+          });
+          const payload = await response.json();
+          renderFieldErrors(payload.fieldErrors);
+          showToast(payload.message || "配置保存失败。", response.ok && payload.success);
+        } catch (error) {
+          showToast("保存请求未完成，请检查服务端是否正在运行。", false);
+        } finally {
+          button.disabled = false;
+          button.textContent = button.dataset.idleLabel;
+        }
+      });
+      // 模型目录刷新同样使用局部请求，页面只更新缓存数量。
+      const modelRefreshForm = document.querySelector("[data-model-refresh]");
+      modelRefreshForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const button = document.querySelector("[data-refresh-button]");
+        button.disabled = true;
+        button.textContent = "刷新中…";
+        try {
+          const response = await fetch(modelRefreshForm.action, {
+            method: "POST",
+            body: new FormData(modelRefreshForm),
+            headers: { Accept: "application/json" },
+          });
+          const payload = await response.json();
+          document.querySelector("[data-catalog-count]").textContent = `当前缓存 ${payload.catalogCount} 个可用模型；选择缓存模型时会自动回填上下文和最大输出 Tokens。`;
+          showToast(payload.message || "模型目录刷新失败。", response.ok && payload.success);
+        } catch (error) {
+          showToast("刷新请求未完成，请检查服务端是否正在运行。", false);
+        } finally {
+          button.disabled = false;
+          button.textContent = button.dataset.idleLabel;
+        }
+      });
+      document.querySelectorAll("[data-connection-test]").forEach((form) => {
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const button = document.querySelector(`[form="${form.id}"][data-test-button]`);
+          button.disabled = true;
+          button.textContent = "测试中…";
+          try {
+            const response = await fetch(form.action, {
+              method: "POST",
+              body: new FormData(form),
+              headers: { Accept: "application/json" },
+            });
+            const payload = await response.json();
+            showToast(payload.message || "服务未返回测试结果。", response.ok && payload.success);
+          } catch (error) {
+            showToast("请求未完成，请检查服务端是否正在运行。", false);
+          } finally {
+            button.disabled = false;
+            button.textContent = button.dataset.idleLabel;
+          }
+        });
+      });
+
       // 仅在当前页面切换密码框可见性，不复制、缓存或记录密钥。
       document.querySelectorAll("[data-password-toggle]").forEach((button) => {
         button.addEventListener("click", () => {
@@ -107,13 +328,117 @@
           button.textContent = visible ? "显示" : "隐藏";
         });
       });
-      // 选择缓存模型时同步其上下文元数据；手填 CPA 模型名时保留管理员输入值。
-      document.getElementById("llmModel").addEventListener("change", (event) => {
-        const option = [...document.querySelectorAll("#llm-model-catalog option")]
-          .find((item) => item.value === event.target.value);
-        if (!option) return;
-        document.getElementById("llmContextLength").value = option.dataset.context;
-        document.getElementById("llmMaxCompletionTokens").value = option.dataset.output;
+      // 自定义模型目录支持输入过滤；选择缓存模型时同步上下文元数据。
+      const modelPicker = document.querySelector("[data-model-picker]");
+      const modelInput = document.getElementById("llmModel");
+      const modelMenu = modelPicker.querySelector("[data-model-picker-menu]");
+      const modelToggle = modelPicker.querySelector("[data-model-picker-toggle]");
+      const modelSearch = modelPicker.querySelector("[data-model-picker-search]");
+      const modelOptions = [...modelPicker.querySelectorAll("[data-value]")];
+      const modelEmpty = modelPicker.querySelector("[data-model-picker-empty]");
+      // Token 数量统一按二进制容量缩写显示，输入时再换算为完整整数提交。
+      const formatTokenCount = (raw) => {
+        const value = Number(raw);
+        if (!Number.isFinite(value)) return "";
+        if (value >= 1024 * 1024) return `${Number((value / (1024 * 1024)).toFixed(2))}M`;
+        if (value >= 1024) return `${Number((value / 1024).toFixed(1))}K`;
+        return String(value);
+      };
+      const parseTokenCount = (raw) => {
+        const match = raw.trim().match(/^(\d+(?:\.\d+)?)\s*([kKmM]?)$/);
+        if (!match) return null;
+        const multiplier = match[2].toUpperCase() === "M" ? 1024 * 1024 : match[2] ? 1024 : 1;
+        return Math.round(Number(match[1]) * multiplier);
+      };
+      document.querySelectorAll("[data-token-number]").forEach((item) => {
+        item.textContent = formatTokenCount(item.dataset.tokenNumber);
+      });
+      document.querySelectorAll("[data-token-input]").forEach((displayInput) => {
+        const rawInput = document.getElementById(displayInput.dataset.tokenInput);
+        displayInput.value = formatTokenCount(rawInput.value);
+        displayInput.addEventListener("change", () => {
+          const parsed = parseTokenCount(displayInput.value);
+          if (parsed === null) {
+            displayInput.value = formatTokenCount(rawInput.value);
+            return;
+          }
+          rawInput.value = parsed;
+          displayInput.value = formatTokenCount(parsed);
+        });
+      });
+      // 超时在页面按分钟编辑，提交时继续换算为后端既有的秒数字段。
+      document.querySelectorAll("[data-timeout-input]").forEach((minutesInput) => {
+        const secondsInput = document.getElementById(minutesInput.dataset.timeoutInput);
+        minutesInput.value = Math.max(1, Math.ceil(Number(secondsInput.value) / 60));
+        minutesInput.addEventListener("input", () => {
+          const minutes = Number(minutesInput.value);
+          if (Number.isFinite(minutes) && minutes > 0) secondsInput.value = Math.round(minutes * 60);
+        });
+      });
+      const setModelMenuOpen = (open) => {
+        modelMenu.hidden = !open;
+        modelInput.setAttribute("aria-expanded", String(open));
+        modelPicker.classList.toggle("is-open", open);
+      };
+      const filterModels = () => {
+        const keyword = modelSearch.value.trim().toLowerCase();
+        let visibleCount = 0;
+        modelOptions.forEach((option) => {
+          const visible = !keyword || option.dataset.search.toLowerCase().includes(keyword);
+          option.hidden = !visible;
+          if (visible) visibleCount += 1;
+        });
+        modelEmpty.hidden = visibleCount > 0;
+      };
+      const syncModelMetadata = (option) => {
+        const contextInput = document.getElementById("llmContextLength");
+        const outputInput = document.getElementById("llmMaxCompletionTokens");
+        contextInput.value = option.dataset.context;
+        outputInput.value = option.dataset.output;
+        document.getElementById("llmContextLengthDisplay").value = formatTokenCount(option.dataset.context);
+        document.getElementById("llmMaxCompletionTokensDisplay").value = formatTokenCount(option.dataset.output);
+      };
+      modelInput.addEventListener("focus", () => {
+        modelSearch.value = "";
+        filterModels();
+        setModelMenuOpen(true);
+      });
+      modelInput.addEventListener("input", () => {
+        modelSearch.value = modelInput.value;
+        filterModels();
+        setModelMenuOpen(true);
+      });
+      modelSearch.addEventListener("input", filterModels);
+      modelSearch.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        const firstVisible = modelOptions.find((option) => !option.hidden);
+        if (firstVisible) firstVisible.click();
+      });
+      modelToggle.addEventListener("click", () => {
+        const open = modelMenu.hidden;
+        modelSearch.value = "";
+        filterModels();
+        setModelMenuOpen(open);
+        if (open) modelSearch.focus();
+      });
+      modelOptions.forEach((option) => {
+        option.addEventListener("click", () => {
+          modelInput.value = option.dataset.value;
+          syncModelMetadata(option);
+          modelSearch.value = "";
+          setModelMenuOpen(false);
+        });
+      });
+      modelInput.addEventListener("change", () => {
+        const exact = modelOptions.find((option) => option.dataset.value === modelInput.value);
+        if (exact) syncModelMetadata(exact);
+      });
+      document.addEventListener("click", (event) => {
+        if (!modelPicker.contains(event.target)) setModelMenuOpen(false);
+      });
+      modelPicker.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") setModelMenuOpen(false);
       });
     </script>
   </body>

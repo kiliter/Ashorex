@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/app/router.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
@@ -30,6 +31,13 @@ final class _ShanganAppState extends State<ShanganApp> {
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.light,
       theme: ShanganTheme.light(),
+      locale: const Locale('zh', 'CN'),
+      supportedLocales: const [Locale('zh', 'CN')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       routerConfig: _router,
     );
   }

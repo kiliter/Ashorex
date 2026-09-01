@@ -47,17 +47,37 @@ class RuntimeIntegrationSettingsServiceTest {
 
   @Test
   void usesCompleteEnvironmentSnapshotBeforeFirstAdminSave() {
-    RuntimeIntegrationSettings current = settings.current();
+    MockEnvironment environment =
+        new MockEnvironment()
+            .withProperty("app.emby.base-url", "https://env-emby.example.test")
+            .withProperty("app.emby.api-key", "env-emby-key")
+            .withProperty("app.emby.user-id", "env-user")
+            .withProperty("app.asr.base-url", "https://env-asr.example.test")
+            .withProperty("app.llm.base-url", "https://env-cpa.example.test/v1")
+            .withProperty("app.llm.model", "env-model");
+    RuntimeIntegrationSettingsRepository emptyRepository =
+        new RuntimeIntegrationSettingsRepository() {
+          @Override
+          public Optional<RuntimeIntegrationSettings> find() {
+            return Optional.empty();
+          }
+
+          @Override
+          public void replace(RuntimeIntegrationSettings value) {}
+        };
+    var service =
+        new RuntimeIntegrationSettingsService(
+            emptyRepository,
+            new EnvironmentIntegrationSettings(environment),
+            Clock.fixed(Instant.parse("2026-08-30T12:00:00Z"), ZoneOffset.UTC),
+            transactionManager(new AtomicBoolean()));
+
+    RuntimeIntegrationSettings current = service.current();
 
     assertThat(current.emby().baseUrl()).isEqualTo("https://env-emby.example.test");
     assertThat(current.asr().baseUrl()).isEqualTo("https://env-asr.example.test");
     assertThat(current.llm().model()).isEqualTo("env-model");
     assertThat(current.autoFill().enabled()).isFalse();
-    assertThat(
-            jdbc.sql("select count(*) from runtime_integration_settings")
-                .query(Long.class)
-                .single())
-        .isZero();
   }
 
   @Test

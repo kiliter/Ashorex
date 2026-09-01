@@ -29,6 +29,7 @@ final class WatchSessionData {
     required this.trustedPositionMs,
     required this.durationMs,
     required this.heartbeatIntervalSeconds,
+    this.review = false,
   });
 
   final String sessionId;
@@ -36,6 +37,7 @@ final class WatchSessionData {
   final int trustedPositionMs;
   final int durationMs;
   final int heartbeatIntervalSeconds;
+  final bool review;
 }
 
 /// 心跳请求仅提交播放器事实，不能直接声明视频完成。
@@ -45,18 +47,21 @@ final class WatchHeartbeatCommand {
     required this.positionMs,
     required this.playing,
     required this.foreground,
+    required this.playbackSpeed,
   });
 
   final int sequence;
   final int positionMs;
   final bool playing;
   final bool foreground;
+  final double playbackSpeed;
 
   Map<String, dynamic> toJson() => {
     'sequence': sequence,
     'positionMs': positionMs,
     'playing': playing,
     'foreground': foreground,
+    'playbackSpeed': playbackSpeed,
   };
 }
 
@@ -132,6 +137,7 @@ final class RemoteWatchRepository implements WatchRepository {
       durationMs: (json['durationMs'] as num).toInt(),
       heartbeatIntervalSeconds: (json['heartbeatIntervalSeconds'] as num)
           .toInt(),
+      review: json['review'] as bool? ?? false,
     );
   }
 

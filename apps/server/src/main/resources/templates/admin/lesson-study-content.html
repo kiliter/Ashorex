@@ -4,20 +4,45 @@
   <body class="admin-body"><div class="admin-shell">
     <header th:replace="~{admin/fragments :: navigation('courses')}"></header>
     <main class="admin-main">
-      <section class="page-head"><div class="container"><div class="route"><a th:href="@{/admin/courses}">课程管理</a><span>/</span><a th:href="@{/admin/courses/{id}/lessons(id=${course.id})}" th:text="${course.name}">课程</a><span>/</span><span th:text="${lesson.title}">课时</span></div><div class="page-head-row"><div><h1 class="page-title" data-code="TXT/06">课时学习内容</h1><p class="page-desc">全文与 Markdown 摘要分别就绪，失败不会清空旧内容</p></div><div class="actions"><form method="post" th:action="@{/admin/lessons/{id}/transcribe(id=${lesson.id})}"><input type="hidden" name="overwrite" value="true" /><button class="btn btn-secondary" type="submit">重新转写</button></form><form method="post" th:action="@{/admin/lessons/{id}/summarize(id=${lesson.id})}"><input type="hidden" name="overwrite" value="true" /><button type="submit">重新生成摘要</button></form></div></div></div></section>
+      <section class="page-head"><div class="container"><div class="route"><a th:href="@{/admin/courses}">课程管理</a><span>/</span><a th:href="@{/admin/courses/{id}/lessons(id=${course.id})}" th:text="${course.name}">课程</a><span>/</span><span th:text="${lesson.title}">课时</span></div><div class="page-head-row"><div><h1 class="page-title" data-code="TXT/06">课时学习内容</h1><p class="page-desc">全文与 Markdown 摘要分别就绪，失败不会清空旧内容</p></div><div class="actions"><form class="js-content-job" method="post" th:action="@{/admin/lessons/{id}/transcribe(id=${lesson.id})}"><input type="hidden" name="overwrite" value="true" /><button class="btn btn-secondary" type="submit">重新转写</button></form><form class="js-content-job" method="post" th:action="@{/admin/lessons/{id}/summarize(id=${lesson.id})}"><input type="hidden" name="overwrite" value="true" /><button class="btn btn-secondary" type="submit">重新生成摘要</button></form><form class="js-content-job" method="post" th:action="@{/admin/lessons/{id}/generate-quiz(id=${lesson.id})}"><input type="hidden" name="questionCount" value="5" /><button type="submit">重新生成题目</button></form></div></div></div></section>
       <div class="container workspace">
         <div class="content-grid">
           <aside class="content-sidebar"><div><div class="content-code">CONTENT/META</div><h2 th:text="${lesson.title}">课时</h2><p class="help num" th:text="${lesson.embyItemId}">emby</p></div><div class="content-meta">
-            <div class="content-meta-row"><span>全文状态</span><strong th:text="${content != null and content.transcriptReady() ? 'READY' : 'MISSING'}">MISSING</strong></div>
-            <div class="content-meta-row"><span>摘要状态</span><strong th:text="${content != null and content.summaryReady() ? 'READY' : 'MISSING'}">MISSING</strong></div>
-            <div class="content-meta-row"><span>全文更新时间</span><strong th:text="${content?.transcriptUpdatedAt ?: '—'}">—</strong></div>
-            <div class="content-meta-row"><span>摘要更新时间</span><strong th:text="${content?.summaryUpdatedAt ?: '—'}">—</strong></div>
+            <div class="content-meta-row"><span>全文状态</span><strong th:text="${content != null and content.transcriptReady() ? '已就绪' : '未生成'}">未生成</strong></div>
+            <div class="content-meta-row"><span>摘要状态</span><strong th:text="${content != null and content.summaryReady() ? '已就绪' : '未生成'}">未生成</strong></div>
+            <div class="content-meta-row"><span>全文更新时间</span><strong th:text="${content != null ? T(com.shangan.admin.AdminDisplayFormatter).dateTime(content.transcriptUpdatedAt) : '—'}">—</strong></div>
+            <div class="content-meta-row"><span>摘要更新时间</span><strong th:text="${content != null ? T(com.shangan.admin.AdminDisplayFormatter).dateTime(content.summaryUpdatedAt) : '—'}">—</strong></div>
             <div class="content-meta-row"><span>全文字符数</span><strong th:text="${content != null and content.fullText != null ? #strings.length(content.fullText) : 0}">0</strong></div>
-          </div><a class="btn btn-secondary" th:href="@{/admin/content-jobs}">查看任务日志</a></aside>
-          <article class="content-pane"><div class="content-pane-head"><h2>TRANSCRIPT / 全文文字</h2><span class="badge" th:classappend="${content != null and content.transcriptReady() ? ' success' : ''}" th:text="${content != null and content.transcriptReady() ? '已就绪' : '缺失'}">缺失</span></div><div class="content-scroll transcript" th:text="${content != null and content.transcriptReady() ? content.fullText : '尚未生成全文。请返回课时页点击“一键转文本”。'}">全文</div></article>
-          <article class="content-pane"><div class="content-pane-head"><h2>SUMMARY.MD / 摘要源码</h2><span class="badge" th:classappend="${content != null and content.summaryReady() ? ' success' : ''}" th:text="${content != null and content.summaryReady() ? '已就绪' : '缺失'}">缺失</span></div><div class="content-scroll"><pre class="markdown-source" th:text="${content != null and content.summaryReady() ? content.summaryMarkdown : '尚未生成摘要。全文就绪后可点击“AI 摘要”。'}">摘要</pre></div></article>
+          </div><a class="btn btn-secondary" th:href="@{/admin/content-jobs/courses/{id}(id=${course.id})}">查看任务日志</a></aside>
+          <article class="content-pane"><div class="content-pane-head"><h2>TRANSCRIPT / 全文文字</h2><span class="badge" th:classappend="${content != null and content.transcriptReady() ? ' success' : ''}" th:text="${content != null and content.transcriptReady() ? '已就绪' : '缺失'}">缺失</span></div><div class="content-scroll transcript" th:text="${content != null and content.transcriptReady() ? content.fullText : '尚未生成全文。可返回课时页点击“AI 一下”，或在本页单独重新转写。'}">全文</div></article>
+          <article class="content-pane"><div class="content-pane-head"><h2>SUMMARY.MD / 摘要源码</h2><span class="badge" th:classappend="${content != null and content.summaryReady() ? ' success' : ''}" th:text="${content != null and content.summaryReady() ? '已就绪' : '缺失'}">缺失</span></div><div class="content-scroll"><pre class="markdown-source" th:text="${content != null and content.summaryReady() ? content.summaryMarkdown : '尚未生成摘要。全文就绪后可在本页单独重新生成摘要。'}">摘要</pre></div></article>
         </div>
       </div>
     </main>
-  </div></body>
+  </div><div class="toast-region" aria-live="polite" aria-atomic="true" data-toast-region></div><script>
+    // 详情页单阶段重做使用 AJAX 排队，正文和摘要区域不整页重载。
+    const toastRegion = document.querySelector("[data-toast-region]");
+    const showToast = (message, success) => {
+      const toast = document.createElement("div");
+      toast.className = `toast ${success ? "toast--success" : "toast--error"}`;
+      toast.innerHTML = `<span class="toast__icon" aria-hidden="true"></span><div><strong>${success ? "已排队" : "操作失败"}</strong><p></p></div><button type="button" class="toast__close" aria-label="关闭通知">&times;</button>`;
+      toast.querySelector("p").textContent = message;
+      toast.querySelector(".toast__close").addEventListener("click", () => toast.remove());
+      toastRegion.appendChild(toast);
+      window.setTimeout(() => toast.remove(), 5000);
+    };
+    document.querySelectorAll(".js-content-job").forEach((form) => form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = form.querySelector("button[type='submit']");
+      button.disabled = true;
+      try {
+        const response = await fetch(form.action, { method: "POST", body: new FormData(form) });
+        showToast(response.ok ? "后台任务已创建，请到任务日志查看进度。" : "任务创建失败。", response.ok);
+      } catch (error) {
+        showToast("请求未完成，请检查服务端是否正在运行。", false);
+      } finally {
+        button.disabled = false;
+      }
+    }));
+  </script></body>
 </html>

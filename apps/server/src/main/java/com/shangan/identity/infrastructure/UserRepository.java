@@ -20,7 +20,12 @@ public interface UserRepository {
   void insert(User user, Instant createdAt);
 
   void updatePreferences(
-      String userId, String timezone, String aliveCheckLevel, String dayEndLocalTime, Instant now);
+      String userId,
+      String timezone,
+      String aliveCheckLevel,
+      int aliveCheckIntervalPercent,
+      String dayEndLocalTime,
+      Instant now);
 
   /** 启用或禁用用户；禁用时应用服务会同时撤销其 Refresh Token。 */
   void setEnabled(String userId, boolean enabled, Instant now);

@@ -31,7 +31,8 @@ public class EnvironmentIntegrationSettings {
             value("app.llm.model"),
             integer("app.llm.context-length", 131072),
             integer("app.llm.max-completion-tokens", 8192),
-            integer("app.llm.timeout-seconds", 300)),
+            integer("app.llm.timeout-seconds", 300),
+            value("app.llm.reasoning-effort")),
         new RuntimeIntegrationSettings.OpenRouter(value("app.openrouter.api-key")),
         new RuntimeIntegrationSettings.AutoFill(
             Boolean.parseBoolean(valueOr("app.content-auto-fill.enabled", "false")),

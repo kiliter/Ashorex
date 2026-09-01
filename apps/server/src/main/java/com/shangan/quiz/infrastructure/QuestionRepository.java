@@ -3,6 +3,7 @@ package com.shangan.quiz.infrastructure;
 import com.shangan.quiz.domain.Question;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /** 题库、答题尝试与逐题答案的持久化边界。 */
@@ -10,6 +11,9 @@ public interface QuestionRepository {
   List<Question> findByMedia(String mediaItemId, boolean enabledOnly);
 
   boolean hasEnabled(String mediaItemId);
+
+  /** 按课程一次性统计每个课时的正式题目数量，供管理台局部轮询使用。 */
+  Map<String, Integer> countByCourse(String courseId);
 
   Optional<Question> findById(String questionId);
 

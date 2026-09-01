@@ -5,7 +5,7 @@ info:
   version: 0.1.0-rc1
 servers:
 - url: http://localhost:18080
-  description: Generated server url
+  description: 本地开发服务
 paths:
   /api/v1/preferences:
     get:
@@ -40,11 +40,11 @@ paths:
                 $ref: "#/components/schemas/PreferencesResponse"
       security:
       - bearerAuth: []
-  /api/v1/plans/{date}/items/{itemId}:
-    put:
+  /api/v1/plans/{date}:
+    get:
       tags:
       - daily-plan-controller
-      operationId: update
+      operationId: plan
       parameters:
       - name: date
         in: path
@@ -52,16 +52,31 @@ paths:
         schema:
           type: string
           format: date
-      - name: itemId
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PlanView"
+      security:
+      - bearerAuth: []
+    put:
+      tags:
+      - daily-plan-controller
+      operationId: save
+      parameters:
+      - name: date
         in: path
         required: true
         schema:
           type: string
+          format: date
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateItemRequest"
+              $ref: "#/components/schemas/SaveBattleOrderRequest"
         required: true
       responses:
         "200":
@@ -72,29 +87,45 @@ paths:
                 $ref: "#/components/schemas/PlanView"
       security:
       - bearerAuth: []
-    delete:
+  /api/v1/mock-exam-presets/{presetId}:
+    put:
       tags:
-      - daily-plan-controller
-      operationId: delete
+      - mock-exam-preset-controller
+      operationId: update
       parameters:
-      - name: date
+      - name: presetId
         in: path
         required: true
         schema:
           type: string
-          format: date
-      - name: itemId
-        in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PresetRequest"
         required: true
-        schema:
-          type: string
       responses:
         "200":
           description: OK
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/PlanView"
+                $ref: "#/components/schemas/PresetView"
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - mock-exam-preset-controller
+      operationId: delete
+      parameters:
+      - name: presetId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
       security:
       - bearerAuth: []
   /api/v1/exam-goal:
@@ -114,7 +145,7 @@ paths:
     put:
       tags:
       - exam-controller
-      operationId: save
+      operationId: save_1
       requestBody:
         content:
           application/json:
@@ -196,113 +227,117 @@ paths:
                 $ref: "#/components/schemas/WatchHeartbeatResponse"
       security:
       - bearerAuth: []
-  /api/v1/plans/{date}/lock:
+  /api/v1/mock-exams/{sessionId}/submit-early:
     post:
       tags:
-      - daily-plan-controller
-      operationId: lock
+      - mock-exam-controller
+      operationId: submitEarly
       parameters:
-      - name: date
+      - name: sessionId
         in: path
         required: true
         schema:
           type: string
-          format: date
       responses:
         "200":
           description: OK
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/PlanView"
+                $ref: "#/components/schemas/SessionView"
       security:
       - bearerAuth: []
-  /api/v1/plans/{date}/items:
+  /api/v1/mock-exams/{sessionId}/attachments:
     post:
       tags:
-      - daily-plan-controller
-      operationId: add
+      - mock-exam-controller
+      operationId: addAttachment
       parameters:
-      - name: date
+      - name: sessionId
         in: path
         required: true
         schema:
           type: string
-          format: date
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+              - file
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SessionWithAttachments"
+      security:
+      - bearerAuth: []
+  /api/v1/mock-exams/{planItemId}/start:
+    post:
+      tags:
+      - mock-exam-controller
+      operationId: start
+      parameters:
+      - name: planItemId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SessionView"
+      security:
+      - bearerAuth: []
+  /api/v1/mock-exam-presets:
+    get:
+      tags:
+      - mock-exam-preset-controller
+      operationId: list
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PresetView"
+      security:
+      - bearerAuth: []
+    post:
+      tags:
+      - mock-exam-preset-controller
+      operationId: create
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ItemRequest"
+              $ref: "#/components/schemas/PresetRequest"
         required: true
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Created
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/PlanView"
-      security:
-      - bearerAuth: []
-  /api/v1/plans/{date}/debt-items:
-    post:
-      tags:
-      - daily-plan-controller
-      operationId: addDebtItems
-      parameters:
-      - name: date
-        in: path
-        required: true
-        schema:
-          type: string
-          format: date
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/DebtItemsRequest"
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/PlanView"
-      security:
-      - bearerAuth: []
-  /api/v1/plans/{date}/abandon:
-    post:
-      tags:
-      - daily-plan-controller
-      operationId: abandon
-      parameters:
-      - name: date
-        in: path
-        required: true
-        schema:
-          type: string
-          format: date
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AbandonRequest"
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/PlanView"
+                $ref: "#/components/schemas/PresetView"
       security:
       - bearerAuth: []
   /api/v1/lessons/{lessonId}/watch-sessions:
     post:
       tags:
       - watch-session-controller
-      operationId: create
+      operationId: create_1
       parameters:
       - name: lessonId
         in: path
@@ -375,7 +410,7 @@ paths:
     post:
       tags:
       - focus-session-controller
-      operationId: start
+      operationId: start_1
       requestBody:
         content:
           application/json:
@@ -598,7 +633,7 @@ paths:
           content:
             '*/*':
               schema:
-                type: object
+                $ref: "#/components/schemas/StreamingResponseBody"
   /api/v1/playback/{ticket}/master.m3u8:
     get:
       tags:
@@ -616,48 +651,51 @@ paths:
           content:
             '*/*':
               schema:
-                type: string
-                format: byte
-  /api/v1/plans/{date}:
+                $ref: "#/components/schemas/StreamingResponseBody"
+  /api/v1/mock-exams/{sessionId}:
     get:
       tags:
-      - daily-plan-controller
-      operationId: plan
+      - mock-exam-controller
+      operationId: get
       parameters:
-      - name: date
+      - name: sessionId
         in: path
         required: true
         schema:
           type: string
-          format: date
       responses:
         "200":
           description: OK
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/PlanView"
+                $ref: "#/components/schemas/SessionWithAttachments"
       security:
       - bearerAuth: []
-  /api/v1/plans/{date}/abandon-preview:
+  /api/v1/mock-exams/{sessionId}/attachments/{attachmentId}:
     get:
       tags:
-      - daily-plan-controller
-      operationId: preview
+      - mock-exam-controller
+      operationId: downloadAttachment
       parameters:
-      - name: date
+      - name: sessionId
         in: path
         required: true
         schema:
           type: string
-          format: date
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           description: OK
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/AbandonPreview"
+                type: string
+                format: byte
       security:
       - bearerAuth: []
   /api/v1/me:
@@ -766,7 +804,7 @@ paths:
     get:
       tags:
       - debt-controller
-      operationId: list
+      operationId: list_1
       parameters:
       - name: page
         in: query
@@ -851,14 +889,19 @@ components:
         timezone:
           type: string
           minLength: 1
-        aliveCheckLevel:
-          type: string
-          minLength: 1
+        aliveCheckEnabled:
+          type: boolean
+        aliveCheckIntervalPercent:
+          type: integer
+          format: int32
+          maximum: 50
+          minimum: 1
         dayEndLocalTime:
           type: string
           minLength: 1
       required:
-      - aliveCheckLevel
+      - aliveCheckEnabled
+      - aliveCheckIntervalPercent
       - dayEndLocalTime
       - timezone
     PreferencesResponse:
@@ -866,31 +909,47 @@ components:
       properties:
         timezone:
           type: string
-        aliveCheckLevel:
-          type: string
+        aliveCheckEnabled:
+          type: boolean
+        aliveCheckIntervalPercent:
+          type: integer
+          format: int32
         dayEndLocalTime:
           type: string
-    UpdateItemRequest:
+    BattleOrderItemRequest:
       type: object
       properties:
-        title:
+        existingItemId:
+          type: string
+        itemType:
           type: string
           minLength: 1
-        plannedSeconds:
-          type: integer
-          format: int64
-          minimum: 1
+        mediaItemId:
+          type: string
+        mockExamPresetId:
+          type: string
         sortOrder:
           type: integer
           format: int32
       required:
-      - title
-    PlanItem:
+      - itemType
+    SaveBattleOrderRequest:
+      type: object
+      properties:
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BattleOrderItemRequest"
+      required:
+      - items
+    ItemView:
       type: object
       properties:
         id:
-          type: string
-        planId:
           type: string
         itemType:
           type: string
@@ -898,7 +957,9 @@ components:
           type: string
         mediaItemId:
           type: string
-        debtId:
+        mockExamPresetId:
+          type: string
+        mockExamName:
           type: string
         plannedSeconds:
           type: integer
@@ -906,20 +967,13 @@ components:
         completedSeconds:
           type: integer
           format: int64
-        watchCompleted:
-          type: boolean
-        quizRequired:
-          type: boolean
-        quizCompleted:
-          type: boolean
         status:
           type: string
         sortOrder:
           type: integer
           format: int32
-        completedAt:
-          type: string
-          format: date-time
+        immutable:
+          type: boolean
     PlanView:
       type: object
       properties:
@@ -930,10 +984,43 @@ components:
           format: date
         status:
           type: string
+        version:
+          type: integer
+          format: int64
         items:
           type: array
           items:
-            $ref: "#/components/schemas/PlanItem"
+            $ref: "#/components/schemas/ItemView"
+    PresetRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 80
+          minLength: 0
+        durationSeconds:
+          type: integer
+          format: int64
+          maximum: 43200
+          minimum: 60
+        sortOrder:
+          type: integer
+          format: int32
+      required:
+      - name
+    PresetView:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        durationSeconds:
+          type: integer
+          format: int64
+        sortOrder:
+          type: integer
+          format: int32
     ExamGoalRequest:
       type: object
       properties:
@@ -1016,48 +1103,66 @@ components:
           type: boolean
         foreground:
           type: boolean
-    ItemRequest:
+        playbackSpeed:
+          type: number
+          format: double
+          minimum: 0
+    SessionView:
       type: object
       properties:
-        itemType:
+        id:
           type: string
-          minLength: 1
-        title:
+        planItemId:
           type: string
-        mediaItemId:
+        name:
           type: string
-        debtId:
-          type: string
-        plannedSeconds:
+        durationSeconds:
           type: integer
           format: int64
-          minimum: 1
+        status:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        deadlineAt:
+          type: string
+          format: date-time
+        submittedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        serverNow:
+          type: string
+          format: date-time
+    AttachmentView:
+      type: object
+      properties:
+        id:
+          type: string
+        originalFilename:
+          type: string
+        contentType:
+          type: string
+        sizeBytes:
+          type: integer
+          format: int64
         sortOrder:
           type: integer
           format: int32
-      required:
-      - itemType
-    DebtItemsRequest:
+        createdAt:
+          type: string
+          format: date-time
+    SessionWithAttachments:
       type: object
       properties:
-        debtIds:
+        session:
+          $ref: "#/components/schemas/SessionView"
+        attachments:
           type: array
           items:
-            type: string
-            minLength: 1
-          minItems: 1
-      required:
-      - debtIds
-    AbandonRequest:
-      type: object
-      properties:
-        reasonCode:
-          type: string
-          minLength: 1
-        reasonText:
-          type: string
-      required:
-      - reasonCode
+            $ref: "#/components/schemas/AttachmentView"
     CreateWatchSessionRequest:
       type: object
       properties:
@@ -1084,6 +1189,8 @@ components:
         heartbeatIntervalSeconds:
           type: integer
           format: int32
+        review:
+          type: boolean
     AnswerRequest:
       type: object
       properties:
@@ -1154,8 +1261,6 @@ components:
     StartRequest:
       type: object
       properties:
-        planItemId:
-          type: string
         mediaItemId:
           type: string
         focusType:
@@ -1249,6 +1354,16 @@ components:
         repaidDebtSeconds:
           type: integer
           format: int64
+    ReviewedLesson:
+      type: object
+      properties:
+        mediaItemId:
+          type: string
+        lessonTitle:
+          type: string
+        reviewCount:
+          type: integer
+          format: int32
     WeeklyReportView:
       type: object
       properties:
@@ -1289,6 +1404,13 @@ components:
         abandonmentCount:
           type: integer
           format: int32
+        slackedDayCount:
+          type: integer
+          format: int32
+        reviewedLessons:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewedLesson"
         aliveCheckFailureCount:
           type: integer
           format: int32
@@ -1312,6 +1434,8 @@ components:
           format: date
         planStatus:
           type: string
+        dayOutcome:
+          type: string
         plannedSeconds:
           type: integer
           format: int64
@@ -1331,6 +1455,12 @@ components:
           type: integer
           format: int32
         videoCompletedCount:
+          type: integer
+          format: int32
+        mockExamCompletedCount:
+          type: integer
+          format: int32
+        mockExamAwaitingUploadCount:
           type: integer
           format: int32
         answerCount:
@@ -1362,29 +1492,6 @@ components:
           type: string
           format: date-time
     StreamingResponseBody: {}
-    AbandonPreview:
-      type: object
-      properties:
-        debtCount:
-          type: integer
-          format: int32
-        addedDebtSeconds:
-          type: integer
-          format: int64
-        debts:
-          type: array
-          items:
-            $ref: "#/components/schemas/DebtPreview"
-    DebtPreview:
-      type: object
-      properties:
-        type:
-          type: string
-        title:
-          type: string
-        seconds:
-          type: integer
-          format: int64
     UserResponse:
       type: object
       properties:
@@ -1413,6 +1520,16 @@ components:
         sortOrder:
           type: integer
           format: int32
+        maxVerifiedPositionMs:
+          type: integer
+          format: int64
+        progressPercent:
+          type: integer
+          format: int32
+        learningStatus:
+          type: string
+        summaryAvailable:
+          type: boolean
     LessonStudyContentResponse:
       type: object
       properties:

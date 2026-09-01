@@ -60,19 +60,22 @@ final class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
             const ShanganEyebrow('学习周报'),
             const SizedBox(height: 7),
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                IconButton.outlined(
-                  onPressed: () => _moveWeek(-7),
-                  icon: const Icon(Icons.chevron_left),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: const Key('selectWeeklyReportDate'),
+                    onPressed: _selectWeek,
+                    icon: const Icon(Icons.calendar_month_outlined),
+                    label: Text(
+                      '${_date(report.weekStart)} 起',
+                      style: shanganNumberStyle(context, fontSize: 14),
+                    ),
+                  ),
                 ),
-                Text(
-                  '${_date(report.weekStart)} 起',
-                  style: shanganNumberStyle(context, fontSize: 15),
-                ),
-                IconButton.outlined(
-                  onPressed: () => _moveWeek(7),
-                  icon: const Icon(Icons.chevron_right),
+                const SizedBox(width: 10),
+                TextButton(
+                  onPressed: _goCurrentWeek,
+                  child: const Text('回到本周'),
                 ),
               ],
             ),
@@ -108,6 +111,11 @@ final class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
                   value: _duration(report.newDebtSeconds),
                   label: '本周新增欠债',
                   tone: ShanganTagTone.risk,
+                ),
+                (
+                  value: '${report.slackedDayCount} 天',
+                  label: '自动开摆日',
+                  tone: ShanganTagTone.warning,
                 ),
               ],
             ),
@@ -191,15 +199,56 @@ final class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
                 ),
               ),
             ),
+            if (report.reviewedLessons.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Text('复习审计', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              const Text('仅记录复习过的课时和次数，不计入有效学习时长。'),
+              const SizedBox(height: 10),
+              ...report.reviewedLessons.map(
+                (lesson) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(
+                    Icons.history_edu_outlined,
+                    color: ShanganColors.blue,
+                  ),
+                  title: Text(lesson.lessonTitle),
+                  trailing: ShanganStatusTag(
+                    '${lesson.reviewCount} 次',
+                    tone: ShanganTagTone.info,
+                  ),
+                ),
+              ),
+            ],
           ],
         );
       },
     ),
   );
 
-  void _moveWeek(int days) {
+  Future<void> _selectWeek() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _weekStart,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      helpText: '选择周报所在日期',
+    );
+    if (selected == null || !mounted) return;
     setState(() {
-      _weekStart = _weekStart.add(Duration(days: days));
+      _weekStart = selected.subtract(Duration(days: selected.weekday - 1));
+      _load();
+    });
+  }
+
+  void _goCurrentWeek() {
+    final now = DateTime.now();
+    setState(() {
+      _weekStart = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(Duration(days: now.weekday - 1));
       _load();
     });
   }

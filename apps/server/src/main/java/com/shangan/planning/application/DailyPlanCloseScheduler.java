@@ -1,5 +1,6 @@
 package com.shangan.planning.application;
 
+import com.shangan.reporting.application.DayOutcomeService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -7,9 +8,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class DailyPlanCloseScheduler {
   private final DailyPlanService plans;
+  private final DayOutcomeService outcomes;
 
-  public DailyPlanCloseScheduler(DailyPlanService plans) {
+  public DailyPlanCloseScheduler(DailyPlanService plans, DayOutcomeService outcomes) {
     this.plans = plans;
+    this.outcomes = outcomes;
   }
 
   @Scheduled(fixedDelay = 60_000L)
@@ -17,5 +20,6 @@ public class DailyPlanCloseScheduler {
     plans.lockedPlans().stream()
         .filter(plans::isDue)
         .forEach(plan -> plans.closeForDayEnd(plan.userId(), plan.planId()));
+    outcomes.settleDueDays();
   }
 }

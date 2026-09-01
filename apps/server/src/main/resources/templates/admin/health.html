@@ -23,17 +23,17 @@
                 <div class="status-row"><div><div class="status-key">ASR 转写</div><div class="status-meta">OpenAI-compatible 音频转写</div></div><span class="badge" th:classappend="${health.asrConfigured ? ' success' : ' warning'}" th:text="${health.asrConfigured ? '已配置' : '未配置'}">状态</span></div>
                 <div class="status-row"><div><div class="status-key">LLM 摘要 / 出题</div><div class="status-meta">CPA OpenAI-compatible 上游</div></div><span class="badge" th:classappend="${health.llmConfigured ? ' success' : ' warning'}" th:text="${health.llmConfigured ? '已配置' : '未配置'}">状态</span></div>
                 <div class="status-row"><div><div class="status-key">课程学习内容</div><div class="status-meta">全文或摘要至少一项就绪</div></div><strong class="num" th:text="${health.lessonStudyContentCount}">0</strong></div>
-                <div class="status-row"><div><div class="status-key">最近课程同步</div><div class="status-meta">本地课程快照更新时间</div></div><time th:text="${health.lastCourseSync ?: '尚未同步'}">尚未同步</time></div>
+                <div class="status-row"><div><div class="status-key">最近课程同步</div><div class="status-meta">本地课程快照更新时间</div></div><time th:text="${health.lastCourseSync != null ? T(com.shangan.admin.AdminDisplayFormatter).dateTime(health.lastCourseSync) : '尚未同步'}">尚未同步</time></div>
               </div>
             </section>
 
             <section class="panel">
               <div class="panel-head"><h2 class="section-title">LATENCY / 平均耗时</h2><span class="muted">全部已完成任务</span></div>
               <table><tbody>
-                <tr><td>获取音频</td><td class="right num" th:text="|${health.contentQueue.averageFetchMs} ms|">0 ms</td></tr>
-                <tr><td>ASR 转写</td><td class="right num" th:text="|${health.contentQueue.averageTranscribeMs} ms|">0 ms</td></tr>
-                <tr><td>AI 摘要</td><td class="right num" th:text="|${health.contentQueue.averageSummarizeMs} ms|">0 ms</td></tr>
-                <tr><td>任务总耗时</td><td class="right num" th:text="|${health.contentQueue.averageTotalMs} ms|">0 ms</td></tr>
+                <tr><td>获取音频</td><td class="right num" th:text="${T(com.shangan.admin.AdminDisplayFormatter).duration(health.contentQueue.averageFetchMs)}">0 ms</td></tr>
+                <tr><td>ASR 转写</td><td class="right num" th:text="${T(com.shangan.admin.AdminDisplayFormatter).duration(health.contentQueue.averageTranscribeMs)}">0 ms</td></tr>
+                <tr><td>AI 摘要</td><td class="right num" th:text="${T(com.shangan.admin.AdminDisplayFormatter).duration(health.contentQueue.averageSummarizeMs)}">0 ms</td></tr>
+                <tr><td>任务总耗时</td><td class="right num" th:text="${T(com.shangan.admin.AdminDisplayFormatter).duration(health.contentQueue.averageTotalMs)}">0 ms</td></tr>
                 <tr><td>ASR RTF</td><td class="right num" th:text="${health.contentQueue.averageAudioDurationMs > 0 ? #numbers.formatDecimal(health.contentQueue.averageTranscribeMs * 1.0 / health.contentQueue.averageAudioDurationMs, 1, 3) : '—'}">—</td></tr>
                 <tr><td>数据库 / WAL</td><td class="right num" th:text="|${health.databaseSizeBytes} / ${health.walSizeBytes} B|">0 / 0 B</td></tr>
               </tbody></table>

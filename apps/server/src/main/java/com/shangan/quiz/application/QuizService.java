@@ -148,6 +148,12 @@ public class QuizService {
     return questions.findByMedia(mediaItemId, false);
   }
 
+  /** 返回课程内每个课时的正式题目数量，避免管理台轮询时逐课时查询。 */
+  @Transactional(readOnly = true)
+  public Map<String, Integer> adminQuestionCounts(String courseId) {
+    return questions.countByCourse(courseId);
+  }
+
   @Transactional(readOnly = true)
   public Question adminQuestion(String questionId) {
     return questions

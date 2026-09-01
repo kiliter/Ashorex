@@ -15,7 +15,7 @@ import 'package:shangan_ios/features/quiz/data/quiz_repository.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Fake 服务端下完成登录、学习、答题、开摆和欠债的 V1 核心流程', (tester) async {
+  testWidgets('Fake 服务端下完成登录、作战单保存、学习和答题的核心流程', (tester) async {
     final tokens = _MemoryTokenStore();
     final auth = AuthController(
       repository: _FakeAuthRepository(),
@@ -39,9 +39,22 @@ void main() {
     expect((await exams.loadGoal())?.name, '公务员考试');
 
     final plans = _FakePlanRepository();
-    await plans.addVideo('lesson-1');
-    await plans.addFocus('申论练习', 900);
-    expect((await plans.lockToday()).status, 'LOCKED');
+    final savedPlan = await plans.saveToday(
+      expectedVersion: 0,
+      items: const [
+        BattleOrderDraft(
+          existingItemId: null,
+          itemType: 'VIDEO',
+          title: '资料分析',
+          mediaItemId: 'lesson-1',
+          mockExamPresetId: null,
+          plannedSeconds: 600,
+          immutable: false,
+          catalogOrder: 0,
+        ),
+      ],
+    );
+    expect(savedPlan.status, 'ACTIVE');
 
     final playerAdapter = _FakePlayerAdapter();
     final watch = _FakeWatchRepository();
@@ -67,10 +80,7 @@ void main() {
     expect(result.score, 100);
     expect(plans.videoCompleted, isTrue);
 
-    final preview = await plans.previewAbandon();
-    expect(preview.addedDebtSeconds, 900);
-    expect((await plans.abandon('OPEN_PALM', '今日状态不佳')).status, 'ABANDONED');
-    expect((await plans.loadDebts()).single.remainingSeconds, 900);
+    expect(await plans.loadDebts(), isEmpty);
 
     await player.close();
     auth.dispose();
@@ -134,11 +144,11 @@ final class _FakeExamRepository implements ExamRepository {
 }
 
 final class _FakePlanRepository implements PlanRepository {
-  String status = 'DRAFT';
+  String status = 'NONE';
+  int version = 0;
   bool videoWatched = false;
   bool quizPassed = false;
   final List<PlanItemData> _items = [];
-  final List<LearningDebtData> _debts = [];
 
   bool get videoCompleted => videoWatched && quizPassed;
 
@@ -146,38 +156,37 @@ final class _FakePlanRepository implements PlanRepository {
     id: 'plan-1',
     date: DateTime(2026, 8, 30),
     status: status,
+    version: version,
     items: List.unmodifiable(_items),
   );
 
   @override
-  Future<DailyPlanData> addVideo(String lessonId) async {
-    _items.add(
-      const PlanItemData(
-        id: 'video-1',
-        itemType: 'VIDEO',
-        title: '资料分析',
-        mediaItemId: 'lesson-1',
-        plannedSeconds: 600,
-        completedSeconds: 0,
-        status: 'PENDING',
-      ),
-    );
-    return _plan;
-  }
-
-  @override
-  Future<DailyPlanData> addFocus(String title, int seconds) async {
-    _items.add(
-      PlanItemData(
-        id: 'focus-1',
-        itemType: 'FOCUS',
-        title: title,
-        mediaItemId: null,
-        plannedSeconds: seconds,
-        completedSeconds: 0,
-        status: 'PENDING',
-      ),
-    );
+  Future<DailyPlanData> saveToday({
+    required int expectedVersion,
+    required List<BattleOrderDraft> items,
+  }) async {
+    expect(expectedVersion, version);
+    _items
+      ..clear()
+      ..addAll(
+        items.indexed.map(
+          (entry) => PlanItemData(
+            id: entry.$2.existingItemId ?? 'video-${entry.$1 + 1}',
+            itemType: entry.$2.itemType,
+            title: entry.$2.title,
+            mediaItemId: entry.$2.mediaItemId,
+            mockExamPresetId: entry.$2.mockExamPresetId,
+            mockExamName: null,
+            plannedSeconds: entry.$2.plannedSeconds,
+            completedSeconds: 0,
+            status: 'PENDING',
+            sortOrder: entry.$1,
+            immutable: false,
+          ),
+        ),
+      );
+    status = 'ACTIVE';
+    version += 1;
     return _plan;
   }
 
@@ -186,38 +195,7 @@ final class _FakePlanRepository implements PlanRepository {
   void completeQuiz() => quizPassed = true;
 
   @override
-  Future<DailyPlanData> lockToday() async {
-    status = 'LOCKED';
-    return _plan;
-  }
-
-  @override
-  Future<AbandonPreviewData> previewAbandon() async => const AbandonPreviewData(
-    debtCount: 1,
-    addedDebtSeconds: 900,
-    debts: [DebtPreviewData(type: 'FOCUS', title: '申论练习', seconds: 900)],
-  );
-
-  @override
-  Future<DailyPlanData> abandon(String reasonCode, String reasonText) async {
-    status = 'ABANDONED';
-    _debts.add(
-      const LearningDebtData(
-        id: 'debt-1',
-        debtType: 'FOCUS',
-        title: '申论练习',
-        remainingSeconds: 900,
-        status: 'OPEN',
-      ),
-    );
-    return _plan;
-  }
-
-  @override
-  Future<List<LearningDebtData>> loadDebts() async => List.unmodifiable(_debts);
-
-  @override
-  Future<DailyPlanData> addDebtItems(List<String> debtIds) async => _plan;
+  Future<List<LearningDebtData>> loadDebts() async => const [];
 
   @override
   Future<DailyPlanData> loadToday() async => _plan;
@@ -246,6 +224,9 @@ final class _FakePlayerAdapter implements PlayerAdapter {
 
   @override
   Future<void> seek(Duration position) async => emit(position);
+
+  @override
+  Future<void> setPlaybackSpeed(double speed) async {}
 }
 
 final class _FakeWatchRepository implements WatchRepository {

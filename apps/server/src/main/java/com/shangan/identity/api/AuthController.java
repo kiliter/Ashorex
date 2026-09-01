@@ -4,7 +4,10 @@ import com.shangan.common.auth.CurrentUser;
 import com.shangan.identity.application.AuthService;
 import com.shangan.identity.application.AuthService.TokenPair;
 import com.shangan.identity.domain.User;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -58,7 +61,8 @@ public class AuthController {
         authService.updatePreferences(
             currentUser.userId(),
             request.timezone(),
-            request.aliveCheckLevel(),
+            request.aliveCheckEnabled(),
+            request.aliveCheckIntervalPercent(),
             request.dayEndLocalTime()));
   }
 
@@ -68,7 +72,11 @@ public class AuthController {
 
   record PreferencesRequest(
       @NotBlank String timezone,
-      @NotBlank String aliveCheckLevel,
+      @Schema(requiredMode = Schema.RequiredMode.REQUIRED) boolean aliveCheckEnabled,
+      @Schema(requiredMode = Schema.RequiredMode.REQUIRED, minimum = "1", maximum = "50")
+          @Min(1)
+          @Max(50)
+          int aliveCheckIntervalPercent,
       @NotBlank String dayEndLocalTime) {}
 
   record UserResponse(
@@ -79,10 +87,17 @@ public class AuthController {
     }
   }
 
-  record PreferencesResponse(String timezone, String aliveCheckLevel, String dayEndLocalTime) {
+  record PreferencesResponse(
+      String timezone,
+      boolean aliveCheckEnabled,
+      int aliveCheckIntervalPercent,
+      String dayEndLocalTime) {
     static PreferencesResponse from(User user) {
       return new PreferencesResponse(
-          user.timezone(), user.aliveCheckLevel(), user.dayEndLocalTime());
+          user.timezone(),
+          !"OFF".equals(user.aliveCheckLevel()),
+          user.aliveCheckIntervalPercent(),
+          user.dayEndLocalTime());
     }
   }
 }

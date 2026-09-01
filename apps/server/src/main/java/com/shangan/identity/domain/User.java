@@ -9,5 +9,6 @@ public record User(
     String role,
     String timezone,
     String aliveCheckLevel,
+    int aliveCheckIntervalPercent,
     String dayEndLocalTime,
     boolean enabled) {}

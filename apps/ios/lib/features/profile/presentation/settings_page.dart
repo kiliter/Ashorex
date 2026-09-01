@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/profile/data/preferences_repository.dart';
 
@@ -16,7 +15,8 @@ final class _SettingsPageState extends ConsumerState<SettingsPage> {
   final _formKey = GlobalKey<FormState>();
   final _dayEndController = TextEditingController();
   String _timezone = 'Asia/Shanghai';
-  String _aliveCheckLevel = 'NORMAL';
+  bool _aliveCheckEnabled = true;
+  double _aliveCheckIntervalPercent = 50;
   bool _loading = true;
   bool _saving = false;
   String? _message;
@@ -39,7 +39,9 @@ final class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (!mounted) return;
       setState(() {
         _timezone = preferences.timezone;
-        _aliveCheckLevel = preferences.aliveCheckLevel;
+        _aliveCheckEnabled = preferences.aliveCheckEnabled;
+        _aliveCheckIntervalPercent = preferences.aliveCheckIntervalPercent
+            .toDouble();
         _dayEndController.text = preferences.dayEndLocalTime;
         _loading = false;
       });
@@ -64,13 +66,15 @@ final class _SettingsPageState extends ConsumerState<SettingsPage> {
           .update(
             UserPreferences(
               timezone: _timezone,
-              aliveCheckLevel: _aliveCheckLevel,
+              aliveCheckEnabled: _aliveCheckEnabled,
+              aliveCheckIntervalPercent: _aliveCheckIntervalPercent.round(),
               dayEndLocalTime: _dayEndController.text,
             ),
           );
       if (!mounted) return;
       setState(() {
-        _aliveCheckLevel = saved.aliveCheckLevel;
+        _aliveCheckEnabled = saved.aliveCheckEnabled;
+        _aliveCheckIntervalPercent = saved.aliveCheckIntervalPercent.toDouble();
         _dayEndController.text = saved.dayEndLocalTime;
         _message = '设置已保存';
       });
@@ -93,36 +97,64 @@ final class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
                 children: [
-                  const ShanganEyebrow('验活等级'),
+                  const ShanganEyebrow('视频进度验活'),
                   const SizedBox(height: 8),
-                  RadioGroup<String>(
-                    groupValue: _aliveCheckLevel,
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _aliveCheckLevel = value);
-                      }
-                    },
+                  ShanganSurface(
                     child: Column(
-                      children: const [
-                        _LevelOption(
-                          value: 'OFF',
-                          title: '关闭',
-                          description: '不主动验活，仅记录可信播放进度',
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Material(
+                          type: MaterialType.transparency,
+                          child: SwitchListTile.adaptive(
+                            key: const Key('aliveCheckEnabledSwitch'),
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('启用播放验活'),
+                            subtitle: const Text('关闭后仍保存当前百分比设置'),
+                            value: _aliveCheckEnabled,
+                            onChanged: (value) {
+                              setState(() => _aliveCheckEnabled = value);
+                            },
+                          ),
                         ),
-                        _LevelOption(
-                          value: 'NORMAL',
-                          title: '普通',
-                          description: '每 40–60 分钟确认一次',
-                        ),
-                        _LevelOption(
-                          value: 'STRICT',
-                          title: '严格',
-                          description: '每 20–40 分钟确认一次',
-                        ),
-                        _LevelOption(
-                          value: 'INTENSE',
-                          title: '拷打',
-                          description: '每 10–25 分钟确认一次，适合冲刺期',
+                        const Divider(),
+                        AnimatedOpacity(
+                          opacity: _aliveCheckEnabled ? 1 : 0.45,
+                          duration: const Duration(milliseconds: 160),
+                          child: IgnorePointer(
+                            ignoring: !_aliveCheckEnabled,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  '每推进 ${_aliveCheckIntervalPercent.round()}% 验活一次',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium,
+                                ),
+                                const SizedBox(height: 4),
+                                const Text('按视频内容位置触发，倍速播放不会改变检查点。'),
+                                Slider(
+                                  key: const Key('aliveCheckPercentSlider'),
+                                  min: 1,
+                                  max: 50,
+                                  divisions: 49,
+                                  label:
+                                      '${_aliveCheckIntervalPercent.round()}%',
+                                  value: _aliveCheckIntervalPercent,
+                                  onChanged: (value) {
+                                    setState(
+                                      () => _aliveCheckIntervalPercent = value,
+                                    );
+                                  },
+                                ),
+                                const Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [Text('1% · 频繁'), Text('50% · 默认')],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -156,6 +188,7 @@ final class _SettingsPageState extends ConsumerState<SettingsPage> {
                   SizedBox(
                     height: 52,
                     child: FilledButton(
+                      key: const Key('savePreferences'),
                       onPressed: _saving ? null : _save,
                       child: Text(_saving ? '保存中…' : '保存设置'),
                     ),
@@ -165,33 +198,4 @@ final class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
     );
   }
-}
-
-/// 验活选项同时呈现频率说明，避免用户只凭等级名称猜测行为。
-final class _LevelOption extends StatelessWidget {
-  const _LevelOption({
-    required this.value,
-    required this.title,
-    required this.description,
-  });
-
-  final String value;
-  final String title;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    decoration: BoxDecoration(
-      color: ShanganColors.surface,
-      border: Border.all(color: ShanganColors.rule),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: RadioListTile<String>(
-      value: value,
-      activeColor: ShanganColors.blue,
-      title: Text(title, style: Theme.of(context).textTheme.titleMedium),
-      subtitle: Text(description),
-    ),
-  );
 }

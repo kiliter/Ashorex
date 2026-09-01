@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -45,7 +46,8 @@ class IntegrationSettingsAdminTest {
     mockMvc.perform(get("/admin/settings/integrations")).andExpect(status().is3xxRedirection());
     mockMvc
         .perform(get("/admin/settings/integrations").with(user("alice").roles("USER")))
-        .andExpect(status().isForbidden());
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/admin/login?denied=true"));
     mockMvc
         .perform(get("/admin/settings/integrations").with(user("admin").roles("ADMIN")))
         .andExpect(status().isOk())
@@ -86,18 +88,22 @@ class IntegrationSettingsAdminTest {
             .param("openRouterApiKey", "saved-openrouter-key")
             .param("autoFillIntervalMinutes", "15");
 
-    mockMvc.perform(request).andExpect(status().isForbidden());
+    mockMvc
+        .perform(request)
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/admin/login?denied=true"));
     mockMvc
         .perform(request.with(csrf()))
-        .andExpect(status().is3xxRedirection())
-        .andExpect(redirectedUrl("/admin/settings/integrations?saved=true"));
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.message").value("配置已保存并立即生效"));
 
     org.assertj.core.api.Assertions.assertThat(settings.current().emby().apiKey())
         .isEqualTo("saved-emby-key");
     org.assertj.core.api.Assertions.assertThat(settings.current().asr().baseUrl())
         .isEqualTo("https://asr.saved.test");
     org.assertj.core.api.Assertions.assertThat(settings.current().llm().model())
-        .isEqualTo("openai/test-model");
+        .isEqualTo("test-model");
     org.assertj.core.api.Assertions.assertThat(settings.current().autoFill().enabled()).isFalse();
   }
 

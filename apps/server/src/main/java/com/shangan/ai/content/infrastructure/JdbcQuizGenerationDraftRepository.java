@@ -71,10 +71,11 @@ public class JdbcQuizGenerationDraftRepository implements QuizGenerationDraftRep
   }
 
   @Override
-  public boolean hasReadyDraft(String mediaItemId) {
+  public boolean hasCompletedGeneration(String mediaItemId) {
     return jdbc.sql(
                 "select exists(select 1 from quiz_generation_drafts "
-                    + "where media_item_id=:mediaItemId and status='READY_FOR_REVIEW')")
+                    + "where media_item_id=:mediaItemId "
+                    + "and status in ('READY_FOR_REVIEW','PUBLISHED'))")
             .param("mediaItemId", mediaItemId)
             .query(Integer.class)
             .single()
@@ -127,6 +128,24 @@ public class JdbcQuizGenerationDraftRepository implements QuizGenerationDraftRep
             "delete from quiz_generation_draft_items "
                 + "where id=:id and published_question_id is null")
         .param("id", itemId)
+        .update();
+  }
+
+  @Override
+  public void markRejected(String draftId) {
+    jdbc.sql(
+            "update quiz_generation_drafts set status='REJECTED' "
+                + "where id=:draftId and status='READY_FOR_REVIEW'")
+        .param("draftId", draftId)
+        .update();
+  }
+
+  @Override
+  public void deleteDraft(String draftId) {
+    jdbc.sql(
+            "delete from quiz_generation_drafts "
+                + "where id=:draftId and status in ('READY_FOR_REVIEW','REJECTED')")
+        .param("draftId", draftId)
         .update();
   }
 

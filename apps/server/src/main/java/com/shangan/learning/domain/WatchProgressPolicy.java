@@ -41,9 +41,12 @@ public final class WatchProgressPolicy {
     }
 
     long positionDelta = currentPosition - state.lastReportedPositionMs();
-    long allowedForwardDelta = Math.round(elapsedMs * 1.25d) + FORWARD_GRACE_MS;
+    long allowedForwardDelta =
+        Math.round(elapsedMs * heartbeat.playbackSpeed() * 1.25d) + FORWARD_GRACE_MS;
     long acceptedForwardDelta = clamp(positionDelta, 0, allowedForwardDelta);
-    long countedWatchMs = Math.min(elapsedMs, acceptedForwardDelta);
+    // 倍速只扩大内容位置增量；有效学习时长仍按真实经过时间计算。
+    long countedWatchMs =
+        Math.min(elapsedMs, Math.round(acceptedForwardDelta / heartbeat.playbackSpeed()));
     boolean seekAllowed = positionDelta <= allowedForwardDelta;
     long acceptedPosition =
         positionDelta <= 0
@@ -81,7 +84,8 @@ public final class WatchProgressPolicy {
       boolean aliveCheckPending) {}
 
   /** 客户端心跳中参与可信校验的字段。 */
-  public record Heartbeat(long sequence, long positionMs, boolean playing, boolean foreground) {}
+  public record Heartbeat(
+      long sequence, long positionMs, boolean playing, boolean foreground, double playbackSpeed) {}
 
   /** 单次计算后的新聚合状态及客户端纠偏指令。 */
   public record Decision(

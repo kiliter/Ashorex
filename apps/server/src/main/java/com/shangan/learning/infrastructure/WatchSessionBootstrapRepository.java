@@ -24,5 +24,5 @@ public interface WatchSessionBootstrapRepository {
       boolean hls,
       long durationMs,
       long startedPositionMs,
-      Long aliveCheckDueWatchMs) {}
+      Long aliveCheckDuePositionMs) {}
 }

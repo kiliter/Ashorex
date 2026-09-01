@@ -22,7 +22,7 @@ public class JdbcWatchSessionBootstrapRepository implements WatchSessionBootstra
               id,user_id,media_item_id,emby_item_id,plan_item_id,device_id,status,
               play_session_id,upstream_path,hls,duration_ms,started_position_ms,
               last_reported_position_ms,max_verified_position_ms,verified_watch_ms,
-              last_sequence,last_heartbeat_at,alive_check_due_watch_ms,alive_check_pending,
+              last_sequence,last_heartbeat_at,alive_check_due_position_ms,alive_check_pending,
               started_at,created_at,updated_at
             ) values (
               :id,:userId,:mediaId,:embyId,:planItemId,:deviceId,'ACTIVE',
@@ -41,7 +41,7 @@ public class JdbcWatchSessionBootstrapRepository implements WatchSessionBootstra
         .param("hls", value.hls() ? 1 : 0)
         .param("duration", value.durationMs())
         .param("startedPosition", value.startedPositionMs())
-        .param("aliveDue", value.aliveCheckDueWatchMs())
+        .param("aliveDue", value.aliveCheckDuePositionMs())
         .param("now", now.toEpochMilli())
         .update();
   }
@@ -74,9 +74,9 @@ public class JdbcWatchSessionBootstrapRepository implements WatchSessionBootstra
                     rs.getInt("hls") == 1,
                     rs.getLong("duration_ms"),
                     rs.getLong("started_position_ms"),
-                    rs.getObject("alive_check_due_watch_ms") == null
+                    rs.getObject("alive_check_due_position_ms") == null
                         ? null
-                        : rs.getLong("alive_check_due_watch_ms")))
+                        : rs.getLong("alive_check_due_position_ms")))
         .optional();
   }
 }

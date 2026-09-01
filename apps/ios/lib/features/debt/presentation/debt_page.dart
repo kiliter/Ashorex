@@ -4,7 +4,7 @@ import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/planning/data/plan_repository.dart';
 
-/// 欠债页只能查询和加入 DRAFT 计划，不能直接核销。
+/// 欠债页只展示服务端结算结果；作战单不在这里执行局部写入。
 final class DebtPage extends ConsumerWidget {
   const DebtPage({super.key});
 
@@ -99,22 +99,8 @@ final class DebtPage extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () async {
-                            await ref.read(planRepositoryProvider).addDebtItems(
-                              [debt.id],
-                            );
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('已加入今日 DRAFT 计划')),
-                              );
-                            }
-                          },
-                          child: const Text('加入今日计划 ›'),
-                        ),
-                      ),
+                      const SizedBox(height: 8),
+                      const ShanganEyebrow('由可信学习记录自动核对偿还状态'),
                     ],
                   ),
                 );

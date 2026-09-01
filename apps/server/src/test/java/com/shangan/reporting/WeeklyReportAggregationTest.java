@@ -61,6 +61,15 @@ class WeeklyReportAggregationTest {
     assertThat(report.newDebtSeconds()).isEqualTo(700);
     assertThat(report.repaidDebtSeconds()).isEqualTo(100);
     assertThat(report.abandonmentCount()).isEqualTo(1);
+    assertThat(report.slackedDayCount()).isZero();
+    assertThat(report.reviewedLessons())
+        .singleElement()
+        .satisfies(
+            review -> {
+              assertThat(review.mediaItemId()).isEqualTo("media-1");
+              assertThat(review.lessonTitle()).isEqualTo("资料分析");
+              assertThat(review.reviewCount()).isEqualTo(1);
+            });
     assertThat(report.aliveCheckFailureCount()).isEqualTo(1);
     assertThat(report.previousWeekEffectiveStudySeconds()).isZero();
     assertThat(report.effectiveStudySecondsChange()).isEqualTo(900);

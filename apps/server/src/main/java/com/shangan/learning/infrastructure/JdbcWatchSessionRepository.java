@@ -96,12 +96,12 @@ public class JdbcWatchSessionRepository implements WatchSessionRepository {
 
   @Override
   public void setAliveState(
-      String sessionId, boolean pending, Long nextDueWatchMs, String status, Instant now) {
+      String sessionId, boolean pending, Long nextDuePositionMs, String status, Instant now) {
     jdbc.sql(
             "update watch_sessions set alive_check_pending=:pending, "
-                + "alive_check_due_watch_ms=:due, status=:status, updated_at=:now where id=:id")
+                + "alive_check_due_position_ms=:due, status=:status, updated_at=:now where id=:id")
         .param("pending", pending ? 1 : 0)
-        .param("due", nextDueWatchMs)
+        .param("due", nextDuePositionMs)
         .param("status", status)
         .param("now", now.toEpochMilli())
         .param("id", sessionId)
@@ -156,9 +156,9 @@ public class JdbcWatchSessionRepository implements WatchSessionRepository {
         rs.getLong("synced_verified_watch_ms"),
         rs.getLong("last_sequence"),
         Instant.ofEpochMilli(rs.getLong("last_heartbeat_at")),
-        rs.getObject("alive_check_due_watch_ms") == null
+        rs.getObject("alive_check_due_position_ms") == null
             ? null
-            : rs.getLong("alive_check_due_watch_ms"),
+            : rs.getLong("alive_check_due_position_ms"),
         rs.getInt("alive_check_pending") == 1);
   }
 }

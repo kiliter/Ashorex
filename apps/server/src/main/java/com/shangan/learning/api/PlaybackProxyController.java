@@ -38,14 +38,15 @@ public class PlaybackProxyController {
   }
 
   @GetMapping("/master.m3u8")
-  ResponseEntity<byte[]> master(@PathVariable String ticket) {
+  ResponseEntity<StreamingResponseBody> master(@PathVariable String ticket) {
     var context = playback.verify(ticket);
     if (!context.hls()) throw invalidPath();
     return manifestResponse(ticket, context.upstreamPath());
   }
 
   @GetMapping("/proxy/**")
-  ResponseEntity<?> hlsChild(@PathVariable String ticket, HttpServletRequest request) {
+  ResponseEntity<StreamingResponseBody> hlsChild(
+      @PathVariable String ticket, HttpServletRequest request) {
     var context = playback.verify(ticket);
     String prefix = "/api/v1/playback/" + ticket + "/proxy";
     String requestUri = request.getRequestURI();
@@ -57,7 +58,8 @@ public class PlaybackProxyController {
     return streamResponse(path, request.getHeader("Range"), request.getHeader("If-Range"));
   }
 
-  private ResponseEntity<byte[]> manifestResponse(String ticket, String path) {
+  /** 清单允许在安全上限内缓冲并改写，但仍使用明确的流式响应类型返回。 */
+  private ResponseEntity<StreamingResponseBody> manifestResponse(String ticket, String path) {
     try (var upstream = proxy.open(path, null, null)) {
       byte[] input = upstream.body().readNBytes(MAX_MANIFEST_BYTES + 1);
       if (input.length > MAX_MANIFEST_BYTES) {
@@ -66,12 +68,11 @@ public class PlaybackProxyController {
       String rewritten =
           proxy.rewriteManifest(
               ticket, new String(input, StandardCharsets.UTF_8), upstream.upstreamUri());
+      byte[] rewrittenBytes = rewritten.getBytes(StandardCharsets.UTF_8);
       HttpHeaders headers = new HttpHeaders();
       headers.set("Content-Type", "application/vnd.apple.mpegurl");
-      return new ResponseEntity<>(
-          rewritten.getBytes(StandardCharsets.UTF_8),
-          headers,
-          HttpStatusCode.valueOf(upstream.statusCode()));
+      StreamingResponseBody body = output -> output.write(rewrittenBytes);
+      return new ResponseEntity<>(body, headers, HttpStatusCode.valueOf(upstream.statusCode()));
     } catch (java.io.IOException exception) {
       throw new BusinessException(HttpStatus.BAD_GATEWAY, "HLS_MANIFEST_INVALID", "媒体清单不可用");
     }

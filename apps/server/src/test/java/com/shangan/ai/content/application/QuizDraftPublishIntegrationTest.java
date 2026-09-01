@@ -25,6 +25,7 @@ class QuizDraftPublishIntegrationTest {
   @Autowired JdbcClient jdbc;
   @Autowired QuizGenerationDraftRepository drafts;
   @Autowired QuizDraftPublishService publishing;
+  @Autowired ContentGenerationJobService contentJobs;
 
   @DynamicPropertySource
   static void configure(DynamicPropertyRegistry registry) {
@@ -42,6 +43,7 @@ class QuizDraftPublishIntegrationTest {
     jdbc.sql("delete from content_generation_jobs").update();
     jdbc.sql("delete from question_options").update();
     jdbc.sql("delete from questions").update();
+    jdbc.sql("delete from lesson_study_contents").update();
     jdbc.sql("delete from media_items").update();
     jdbc.sql("delete from courses").update();
     jdbc.sql(
@@ -59,6 +61,11 @@ class QuizDraftPublishIntegrationTest {
                 + "(id,course_id,media_item_id,job_type,status,queued_at,attempt,created_by) "
                 + "values ('job-1','course-1','lesson-1','GENERATE_QUIZ','READY_FOR_REVIEW',1,1,'admin')")
         .update();
+    jdbc.sql(
+            "insert into lesson_study_contents "
+                + "(id,media_item_id,full_text,summary_markdown,transcript_updated_at,summary_updated_at,updated_at) "
+                + "values ('content-1','lesson-1','已有全文','已有摘要',1,1,1)")
+        .update();
     drafts.save(draft());
   }
 
@@ -73,6 +80,17 @@ class QuizDraftPublishIntegrationTest {
         .isEqualTo(2);
     assertThat(drafts.findById("draft-1").orElseThrow().status())
         .isEqualTo(QuizGenerationDraft.Status.PUBLISHED);
+  }
+
+  /** 批量 AI 不得为已经发布过题目的课时再次排入任何阶段。 */
+  @Test
+  void batchWorkflowSkipsPublishedQuizGeneration() {
+    publishing.publish("course-1", List.of("draft-1"));
+
+    var result = contentJobs.enqueueLessonsWorkflow("course-1", List.of("lesson-1"), 5, "admin");
+
+    assertThat(result.createdCount()).isZero();
+    assertThat(result.skippedCount()).isEqualTo(3);
   }
 
   private QuizGenerationDraft draft() {

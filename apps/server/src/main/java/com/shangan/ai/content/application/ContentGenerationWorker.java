@@ -19,15 +19,25 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 /** 单实例全局串行 Worker，按数据库稳定顺序逐个执行课时内容任务。 */
 @Component
 public class ContentGenerationWorker {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(ContentGenerationWorker.class);
 
   private final ContentGenerationJobRepository jobs;
   private final CourseRepository courses;
@@ -40,7 +50,11 @@ public class ContentGenerationWorker {
   private final IntegrationSettingsProvider settings;
   private final IdGenerator ids;
   private final Clock clock;
+  private final ThreadPoolTaskExecutor asrExecutor;
+  private final ThreadPoolTaskExecutor llmExecutor;
   private final AtomicBoolean running = new AtomicBoolean();
+  private final AtomicReference<PoolTask> asrCurrentTask = new AtomicReference<>();
+  private final AtomicReference<PoolTask> llmCurrentTask = new AtomicReference<>();
 
   public ContentGenerationWorker(
       ContentGenerationJobRepository jobs,
@@ -53,7 +67,10 @@ public class ContentGenerationWorker {
       QuizContentGenerator quizzes,
       IntegrationSettingsProvider settings,
       IdGenerator ids,
-      Clock clock) {
+      Clock clock,
+      @Qualifier(ContentTaskExecutorConfiguration.ASR_EXECUTOR) ThreadPoolTaskExecutor asrExecutor,
+      @Qualifier(ContentTaskExecutorConfiguration.LLM_EXECUTOR)
+          ThreadPoolTaskExecutor llmExecutor) {
     this.jobs = jobs;
     this.courses = courses;
     this.contents = contents;
@@ -65,12 +82,24 @@ public class ContentGenerationWorker {
     this.settings = settings;
     this.ids = ids;
     this.clock = clock;
+    this.asrExecutor = asrExecutor;
+    this.llmExecutor = llmExecutor;
   }
 
   /** 服务重启不能悄悄重跑外部调用，遗留执行态统一标记为明确失败。 */
   @EventListener(ApplicationReadyEvent.class)
   public void recoverInterruptedJobs() {
-    jobs.failInterrupted(clock.instant());
+    int interrupted = jobs.failInterrupted(clock.instant());
+    LOGGER.info("内容任务 Worker 已启动：执行模式=全局串行，ASR线程池=1，LLM线程池=1，恢复中断任务数={}", interrupted);
+  }
+
+  /** 周期打印两个独立线程池的存活状态，便于区分空闲、等待和实际运行。 */
+  @Scheduled(
+      initialDelayString = "${app.content.worker-heartbeat-initial-delay-ms:5000}",
+      fixedDelayString = "${app.content.worker-heartbeat-ms:30000}")
+  public void logPoolHeartbeat() {
+    logPoolHeartbeat("ASR", asrExecutor, asrCurrentTask.get());
+    logPoolHeartbeat("LLM", llmExecutor, llmCurrentTask.get());
   }
 
   /** 原子进程锁保证同一服务实例全局只处理一个内容任务。 */
@@ -125,7 +154,13 @@ public class ContentGenerationWorker {
               runtime.asr().language(),
               runtime.asr().chunkDurationSeconds(),
               runtime.asr().timeoutSeconds());
-      String transcript = asr.transcribe(audio.path(), asrSnapshot);
+      String transcript =
+          executeInPool(
+              job,
+              "TRANSCRIBING",
+              asrExecutor,
+              asrCurrentTask,
+              () -> asr.transcribe(audio.path(), asrSnapshot));
       transcribeMs = elapsed(transcribeStarted, clock.instant());
       contents.upsertTranscript(ids.nextId(), lesson.id(), transcript, clock.instant());
     }
@@ -145,7 +180,13 @@ public class ContentGenerationWorker {
     LessonStudyContent content = requireTranscript(job.mediaItemId());
     RuntimeIntegrationSettings.Llm llm = llmSnapshot(job, runtime);
     Instant started = clock.instant();
-    LessonSummaryGenerator.Generation generated = summaries.generate(content.fullText(), llm);
+    LessonSummaryGenerator.Generation generated =
+        executeInPool(
+            job,
+            "SUMMARIZING",
+            llmExecutor,
+            llmCurrentTask,
+            () -> summaries.generate(content.fullText(), llm));
     long summarizeMs = elapsed(started, clock.instant());
     contents.upsertSummary(ids.nextId(), job.mediaItemId(), generated.markdown(), clock.instant());
     long totalMs = elapsed(executionStarted, clock.instant());
@@ -173,8 +214,17 @@ public class ContentGenerationWorker {
     RuntimeIntegrationSettings.Llm llm = llmSnapshot(job, runtime);
     Instant started = clock.instant();
     QuizContentGenerator.Generation generated =
-        quizzes.generate(
-            content.fullText(), content.summaryMarkdown(), job.requestedQuestionCount(), llm);
+        executeInPool(
+            job,
+            "GENERATING_QUIZ",
+            llmExecutor,
+            llmCurrentTask,
+            () ->
+                quizzes.generate(
+                    content.fullText(),
+                    content.summaryMarkdown(),
+                    job.requestedQuestionCount(),
+                    llm));
     long generateMs = elapsed(started, clock.instant());
     drafts.save(toDraft(job, generated.questions()));
     long totalMs = elapsed(executionStarted, clock.instant());
@@ -241,7 +291,8 @@ public class ContentGenerationWorker {
         job.llmModel(),
         job.llmContextLength(),
         job.llmMaxCompletionTokens(),
-        runtime.llm().timeoutSeconds());
+        runtime.llm().timeoutSeconds(),
+        runtime.llm().reasoningEffort());
   }
 
   private MediaItem lesson(String lessonId) {
@@ -288,7 +339,56 @@ public class ContentGenerationWorker {
             ids.nextId(), job.id(), clock.instant(), level, stage, message));
   }
 
+  /** 将外部调用交给指定线程池并同步等待，保证全局任务仍然严格串行。 */
+  private <T> T executeInPool(
+      ContentGenerationJob job,
+      String stage,
+      ThreadPoolTaskExecutor executor,
+      AtomicReference<PoolTask> currentTask,
+      Callable<T> operation) {
+    PoolTask task = new PoolTask(job.id(), job.type().name(), stage);
+    if (!currentTask.compareAndSet(null, task)) {
+      throw new IllegalStateException("内容任务线程池已有任务正在运行");
+    }
+    try {
+      Future<T> future = executor.submit(operation);
+      return future.get();
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("内容任务等待外部调用时被中断", exception);
+    } catch (ExecutionException exception) {
+      Throwable cause = exception.getCause();
+      if (cause instanceof RuntimeException runtimeException) {
+        throw runtimeException;
+      }
+      throw new IllegalStateException("内容任务外部调用执行失败", cause);
+    } finally {
+      currentTask.compareAndSet(task, null);
+    }
+  }
+
+  /** 输出线程池当前运行快照；不记录请求参数、正文或任何外部服务密钥。 */
+  private void logPoolHeartbeat(
+      String poolName, ThreadPoolTaskExecutor executor, PoolTask currentTask) {
+    int activeThreads = executor.getActiveCount();
+    int queuedTasks = executor.getThreadPoolExecutor().getQueue().size();
+    String state = activeThreads > 0 ? "RUNNING" : queuedTasks > 0 ? "WAITING" : "IDLE";
+    LOGGER.info(
+        "内容任务线程池存活：pool={} state={} currentJobId={} currentJobType={} stage={} activeThreads={} queuedTasks={} completedTasks={}",
+        poolName,
+        state,
+        currentTask == null ? "-" : currentTask.jobId(),
+        currentTask == null ? "-" : currentTask.jobType(),
+        currentTask == null ? "-" : currentTask.stage(),
+        activeThreads,
+        queuedTasks,
+        executor.getThreadPoolExecutor().getCompletedTaskCount());
+  }
+
   private long elapsed(Instant start, Instant end) {
     return Math.max(0, Duration.between(start, end).toMillis());
   }
+
+  /** 仅保存可安全进入运行日志的任务标识与阶段。 */
+  private record PoolTask(String jobId, String jobType, String stage) {}
 }

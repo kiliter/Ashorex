@@ -18,6 +18,7 @@ public record IntegrationSettingsForm(
     String llmModel,
     Integer llmContextLength,
     Integer llmMaxCompletionTokens,
+    String llmReasoningEffort,
     Integer llmTimeoutSeconds,
     String openRouterApiKey,
     Boolean autoFillEnabled,
@@ -33,7 +34,9 @@ public record IntegrationSettingsForm(
     asrLanguage = safe(asrLanguage);
     llmBaseUrl = safe(llmBaseUrl);
     llmApiKey = safe(llmApiKey);
-    llmModel = safe(llmModel);
+    // OpenRouter 仅提供元数据，CPA 实际调用使用不含供应商命名空间的模型名。
+    llmModel = withoutProviderPrefix(safe(llmModel));
+    llmReasoningEffort = safe(llmReasoningEffort);
     openRouterApiKey = safe(openRouterApiKey);
     asrChunkDurationSeconds = asrChunkDurationSeconds == null ? 30 : asrChunkDurationSeconds;
     asrTimeoutSeconds = asrTimeoutSeconds == null ? 1800 : asrTimeoutSeconds;
@@ -61,6 +64,7 @@ public record IntegrationSettingsForm(
         value.llm().model(),
         value.llm().contextLength(),
         value.llm().maxCompletionTokens(),
+        value.llm().reasoningEffort(),
         value.llm().timeoutSeconds(),
         value.openRouter().apiKey(),
         value.autoFill().enabled(),
@@ -84,7 +88,8 @@ public record IntegrationSettingsForm(
             llmModel,
             llmContextLength,
             llmMaxCompletionTokens,
-            llmTimeoutSeconds),
+            llmTimeoutSeconds,
+            llmReasoningEffort),
         new RuntimeIntegrationSettings.OpenRouter(openRouterApiKey),
         new RuntimeIntegrationSettings.AutoFill(
             Boolean.TRUE.equals(autoFillEnabled), autoFillIntervalMinutes),
@@ -93,5 +98,12 @@ public record IntegrationSettingsForm(
 
   private static String safe(String value) {
     return value == null ? "" : value;
+  }
+
+  private static String withoutProviderPrefix(String model) {
+    int separator = model.indexOf('/');
+    return separator >= 0 && separator + 1 < model.length()
+        ? model.substring(separator + 1)
+        : model;
   }
 }

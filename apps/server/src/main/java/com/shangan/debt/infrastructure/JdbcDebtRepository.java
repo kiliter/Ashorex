@@ -65,17 +65,18 @@ public class JdbcDebtRepository implements DebtRepository {
     jdbc.sql(
             """
             insert into learning_debts (
-              id, user_id, source_plan_item_id, debt_type, media_item_id, title,
+              id, user_id, source_plan_item_id, debt_type, debt_kind, media_item_id, title,
               original_seconds, remaining_seconds, baseline_completed_seconds,
               status, reason, opened_on, created_at, updated_at
             ) values (
-              :id, :userId, :itemId, :type, :mediaId, :title,
+              :id, :userId, :itemId, :physicalType, :type, :mediaId, :title,
               :original, :remaining, :baseline, 'OPEN', :reason, :openedOn, :now, :now
             ) on conflict(source_plan_item_id, debt_type) do nothing
             """)
         .param("id", debt.id())
         .param("userId", debt.userId())
         .param("itemId", debt.sourcePlanItemId())
+        .param("physicalType", debt.debtType().equals("MOCK_EXAM") ? "QUIZ" : debt.debtType())
         .param("type", debt.debtType())
         .param("mediaId", debt.mediaItemId())
         .param("title", debt.title())
@@ -138,7 +139,7 @@ public class JdbcDebtRepository implements DebtRepository {
         rs.getString("id"),
         rs.getString("user_id"),
         rs.getString("source_plan_item_id"),
-        rs.getString("debt_type"),
+        rs.getString("debt_kind") == null ? rs.getString("debt_type") : rs.getString("debt_kind"),
         rs.getString("media_item_id"),
         rs.getString("title"),
         rs.getLong("original_seconds"),

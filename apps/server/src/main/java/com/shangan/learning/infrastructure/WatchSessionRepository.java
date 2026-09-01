@@ -23,7 +23,7 @@ public interface WatchSessionRepository {
   void stop(String sessionId, String status, Instant endedAt);
 
   void setAliveState(
-      String sessionId, boolean pending, Long nextDueWatchMs, String status, Instant now);
+      String sessionId, boolean pending, Long nextDuePositionMs, String status, Instant now);
 
   void insertAliveCheck(String id, String sessionId, Instant requiredAt);
 
@@ -44,7 +44,7 @@ public interface WatchSessionRepository {
       long syncedVerifiedWatchMs,
       long lastSequence,
       Instant lastHeartbeatAt,
-      Long aliveCheckDueWatchMs,
+      Long aliveCheckDuePositionMs,
       boolean aliveCheckPending) {
     public boolean open() {
       return status.equals("ACTIVE") || status.equals("PAUSED");

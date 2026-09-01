@@ -1,10 +1,13 @@
 package com.shangan.learning;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.shangan.common.api.BusinessException;
 import com.shangan.learning.api.WatchHeartbeatRequest;
 import com.shangan.learning.application.WatchSessionService;
 import com.shangan.learning.infrastructure.WatchSessionBootstrapRepository;
+import com.shangan.planning.application.BattleOrderService;
 import com.shangan.planning.application.DailyPlanService;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -12,6 +15,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -35,6 +39,7 @@ class WatchSessionIntegrationTest {
 
   @Autowired WatchSessionService sessions;
   @Autowired DailyPlanService plans;
+  @Autowired BattleOrderService battleOrders;
   @Autowired JdbcClient jdbc;
   @Autowired MutableClock clock;
   @Autowired WatchSessionBootstrapRepository bootstrapSessions;
@@ -52,6 +57,7 @@ class WatchSessionIntegrationTest {
   void setUp() {
     clock.set(START);
     jdbc.sql("delete from alive_checks").update();
+    jdbc.sql("delete from lesson_review_events").update();
     jdbc.sql("delete from watch_sessions").update();
     jdbc.sql("delete from video_progress").update();
     jdbc.sql("delete from debt_repayments").update();
@@ -75,7 +81,8 @@ class WatchSessionIntegrationTest {
     clock.advanceSeconds(10);
 
     var response =
-        sessions.heartbeat("user-1", "session-1", new WatchHeartbeatRequest(1, 10_000, true, true));
+        sessions.heartbeat(
+            "user-1", "session-1", new WatchHeartbeatRequest(1, 10_000, true, true, 1.0d));
 
     assertThat(response.trustedPositionMs()).isEqualTo(10_000);
     assertThat(response.seekAllowed()).isTrue();
@@ -85,6 +92,30 @@ class WatchSessionIntegrationTest {
                 .single())
         .isEqualTo(10_000);
     assertThat(completedSeconds(plan.items().getFirst().id())).isEqualTo(10);
+  }
+
+  @Test
+  void unsupportedPlaybackSpeedDoesNotAdvanceTrustedProgress() {
+    var plan = createLockedPlan();
+    insertSession("session-speed", plan.items().getFirst().id(), 0, 0, 0);
+    clock.advanceSeconds(10);
+
+    assertThatThrownBy(
+            () ->
+                sessions.heartbeat(
+                    "user-1",
+                    "session-speed",
+                    new WatchHeartbeatRequest(1, 11_000, true, true, 1.1d)))
+        .isInstanceOfSatisfying(
+            BusinessException.class,
+            exception ->
+                assertThat(exception.errorCode()).isEqualTo("WATCH_PLAYBACK_SPEED_INVALID"));
+
+    assertThat(
+            jdbc.sql("select max_verified_position_ms from watch_sessions where id='session-speed'")
+                .query(Long.class)
+                .single())
+        .isZero();
   }
 
   @Test
@@ -109,7 +140,7 @@ class WatchSessionIntegrationTest {
     insertSession("session-direct", null, 120_000, 120_000, 0);
     clock.advanceSeconds(10);
     sessions.heartbeat(
-        "user-1", "session-direct", new WatchHeartbeatRequest(1, 130_000, true, true));
+        "user-1", "session-direct", new WatchHeartbeatRequest(1, 130_000, true, true, 1.0d));
     assertThat(
             jdbc.sql(
                     "select remaining_seconds from learning_debts "
@@ -145,7 +176,7 @@ class WatchSessionIntegrationTest {
         .isEqualTo(45_000);
     assertThat(
             jdbc.sql(
-                    "select alive_check_due_watch_ms from watch_sessions where id='session-bootstrap'")
+                    "select alive_check_due_position_ms from watch_sessions where id='session-bootstrap'")
                 .query(Long.class)
                 .single())
         .isEqualTo(2_400_000);
@@ -155,18 +186,20 @@ class WatchSessionIntegrationTest {
   void dueAliveCheckPausesCountingAndRecordsTimeoutFailure() {
     var plan = createLockedPlan();
     insertSession("session-3", plan.items().getFirst().id(), 0, 0, 0);
-    jdbc.sql("update watch_sessions set alive_check_due_watch_ms=5000 where id='session-3'")
+    jdbc.sql("update watch_sessions set alive_check_due_position_ms=5000 where id='session-3'")
         .update();
     clock.advanceSeconds(10);
 
     var required =
-        sessions.heartbeat("user-1", "session-3", new WatchHeartbeatRequest(1, 10_000, true, true));
+        sessions.heartbeat(
+            "user-1", "session-3", new WatchHeartbeatRequest(1, 10_000, true, true, 1.0d));
     assertThat(required.aliveCheckRequired()).isTrue();
     assertThat(required.status()).isEqualTo("PAUSED");
 
     clock.advanceSeconds(61);
     var pending =
-        sessions.heartbeat("user-1", "session-3", new WatchHeartbeatRequest(2, 10_000, true, true));
+        sessions.heartbeat(
+            "user-1", "session-3", new WatchHeartbeatRequest(2, 10_000, true, true, 1.0d));
     assertThat(pending.verifiedWatchMs()).isEqualTo(10_000);
     assertThat(
             jdbc.sql("select status from alive_checks where watch_session_id='session-3'")
@@ -177,6 +210,49 @@ class WatchSessionIntegrationTest {
     var resumed = sessions.confirmAliveCheck("user-1", "session-3");
     assertThat(resumed.aliveCheckRequired()).isFalse();
     assertThat(resumed.status()).isEqualTo("ACTIVE");
+  }
+
+  @Test
+  void reviewShortcutRecordsOneAuditEventWithoutChangingTrustedLearningProgress() {
+    // 已完成课时再次加入作战单时，服务端必须自动转换为复习快捷入口。
+    jdbc.sql(
+            "insert into video_progress "
+                + "(id,user_id,media_item_id,max_verified_position_ms,verified_watch_ms,completed_at,last_watched_at,created_at,updated_at) "
+                + "values ('completed-progress','user-1','media-1',600000,600000,:now,:now,:now,:now)")
+        .param("now", START.toEpochMilli())
+        .update();
+    var order =
+        battleOrders.save(
+            "user-1",
+            LocalDate.of(2026, 8, 30),
+            new BattleOrderService.SaveCommand(
+                0, List.of(new BattleOrderService.ItemCommand(null, "VIDEO", "media-1", null, 0))));
+    String reviewItemId = order.items().getFirst().id();
+    assertThat(order.items().getFirst().itemType()).isEqualTo("REVIEW_SHORTCUT");
+
+    insertSession("review-session", reviewItemId, 0, 0, 0);
+    clock.advanceSeconds(10);
+    sessions.heartbeat(
+        "user-1", "review-session", new WatchHeartbeatRequest(1, 10_000, true, true, 1.0d));
+    clock.advanceSeconds(10);
+    sessions.heartbeat(
+        "user-1", "review-session", new WatchHeartbeatRequest(2, 20_000, true, true, 1.0d));
+
+    assertThat(
+            jdbc.sql(
+                    "select count(*) from lesson_review_events "
+                        + "where user_id='user-1' and watch_session_id='review-session'")
+                .query(Integer.class)
+                .single())
+        .isEqualTo(1);
+    assertThat(
+            jdbc.sql(
+                    "select verified_watch_ms from video_progress "
+                        + "where user_id='user-1' and media_item_id='media-1'")
+                .query(Long.class)
+                .single())
+        .isEqualTo(600_000);
+    assertThat(completedSeconds(reviewItemId)).isZero();
   }
 
   private DailyPlanService.PlanView createLockedPlan() {

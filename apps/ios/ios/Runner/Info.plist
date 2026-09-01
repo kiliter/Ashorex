@@ -24,6 +24,10 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>用于拍摄模拟考试完成后的试卷照片。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>用于选择并上传模拟考试完成后的试卷照片。</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>

@@ -46,8 +46,8 @@ final class _DailyReportPageState extends ConsumerState<DailyReportPage> {
         }
         return _DailyReportBody(
           report: snapshot.data!,
-          previous: () => _moveDate(-1),
-          next: () => _moveDate(1),
+          selectDate: _selectDate,
+          goToday: _goToday,
           openWeekly: () {
             final monday = _date.subtract(Duration(days: _date.weekday - 1));
             context.push('/reports/weekly?weekStart=${_formatDate(monday)}');
@@ -61,9 +61,25 @@ final class _DailyReportPageState extends ConsumerState<DailyReportPage> {
     );
   }
 
-  void _moveDate(int days) {
+  Future<void> _selectDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      helpText: '选择日报日期',
+    );
+    if (selected == null || !mounted) return;
     setState(() {
-      _date = _date.add(Duration(days: days));
+      _date = DateTime(selected.year, selected.month, selected.day);
+      _load();
+    });
+  }
+
+  void _goToday() {
+    final now = DateTime.now();
+    setState(() {
+      _date = DateTime(now.year, now.month, now.day);
       _load();
     });
   }
@@ -72,14 +88,14 @@ final class _DailyReportPageState extends ConsumerState<DailyReportPage> {
 final class _DailyReportBody extends StatelessWidget {
   const _DailyReportBody({
     required this.report,
-    required this.previous,
-    required this.next,
+    required this.selectDate,
+    required this.goToday,
     required this.openWeekly,
   });
 
   final DailyReportData report;
-  final VoidCallback previous;
-  final VoidCallback next;
+  final VoidCallback selectDate;
+  final VoidCallback goToday;
   final VoidCallback openWeekly;
 
   @override
@@ -105,22 +121,20 @@ final class _DailyReportBody extends StatelessWidget {
       ),
       const SizedBox(height: 14),
       Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton.outlined(
-            onPressed: previous,
-            icon: const Icon(Icons.chevron_left),
+          Expanded(
+            child: OutlinedButton.icon(
+              key: const Key('selectDailyReportDate'),
+              onPressed: selectDate,
+              icon: const Icon(Icons.calendar_month_outlined),
+              label: Text(
+                _formatDate(report.date),
+                style: shanganNumberStyle(context, fontSize: 14),
+              ),
+            ),
           ),
-          const SizedBox(width: 12),
-          Text(
-            _formatDate(report.date),
-            style: shanganNumberStyle(context, fontSize: 15),
-          ),
-          const SizedBox(width: 12),
-          IconButton.outlined(
-            onPressed: next,
-            icon: const Icon(Icons.chevron_right),
-          ),
+          const SizedBox(width: 10),
+          TextButton(onPressed: goToday, child: const Text('回到今天')),
         ],
       ),
       const SizedBox(height: 18),
@@ -178,8 +192,26 @@ final class _DailyReportBody extends StatelessWidget {
             label: '验活失败',
             tone: ShanganTagTone.warning,
           ),
+          (
+            value: '${report.mockExamCompletedCount}',
+            label: '完成模拟考试',
+            tone: ShanganTagTone.success,
+          ),
+          (
+            value: '${report.mockExamAwaitingUploadCount}',
+            label: '待传考试试卷',
+            tone: ShanganTagTone.warning,
+          ),
         ],
       ),
+      if (report.dayOutcome == 'SLACKED') ...[
+        const SizedBox(height: 18),
+        const ShanganNotice(
+          title: '今日自动结论：开摆',
+          message: '服务端发现今日既没有作战单，也没有可信观看记录。',
+          tone: ShanganTagTone.risk,
+        ),
+      ],
       const SizedBox(height: 18),
       ShanganNotice(
         title: '当前欠债 ${_shortDuration(report.openDebtSeconds)}',
@@ -223,8 +255,9 @@ String _shortDuration(int seconds) {
 
 String _planStatus(String status) => switch (status) {
   'COMPLETED' => '已完成',
-  'ABANDONED' => '已开摆',
+  'ABANDONED' => '已结算',
   'CLOSED_WITH_DEBT' => '欠债结算',
+  'ACTIVE' => '进行中',
   'LOCKED' => '进行中',
   _ => status,
 };

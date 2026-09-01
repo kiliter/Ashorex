@@ -7,6 +7,7 @@ import com.shangan.identity.infrastructure.UserRepository;
 import com.shangan.learning.api.WatchHeartbeatRequest;
 import com.shangan.learning.api.WatchHeartbeatResponse;
 import com.shangan.learning.domain.WatchProgressPolicy;
+import com.shangan.learning.infrastructure.ReviewEventRepository;
 import com.shangan.learning.infrastructure.VideoProgressRepository;
 import com.shangan.learning.infrastructure.WatchSessionRepository;
 import com.shangan.planning.application.PlanProgressPort;
@@ -22,9 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class WatchSessionService {
   private static final Duration ALIVE_CHECK_TIMEOUT = Duration.ofSeconds(60);
+  private static final java.util.Set<Double> SUPPORTED_PLAYBACK_SPEEDS =
+      java.util.Set.of(1.0d, 1.25d, 1.5d, 2.0d);
 
   private final WatchSessionRepository sessions;
   private final VideoProgressRepository progress;
+  private final ReviewEventRepository reviewEvents;
   private final PlanProgressPort plans;
   private final DebtService debts;
   private final UserRepository users;
@@ -36,6 +40,7 @@ public class WatchSessionService {
   public WatchSessionService(
       WatchSessionRepository sessions,
       VideoProgressRepository progress,
+      ReviewEventRepository reviewEvents,
       @Lazy PlanProgressPort plans,
       DebtService debts,
       UserRepository users,
@@ -44,6 +49,7 @@ public class WatchSessionService {
       Clock clock) {
     this.sessions = sessions;
     this.progress = progress;
+    this.reviewEvents = reviewEvents;
     this.plans = plans;
     this.debts = debts;
     this.users = users;
@@ -61,6 +67,10 @@ public class WatchSessionService {
     WatchSessionRepository.Session session = requireOwned(userId, sessionId);
     requireOpen(session);
     failTimedOutAliveCheck(session, now);
+    if (!SUPPORTED_PLAYBACK_SPEEDS.contains(request.playbackSpeed())) {
+      throw new BusinessException(
+          HttpStatus.BAD_REQUEST, "WATCH_PLAYBACK_SPEED_INVALID", "播放倍速不受支持");
+    }
 
     WatchProgressPolicy.Decision decision =
         policy.evaluate(
@@ -72,7 +82,11 @@ public class WatchSessionService {
                 session.lastHeartbeatAt(),
                 session.aliveCheckPending()),
             new WatchProgressPolicy.Heartbeat(
-                request.sequence(), request.positionMs(), request.playing(), request.foreground()),
+                request.sequence(),
+                request.positionMs(),
+                request.playing(),
+                request.foreground(),
+                request.playbackSpeed()),
             now);
 
     boolean completed = policy.completed(decision.maxVerifiedPositionMs(), session.durationMs());
@@ -81,8 +95,8 @@ public class WatchSessionService {
     boolean requireNewAliveCheck =
         !pending
             && !completed
-            && session.aliveCheckDueWatchMs() != null
-            && decision.verifiedWatchMs() >= session.aliveCheckDueWatchMs();
+            && session.aliveCheckDuePositionMs() != null
+            && decision.maxVerifiedPositionMs() >= session.aliveCheckDuePositionMs();
     if (requireNewAliveCheck) {
       pending = true;
       status = "PAUSED";
@@ -130,9 +144,15 @@ public class WatchSessionService {
               boolean timedOut = now.isAfter(check.requiredAt().plus(ALIVE_CHECK_TIMEOUT));
               sessions.answerAliveCheck(check.id(), timedOut ? "FAILED" : "PASSED", now);
             });
-    String level = users.findById(userId).orElseThrow(() -> notFound("用户不存在")).aliveCheckLevel();
+    var user = users.findById(userId).orElseThrow(() -> notFound("用户不存在"));
     Long nextDue =
-        aliveChecks.nextDueWatchMs(level, session.verifiedWatchMs()).stream()
+        aliveChecks
+            .nextDuePositionMs(
+                user.aliveCheckLevel(),
+                user.aliveCheckIntervalPercent(),
+                session.maxVerifiedPositionMs(),
+                session.durationMs())
+            .stream()
             .boxed()
             .findFirst()
             .orElse(null);
@@ -168,6 +188,22 @@ public class WatchSessionService {
       long sessionMaximumMs,
       long sessionVerifiedWatchMs,
       Instant now) {
+    if (plans.isReviewShortcut(session.userId(), session.planItemId(), session.mediaItemId())) {
+      long watchDelta = Math.max(0, sessionVerifiedWatchMs - session.syncedVerifiedWatchMs());
+      if (watchDelta > 0) {
+        String timezone =
+            users.findById(session.userId()).orElseThrow(() -> notFound("用户不存在")).timezone();
+        reviewEvents.insertIfAbsent(
+            ids.nextId(),
+            session.userId(),
+            session.mediaItemId(),
+            session.id(),
+            now.atZone(java.time.ZoneId.of(timezone)).toLocalDate(),
+            now);
+        sessions.markSynced(session.id(), sessionVerifiedWatchMs, now);
+      }
+      return new SyncedProgress(session.durationMs(), true);
+    }
     long existingMaximum =
         progress
             .find(session.userId(), session.mediaItemId())

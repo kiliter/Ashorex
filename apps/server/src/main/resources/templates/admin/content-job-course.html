@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="~{admin/fragments :: head('课程工作流 - 上岸管理台')}"></head>
+  <body class="admin-body"><div class="admin-shell">
+    <header th:replace="~{admin/fragments :: navigation('jobs')}"></header>
+    <main class="admin-main">
+      <section class="page-head"><div class="container"><div class="route"><a th:href="@{/admin/content-jobs}">内容任务</a><span>/</span><span th:text="${course.name}">课程</span></div><div class="page-head-row"><div><h1 class="page-title" data-code="FLOW/05" th:text="${course.name}">课程名称</h1><p class="page-desc">按课时与排队时间合并展示：转写 → 摘要 → 出题</p></div><a class="btn btn-secondary" th:href="@{/admin/courses/{id}/lessons(id=${course.id})}">返回课时管理</a></div></div></section>
+      <div class="container workspace" data-workflow-list-live th:attr="data-live-url=@{/admin/content-jobs/courses/{id}/live(id=${course.id})},data-login-url=@{/admin/login},data-workflow-base=@{/admin/content-jobs/workflows/},data-course-id=${course.id}">
+        <div class="summary-strip">
+          <div class="summary-item"><div class="summary-label">本页工作流</div><div class="summary-value" data-workflow-count th:text="${#lists.size(workflows)}">0</div></div>
+          <div class="summary-item"><div class="summary-label">全局等待阶段</div><div class="summary-value" data-stat="queued" th:text="${stats.queued}">0</div></div>
+          <div class="summary-item"><div class="summary-label">全局执行中</div><div class="summary-value" data-stat="running" th:text="${stats.running}">0</div></div>
+          <div class="summary-item"><div class="summary-label">近 24h 失败</div><div class="summary-value" data-stat="failedSince" th:text="${stats.failedSince}">0</div></div>
+        </div>
+        <section class="panel workflow-panel">
+          <div class="panel-head"><div><h2>WORKFLOW / 课时任务</h2><p class="muted">同一次“AI 一下”的阶段被合并为一条记录</p></div><span class="muted" data-workflow-list-state>自动刷新中</span></div>
+          <div class="empty-state" data-workflow-empty th:hidden="${!#lists.isEmpty(workflows)}"><strong>该课程还没有任务</strong>返回课时管理，选择一个或多个课时执行“AI 一下”。</div>
+          <div class="workflow-list" data-workflow-list th:hidden="${#lists.isEmpty(workflows)}">
+            <a class="workflow-card" th:each="flow : ${workflows}" th:href="@{/admin/content-jobs/workflows/{courseId}/{lessonId}/{queuedAt}(courseId=${flow.courseId},lessonId=${flow.lessonId},queuedAt=${flow.queuedAt})}">
+              <div class="workflow-card__head"><div><h3 th:text="${flow.lessonTitle}">课时名称</h3><div class="workflow-card__meta"><time class="num" th:text="${flow.queuedAtLabel}">时间</time><span>·</span><span th:text="|总耗时 ${flow.totalDurationLabel}|">总耗时 —</span></div></div><span class="badge" th:classappend="${flow.status == 'FAILED' ? ' danger' : (flow.status == 'COMPLETED' ? ' success' : ' warning')}" th:text="${flow.statusLabel}">状态</span></div>
+              <div class="workflow-rail"><div class="workflow-stage" th:each="stage,stageStat : ${flow.stages}" th:attr="data-status=${stage.status}"><span class="workflow-stage__index num" th:text="${#numbers.formatInteger(stageStat.index + 1, 2)}">01</span><div><strong th:text="${stage.typeLabel}">阶段</strong><span th:text="${stage.statusLabel}">状态</span></div><time class="num" th:text="${stage.durationLabel}">—</time></div></div>
+              <div class="workflow-card__open">查看阶段耗时与合并日志 <span aria-hidden="true">→</span></div>
+            </a>
+          </div>
+          <div class="pagination"><span>最多显示最近 500 条工作流</span><span>全局串行：<strong class="num">1</strong></span></div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script>
+    // 课程页以工作流为最小刷新单位，不重绘页面导航与课程上下文。
+    const workflowRoot = document.querySelector("[data-workflow-list-live]");
+    let workflowTimer;
+    let workflowRefreshing = false;
+    const scheduleWorkflowRefresh = (delay = 2000) => {
+      window.clearTimeout(workflowTimer);
+      workflowTimer = window.setTimeout(refreshWorkflows, delay);
+    };
+    const badgeClass = (status) => status === "FAILED" ? "danger" : status === "COMPLETED" ? "success" : "warning";
+    const buildWorkflow = (flow) => {
+      const card = document.createElement("a");
+      card.className = "workflow-card";
+      card.href = `${workflowRoot.dataset.workflowBase}${encodeURIComponent(flow.courseId)}/${encodeURIComponent(flow.lessonId)}/${flow.queuedAt}`;
+      const head = document.createElement("div");
+      head.className = "workflow-card__head";
+      const titleWrap = document.createElement("div");
+      const title = document.createElement("h3");
+      title.textContent = flow.lessonTitle;
+      const meta = document.createElement("div");
+      meta.className = "workflow-card__meta";
+      const time = document.createElement("time");
+      time.className = "num";
+      time.textContent = flow.queuedAtLabel;
+      const separator = document.createElement("span");
+      separator.textContent = "·";
+      const total = document.createElement("span");
+      total.textContent = `总耗时 ${flow.totalDurationLabel}`;
+      meta.append(time, separator, total);
+      titleWrap.append(title, meta);
+      const badge = document.createElement("span");
+      badge.className = `badge ${badgeClass(flow.status)}`;
+      badge.textContent = flow.statusLabel;
+      head.append(titleWrap, badge);
+      const rail = document.createElement("div");
+      rail.className = "workflow-rail";
+      flow.stages.forEach((stage, index) => {
+        const item = document.createElement("div");
+        item.className = "workflow-stage";
+        item.dataset.status = stage.status;
+        const sequence = document.createElement("span");
+        sequence.className = "workflow-stage__index num";
+        sequence.textContent = String(index + 1).padStart(2, "0");
+        const copy = document.createElement("div");
+        const name = document.createElement("strong");
+        name.textContent = stage.typeLabel;
+        const status = document.createElement("span");
+        status.textContent = stage.statusLabel;
+        copy.append(name, status);
+        const duration = document.createElement("time");
+        duration.className = "num";
+        duration.textContent = stage.durationLabel;
+        item.append(sequence, copy, duration);
+        rail.appendChild(item);
+      });
+      const open = document.createElement("div");
+      open.className = "workflow-card__open";
+      open.textContent = "查看阶段耗时与合并日志 →";
+      card.append(head, rail, open);
+      return card;
+    };
+    const renderWorkflows = (flows) => {
+      const list = workflowRoot.querySelector("[data-workflow-list]");
+      list.replaceChildren(...flows.map(buildWorkflow));
+      workflowRoot.querySelector("[data-workflow-count]").textContent = flows.length;
+      workflowRoot.querySelector("[data-workflow-empty]").hidden = flows.length > 0;
+      list.hidden = flows.length === 0;
+    };
+    const refreshWorkflows = async () => {
+      if (workflowRefreshing) return;
+      if (document.hidden) { scheduleWorkflowRefresh(); return; }
+      workflowRefreshing = true;
+      const state = workflowRoot.querySelector("[data-workflow-list-state]");
+      try {
+        const response = await fetch(workflowRoot.dataset.liveUrl, {headers: {Accept: "application/json"}, credentials: "same-origin"});
+        const contentType = response.headers.get("content-type") || "";
+        if (response.redirected || !contentType.includes("application/json")) { window.location.assign(workflowRoot.dataset.loginUrl); return; }
+        if (!response.ok) throw new Error("工作流读取失败");
+        const payload = await response.json();
+        renderWorkflows(payload.workflows);
+        ["queued", "running", "failedSince"].forEach((name) => { workflowRoot.querySelector(`[data-stat="${name}"]`).textContent = payload.stats[name]; });
+        state.textContent = "自动刷新中";
+      } catch (error) {
+        state.textContent = "刷新失败，正在重试";
+      } finally {
+        workflowRefreshing = false;
+        scheduleWorkflowRefresh();
+      }
+    };
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) scheduleWorkflowRefresh(0); });
+    scheduleWorkflowRefresh(800);
+  </script>
+  </body>
+</html>

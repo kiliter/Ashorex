@@ -55,14 +55,10 @@ public class FocusSessionController {
     return active.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
   }
 
-  record StartRequest(
-      String planItemId,
-      String mediaItemId,
-      @NotBlank String focusType,
-      @Min(1) long plannedSeconds) {
+  record StartRequest(String mediaItemId, @NotBlank String focusType, @Min(1) long plannedSeconds) {
     FocusSessionService.StartCommand toCommand() {
-      return new FocusSessionService.StartCommand(
-          planItemId, mediaItemId, focusType, plannedSeconds);
+      // V1.3 专注是首页独立工具；显式传 null 防止客户端把它伪装成作战单任务。
+      return new FocusSessionService.StartCommand(null, mediaItemId, focusType, plannedSeconds);
     }
   }
 }

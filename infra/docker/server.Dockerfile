@@ -9,7 +9,7 @@ RUN apt-get update \
 WORKDIR /app
 COPY apps/server/target/shangan-server-*.jar /app/server.jar
 COPY infra/scripts /app/infra/scripts
-RUN mkdir -p /data /backup \
+RUN mkdir -p /data/mock-exams /backup \
     && chmod +x /app/infra/scripts/*.sh \
     && chown -R shangan:shangan /app /data /backup
 USER 10001:10001

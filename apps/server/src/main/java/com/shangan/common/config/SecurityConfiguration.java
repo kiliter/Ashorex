@@ -26,6 +26,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -52,6 +53,15 @@ public class SecurityConfiguration {
                     .loginProcessingUrl("/admin/login")
                     .defaultSuccessUrl("/admin/health", true)
                     .permitAll())
+        .exceptionHandling(
+            exceptions ->
+                exceptions
+                    .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/admin/login"))
+                    // 管理台会话失效或角色不足时统一返回登录页，不暴露 Whitelabel 403。
+                    .accessDeniedHandler(
+                        (request, response, exception) ->
+                            response.sendRedirect(
+                                request.getContextPath() + "/admin/login?denied=true")))
         .logout(logout -> logout.logoutUrl("/admin/logout"));
     return http.build();
   }

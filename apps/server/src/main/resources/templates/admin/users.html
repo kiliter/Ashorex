@@ -5,73 +5,81 @@
     <div class="admin-shell">
       <header th:replace="~{admin/fragments :: navigation('users')}"></header>
       <main class="admin-main">
-        <header class="page-header">
-          <div>
-            <p class="page-eyebrow">ACCESS CONTROL</p>
-            <h1 data-code="USR/02">用户管理</h1>
-            <p>创建学习账号，并控制普通用户是否可以继续登录。</p>
-          </div>
-        </header>
-
-        <section class="panel" aria-labelledby="create-user-title">
-          <div class="panel-header">
+        <section class="page-head">
+          <div class="container page-head-row">
             <div>
-              <h2 id="create-user-title">创建普通用户</h2>
-              <p>初始密码至少 12 位，创建后不会在后台再次显示。</p>
+              <p class="page-eyebrow">ACCESS CONTROL</p>
+              <h1 class="page-title" data-code="USR/02">用户管理</h1>
+              <p class="page-desc">创建学习账号，并控制普通用户是否可以继续登录。</p>
             </div>
+            <span class="badge" th:text="|${#lists.size(users)} 个账号|">账号数量</span>
           </div>
-          <form class="form-grid form-grid--two" method="post" th:action="@{/admin/users}">
-            <label class="field">
-              用户名
-              <input name="username" placeholder="例如 student.one" required minlength="3" maxlength="64" />
-            </label>
-            <label class="field">
-              显示名称
-              <input name="displayName" placeholder="例如 一号学员" required maxlength="64" />
-            </label>
-            <label class="field form-grid__wide">
-              初始密码
-              <input name="password" type="password" autocomplete="new-password" placeholder="至少输入 12 位" required minlength="12" maxlength="128" />
-            </label>
-            <div class="actions form-grid__wide">
-              <button type="submit">创建用户</button>
-            </div>
-          </form>
         </section>
 
-        <section class="panel panel--flush" aria-labelledby="user-list-title">
-          <div class="panel-header panel-header--padded">
-            <div>
-              <h2 id="user-list-title">现有用户</h2>
-              <p>管理员账号不能在此页面停用。</p>
+        <!-- 桌面端将创建操作与账号列表并排，避免低频表单占满整行。 -->
+        <div class="container workspace users-layout">
+          <section class="panel users-create-panel" aria-labelledby="create-user-title">
+            <div class="panel-header">
+              <div>
+                <p class="page-eyebrow">CREATE / NEW ACCOUNT</p>
+                <h2 id="create-user-title">创建普通用户</h2>
+                <p>初始密码至少 12 位，创建后不会再次显示。</p>
+              </div>
             </div>
-            <span class="status-pill" th:text="|${#lists.size(users)} 个账号|">账号数量</span>
-          </div>
-          <div class="table-scroll">
-            <table>
-              <thead>
-                <tr><th>用户名</th><th>显示名称</th><th>角色</th><th>状态</th><th>操作</th></tr>
-              </thead>
-              <tbody>
-                <tr th:each="user : ${users}">
-                  <td class="data-text" th:text="${user.username}"></td>
-                  <td th:text="${user.displayName}"></td>
-                  <td><span class="status-pill status-pill--info" th:text="${user.role}"></span></td>
-                  <td>
-                    <span class="status-pill" th:classappend="${user.enabled ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${user.enabled ? '已启用' : '已禁用'}"></span>
-                  </td>
-                  <td>
-                    <form th:if="${user.role != 'ADMIN'}" method="post" th:action="@{/admin/users/{id}/enabled(id=${user.id})}">
-                      <input type="hidden" name="enabled" th:value="${!user.enabled}" />
-                      <button class="button--small" th:classappend="${user.enabled ? 'button--danger' : 'button--secondary'}" type="submit" th:text="${user.enabled ? '禁用账号' : '重新启用'}"></button>
-                    </form>
-                    <span class="status-pill" th:if="${user.role == 'ADMIN'}">受保护</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+            <form class="form-grid panel-body" method="post" th:action="@{/admin/users}">
+              <label class="field">
+                用户名
+                <input name="username" placeholder="例如 student.one" required minlength="3" maxlength="64" />
+              </label>
+              <label class="field">
+                显示名称
+                <input name="displayName" placeholder="例如 一号学员" required maxlength="64" />
+              </label>
+              <label class="field">
+                初始密码
+                <input name="password" type="password" autocomplete="new-password" placeholder="至少输入 12 位" required minlength="12" maxlength="128" />
+              </label>
+              <div class="actions">
+                <button type="submit">创建用户</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel panel--flush users-list-panel" aria-labelledby="user-list-title">
+            <div class="panel-header panel-header--padded">
+              <div>
+                <p class="page-eyebrow">ACCOUNT DIRECTORY</p>
+                <h2 id="user-list-title">现有用户</h2>
+                <p>管理员账号不能在此页面停用。</p>
+              </div>
+              <span class="status-pill" th:text="|${#lists.size(users)} 个账号|">账号数量</span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr><th>用户名</th><th>显示名称</th><th>角色</th><th>状态</th><th class="right">操作</th></tr>
+                </thead>
+                <tbody>
+                  <tr th:each="user : ${users}">
+                    <td class="data-text" th:text="${user.username}"></td>
+                    <td th:text="${user.displayName}"></td>
+                    <td><span class="status-pill status-pill--info" th:text="${user.role == 'ADMIN' ? '管理员' : '学习用户'}"></span></td>
+                    <td>
+                      <span class="status-pill" th:classappend="${user.enabled ? 'status-pill--ok' : 'status-pill--danger'}" th:text="${user.enabled ? '已启用' : '已禁用'}"></span>
+                    </td>
+                    <td class="right">
+                      <form class="inline-form" th:if="${user.role != 'ADMIN'}" method="post" th:action="@{/admin/users/{id}/enabled(id=${user.id})}">
+                        <input type="hidden" name="enabled" th:value="${!user.enabled}" />
+                        <button class="button--small" th:classappend="${user.enabled ? 'button--danger' : 'button--secondary'}" type="submit" th:text="${user.enabled ? '禁用账号' : '重新启用'}"></button>
+                      </form>
+                      <span class="status-pill" th:if="${user.role == 'ADMIN'}">受保护</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
       </main>
     </div>
   </body>

@@ -6,6 +6,8 @@ import com.shangan.catalog.domain.Course;
 import com.shangan.catalog.domain.LessonStudyContent;
 import com.shangan.catalog.domain.MediaItem;
 import com.shangan.common.api.BusinessException;
+import com.shangan.common.auth.CurrentUser;
+import com.shangan.learning.application.VideoProgressQueryService;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
@@ -22,11 +24,15 @@ public class CatalogController {
 
   private final CatalogQueryService catalog;
   private final LessonStudyContentImportService studyContents;
+  private final VideoProgressQueryService videoProgress;
 
   public CatalogController(
-      CatalogQueryService catalog, LessonStudyContentImportService studyContents) {
+      CatalogQueryService catalog,
+      LessonStudyContentImportService studyContents,
+      VideoProgressQueryService videoProgress) {
     this.catalog = catalog;
     this.studyContents = studyContents;
+    this.videoProgress = videoProgress;
   }
 
   @GetMapping("/courses")
@@ -35,7 +41,7 @@ public class CatalogController {
   }
 
   @GetMapping("/courses/{courseId}")
-  CourseDetailResponse course(@PathVariable String courseId) {
+  CourseDetailResponse course(CurrentUser user, @PathVariable String courseId) {
     Course course =
         catalog
             .findCourse(courseId)
@@ -45,14 +51,16 @@ public class CatalogController {
         course.id(),
         course.name(),
         course.description(),
-        catalog.listEnabledLessons(course.id()).stream().map(LessonResponse::from).toList());
+        catalog.listEnabledLessons(course.id()).stream()
+            .map(item -> lessonResponse(user.userId(), item))
+            .toList());
   }
 
   @GetMapping("/lessons/{lessonId}")
-  LessonResponse lesson(@PathVariable String lessonId) {
+  LessonResponse lesson(CurrentUser user, @PathVariable String lessonId) {
     return catalog
         .findLesson(lessonId)
-        .map(LessonResponse::from)
+        .map(item -> lessonResponse(user.userId(), item))
         .orElseThrow(
             () -> new BusinessException(HttpStatus.NOT_FOUND, "LESSON_NOT_FOUND", "课时不存在"));
   }
@@ -83,11 +91,44 @@ public class CatalogController {
   record CourseDetailResponse(
       String id, String name, String description, List<LessonResponse> lessons) {}
 
-  record LessonResponse(String id, String courseId, String title, long durationMs, int sortOrder) {
-    static LessonResponse from(MediaItem item) {
-      return new LessonResponse(
-          item.id(), item.courseId(), item.title(), item.durationMs(), item.sortOrder());
-    }
+  record LessonResponse(
+      String id,
+      String courseId,
+      String title,
+      long durationMs,
+      int sortOrder,
+      long maxVerifiedPositionMs,
+      int progressPercent,
+      String learningStatus,
+      boolean summaryAvailable) {}
+
+  /** 列表只返回摘要可用标志；完整 Markdown 在用户点击小眼睛后按需读取。 */
+  private LessonResponse lessonResponse(String userId, MediaItem item) {
+    var progress = videoProgress.find(userId, item.id()).orElse(null);
+    long maximum = progress == null ? 0 : progress.maxVerifiedPositionMs();
+    int percent =
+        item.durationMs() <= 0
+            ? 0
+            : (int) Math.min(100, Math.round(maximum * 100.0 / item.durationMs()));
+    String status =
+        progress != null && progress.completedAt() != null
+            ? "COMPLETED"
+            : maximum > 0 ? "IN_PROGRESS" : "NOT_STARTED";
+    boolean summaryAvailable =
+        studyContents
+            .findByLessonId(item.id())
+            .filter(LessonStudyContent::summaryReady)
+            .isPresent();
+    return new LessonResponse(
+        item.id(),
+        item.courseId(),
+        item.title(),
+        item.durationMs(),
+        item.sortOrder(),
+        maximum,
+        percent,
+        status,
+        summaryAvailable);
   }
 
   /** App 读取的课程学习内容直接 DTO。 */

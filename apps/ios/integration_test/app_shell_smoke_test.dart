@@ -86,6 +86,16 @@ final class _CatalogRepository implements CatalogRepository {
   Future<CourseDetail> loadCourse(String courseId) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<LessonSummary> loadLesson(String lessonId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LessonStudyContentData> loadStudyContent(String lessonId) {
+    throw UnimplementedError();
+  }
 }
 
 final class _MemoryTokenStore implements TokenStore {
@@ -130,7 +140,8 @@ final class _AuthenticatedRepository implements AuthRepository {
 final class _MemoryPreferencesRepository implements PreferencesRepository {
   UserPreferences _preferences = const UserPreferences(
     timezone: 'Asia/Shanghai',
-    aliveCheckLevel: 'NORMAL',
+    aliveCheckEnabled: true,
+    aliveCheckIntervalPercent: 50,
     dayEndLocalTime: '23:59',
   );
 

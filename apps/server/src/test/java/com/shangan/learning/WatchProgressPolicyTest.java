@@ -33,6 +33,19 @@ class WatchProgressPolicyTest {
   }
 
   @Test
+  void acceptsDoubleSpeedPositionButCountsOnlyRealElapsedTime() {
+    var result =
+        policy.evaluate(
+            state(0, 0, 0, 0, false),
+            new WatchProgressPolicy.Heartbeat(1, 20_000, true, true, 2.0d),
+            at(10));
+
+    assertThat(result.maxVerifiedPositionMs()).isEqualTo(20_000);
+    assertThat(result.verifiedWatchMs()).isEqualTo(10_000);
+    assertThat(result.seekAllowed()).isTrue();
+  }
+
+  @Test
   void ignoresDuplicateSequenceWithoutDoubleCounting() {
     var state = state(10_000, 10_000, 10_000, 1, false);
     var result = policy.evaluate(state, heartbeat(1, 20_000, true, true), at(20));
@@ -89,7 +102,7 @@ class WatchProgressPolicyTest {
 
   private WatchProgressPolicy.Heartbeat heartbeat(
       long sequence, long positionMs, boolean playing, boolean foreground) {
-    return new WatchProgressPolicy.Heartbeat(sequence, positionMs, playing, foreground);
+    return new WatchProgressPolicy.Heartbeat(sequence, positionMs, playing, foreground, 1.0d);
   }
 
   private Instant at(long seconds) {

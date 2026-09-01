@@ -16,6 +16,15 @@ public interface ContentGenerationJobRepository {
 
   List<ContentGenerationJob> findRecent(String courseId, String type, String status, int limit);
 
+  /** 按课程汇总历史任务，供管理台第一层列表使用。 */
+  List<CourseTaskSummary> summarizeByCourse();
+
+  /** 将同一课时、同一排队时间创建的阶段任务汇总为一个工作流。 */
+  List<WorkflowTaskSummary> summarizeWorkflows(String courseId, int limit);
+
+  /** 精确读取一个工作流内的全部阶段，避免详情页依赖最近任务条数上限。 */
+  List<ContentGenerationJob> findWorkflow(String courseId, String mediaItemId, Instant queuedAt);
+
   boolean transition(
       String jobId,
       ContentGenerationJob.Status expected,
@@ -43,6 +52,30 @@ public interface ContentGenerationJobRepository {
       Long totalMs,
       Integer promptTokens,
       Integer completionTokens) {}
+
+  /** 课程级任务汇总不包含正文、模型密钥或错误详情。 */
+  record CourseTaskSummary(
+      String courseId,
+      long workflowCount,
+      long taskCount,
+      long queuedCount,
+      long runningCount,
+      long failedCount,
+      Instant lastQueuedAt) {}
+
+  /** 一个工作流最多包含转写、摘要和出题三个阶段。 */
+  record WorkflowTaskSummary(
+      String mediaItemId,
+      Instant queuedAt,
+      String transcribeJobId,
+      String transcribeStatus,
+      Long transcribeTotalMs,
+      String summarizeJobId,
+      String summarizeStatus,
+      Long summarizeTotalMs,
+      String quizJobId,
+      String quizStatus,
+      Long quizTotalMs) {}
 
   /** 后台首页和任务页使用的紧凑队列统计。 */
   record QueueStats(

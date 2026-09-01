@@ -133,6 +133,25 @@ final class _ProfileTab extends ConsumerWidget {
           const SizedBox(height: 22),
           const Divider(),
           InkWell(
+            key: const Key('mockExamPresetEntry'),
+            onTap: () => context.push('/mock-exam-presets'),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 15),
+              child: Row(
+                children: [
+                  Icon(Icons.assignment_outlined, color: ShanganColors.blue),
+                  SizedBox(width: 12),
+                  Expanded(child: Text('模拟考试预置')),
+                  Text(
+                    '名称与时长 ›',
+                    style: TextStyle(color: ShanganColors.mutedInk),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(),
+          InkWell(
             key: const Key('settingsEntry'),
             onTap: () => context.push('/settings'),
             child: const Padding(

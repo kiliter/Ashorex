@@ -42,13 +42,25 @@ public record RuntimeIntegrationSettings(
       String model,
       int contextLength,
       int maxCompletionTokens,
-      int timeoutSeconds) {
+      int timeoutSeconds,
+      String reasoningEffort) {
+    /** 兼容既有调用方；未显式配置时不向上游发送 reasoning_effort。 */
+    public Llm(
+        String baseUrl,
+        String apiKey,
+        String model,
+        int contextLength,
+        int maxCompletionTokens,
+        int timeoutSeconds) {
+      this(baseUrl, apiKey, model, contextLength, maxCompletionTokens, timeoutSeconds, "");
+    }
+
     public boolean configured() {
       return present(baseUrl) && present(model) && contextLength >= 4096 && maxCompletionTokens > 0;
     }
 
     public static Llm defaults() {
-      return new Llm("", "", "", 131072, 8192, 300);
+      return new Llm("", "", "", 131072, 8192, 300, "");
     }
   }
 

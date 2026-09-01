@@ -59,7 +59,13 @@ public class JdbcContentGenerationJobRepository implements ContentGenerationJobR
             join media_items media on media.id=job.media_item_id
             where job.status='QUEUED'
             order by job.queued_at,course.sort_order,course.name,
-                     media.sort_order,media.title,job.id
+                     media.sort_order,media.title,
+                     case job.job_type
+                       when 'TRANSCRIBE' then 0
+                       when 'SUMMARIZE' then 1
+                       else 2
+                     end,
+                     job.id
             limit 1
             """)
         .query(this::mapJob)
@@ -89,6 +95,98 @@ public class JdbcContentGenerationJobRepository implements ContentGenerationJobR
         .param("type", safe(type))
         .param("status", safe(status))
         .param("limit", Math.max(1, Math.min(500, limit)))
+        .query(this::mapJob)
+        .list();
+  }
+
+  /** 使用数据库聚合课程任务，避免管理台按课程逐条查询。 */
+  @Override
+  public List<CourseTaskSummary> summarizeByCourse() {
+    return jdbc.sql(
+            """
+            select course_id,
+              count(distinct media_item_id || ':' || cast(queued_at as text)) workflow_count,
+              count(*) task_count,
+              sum(case when status='QUEUED' then 1 else 0 end) queued_count,
+              sum(case when status in (
+                'FETCHING_AUDIO','TRANSCRIBING','SUMMARIZING','GENERATING_QUIZ'
+              ) then 1 else 0 end) running_count,
+              sum(case when status='FAILED' then 1 else 0 end) failed_count,
+              max(queued_at) last_queued_at
+            from content_generation_jobs
+            group by course_id
+            order by last_queued_at desc,course_id
+            """)
+        .query(
+            (row, number) ->
+                new CourseTaskSummary(
+                    row.getString("course_id"),
+                    row.getLong("workflow_count"),
+                    row.getLong("task_count"),
+                    row.getLong("queued_count"),
+                    row.getLong("running_count"),
+                    row.getLong("failed_count"),
+                    Instant.ofEpochMilli(row.getLong("last_queued_at"))))
+        .list();
+  }
+
+  /** 同一 queued_at 是“AI 一下”创建的工作流批次标识，单阶段任务也自然形成单阶段工作流。 */
+  @Override
+  public List<WorkflowTaskSummary> summarizeWorkflows(String courseId, int limit) {
+    return jdbc.sql(
+            """
+            select media_item_id,queued_at,
+              max(case when job_type='TRANSCRIBE' then id end) transcribe_job_id,
+              max(case when job_type='TRANSCRIBE' then status end) transcribe_status,
+              max(case when job_type='TRANSCRIBE' then total_ms end) transcribe_total_ms,
+              max(case when job_type='SUMMARIZE' then id end) summarize_job_id,
+              max(case when job_type='SUMMARIZE' then status end) summarize_status,
+              max(case when job_type='SUMMARIZE' then total_ms end) summarize_total_ms,
+              max(case when job_type='GENERATE_QUIZ' then id end) quiz_job_id,
+              max(case when job_type='GENERATE_QUIZ' then status end) quiz_status,
+              max(case when job_type='GENERATE_QUIZ' then total_ms end) quiz_total_ms
+            from content_generation_jobs
+            where course_id=:courseId
+            group by media_item_id,queued_at
+            order by queued_at desc,media_item_id
+            limit :limit
+            """)
+        .param("courseId", courseId)
+        .param("limit", Math.max(1, Math.min(500, limit)))
+        .query(
+            (row, number) ->
+                new WorkflowTaskSummary(
+                    row.getString("media_item_id"),
+                    Instant.ofEpochMilli(row.getLong("queued_at")),
+                    row.getString("transcribe_job_id"),
+                    row.getString("transcribe_status"),
+                    longOrNull(row, "transcribe_total_ms"),
+                    row.getString("summarize_job_id"),
+                    row.getString("summarize_status"),
+                    longOrNull(row, "summarize_total_ms"),
+                    row.getString("quiz_job_id"),
+                    row.getString("quiz_status"),
+                    longOrNull(row, "quiz_total_ms")))
+        .list();
+  }
+
+  /** 工作流详情按完整复合键读取，阶段顺序固定为转写、摘要、出题。 */
+  @Override
+  public List<ContentGenerationJob> findWorkflow(
+      String courseId, String mediaItemId, Instant queuedAt) {
+    return jdbc.sql(
+            """
+            select * from content_generation_jobs
+            where course_id=:courseId and media_item_id=:mediaItemId and queued_at=:queuedAt
+            order by case job_type
+              when 'TRANSCRIBE' then 0
+              when 'SUMMARIZE' then 1
+              else 2
+            end,id
+            """)
+        .param("courseId", courseId)
+        .param("mediaItemId", mediaItemId)
+        .param("queuedAt", queuedAt.toEpochMilli())
         .query(this::mapJob)
         .list();
   }

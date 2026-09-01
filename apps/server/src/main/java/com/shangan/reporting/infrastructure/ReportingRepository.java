@@ -27,14 +27,20 @@ public interface ReportingRepository {
 
   List<UserTimezone> users();
 
+  /** 查询指定周内发生过的复习课时，并按课时聚合次数。 */
+  List<ReviewedLesson> reviewedLessons(String userId, LocalDate start, LocalDate endExclusive);
+
   record RawDailyMetrics(
       String planStatus,
+      String dayOutcome,
       long plannedSeconds,
       int completedTasks,
       int totalTasks,
       long videoStudySeconds,
       long focusSeconds,
       int videoCompletedCount,
+      int mockExamCompletedCount,
+      int mockExamAwaitingUploadCount,
       int answerCount,
       int correctAnswerCount,
       int aliveCheckFailureCount,
@@ -50,4 +56,6 @@ public interface ReportingRepository {
   record ReportCandidate(String userId, LocalDate date) {}
 
   record UserTimezone(String userId, String timezone) {}
+
+  record ReviewedLesson(String mediaItemId, String lessonTitle, int reviewCount) {}
 }

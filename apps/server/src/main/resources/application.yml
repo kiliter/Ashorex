@@ -12,6 +12,10 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  session:
+    jdbc:
+      # Session 表由 Flyway 统一维护，避免框架启动时改写生产数据库结构。
+      initialize-schema: never
   servlet:
     multipart:
       # 课程内容压缩包上限为 50 MiB，请求额外预留少量 multipart 边界开销。
@@ -24,14 +28,21 @@ management:
       exposure:
         include: health,info
 
+springdoc:
+  # 冻结合同只描述 iOS 业务 API，管理后台由 Thymeleaf 页面和 MVC 测试覆盖。
+  paths-to-match: /api/v1/**
+
 server:
   # 本地开发统一使用 18080，部署环境仍可通过 SERVER_PORT 覆盖。
   port: ${SERVER_PORT:18080}
   servlet:
     session:
+      # 管理后台 Session 在七天无访问后失效；重启服务不会主动清除。
+      timeout: 7d
       cookie:
         http-only: true
-        secure: true
+        # 本机和局域网 HTTP 开发允许关闭；容器部署默认通过环境变量强制开启。
+        secure: ${SESSION_COOKIE_SECURE:false}
         same-site: lax
   error:
     include-message: never
@@ -43,6 +54,8 @@ logging:
     level: "%5p [requestId:%X{requestId:-}]"
 
 app:
+  # 模拟考试试卷与 SQLite 同处本地数据卷，并由备份脚本成套归档。
+  mock-exam-attachments-dir: ${MOCK_EXAM_ATTACHMENTS_DIR:${DATA_DIR:./data}/mock-exams}
   emby:
     base-url: ${EMBY_BASE_URL:}
     api-key: ${EMBY_API_KEY:}
@@ -60,12 +73,18 @@ app:
     model: ${LLM_MODEL:}
     context-length: ${LLM_CONTEXT_LENGTH:131072}
     max-completion-tokens: ${LLM_MAX_COMPLETION_TOKENS:8192}
+    reasoning-effort: ${LLM_REASONING_EFFORT:}
     timeout-seconds: ${LLM_TIMEOUT_SECONDS:300}
   openrouter:
     api-key: ${OPENROUTER_API_KEY:}
   content-auto-fill:
     enabled: ${CONTENT_AUTO_FILL_ENABLED:false}
     interval-minutes: ${CONTENT_AUTO_FILL_INTERVAL_MINUTES:15}
+  content:
+    # 内容任务仍由全局 Worker 串行消费，两个外部调用线程池每 30 秒打印一次存活状态。
+    worker-delay-ms: 1000
+    worker-heartbeat-initial-delay-ms: 5000
+    worker-heartbeat-ms: 30000
   security:
     jwt-secret: ${JWT_SECRET:}
     bootstrap-admin-username: ${ADMIN_BOOTSTRAP_USERNAME:}

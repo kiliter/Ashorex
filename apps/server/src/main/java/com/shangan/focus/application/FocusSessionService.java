@@ -13,7 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 专注会话应用服务，所有状态变化和计划同步位于同一短事务内。 */
+/** 专注会话应用服务；新会话独立于作战单，计划同步仅兼容历史关联会话。 */
 @Service
 public class FocusSessionService {
   private final FocusSessionRepository sessions;
@@ -34,7 +34,9 @@ public class FocusSessionService {
     if (sessions.findActive(userId).isPresent()) {
       throw invalid("FOCUS_SESSION_ACTIVE", "已有进行中的专注会话");
     }
-    plans.validateFocusLink(userId, command.planItemId());
+    if (command.planItemId() != null) {
+      plans.validateFocusLink(userId, command.planItemId());
+    }
     Instant now = clock.instant();
     FocusSession session =
         FocusSession.start(
@@ -107,8 +109,10 @@ public class FocusSessionService {
 
   private void persistAndSync(FocusSession session, Instant now, boolean completed) {
     sessions.update(session, now);
-    plans.updateFocusProgress(
-        session.userId(), session.planItemId(), session.actualSeconds(), completed);
+    if (session.planItemId() != null) {
+      plans.updateFocusProgress(
+          session.userId(), session.planItemId(), session.actualSeconds(), completed);
+    }
   }
 
   private FocusSession requireOwned(String userId, String sessionId) {

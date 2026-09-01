@@ -71,7 +71,10 @@ class LessonStudyContentAdminTest {
             .file(file)
             .with(user("admin").roles("ADMIN"));
 
-    mockMvc.perform(request).andExpect(status().isForbidden());
+    mockMvc
+        .perform(request)
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/admin/login?denied=true"));
     mockMvc
         .perform(request.with(csrf()))
         .andExpect(status().is3xxRedirection())

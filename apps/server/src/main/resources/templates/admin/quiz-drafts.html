@@ -4,30 +4,154 @@
   <body class="admin-body"><div class="admin-shell">
     <header th:replace="~{admin/fragments :: navigation('courses')}"></header>
     <main class="admin-main">
-      <section class="page-head"><div class="container"><div class="route"><a th:href="@{/admin/courses}">课程管理</a><span>/</span><a th:href="@{/admin/courses/{id}/lessons(id=${course.id})}" th:text="${course.name}">课程</a><span>/</span><span>题目草稿</span></div><div class="page-head-row"><div><h1 class="page-title" data-code="DRF/07">AI 题目草稿</h1><p class="page-desc">AI 结果必须经过人工审核，批量发布只追加正式题目</p></div><span class="badge" th:text="|${#lists.size(drafts)} 份草稿|">0 份草稿</span></div></div></section>
+      <section class="page-head"><div class="container"><div class="route"><a th:href="@{/admin/courses}">课程管理</a><span>/</span><a th:href="@{/admin/courses/{id}/lessons(id=${course.id})}" th:text="${course.name}">课程</a><span>/</span><span>题目草稿</span></div><div class="page-head-row"><div><h1 class="page-title" data-code="DRF/07">AI 题目草稿</h1><p class="page-desc">选择整份课时草稿后批量通过、驳回或删除</p></div><span class="badge" th:text="|${#lists.size(drafts)} 份草稿|">0 份草稿</span></div></div></section>
       <div class="container workspace">
         <div class="alert alert--success" th:if="${published}">所选草稿已完成批量发布；重复提交不会创建重复题目。</div>
-        <form id="publish-drafts-form" method="post" th:action="@{/admin/courses/{courseId}/quiz-drafts/publish(courseId=${course.id})}"></form>
+        <form id="batch-drafts-form" method="post" th:action="@{/admin/courses/{courseId}/quiz-drafts/batch(courseId=${course.id})}"></form>
           <section class="panel">
-            <div class="panel-head"><div><h2>REVIEW / 课程草稿</h2><p>发布前会校验整批题型、选项、唯一答案和中文解析；任一无效则整批不写入。</p></div><button type="submit" form="publish-drafts-form">发布所选草稿</button></div>
-            <div class="empty-state" th:if="${#lists.isEmpty(drafts)}"><strong>暂无题目草稿</strong>从课时页或课程批量操作创建 AI 出题任务。</div>
-            <div th:each="draft : ${drafts}" class="draft-block">
-              <div class="panel-head"><label class="check-field"><input th:if="${draft.status.name() == 'READY_FOR_REVIEW'}" type="checkbox" name="draftId" th:value="${draft.id}" form="publish-drafts-form" /><strong class="num" th:text="${draft.mediaItemId}">lesson</strong></label><div class="actions"><span class="badge" th:classappend="${draft.status.name() == 'PUBLISHED' ? ' success' : ' warning'}" th:text="${draft.status}">状态</span><span class="muted num" th:text="|${#lists.size(draft.items)} ITEMS|">0 ITEMS</span></div></div>
-              <article class="draft-item" th:each="item, stat : ${draft.items}">
-                <form class="form-grid" method="post" th:action="@{/admin/courses/{courseId}/quiz-drafts/{draftId}/items/{itemId}(courseId=${course.id},draftId=${draft.id},itemId=${item.id})}">
-                  <div class="form-row">
-                    <label class="field">题型<select name="questionType"><option value="SINGLE_CHOICE" th:selected="${item.questionType == 'SINGLE_CHOICE'}">单选题</option><option value="TRUE_FALSE" th:selected="${item.questionType == 'TRUE_FALSE'}">判断题</option></select></label>
-                    <label class="field">排序值<input class="num" type="number" name="sortOrder" th:value="${item.sortOrder}" /></label>
-                  </div>
-                  <label class="field">题干<textarea name="content" required th:text="${item.content}"></textarea></label>
-                  <label class="field">中文解析<textarea name="explanation" required th:text="${item.explanation}"></textarea></label>
-                  <fieldset><legend>选项与唯一正确答案</legend><div class="option-list"><label class="option-row" th:each="option, optionStat : ${item.options}"><span><input type="radio" name="correctOptionIndex" th:value="${optionStat.index}" th:checked="${option.correct}" required /> 正确</span><input name="optionContent" th:value="${option.content}" required /></label></div></fieldset>
-                  <div class="actions"><button class="btn btn-secondary btn-sm" type="submit" th:disabled="${draft.status.name() == 'PUBLISHED'}">保存修改</button><button class="btn btn-danger btn-sm" type="submit" th:formaction="@{/admin/courses/{courseId}/quiz-drafts/{draftId}/items/{itemId}/delete(courseId=${course.id},draftId=${draft.id},itemId=${item.id})}" th:disabled="${draft.status.name() == 'PUBLISHED'}">删除题目</button><span class="muted num" th:text="|Q${#numbers.formatInteger(stat.count, 2)}|">Q01</span></div>
-                </form>
-              </article>
+            <div class="panel-head"><div><h2>REVIEW / 课程草稿</h2><p>通过会校验并发布到正式题库；驳回保留记录；删除会移除整份未发布草稿。</p></div><div class="actions"><label class="check-field"><input type="checkbox" aria-label="全选可操作草稿" data-select-all-drafts /><span>全选</span></label><span class="muted" data-selected-draft-count>已选 0 份</span><button type="submit" value="APPROVE" form="batch-drafts-form" data-batch-action>批量通过</button><button class="btn btn-secondary" type="submit" value="REJECT" form="batch-drafts-form" data-batch-action>批量驳回</button><button class="btn btn-danger" type="submit" value="DELETE" form="batch-drafts-form" data-batch-action>批量删除</button></div></div>
+            <div class="empty-state" th:if="${#lists.isEmpty(drafts)}"><strong>暂无题目草稿</strong>从课时页点击“AI 一下”或使用课程批量功能创建。</div>
+            <div class="draft-stack" th:unless="${#lists.isEmpty(drafts)}">
+              <section th:each="draft : ${drafts}" class="draft-block" th:attr="data-draft-id=${draft.id},data-draft-status=${draft.status.name()}">
+                <header class="draft-block__head">
+                  <label class="draft-lesson">
+                    <input th:if="${draft.status.name() != 'PUBLISHED'}" type="checkbox" name="draftId" th:value="${draft.id}" form="batch-drafts-form" data-draft-selection />
+                    <span class="draft-lesson__copy">
+                      <small>课时题目草稿</small>
+                      <strong th:text="${lessonsById.containsKey(draft.mediaItemId) ? lessonsById.get(draft.mediaItemId).title() : '课时已移除'}">课时名称</strong>
+                    </span>
+                  </label>
+                  <div class="actions"><span class="badge" th:classappend="${draft.status.name() == 'PUBLISHED' ? ' success' : ' warning'}" data-draft-status-badge th:text="${draft.status.label()}">状态</span><span class="draft-count" th:text="|${#lists.size(draft.items)} 道题|">0 道题</span></div>
+                </header>
+                <div class="quiz-card-grid">
+                  <details class="quiz-card" th:each="item, stat : ${draft.items}">
+                    <summary class="quiz-card__summary">
+                      <div class="quiz-card__meta"><span class="quiz-card__number" th:text="|Q${#numbers.formatInteger(stat.count, 2)}|">Q01</span><span th:text="${item.questionType == 'SINGLE_CHOICE' ? '单选题' : '判断题'}">单选题</span></div>
+                      <p th:text="${item.content}">题干内容</p>
+                      <div class="quiz-card__answer"><span th:each="option : ${item.options}" th:if="${option.correct}" th:text="|答案：${option.content}|">答案</span><span class="quiz-card__toggle" aria-hidden="true"></span></div>
+                    </summary>
+                    <form class="form-grid quiz-card__editor" method="post" th:action="@{/admin/courses/{courseId}/quiz-drafts/{draftId}/items/{itemId}(courseId=${course.id},draftId=${draft.id},itemId=${item.id})}">
+                      <div class="form-row">
+                        <label class="field">题型<select name="questionType" th:disabled="${draft.status.name() != 'READY_FOR_REVIEW'}"><option value="SINGLE_CHOICE" th:selected="${item.questionType == 'SINGLE_CHOICE'}">单选题</option><option value="TRUE_FALSE" th:selected="${item.questionType == 'TRUE_FALSE'}">判断题</option></select></label>
+                        <label class="field">排序值<input class="num" type="number" name="sortOrder" th:value="${item.sortOrder}" /></label>
+                      </div>
+                      <label class="field">题干<textarea name="content" required th:text="${item.content}"></textarea></label>
+                      <label class="field">中文解析<textarea name="explanation" required th:text="${item.explanation}"></textarea></label>
+                      <fieldset><legend>选项与唯一正确答案</legend><div class="option-list"><label class="option-row" th:each="option, optionStat : ${item.options}"><span><input type="radio" name="correctOptionIndex" th:value="${optionStat.index}" th:checked="${option.correct}" required /> 正确</span><input name="optionContent" th:value="${option.content}" required /></label></div></fieldset>
+                      <div class="actions"><button class="btn btn-secondary btn-sm" type="submit" th:disabled="${draft.status.name() != 'READY_FOR_REVIEW'}">保存修改</button><button class="btn btn-danger btn-sm" type="submit" th:formaction="@{/admin/courses/{courseId}/quiz-drafts/{draftId}/items/{itemId}/delete(courseId=${course.id},draftId=${draft.id},itemId=${item.id})}" th:disabled="${draft.status.name() != 'READY_FOR_REVIEW'}">删除题目</button></div>
+                    </form>
+                  </details>
+                </div>
+              </section>
             </div>
           </section>
       </div>
     </main>
-  </div></body>
+  </div><div class="toast-region" aria-live="polite" aria-atomic="true" data-toast-region></div><script>
+    // 批量审核只更新涉及的草稿块，避免课程草稿页面整体重载。
+    const batchForm = document.querySelector("#batch-drafts-form");
+    const toastRegion = document.querySelector("[data-toast-region]");
+    const selectAllDrafts = document.querySelector("[data-select-all-drafts]");
+    const selectedDraftCount = document.querySelector("[data-selected-draft-count]");
+    const batchActionButtons = [...document.querySelectorAll("[data-batch-action]")];
+    const showToast = (message, success) => {
+      const toast = document.createElement("div");
+      toast.className = `toast ${success ? "toast--success" : "toast--error"}`;
+      toast.innerHTML = `<span class="toast__icon" aria-hidden="true"></span><div><strong>${success ? "操作完成" : "操作失败"}</strong><p></p></div><button type="button" class="toast__close" aria-label="关闭通知">&times;</button>`;
+      toast.querySelector("p").textContent = message;
+      toast.querySelector(".toast__close").addEventListener("click", () => toast.remove());
+      toastRegion.appendChild(toast);
+      window.setTimeout(() => toast.remove(), 5000);
+    };
+
+    // 草稿删除后重新查询可选项，确保全选状态和数量始终与当前页面一致。
+    const draftSelections = () => [...document.querySelectorAll("[data-draft-selection]")];
+    const selectedDrafts = () => draftSelections().filter((checkbox) => checkbox.checked);
+    const syncDraftSelection = () => {
+      const selections = draftSelections();
+      const selected = selectedDrafts();
+      if (selectAllDrafts) {
+        selectAllDrafts.checked = selections.length > 0 && selected.length === selections.length;
+        selectAllDrafts.indeterminate = selected.length > 0 && selected.length < selections.length;
+        selectAllDrafts.disabled = selections.length === 0;
+      }
+      selectedDraftCount.textContent = `已选 ${selected.length} 份`;
+      batchActionButtons.forEach((button) => button.disabled = selected.length === 0);
+    };
+
+    selectAllDrafts?.addEventListener("change", () => {
+      draftSelections().forEach((checkbox) => checkbox.checked = selectAllDrafts.checked);
+      syncDraftSelection();
+    });
+    document.addEventListener("change", (event) => {
+      if (event.target.matches("[data-draft-selection]")) syncDraftSelection();
+    });
+
+    batchForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const action = event.submitter?.value;
+      const selected = selectedDrafts();
+      if (!action || selected.length === 0) {
+        showToast("请至少选择一份题目草稿。", false);
+        return;
+      }
+      const containsNonReviewDraft = selected.some((checkbox) =>
+        checkbox.closest("[data-draft-status]")?.dataset.draftStatus !== "READY_FOR_REVIEW"
+      );
+      if (action !== "DELETE" && containsNonReviewDraft) {
+        showToast("批量通过或驳回只能选择待审核草稿，请取消选择已驳回草稿。", false);
+        return;
+      }
+
+      // 显式写入选中 ID，不依赖浏览器是否收集表单外通过 form 属性关联的控件。
+      const formData = new FormData(batchForm);
+      formData.delete("draftId");
+      selected.forEach((checkbox) => formData.append("draftId", checkbox.value));
+      formData.set("action", action);
+      event.submitter.disabled = true;
+      try {
+        // 不读取 form.action，避免同名表单控件把它遮蔽为 RadioNodeList。
+        const endpoint = batchForm.getAttribute("action");
+        const response = await fetch(endpoint, {
+          method: "POST",
+          body: formData,
+          headers: { Accept: "application/json" },
+        });
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.includes("json")) {
+          window.location.assign("/admin/login");
+          return;
+        }
+        const payload = await response.json();
+        if (!response.ok || !payload.success) {
+          showToast(payload.detail || payload.message || "批量审核失败", false);
+          return;
+        }
+        payload.draftIds.forEach((draftId) => {
+          const block = document.querySelector(`[data-draft-id="${CSS.escape(draftId)}"]`);
+          if (!block) return;
+          if (payload.action === "DELETE") {
+            block.remove();
+            return;
+          }
+          const status = payload.action === "APPROVE" ? "PUBLISHED" : "REJECTED";
+          block.dataset.draftStatus = status;
+          const badge = block.querySelector("[data-draft-status-badge]");
+          badge.textContent = status === "PUBLISHED" ? "已发布" : "已驳回";
+          badge.classList.toggle("success", status === "PUBLISHED");
+          if (status === "PUBLISHED") block.querySelector("input[name='draftId']")?.remove();
+          else if (block.querySelector("input[name='draftId']")) block.querySelector("input[name='draftId']").checked = false;
+          block.querySelectorAll("button, textarea, select, input:not([name='draftId'])").forEach((control) => control.disabled = true);
+        });
+        syncDraftSelection();
+        showToast(payload.message, true);
+      } catch (error) {
+        showToast("请求未完成，请检查服务端是否正在运行。", false);
+      } finally {
+        if (event.submitter?.isConnected) event.submitter.disabled = false;
+        syncDraftSelection();
+      }
+    });
+    syncDraftSelection();
+  </script></body>
 </html>
