@@ -1,0 +1,29 @@
+apps/ios/pubspec.yaml
+  s_73dd1583cd0fea::t_e7f4f8acecf655 7-8
+docs/plans/2026-08-27-shangan-v1-implementation-plan.md
+  s_73dd1583cd0fea::t_e7f4f8acecf655 9,2298,2302,2444
+docs/adr/0014-mobile-platforms-and-logic-only-tests.md
+  s_73dd1583cd0fea::t_e7f4f8acecf655 11,15
+docs/specs/2026-08-27-shangan-v1-design.md
+  s_73dd1583cd0fea::t_e7f4f8acecf655 478
+AGENTS.md
+  s_73dd1583cd0fea::t_e7f4f8acecf655 133
+apps/ios/pubspec.lock
+  s_73dd1583cd0fea::t_50bc18f8df3fca 925
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "8fd8d68960e9294ad23a3c94fd14cb813599c980",
+  "prompts": {},
+  "sessions": {
+    "s_73dd1583cd0fea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05895-5df5-7e93-a5e3-7560bc9c3d61",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
