@@ -40,7 +40,9 @@ final class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
         if (snapshot.hasError || !snapshot.hasData) {
           return Center(
             child: FilledButton(
-              onPressed: () => setState(_load),
+              onPressed: () => setState(() {
+                _load();
+              }),
               child: const Text('周报加载失败，点击重试'),
             ),
           );
@@ -118,8 +120,8 @@ final class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: report.days.map((day) {
-                    final height =
-                        18 + 92 * day.effectiveStudySeconds / maxStudy;
+                    final heightFactor =
+                        0.18 + 0.82 * day.effectiveStudySeconds / maxStudy;
                     return Expanded(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -129,15 +131,28 @@ final class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
                             style: Theme.of(context).textTheme.labelSmall,
                           ),
                           const SizedBox(height: 4),
-                          Container(
-                            height: height,
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: ShanganColors.blue,
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(4),
+                          // 柱体占用标签之外的剩余高度，避免小屏或动态字体造成纵向溢出。
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.bottomCenter,
+                              child: FractionallySizedBox(
+                                heightFactor: heightFactor.clamp(0, 1),
+                                widthFactor: 1,
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: ShanganColors.blue,
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(4),
+                                    ),
+                                    border: Border.all(
+                                      color: ShanganColors.ink,
+                                    ),
+                                  ),
+                                ),
                               ),
-                              border: Border.all(color: ShanganColors.ink),
                             ),
                           ),
                           const SizedBox(height: 5),

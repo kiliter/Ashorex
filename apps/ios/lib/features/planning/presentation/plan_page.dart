@@ -186,7 +186,10 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
 
   Future<void> _addFocus() async {
     await ref.read(planRepositoryProvider).addFocus('专注学习', 25 * 60);
-    setState(_reload);
+    // 使用块函数确保 setState 回调同步返回，Future 仅保存到页面状态中。
+    setState(() {
+      _reload();
+    });
   }
 
   /// 按任务组件进入对应学习页面；无媒体的还债任务在 V1 中只可能是 FOCUS。
@@ -229,7 +232,11 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
         },
       ),
     );
-    if (mounted) setState(_reload);
+    if (mounted) {
+      setState(() {
+        _reload();
+      });
+    }
   }
 
   Future<void> _showAbandon() async {
@@ -247,7 +254,11 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
         },
       ),
     );
-    if (mounted) setState(_reload);
+    if (mounted) {
+      setState(() {
+        _reload();
+      });
+    }
   }
 }
 

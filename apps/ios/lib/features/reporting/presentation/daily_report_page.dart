@@ -38,7 +38,11 @@ final class _DailyReportPageState extends ConsumerState<DailyReportPage> {
           return const ShanganLoading('正在生成学习日报');
         }
         if (snapshot.hasError || !snapshot.hasData) {
-          return _ReportError(onRetry: () => setState(_load));
+          return _ReportError(
+            onRetry: () => setState(() {
+              _load();
+            }),
+          );
         }
         return _DailyReportBody(
           report: snapshot.data!,
