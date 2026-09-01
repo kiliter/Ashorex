@@ -1,6 +1,7 @@
-name: iOS 验证
+name: 移动端验证
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - "apps/ios/**"
@@ -18,19 +19,38 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
-      - name: 提供 Dart 与 Flutter 基础环境
+      - name: 提供锁定的 Dart 与 Flutter 环境
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.44.7"
           channel: stable
           cache: true
-      - name: 安装 FVM
-        run: |
-          dart pub global activate fvm 4.3.0
-          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
-      - name: 准备锁定的 Flutter SDK
-        run: cd apps/ios && fvm install
-      - name: 执行 iOS 静态检查和测试
+      - name: 输出实际 Flutter 与 Dart 版本
+        run: flutter --version
+      - name: 执行移动端静态检查和测试
         run: make ios-test
-      - name: 构建 iOS Simulator 应用
-        run: cd apps/ios && fvm flutter build ios --simulator --no-codesign
+      - name: 构建无签名 iOS 应用
+        run: cd apps/ios && flutter build ios --release --no-codesign
+      - name: 打包无签名 IPA
+        run: |
+          cd apps/ios
+          mkdir -p build/unsigned-ipa/Payload
+          cp -R build/ios/iphoneos/Runner.app build/unsigned-ipa/Payload/Runner.app
+          cd build/unsigned-ipa
+          zip -qry ../shangan-ios-unsigned.ipa Payload
+      - name: 构建 Android Debug APK
+        run: cd apps/ios && flutter build apk --debug
+      - name: 上传无签名 IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: shangan-ios-unsigned
+          path: apps/ios/build/shangan-ios-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
+      - name: 上传 Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: shangan-android-debug
+          path: apps/ios/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14

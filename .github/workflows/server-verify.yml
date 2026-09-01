@@ -1,6 +1,7 @@
 name: 服务端验证
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - "apps/server/**"
@@ -15,6 +16,9 @@ on:
 jobs:
   server-verify:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -24,7 +28,30 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
-      - name: 安装 SQLite 工具
-        run: sudo apt-get update && sudo apt-get install -y sqlite3
       - name: 执行服务端验证
         run: make server-test
+      - name: 构建服务端 Docker 镜像
+        run: docker build --file infra/docker/server.Dockerfile --tag ashorex-server:${{ github.sha }} .
+      - name: 导出 Docker 镜像
+        run: docker save ashorex-server:${{ github.sha }} | gzip > /tmp/ashorex-server-image.tar.gz
+      - name: 上传 Docker 镜像产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ashorex-server-image
+          path: /tmp/ashorex-server-image.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+      - name: 登录 GitHub Container Registry
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: 推送服务端镜像到 GitHub Container Registry
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          docker tag ashorex-server:${{ github.sha }} ghcr.io/${{ github.repository_owner }}/ashorex-server:${{ github.sha }}
+          docker tag ashorex-server:${{ github.sha }} ghcr.io/${{ github.repository_owner }}/ashorex-server:latest
+          docker push ghcr.io/${{ github.repository_owner }}/ashorex-server:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/ashorex-server:latest

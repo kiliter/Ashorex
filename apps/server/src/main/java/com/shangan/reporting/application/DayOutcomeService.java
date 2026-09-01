@@ -1,7 +1,7 @@
 package com.shangan.reporting.application;
 
 import com.shangan.common.IdGenerator;
-import com.shangan.planning.application.DailyPlanService;
+import com.shangan.planning.application.DayEndPlanCloser;
 import com.shangan.reporting.infrastructure.DayOutcomeRepository;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -16,12 +16,12 @@ public class DayOutcomeService {
   private static final int MAX_CATCH_UP_DAYS_PER_RUN = 31;
 
   private final DayOutcomeRepository outcomes;
-  private final DailyPlanService plans;
+  private final DayEndPlanCloser plans;
   private final IdGenerator ids;
   private final Clock clock;
 
   public DayOutcomeService(
-      DayOutcomeRepository outcomes, DailyPlanService plans, IdGenerator ids, Clock clock) {
+      DayOutcomeRepository outcomes, DayEndPlanCloser plans, IdGenerator ids, Clock clock) {
     this.outcomes = outcomes;
     this.plans = plans;
     this.ids = ids;
@@ -63,7 +63,10 @@ public class DayOutcomeService {
     } else {
       var start = date.atStartOfDay(zone).toInstant();
       var end = date.plusDays(1).atStartOfDay(zone).toInstant();
-      outcome = outcomes.hasEffectiveActivity(userId, start, end) ? "FREE_STUDY" : "SLACKED";
+      outcome =
+          outcomes.activitySummary(userId, start, end).hasEffectiveActivity()
+              ? "FREE_STUDY"
+              : "SLACKED";
     }
     outcomes.upsert(ids.nextId(), userId, date, outcome, clock.instant());
     return outcome;

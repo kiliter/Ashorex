@@ -32,7 +32,8 @@ make verify
 
 ## 不可违反的边界
 
-- V1 只实现 iOS Flutter App；不要实现 Android、PC Web、macOS 或 Windows 客户端。
+- V1 使用同一 Flutter App 支持 iPhone、iPad 和 Android；不要实现 PC Web、macOS 或 Windows 客户端。
+- 服务端只编写不连接真实数据库的逻辑、Controller 切片和外部协议测试，不启动 SQLite 或 Flyway。
 - 不引入 PostgreSQL、Redis、Kafka、微服务、Kubernetes、向量数据库或多智能体。
 - Emby、LLM、ASR 和 MCP 凭据只能在服务端。
 - AI 只有只读工具，不能修改计划、欠债、考试目标、学习记录或任何其他业务数据。

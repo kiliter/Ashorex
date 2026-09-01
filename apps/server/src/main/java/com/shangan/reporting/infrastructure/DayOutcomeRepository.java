@@ -13,11 +13,21 @@ public interface DayOutcomeRepository {
 
   Optional<PlanDay> findPlan(String userId, LocalDate date);
 
-  boolean hasEffectiveActivity(String userId, Instant start, Instant end);
+  DayActivitySummary activitySummary(String userId, Instant start, Instant end);
 
   void upsert(String id, String userId, LocalDate date, String outcome, Instant generatedAt);
 
   record UserDaySettings(String userId, String timezone, String dayEndLocalTime) {}
 
   record PlanDay(String planId, String lifecycleStatus, int accountableItems) {}
+
+  /** 用户自然日活动汇总；复习次数只用于审计，不参与有效学习判断。 */
+  record DayActivitySummary(
+      int trustedWatchSessions, int focusSessions, int mockExamSessions, int reviewEvents) {
+
+    /** 判断是否存在可以把无作战单日期归类为自由学习的有效活动。 */
+    public boolean hasEffectiveActivity() {
+      return trustedWatchSessions > 0 || focusSessions > 0 || mockExamSessions > 0;
+    }
+  }
 }

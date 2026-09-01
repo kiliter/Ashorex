@@ -28,8 +28,8 @@ Codex 在实现中的局部判断
 
 ## 已冻结的关键决策
 
-- V1 只实现 iOS，客户端使用 Flutter。
-- Android、PC Web、macOS 和 Windows 只保留服务端 API 兼容设计，不实现客户端。
+- V1 客户端使用同一 Flutter 工程支持 iPhone、iPad 和 Android。
+- PC Web、macOS 和 Windows 只保留服务端 API 兼容设计，不实现客户端。
 - 服务端采用 Java 21、Spring Boot 模块化单体。
 - 数据库采用单机 SQLite WAL；不引入 PostgreSQL、Redis、Kafka 或微服务。
 - Emby 负责视频库、剧集、媒体信息和转码；上岸服务端负责业务规则和媒体代理。
@@ -58,7 +58,7 @@ make verify
 
 ## 不允许 Codex 自行增加的内容
 
-- Android、Web 或桌面客户端。
+- PC Web 或桌面客户端。
 - 社交、排行榜、监督人、支付、直播、离线视频、DRM。
 - AI 主动催学、AI 自动计划、AI 修改数据、多智能体。
 - 向量数据库、Redis、Kafka、微服务、Kubernetes。
@@ -70,7 +70,8 @@ make verify
 
 - Task 1–16 全部有独立提交。
 - 后端测试、Flutter 测试、静态检查和格式检查全部通过。
-- iOS 真机可以完成完整学习闭环。
+- iPhone、iPad 和 Android 真机可以完成完整学习闭环。
+- 服务端自动化测试不启动 SQLite、Flyway 或其他真实数据库。
 - Emby Key、LLM Key、ASR Key 和 MCP 凭据未进入客户端、日志或响应。
 - 开摆与日终欠债生成具备幂等性。
 - 可信观看规则无法通过普通拖动进度条绕过。

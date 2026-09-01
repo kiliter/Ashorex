@@ -61,31 +61,36 @@ public class JdbcDayOutcomeRepository implements DayOutcomeRepository {
   }
 
   @Override
-  public boolean hasEffectiveActivity(String userId, Instant start, Instant end) {
-    int count =
-        jdbc.sql(
-                """
-                select (
-                  select count(*) from watch_sessions w
-                  left join daily_plan_items i on i.id=w.plan_item_id
-                  where w.user_id=:userId and w.started_at>=:start and w.started_at<:end
-                    and w.verified_watch_ms>0
-                    and coalesce(i.item_kind,'')<>'REVIEW_SHORTCUT'
-                ) + (
-                  select count(*) from focus_sessions f
-                  where f.user_id=:userId and f.started_at>=:start and f.started_at<:end
-                    and f.actual_seconds>0
-                ) + (
-                  select count(*) from mock_exam_sessions m
-                  where m.user_id=:userId and m.started_at>=:start and m.started_at<:end
-                )
-                """)
-            .param("userId", userId)
-            .param("start", start.toEpochMilli())
-            .param("end", end.toEpochMilli())
-            .query(Integer.class)
-            .single();
-    return count > 0;
+  public DayActivitySummary activitySummary(String userId, Instant start, Instant end) {
+    return jdbc.sql(
+            """
+            select
+              (select count(*) from watch_sessions w
+                left join daily_plan_items i on i.id=w.plan_item_id
+                where w.user_id=:userId and w.started_at>=:start and w.started_at<:end
+                  and w.verified_watch_ms>0
+                  and coalesce(i.item_kind,'')<>'REVIEW_SHORTCUT') trusted_watch_sessions,
+              (select count(*) from focus_sessions f
+                where f.user_id=:userId and f.started_at>=:start and f.started_at<:end
+                  and f.actual_seconds>0) focus_sessions,
+              (select count(*) from mock_exam_sessions m
+                where m.user_id=:userId and m.started_at>=:start and m.started_at<:end)
+                mock_exam_sessions,
+              (select count(*) from lesson_review_events r
+                where r.user_id=:userId and r.created_at>=:start and r.created_at<:end)
+                review_events
+            """)
+        .param("userId", userId)
+        .param("start", start.toEpochMilli())
+        .param("end", end.toEpochMilli())
+        .query(
+            (rs, row) ->
+                new DayActivitySummary(
+                    rs.getInt("trusted_watch_sessions"),
+                    rs.getInt("focus_sessions"),
+                    rs.getInt("mock_exam_sessions"),
+                    rs.getInt("review_events")))
+        .single();
   }
 
   @Override

@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** 每日计划事务边界，统一处理锁定、关闭、完成与还债对账。 */
 @Service
-public class DailyPlanService implements PlanProgressPort {
+public class DailyPlanService implements PlanProgressPort, DayEndPlanCloser {
   private final PlanningRepository plans;
   private final DebtService debts;
   private final CatalogQueryService catalog;
@@ -195,6 +195,7 @@ public class DailyPlanService implements PlanProgressPort {
 
   /** 由独立调度器调用；重复调用已关闭计划时不产生任何新欠债。 */
   @Transactional
+  @Override
   public void closeForDayEnd(String userId, String planId) {
     DailyPlan plan = plans.findOwnedPlan(userId, planId).orElseThrow(() -> notFound("计划不存在"));
     if (plan.status() != PlanStatus.LOCKED) return;

@@ -1,9 +1,9 @@
 # 上岸 V1 产品与技术设计规范
 
 **文档状态：** 已冻结，可进入实现
-**版本：** V1.3
+**版本：** V1.4
 **日期：** 2026-09-01
-**目标平台：** iOS
+**目标平台：** iPhone、iPad、Android
 **工作仓库名：** `shangan`
 **产品名：** 上岸
 
@@ -54,7 +54,7 @@ V1 的价值判断标准：
 
 ### 3.1 本期必须实现
 
-#### iOS 学习端
+#### Flutter 移动学习端
 
 - 账号登录。
 - 设置一个当前考试目标。
@@ -110,7 +110,6 @@ V1 的价值判断标准：
 
 ### 3.2 明确不做
 
-- Android 客户端。
 - Windows 或 macOS 客户端。
 - PC 学习 Web。
 - 离线视频下载和离线学习。
@@ -340,7 +339,7 @@ V1 题型：
 规则：
 
 - 服务端记录开始、暂停、继续和结束时间。
-- iOS 根据服务端返回的时间戳渲染倒计时，不能只依赖本地递减。
+- 移动端根据服务端返回的时间戳渲染倒计时，不能只依赖本地递减。
 - App 切后台后继续计时。
 - 用户主动取消时不计为完成。
 - 专注计时位于首页右滑小工具菜单，也必须提供可发现的“小工具”按钮。
@@ -433,7 +432,8 @@ PENDING → RUNNING → AWAITING_UPLOAD → COMPLETED
 
 ```text
 ┌──────────────────────────────────────┐
-│             iOS Flutter App          │
+│        Flutter Mobile App            │
+│       iPhone / iPad / Android        │
 │                                      │
 │ 首页 / 学习 / 数据 / 我的            │
 │ 视频播放器 / 题目 / 计时 / 报表       │
@@ -474,8 +474,11 @@ PENDING → RUNNING → AWAITING_UPLOAD → COMPLETED
 
 | 区域 | 选择 |
 |---|---|
-| iOS 客户端 | Flutter 3.44.7，使用 FVM 固定版本 |
+| 移动客户端 | Flutter 3.44.7 stable，使用 FVM 固定版本 |
+| Dart | 3.13.x，项目约束 `>=3.13.0 <4.0.0` |
 | iOS 最低版本 | iOS 16 |
+| Android 最低版本 | API 24 |
+| Android 编译版本 | compileSdk 37 |
 | Dart 状态管理 | flutter_riverpod 3.0.2，不使用代码生成 |
 | 路由 | go_router 17.5.0 |
 | HTTP | Dio 5.11.0 |
@@ -544,11 +547,12 @@ shangan/
 │   │       │       ├── templates/admin/
 │   │       │       └── static/admin/
 │   │       └── test/
-│   └── ios/
+│   └── ios/                 # 历史目录名，实际承载 Flutter 多移动端工程
 │       ├── .fvmrc
 │       ├── pubspec.yaml
 │       ├── pubspec.lock
 │       ├── ios/
+│       ├── android/
 │       ├── lib/
 │       ├── test/
 │       └── integration_test/
@@ -566,10 +570,10 @@ shangan/
 
 - V1 不拆 Maven 多模块。
 - 服务端单模块，内部按业务功能分包。
-- Flutter 按 Feature First 组织。
+- Flutter 按 Feature First 组织，iPhone、iPad 和 Android 共享业务实现。
 - 管理后台与后端同包部署，不单独创建 Vue 项目。
 - API 统一 `/api/v1`。
-- 将来 Android 复用 Flutter 工程。
+- Android 与 iPhone、iPad 复用同一 Flutter 工程。
 - 将来 PC Web 直接复用 API，不复用 iOS UI。
 
 ---
@@ -1368,7 +1372,7 @@ V1 仍不包含 MCP、AI Chat/SSE、智能体、联网搜索、AI 计划、AI �
 
 ---
 
-## 15. iOS App 架构
+## 15. Flutter 移动端架构
 
 ### 15.1 目录
 
@@ -1481,6 +1485,12 @@ V1 不引入 Drift 或本地 SQLite。
 - 播放器下方仅在 `summaryStatus=READY` 且 `summaryMarkdown` 非空时展示 Markdown 摘要；没有摘要时整个区域隐藏。
 - 验活使用不可绕过的模态框。
 
+iPad 与 Android：
+
+- iPad 复用 iOS 工程，根据可用宽度调整内容栏和播放器尺寸，不复制业务页面。
+- Android 复用相同路由、Repository、Controller 和业务组件，仅在系统返回、权限、文件选择和播放器适配层处理平台差异。
+- 平板横竖屏切换不得创建新的观看会话，也不得重置可信进度和验活状态。
+
 App 生命周期：
 
 - `inactive`、`paused`、`detached` 时暂停。
@@ -1493,7 +1503,7 @@ App 生命周期：
 ### 15.6 UI 原则
 
 - V1 仅亮色主题。
-- 以 iOS 使用习惯为主。
+- iPhone、iPad 和 Android 使用同一视觉语言，并遵循各平台的系统返回、权限与安全存储习惯。
 - 系统字体，支持 Dynamic Type。
 - 颜色不是唯一状态表达方式。
 - 主要操作最小点击区域 44pt。
@@ -1700,18 +1710,14 @@ sqlite3 /data/study.db ".backup '/backup/study-YYYYMMDD-HHMMSS.db'"
 - ZIP 结构解析和导入校验。
 - 内容任务状态机、ASR NDJSON 拼接、上下文预算和摘要分段合并。
 
-集成测试：
+逻辑与协议测试：
 
-- 临时 SQLite 文件。
-- Flyway Core 与 SQLite 数据库模块加载成功，并完成全量迁移。
-- 外键和唯一约束。
-- Spring Security。
-- REST API。
-- Emby 使用 WireMock。
-- ASR、LLM 和 OpenRouter Models API 使用 WireMock。
-- 课程内容导入事务与 V013 旧数据迁移。
-- V014 内容任务、部分就绪内容和运行时配置迁移。
-- Range 转发和 HLS 重写。
+- 领域状态机、策略和应用服务通过 Fake、Stub 或 Mock Repository 验证，不启动 Spring Boot 完整上下文。
+- 不启动 SQLite、Flyway 或其他真实数据库，不测试具体 SQL、数据库约束、事务和迁移。
+- Controller 与 Spring Security 使用不连接数据库的测试切片。
+- Emby、ASR、LLM 和 OpenRouter Models API 使用 WireMock。
+- ZIP 解析、全包校验和批量写入命令生成使用内存对象验证；数据库原子性转为代码评审和人工发布验证。
+- Range 转发和 HLS 重写使用内存流或 WireMock，不连接业务数据库。
 
 契约测试：
 
@@ -1744,7 +1750,7 @@ Widget 测试：
 - 已登录启动服务不可达恢复页。
 - 日报和周报日期选择器。
 
-集成测试：
+端到端逻辑测试：
 
 - 登录。
 - 编排、保存和修改今日作战单。
@@ -1753,7 +1759,7 @@ Widget 测试：
 - 日终自动结算欠债、自由学习和开摆日。
 - 读取已导入课程内容。
 
-真实视频播放需在至少一台物理 iPhone 做 smoke test。
+真实视频播放需在至少一台物理 iPhone、iPad 和 Android 设备做 smoke test。
 
 ### 21.3 完成门槛
 
@@ -1768,7 +1774,7 @@ make verify
 
 - Java 编译和测试。
 - Flutter format、analyze、test。
-- OpenAPI 生成。
+- OpenAPI 静态合同检查。
 - 无 secret 扫描命中。
 - 无禁用测试。
 - 无未解释的 warning。
@@ -1783,11 +1789,10 @@ make verify
 
 - Ubuntu。
 - Java 21。
-- `./mvnw verify`。
-- 生成 OpenAPI。
+- `./mvnw verify`，只运行不连接真实数据库的逻辑、协议和 Controller 测试。
 - 上传测试报告。
 
-### `ios-verify`
+### `mobile-verify`
 
 - macOS。
 - FVM 安装固定 Flutter。
@@ -1796,6 +1801,7 @@ make verify
 - `flutter analyze`。
 - `flutter test`。
 - 构建 iOS Simulator，禁止签名。
+- 构建 Android APK。
 
 ### `security`
 
@@ -1871,14 +1877,14 @@ BACKUP_DIR
 
 ## 25. 未来平台保留
 
-虽然 V1 只实现 iOS，但以下设计必须平台中立：
+V1 同时面向 iPhone、iPad 和 Android，以下设计保持平台中立：
 
 - 所有业务规则在服务端。
 - API 不出现 `/ios`。
 - 媒体播放票据不依赖 iOS。
 - 使用 `/api/v1` 版本化。
 - DTO 不包含 Flutter 类型。
-- Android 将复用 Flutter 工程。
+- iPhone、iPad 和 Android 复用 Flutter 工程和服务端 API。
 - PC 使用 Web，不创建桌面客户端。
 - 未来迁移 PostgreSQL 时保持应用接口不变。
 
@@ -2008,7 +2014,7 @@ V1 只有同时满足以下条件才完成：
 
 - 所有 V1 验收场景通过。
 - 后端和 Flutter 测试全部通过。
-- 一台物理 iPhone 连续使用 7 天无阻断性问题。
+- 物理 iPhone、iPad 和 Android 设备完成关键流程验证，iPhone 连续使用 7 天无阻断性问题。
 - Emby Key 未出现在 App 包、日志和 API 响应。
 - 未看区间无法通过正常 UI 和直接 API 心跳绕过。
 - 作战单正常日终会幂等生成欠债，无作战单且无学习活动时幂等生成开摆日结果。
@@ -2018,7 +2024,7 @@ V1 只有同时满足以下条件才完成：
 - AI 题目必须经过管理员审核或批量发布，不能直接进入学习端。
 - 数据库可在线备份并成功恢复。
 - 文档、环境变量和运行命令完整。
-- 没有 Android、Web、微服务、Redis、向量库等越界实现。
+- 没有 PC Web、微服务、Redis、向量库等越界实现。
 - 服务端地址切换经过健康检查，且不会向新服务器发送旧 Token。
 - 管理员保存外部服务配置后，新请求无需重启即可使用最新配置。
 

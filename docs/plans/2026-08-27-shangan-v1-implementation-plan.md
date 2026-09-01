@@ -2,24 +2,26 @@
 
 > **执行要求：** 按 Task 顺序单线程实施，不使用多智能体。步骤使用 checkbox（`- [ ]`）跟踪。
 
-**Goal:** 构建一款 iOS-only 的学习监督 App，完成 Emby 视频学习、可信观看、今日作战单编排、模拟考试、自动日终结算、欠债、答题、独立专注、报表，以及课程自动转写、摘要和 AI 题目草稿闭环。
+**Goal:** 构建一款面向 iPhone、iPad 和 Android 的 Flutter 学习监督 App，完成 Emby 视频学习、可信观看、今日作战单编排、模拟考试、自动日终结算、欠债、答题、独立专注、报表，以及课程自动转写、摘要和 AI 题目草稿闭环。
 
-**Architecture:** 单仓库包含 Flutter iOS App 与 Spring Boot 模块化单体。服务端以 SQLite 为业务真相，Emby 提供媒体与音频流；课程全文和 Markdown 摘要可由管理员导入，也可由持久化串行任务调用 OpenAI-compatible ASR/LLM 生成；AI 题目只进入待审核草稿，管理员发布后才进入正式题库。Flutter 只负责交互、播放器、心跳和只读内容查询。
+**Architecture:** 单仓库包含 Flutter 移动端与 Spring Boot 模块化单体。服务端以 SQLite 为业务真相，Emby 提供媒体与音频流；课程全文和 Markdown 摘要可由管理员导入，也可由持久化串行任务调用 OpenAI-compatible ASR/LLM 生成；AI 题目只进入待审核草稿，管理员发布后才进入正式题库。Flutter 只负责交互、播放器、心跳和只读内容查询。
 
-**Tech Stack:** Flutter 3.44.7、flutter_riverpod 3.0.2、go_router 17.5.0、Dio 5.11.0、video_player 2.14.0、Java 21、Spring Boot 4.1.1、Spring MVC、JdbcClient、sqlite-jdbc 3.53.4.0、SQLite WAL、Flyway 13.3.0、Thymeleaf、LangChain4j OpenAI 1.19.0、Caddy。
+**Tech Stack:** Flutter 3.44.7 stable、Dart 3.13.x、flutter_riverpod 3.0.2、go_router 17.5.0、Dio 5.11.0、video_player 2.14.0、Java 21、Spring Boot 4.1.1、Spring MVC、JdbcClient、sqlite-jdbc 3.53.4.0、SQLite WAL、Flyway 13.3.0、Thymeleaf、LangChain4j OpenAI 1.19.0、Caddy。
 
 **Spec:** `docs/specs/2026-08-27-shangan-v1-design.md`
 
 ## Global Constraints
 
-- V1 只实现 iOS；不要创建 Android、Web 或桌面客户端。
+- V1 移动端覆盖 iPhone、iPad 和 Android；不创建 PC Web 或桌面客户端。
 - iOS 最低版本为 16。
+- Android 最低版本为 API 24。
 - 后端只能运行一个实例，SQLite 文件必须位于本机磁盘。
 - 服务端只允许课时转写、摘要和 AI 题目草稿；不包含 AI Chat、智能体、MCP、联网搜索或 AI 业务写能力。
 - Emby 密钥不能进入 Flutter、日志或业务 API 响应；仅允许存在于服务端存储和 ADMIN 配置页面。
 - 不使用 Redis、Kafka、向量数据库、微服务或对象存储。
 - 所有日期边界按用户时区处理，数据库时间统一 UTC Epoch Milliseconds。
-- 所有状态机和时间规则必须通过注入的 `java.time.Clock` 测试。
+- 所有状态机和时间规则必须通过注入的 `java.time.Clock` 做纯逻辑测试。
+- 服务端自动化测试不得启动 SQLite、Flyway 或其他真实数据库；历史 Task 中的数据库集成测试要求统一由 Task 23 替代。
 - 每个 Task 独立完成测试、评审和提交，禁止一次提交跨越多个 Task。
 - Task 1–3 在应用脚手架尚未齐全时运行各 Task 明确的验证命令；从 Task 4 起，每次提交前运行 `make format && make verify`。
 - 禁止用跳过测试、删除断言或放宽业务规则的方式让测试通过。
@@ -161,7 +163,7 @@ public interface DebtService {
 ```markdown
 # 上岸
 
-V1 is an iOS-only study supervision app.
+V1 is a Flutter study supervision app for iPhone, iPad, and Android.
 
 ## Commands
 
@@ -539,7 +541,7 @@ git commit -m "feat(identity): add app and admin authentication"
   - automatic one-time refresh
   - root navigation shell.
 
-- [ ] **Step 1: Initialize Flutter app with iOS only**
+- [ ] **Step 1: Initialize Flutter app for iPhone, iPad, and Android**
 
 Run:
 
@@ -1625,7 +1627,6 @@ git commit -m "feat(ios): add general and video ai chat"
 - Test: `apps/server/src/test/java/com/shangan/acceptance/FullLearningFlowAcceptanceTest.java`
 - Test: `apps/server/src/test/java/com/shangan/acceptance/AbandonAndDebtAcceptanceTest.java`
 - Test: `apps/server/src/test/java/com/shangan/acceptance/LessonStudyContentAcceptanceTest.java`
-- Test: `infra/scripts/backup_restore_smoke_test.sh`
 - Test: `apps/ios/integration_test/core_flow_test.dart`
 
 **Interfaces:**
@@ -1659,7 +1660,7 @@ sqlite3 "${DATA_DIR}/study.db" ".backup '${BACKUP_DIR}/study-${STAMP}.db'"
 sqlite3 "${BACKUP_DIR}/study-${STAMP}.db" "PRAGMA integrity_check;"
 ```
 
-Fail unless output is exactly `ok`. `backup_restore_smoke_test.sh` creates a temporary database, backs it up while the service database is open, restores into a new path, and asserts schema version plus representative row counts.
+Fail unless output is exactly `ok`. 根据 ADR-0014，备份恢复改为发布前人工演练，不再提供数据库运行时 Smoke Test。
 
 `restore.sh` requires service stopped, validates backup, archives current database, and restores the selected file.
 
@@ -2278,6 +2279,52 @@ cd ../..
 make verify
 ```
 
+### Task 23：统一移动端工具链并移除数据库运行时测试
+
+**前置文档：**
+
+- `docs/adr/0014-mobile-platforms-and-logic-only-tests.md`
+
+**主要文件：**
+
+- 修改：`AGENTS.md`、设计规范、实施计划和追踪矩阵
+- 修改：`apps/ios/.fvmrc`、`pubspec.yaml`、`pubspec.lock`
+- 修改：移动端和服务端 GitHub Actions
+- 删除：所有启动 SQLite、Flyway 或真实数据库的服务端测试
+- 新建：不连接数据库的日终结果业务逻辑测试
+
+- [ ] **步骤 1：统一 Flutter 与 Dart 基线**
+
+固定 Flutter 3.44.7 stable 和其配套的 Dart 3.13.x，将项目 SDK 约束设为 `>=3.13.0 <4.0.0`。使用干净 SDK 重新解析锁文件，并输出 CI 实际版本，防止本机 FVM 缓存污染掩盖版本漂移。
+
+- [ ] **步骤 2：确认移动端依赖与平台范围**
+
+保留已验证兼容 Flutter 3.44.7、Dart 3.13 的直接依赖。iOS 最低版本保持 16；Android 使用 compileSdk 37，最低运行版本为 API 24；iPad 复用 iOS 工程。移动端 CI 构建 iOS Simulator 和 Android APK。
+
+- [ ] **步骤 3：删除数据库运行时测试**
+
+删除所有直接使用 `JdbcClient`、SQLite JDBC URL、Flyway、真实 `DataSource` 或完整 Spring Boot 数据库上下文的测试和专用 Fixture。不得通过禁用注解保留这些测试。
+
+- [ ] **步骤 4：保留并补充纯逻辑测试**
+
+保留领域状态机、策略、解析器、WireMock 外部协议和不连接数据库的 Controller 切片测试。把日终分类改写为使用 Fake `DayOutcomeRepository`、固定 `Clock` 和 Mock 应用边界的纯逻辑测试，精确覆盖开摆、自由学习和复习审计不计有效学习。
+
+- [ ] **步骤 5：更新 CI 与验证命令**
+
+服务端 CI 不安装 SQLite 工具，只执行编译、格式和逻辑测试。备份恢复改为人工发布检查，不再由 `make verify` 自动执行。运行：
+
+```bash
+make format
+make server-test
+make ios-test
+cd apps/ios && fvm flutter build ios --simulator --no-codesign
+cd apps/ios && fvm flutter build apk --debug
+```
+
+- [ ] **步骤 6：审查并提交**
+
+检查没有真实数据库测试残留、没有依赖预发布版本、没有密钥或调试产物，并提交一次可评审变更。
+
 ## Cross-Task Review Gates
 
 After Tasks 1–4:
@@ -2391,6 +2438,15 @@ Task 22 之后：
 日报和周报可通过日期选择器直接跳转
 ```
 
+Task 23 之后：
+
+```text
+Flutter 3.44.7、Dart 3.13.x、pubspec 和 CI 版本一致
+移动端依赖覆盖 iPhone、iPad 和 Android
+服务端自动化测试不启动 SQLite、Flyway 或真实数据库
+日终分类等核心规则由纯逻辑测试覆盖
+```
+
 ---
 
 ## Codex Execution Rules
@@ -2413,14 +2469,14 @@ Codex must:
 ## Final Self-Review Checklist
 
 - [ ] Every V1 spec section maps to at least one Task.
-- [ ] No Task implements Android, PC Web, multi-agent or vector search.
-- [ ] Every state transition has tests.
+- [ ] No Task implements PC Web, multi-agent or vector search.
+- [ ] Every state transition has不连接数据库的逻辑测试。
 - [ ] All external services have contract tests.
 - [ ] Playback proxy never buffers a full video.
 - [ ] 服务端只存在课时转写、摘要和 AI 题目草稿能力，不存在聊天、智能体、MCP 或 AI 业务写入口。
 - [ ] 课程学习内容导入全包原子，读取接口只读。
 - [ ] 长视频摘要和出题不会超过模型上下文预算，AI 题目批量发布原子且幂等。
 - [ ] Secrets remain server-side.
-- [ ] SQLite backup and restore have been executed, not merely documented.
-- [ ] Physical iPhone acceptance is recorded.
+- [ ] SQLite backup and restore have been人工执行并记录，不纳入自动化测试。
+- [ ] Physical iPhone、iPad 和 Android acceptance is recorded.
 - [ ] `make verify` passes from repository root.

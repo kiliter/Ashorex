@@ -1,10 +1,12 @@
 name: shangan_ios
-description: "上岸 iOS 学习监督客户端。"
+description: "上岸 iPhone、iPad 与 Android 学习监督客户端。"
 publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.13.1
+  # Flutter 3.44.7 stable 自带 Dart 3.13.1，三端统一使用这一稳定基线。
+  sdk: ">=3.13.0 <4.0.0"
+  flutter: ">=3.44.7 <3.45.0"
 
 dependencies:
   flutter:

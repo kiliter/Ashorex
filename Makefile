@@ -1,8 +1,8 @@
-.PHONY: format server-test ios-test operations-test verify
+.PHONY: format server-test ios-test verify
 
-# 优先使用项目锁定的 FVM SDK；未安装本地 SDK 时再回退到系统 fvm。
-IOS_FLUTTER := $(if $(wildcard apps/ios/.fvm/flutter_sdk/bin/flutter),.fvm/flutter_sdk/bin/flutter,fvm flutter)
-IOS_DART := $(if $(wildcard apps/ios/.fvm/flutter_sdk/bin/dart),.fvm/flutter_sdk/bin/dart,fvm dart)
+# 优先使用项目锁定的 FVM SDK；CI 已固定 Flutter 版本时可直接使用系统命令。
+IOS_FLUTTER := $(if $(wildcard apps/ios/.fvm/flutter_sdk/bin/flutter),.fvm/flutter_sdk/bin/flutter,$(if $(shell command -v fvm 2>/dev/null),fvm flutter,flutter))
+IOS_DART := $(if $(wildcard apps/ios/.fvm/flutter_sdk/bin/dart),.fvm/flutter_sdk/bin/dart,$(if $(shell command -v fvm 2>/dev/null),fvm dart,dart))
 
 # 格式化服务端 Java 代码和 iOS Dart 代码。
 format:
@@ -20,9 +20,5 @@ ios-test:
 	cd apps/ios && $(IOS_FLUTTER) analyze
 	cd apps/ios && $(IOS_FLUTTER) test
 
-# 验证 SQLite 在线备份、完整性检查和独立恢复。
-operations-test:
-	infra/scripts/backup_restore_smoke_test.sh
-
 # 执行仓库级完整验证。
-verify: server-test ios-test operations-test
+verify: server-test ios-test

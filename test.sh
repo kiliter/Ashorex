@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # 上岸本地统一测试入口。
-# 默认按照项目 Definition of Done 执行服务端、Flutter 和备份恢复验证，也可只跑单个模块。
+# 默认按照项目 Definition of Done 执行服务端逻辑测试和 Flutter 验证，也可只跑单个模块。
 set -Eeuo pipefail
 
 readonly PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,7 +18,6 @@ print_usage() {
   ./test.sh all         同上
   ./test.sh server      只执行服务端 verify
   ./test.sh ios         只执行 Flutter 格式检查、静态分析和测试
-  ./test.sh operations  只执行 SQLite 备份恢复验证
   ./test.sh --help      显示帮助
 USAGE
 }
@@ -102,15 +101,9 @@ test_ios() {
   )
 }
 
-test_operations() {
-  log '执行 SQLite 备份、完整性检查和恢复验证'
-  "$PROJECT_DIR/infra/scripts/backup_restore_smoke_test.sh"
-}
-
 test_all() {
   test_server
   test_ios
-  test_operations
 }
 
 case "${1:-all}" in
@@ -122,9 +115,6 @@ server)
   ;;
 ios)
   test_ios
-  ;;
-operations)
-  test_operations
   ;;
 -h | --help | help)
   print_usage

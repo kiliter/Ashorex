@@ -2,7 +2,7 @@
 
 ## Project
 
-**上岸（Shangan）** 是一款 iOS-only 的学习监督 App。
+**上岸（Shangan）** 是一款面向 iPhone、iPad 和 Android 的 Flutter 学习监督 App。
 
 V1 目标不是建设在线教育平台，而是完成以下闭环：
 
@@ -47,7 +47,7 @@ V1 目标不是建设在线教育平台，而是完成以下闭环：
 V1：
 
 ```text
-iOS Flutter App
+Flutter Mobile App（iPhone / iPad / Android）
 Spring Boot Backend
 SQLite
 Emby
@@ -59,7 +59,6 @@ OpenRouter model catalog cache
 禁止实现：
 
 ```text
-Android
 PC Study Web
 macOS / Windows client
 Redis
@@ -83,7 +82,7 @@ Flutter AI 入口
 Repository:
 
 ```text
-apps/ios      Flutter iOS application
+apps/ios      Flutter mobile application（历史目录名，包含 iOS/iPadOS 与 Android）
 apps/server   Spring Boot modular monolith
 docs          specs, plans, ADRs, API, runbooks
 infra         container, Caddy, backup scripts
@@ -131,7 +130,9 @@ Rules:
 ## Technology Baseline
 
 - Flutter 3.44.x, locked with FVM.
+- Dart 3.13.x.
 - iOS minimum 16.
+- Android minimum API 24.
 - Riverpod, go_router, Dio.
 - Flutter official `video_player`.
 - Java 21.
@@ -341,13 +342,12 @@ Server:
 - JUnit 5.
 - AssertJ.
 - MockMvc.
-- Temporary file SQLite.
 - 使用 WireMock 测试 Emby、ASR、LLM 和 OpenRouter。
-- ZIP 导入测试必须覆盖整包校验、原子回滚和重复覆盖。
+- ZIP 解析逻辑测试必须覆盖整包校验和重复覆盖命令生成。
 - 内容任务测试必须覆盖 NDJSON 拼接、全局串行、长文本分层、临时音频删除和题目草稿批量发布。
-- State machines and policies tested without Spring when possible.
-- Integration tests verify constraints, transactions and security.
-- Acceptance tests cover complete flows.
+- 状态机、策略和应用服务使用 Fake、Stub 或 Mock Repository 做纯逻辑测试。
+- 自动化测试不得启动 SQLite、Flyway 或其他真实数据库，也不测试具体 SQL、数据库约束、事务和迁移。
+- Controller、安全规则和外部服务协议可以使用不连接数据库的测试切片或 WireMock。
 
 Flutter:
 
@@ -381,7 +381,7 @@ Update `docs/api/openapi.yaml` with API changes. Contract drift must fail CI.
 - Use system typography and Dynamic Type.
 - Minimum tap target 44pt.
 - Important state must not rely on color alone.
-- iOS experience takes priority over future Android.
+- iPhone、iPad 和 Android 共享业务体验，平台差异仅放在布局和系统适配层。
 - The abandon button must show exact added debt before confirmation.
 - Alive check modal cannot be dismissed by tapping outside.
 - Do not add unsolicited gamification or AI features.
@@ -425,4 +425,4 @@ A change is complete only when:
 - diff is limited to the Task;
 - commit is clean and reviewable.
 
-V1 is complete only after all acceptance scenarios, backup/restore and physical iPhone testing pass.
+V1 仅在所有验收场景、人工备份恢复，以及物理 iPhone、iPad 和 Android 设备验证通过后完成。
