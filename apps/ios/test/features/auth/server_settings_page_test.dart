@@ -28,7 +28,7 @@ void main() {
       ),
     );
 
-    expect(find.text('当前服务器：127.0.0.1:8080'), findsOneWidget);
+    expect(find.text('当前服务器：127.0.0.1:18080'), findsOneWidget);
     await tester.tap(find.byKey(const Key('serverSettingsButton')));
     await tester.pumpAndSettle();
     expect(find.byType(ServerSettingsPage), findsOneWidget);
@@ -51,7 +51,7 @@ void main() {
     expect(find.text('无法连接服务器，请检查地址和网络'), findsOneWidget);
     expect(
       dependencies.configuration.configuration.baseUrl,
-      'http://127.0.0.1:8080',
+      'http://127.0.0.1:18080',
     );
     expect(dependencies.store.saveCalls, 0);
   });
@@ -95,7 +95,7 @@ Future<void> _pumpSettings(
 
 Future<_TestDependencies> _dependencies() async {
   final store = _MemoryServerConfigurationStore(
-    ServerConfiguration.parse('http://127.0.0.1:8080'),
+    ServerConfiguration.parse('http://127.0.0.1:18080'),
   );
   final tokens = _MemoryTokenStore()
     ..tokens = const TokenPair(

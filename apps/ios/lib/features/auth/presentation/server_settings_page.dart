@@ -103,7 +103,7 @@ final class _ServerSettingsPageState extends ConsumerState<ServerSettingsPage> {
               enableSuggestions: false,
               decoration: const InputDecoration(
                 labelText: '新服务端地址',
-                hintText: 'http://127.0.0.1:8080',
+                hintText: 'http://127.0.0.1:18080',
                 helperText: '填写完整的 http:// 或 https:// 地址，不要包含 /api/v1',
               ),
               validator: _validateAddress,

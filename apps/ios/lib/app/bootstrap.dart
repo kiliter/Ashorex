@@ -6,7 +6,7 @@ Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
   const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:8080',
+    defaultValue: 'http://127.0.0.1:18080',
   );
   runApp(const ApplicationBootstrap(defaultBaseUrl: baseUrl));
 }

@@ -61,7 +61,7 @@ infra/scripts/restore.sh /srv/shangan/backup/study-YYYYMMDD-HHMMSS.db
 先在只监听本机的环境启动服务，然后依次检查：
 
 ```bash
-curl --fail http://127.0.0.1:8080/actuator/health
+curl --fail http://127.0.0.1:18080/actuator/health
 sqlite3 /srv/shangan/data/study.db \
   "SELECT version FROM flyway_schema_history WHERE success=1 ORDER BY installed_rank DESC LIMIT 1;"
 sqlite3 /srv/shangan/data/study.db "PRAGMA integrity_check;"

@@ -1799,7 +1799,7 @@ Add a top-right action on the login page. The configuration page validates input
 Start Spring Boot with non-committed development secrets and a workspace-local SQLite directory. Verify:
 
 ```bash
-curl http://127.0.0.1:8080/actuator/health
+curl http://127.0.0.1:18080/actuator/health
 ```
 
 Expected: HTTP 200 and `status=UP`.

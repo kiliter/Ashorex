@@ -11,6 +11,8 @@
 
 登录页右上角提供未登录可访问的“服务器设置”。用户输入的完整 HTTP/HTTPS 基础地址经格式校验和 `/actuator/health` 健康检查后，保存到 `SharedPreferences`，并优先于编译参数 `API_BASE_URL`。
 
+本地开发服务统一监听 `18080`，Flutter 未传入 `API_BASE_URL` 时默认连接 `http://127.0.0.1:18080`。生产部署仍可通过环境变量覆盖端口和公开地址。
+
 保存新地址时，App 必须清除旧服务器的 Access Token 和 Refresh Token，并重新创建 ApiClient、认证控制器和所有 Repository。考试目标、计划、欠债、可信观看、答题、报表和 AI 数据仍全部来自当前服务端，不在客户端持久化业务副本。
 
 ## 后果（Consequences）

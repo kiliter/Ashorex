@@ -5,8 +5,8 @@ void main() {
   group('ServerConfiguration', () {
     test('接受 HTTP/HTTPS Origin 并移除末尾斜杠', () {
       expect(
-        ServerConfiguration.parse('http://127.0.0.1:8080/').baseUrl,
-        'http://127.0.0.1:8080',
+        ServerConfiguration.parse('http://127.0.0.1:18080/').baseUrl,
+        'http://127.0.0.1:18080',
       );
       expect(
         ServerConfiguration.parse('https://study.example.com').baseUrl,
@@ -37,8 +37,8 @@ void main() {
 
     test('展示当前服务端主机和端口', () {
       expect(
-        ServerConfiguration.parse('http://192.168.1.8:8080').displayLabel,
-        '192.168.1.8:8080',
+        ServerConfiguration.parse('http://192.168.1.8:18080').displayLabel,
+        '192.168.1.8:18080',
       );
       expect(
         ServerConfiguration.parse('https://study.example.com').displayLabel,

@@ -25,6 +25,8 @@ management:
         include: health,info
 
 server:
+  # 本地开发统一使用 18080，部署环境仍可通过 SERVER_PORT 覆盖。
+  port: ${SERVER_PORT:18080}
   servlet:
     session:
       cookie:

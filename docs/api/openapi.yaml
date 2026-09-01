@@ -4,7 +4,7 @@ info:
   description: iOS 客户端使用的只读与学习业务接口；所有业务路由统一使用 /api/v1 前缀。
   version: 0.1.0-rc1
 servers:
-- url: http://localhost
+- url: http://localhost:18080
   description: Generated server url
 paths:
   /api/v1/preferences:

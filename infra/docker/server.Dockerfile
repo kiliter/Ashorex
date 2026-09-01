@@ -14,9 +14,9 @@ RUN mkdir -p /data /backup \
     && chown -R shangan:shangan /app /data /backup
 USER 10001:10001
 VOLUME ["/data", "/backup"]
-EXPOSE 8080
+EXPOSE 18080
 ENV DATA_DIR=/data \
     JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8"
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD curl --fail --silent http://127.0.0.1:8080/actuator/health || exit 1
+  CMD curl --fail --silent http://127.0.0.1:18080/actuator/health || exit 1
 ENTRYPOINT ["java", "-jar", "/app/server.jar"]

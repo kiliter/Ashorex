@@ -14,7 +14,7 @@ void main() {
     final store = await SharedPreferencesServerConfigurationStore.create();
 
     final configuration = await store.load(
-      defaultBaseUrl: 'http://127.0.0.1:8080',
+      defaultBaseUrl: 'http://127.0.0.1:18080',
     );
 
     expect(configuration.baseUrl, 'https://saved.example.com');
@@ -25,13 +25,13 @@ void main() {
     final store = await SharedPreferencesServerConfigurationStore.create();
 
     expect(
-      (await store.load(defaultBaseUrl: 'http://127.0.0.1:8080')).baseUrl,
-      'http://127.0.0.1:8080',
+      (await store.load(defaultBaseUrl: 'http://127.0.0.1:18080')).baseUrl,
+      'http://127.0.0.1:18080',
     );
 
     await store.save(ServerConfiguration.parse('https://next.example.com/'));
     expect(
-      (await store.load(defaultBaseUrl: 'http://127.0.0.1:8080')).baseUrl,
+      (await store.load(defaultBaseUrl: 'http://127.0.0.1:18080')).baseUrl,
       'https://next.example.com',
     );
   });

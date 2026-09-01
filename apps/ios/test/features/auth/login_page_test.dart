@@ -19,7 +19,7 @@ void main() {
     await controller.initialize();
     addTearDown(controller.dispose);
     final serverController = ServerConfigurationController(
-      initialConfiguration: ServerConfiguration.parse('http://127.0.0.1:8080'),
+      initialConfiguration: ServerConfiguration.parse('http://127.0.0.1:18080'),
       store: _MemoryServerConfigurationStore(),
       tokenStore: tokenStore,
     );

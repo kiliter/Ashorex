@@ -9,7 +9,7 @@ import 'package:shangan_ios/core/storage/token_store.dart';
 void main() {
   testWidgets('切换服务端清除旧 Token 并用新地址重建应用依赖', (tester) async {
     final store = _MemoryServerConfigurationStore(
-      ServerConfiguration.parse('http://127.0.0.1:8080'),
+      ServerConfiguration.parse('http://127.0.0.1:18080'),
     );
     final tokenStore = _MemoryTokenStore()
       ..tokens = const TokenPair(
@@ -20,7 +20,7 @@ void main() {
 
     await tester.pumpWidget(
       ApplicationBootstrap(
-        defaultBaseUrl: 'http://127.0.0.1:8080',
+        defaultBaseUrl: 'http://127.0.0.1:18080',
         configurationStore: store,
         tokenStore: tokenStore,
         configuredAppBuilder: (context, value) {
@@ -35,7 +35,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('http://127.0.0.1:8080'), findsOneWidget);
+    expect(find.text('http://127.0.0.1:18080'), findsOneWidget);
 
     await controller!.switchTo(
       ServerConfiguration.parse('https://new.example.com'),

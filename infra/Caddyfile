@@ -1,7 +1,7 @@
 # APP_DOMAIN 在生产环境设置为真实域名；Caddy 自动申请和续期 HTTPS 证书。
 {$APP_DOMAIN:localhost} {
   encode zstd gzip
-  reverse_proxy server:8080
+  reverse_proxy server:18080
   header {
     Strict-Transport-Security "max-age=31536000; includeSubDomains"
     X-Content-Type-Options "nosniff"

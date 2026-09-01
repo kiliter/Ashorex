@@ -1384,7 +1384,7 @@ App 生命周期：
 
 规则：
 
-- 默认地址由 `API_BASE_URL` 编译参数提供，未传入时为 `http://127.0.0.1:8080`。
+- 默认地址由 `API_BASE_URL` 编译参数提供，未传入时为 `http://127.0.0.1:18080`。
 - 用户保存的地址存入 `SharedPreferences`，并优先于编译默认值。
 - 地址必须是完整的 HTTP 或 HTTPS Origin，不允许用户名、密码、Query、Fragment 或 API 子路径。
 - 保存前调用目标服务的 `/actuator/health`；只有返回 2xx 且状态为 `UP` 才允许切换。
@@ -1403,6 +1403,8 @@ App 生命周期：
 路径：
 
 ```text
+/ -> /admin/health
+/admin -> /admin/health
 /admin/login
 /admin/users
 /admin/emby

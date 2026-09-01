@@ -34,7 +34,7 @@ services:
       - study-data:/data
       - study-backup:/backup
     expose:
-      - "8080"
+      - "18080"
     networks:
       - internal
 

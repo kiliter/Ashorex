@@ -4,6 +4,10 @@
 
 ## 常用命令
 
+- `./run.sh`：自动选择 Java 21，启动后端、iPhone 模拟器和 Flutter 调试会话。
+- `./run.sh server` / `./run.sh ios`：只启动服务端或 iOS 调试会话。
+- `./test.sh`：执行服务端、Flutter 和备份恢复完整验证。
+- `./test.sh server` / `./test.sh ios`：只验证指定模块。
 - `make server-test`：运行服务端完整验证。
 - `make ios-test`：解析 Flutter 依赖，并执行格式、静态分析和测试。
 - `make format`：格式化服务端和 iOS 代码。
