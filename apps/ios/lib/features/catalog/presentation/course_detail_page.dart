@@ -95,9 +95,9 @@ final class CourseDetailPage extends ConsumerWidget {
                                 children: [
                                   Text(
                                     lesson.title,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
                                   ),
                                   const SizedBox(height: 5),
                                   ShanganWatchProgress(

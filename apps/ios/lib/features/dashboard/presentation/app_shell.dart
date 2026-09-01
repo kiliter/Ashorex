@@ -107,8 +107,9 @@ final class _ProfileTab extends ConsumerWidget {
                   (user?.displayName.isNotEmpty == true
                       ? user!.displayName.substring(0, 1)
                       : '学'),
-                  style: Theme.of(context).textTheme.titleLarge
-                      ?.copyWith(color: ShanganColors.surface),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: ShanganColors.surface,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),

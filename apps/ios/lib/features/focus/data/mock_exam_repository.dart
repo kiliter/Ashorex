@@ -111,9 +111,9 @@ final class RemoteMockExamRepository implements MockExamRepository {
 
   @override
   Future<List<MockExamPresetData>> listPresets() async =>
-      (await _api.getJsonList('/api/v1/mock-exam-presets'))
-          .map(MockExamPresetData.fromJson)
-          .toList();
+      (await _api.getJsonList(
+        '/api/v1/mock-exam-presets',
+      )).map(MockExamPresetData.fromJson).toList();
 
   @override
   Future<MockExamPresetData> createPreset(String name, int seconds) async =>

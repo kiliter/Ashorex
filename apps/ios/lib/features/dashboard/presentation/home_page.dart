@@ -187,9 +187,9 @@ final class _HomePageState extends ConsumerState<HomePage> {
                                   const SizedBox(height: 5),
                                   Text(
                                     shanganDuration(dashboard.openDebtSeconds),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleLarge,
                                   ),
                                 ],
                               ),

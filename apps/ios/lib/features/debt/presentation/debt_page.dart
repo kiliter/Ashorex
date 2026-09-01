@@ -81,9 +81,9 @@ final class DebtPage extends ConsumerWidget {
                               children: [
                                 Text(
                                   debt.title,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
                                 ),
                                 const SizedBox(height: 3),
                                 Text(

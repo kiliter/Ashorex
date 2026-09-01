@@ -189,10 +189,9 @@ final class RemotePlanRepository implements PlanRepository {
   );
 
   @override
-  Future<List<LearningDebtData>> loadDebts() async =>
-      (await _api.getJsonList('/api/v1/debts'))
-          .map(LearningDebtData.fromJson)
-          .toList();
+  Future<List<LearningDebtData>> loadDebts() async => (await _api.getJsonList(
+    '/api/v1/debts',
+  )).map(LearningDebtData.fromJson).toList();
 }
 
 final planRepositoryProvider = Provider<PlanRepository>((ref) {

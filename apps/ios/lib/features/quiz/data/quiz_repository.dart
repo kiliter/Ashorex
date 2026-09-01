@@ -28,19 +28,19 @@ final class QuizQuestionData {
   final String content;
   final List<QuizOptionData> options;
 
-  factory QuizQuestionData.fromJson(Map<String, dynamic> json) =>
-      QuizQuestionData(
-        id: json['id'] as String,
-        questionType: json['questionType'] as String,
-        content: json['content'] as String,
-        options: (json['options'] as List)
-            .map(
-              (value) => QuizOptionData.fromJson(
-                Map<String, dynamic>.from(value as Map),
-              ),
-            )
-            .toList(),
-      );
+  factory QuizQuestionData.fromJson(
+    Map<String, dynamic> json,
+  ) => QuizQuestionData(
+    id: json['id'] as String,
+    questionType: json['questionType'] as String,
+    content: json['content'] as String,
+    options: (json['options'] as List)
+        .map(
+          (value) =>
+              QuizOptionData.fromJson(Map<String, dynamic>.from(value as Map)),
+        )
+        .toList(),
+  );
 }
 
 final class QuizData {

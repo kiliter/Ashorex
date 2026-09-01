@@ -127,9 +127,9 @@ final class _SettingsPageState extends ConsumerState<SettingsPage> {
                               children: [
                                 Text(
                                   '每推进 ${_aliveCheckIntervalPercent.round()}% 验活一次',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
                                 ),
                                 const SizedBox(height: 4),
                                 const Text('按视频内容位置触发，倍速播放不会改变检查点。'),
@@ -170,8 +170,9 @@ final class _SettingsPageState extends ConsumerState<SettingsPage> {
                       helperText: '使用 24 小时制 HH:mm',
                     ),
                     validator: (value) {
-                      final match = RegExp(r'^(?:[01]\d|2[0-3]):[0-5]\d$')
-                          .hasMatch(value ?? '');
+                      final match = RegExp(
+                        r'^(?:[01]\d|2[0-3]):[0-5]\d$',
+                      ).hasMatch(value ?? '');
                       return match ? null : '请输入有效的 24 小时时间';
                     },
                   ),

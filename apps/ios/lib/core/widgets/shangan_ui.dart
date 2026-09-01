@@ -106,8 +106,10 @@ final class ShanganStatusTag extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: Theme.of(context).textTheme.labelSmall
-                  ?.copyWith(color: color, fontWeight: FontWeight.w700),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),
@@ -418,8 +420,9 @@ final class _Legend extends StatelessWidget {
       const SizedBox(width: 4),
       Text(
         label,
-        style: Theme.of(context).textTheme.labelSmall
-            ?.copyWith(color: ShanganColors.mutedInk),
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(color: ShanganColors.mutedInk),
       ),
     ],
   );

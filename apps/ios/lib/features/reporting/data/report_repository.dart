@@ -169,45 +169,45 @@ final class WeeklyReportData {
   final int slackedDayCount;
   final List<ReviewedLessonData> reviewedLessons;
 
-  factory WeeklyReportData.fromJson(Map<String, dynamic> json) =>
-      WeeklyReportData(
-        weekStart: DateTime.parse(json['weekStart'] as String),
-        days: (json['days'] as List)
-            .map(
-              (item) => WeeklyDayTrendData.fromJson(
-                Map<String, dynamic>.from(item as Map),
-              ),
-            )
-            .toList(),
-        totalEffectiveStudySeconds: (json['totalEffectiveStudySeconds'] as num)
-            .toInt(),
-        videoStudySeconds: (json['videoStudySeconds'] as num).toInt(),
-        focusSeconds: (json['focusSeconds'] as num).toInt(),
-        videoCompletedCount: (json['videoCompletedCount'] as num).toInt(),
-        answerCount: (json['answerCount'] as num).toInt(),
-        answerAccuracy: (json['answerAccuracy'] as num).toInt(),
-        planCompletionRate: (json['planCompletionRate'] as num).toInt(),
-        newDebtSeconds: (json['newDebtSeconds'] as num).toInt(),
-        repaidDebtSeconds: (json['repaidDebtSeconds'] as num).toInt(),
-        abandonmentCount: (json['abandonmentCount'] as num).toInt(),
-        aliveCheckFailureCount: (json['aliveCheckFailureCount'] as num).toInt(),
-        previousWeekEffectiveStudySeconds:
-            (json['previousWeekEffectiveStudySeconds'] as num).toInt(),
-        effectiveStudySecondsChange:
-            (json['effectiveStudySecondsChange'] as num).toInt(),
-        previousWeekPlanCompletionRate:
-            (json['previousWeekPlanCompletionRate'] as num).toInt(),
-        planCompletionRateChange: (json['planCompletionRateChange'] as num)
-            .toInt(),
-        slackedDayCount: (json['slackedDayCount'] as num?)?.toInt() ?? 0,
-        reviewedLessons: (json['reviewedLessons'] as List<dynamic>? ?? const [])
-            .map(
-              (item) => ReviewedLessonData.fromJson(
-                Map<String, dynamic>.from(item as Map),
-              ),
-            )
-            .toList(),
-      );
+  factory WeeklyReportData.fromJson(
+    Map<String, dynamic> json,
+  ) => WeeklyReportData(
+    weekStart: DateTime.parse(json['weekStart'] as String),
+    days: (json['days'] as List)
+        .map(
+          (item) => WeeklyDayTrendData.fromJson(
+            Map<String, dynamic>.from(item as Map),
+          ),
+        )
+        .toList(),
+    totalEffectiveStudySeconds: (json['totalEffectiveStudySeconds'] as num)
+        .toInt(),
+    videoStudySeconds: (json['videoStudySeconds'] as num).toInt(),
+    focusSeconds: (json['focusSeconds'] as num).toInt(),
+    videoCompletedCount: (json['videoCompletedCount'] as num).toInt(),
+    answerCount: (json['answerCount'] as num).toInt(),
+    answerAccuracy: (json['answerAccuracy'] as num).toInt(),
+    planCompletionRate: (json['planCompletionRate'] as num).toInt(),
+    newDebtSeconds: (json['newDebtSeconds'] as num).toInt(),
+    repaidDebtSeconds: (json['repaidDebtSeconds'] as num).toInt(),
+    abandonmentCount: (json['abandonmentCount'] as num).toInt(),
+    aliveCheckFailureCount: (json['aliveCheckFailureCount'] as num).toInt(),
+    previousWeekEffectiveStudySeconds:
+        (json['previousWeekEffectiveStudySeconds'] as num).toInt(),
+    effectiveStudySecondsChange: (json['effectiveStudySecondsChange'] as num)
+        .toInt(),
+    previousWeekPlanCompletionRate:
+        (json['previousWeekPlanCompletionRate'] as num).toInt(),
+    planCompletionRateChange: (json['planCompletionRateChange'] as num).toInt(),
+    slackedDayCount: (json['slackedDayCount'] as num?)?.toInt() ?? 0,
+    reviewedLessons: (json['reviewedLessons'] as List<dynamic>? ?? const [])
+        .map(
+          (item) => ReviewedLessonData.fromJson(
+            Map<String, dynamic>.from(item as Map),
+          ),
+        )
+        .toList(),
+  );
 }
 
 abstract interface class ReportRepository {

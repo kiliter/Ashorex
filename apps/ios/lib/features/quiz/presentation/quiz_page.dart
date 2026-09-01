@@ -189,8 +189,9 @@ final class _QuizPageState extends ConsumerState<QuizPage> {
       );
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('答卷提交失败，请检查网络后重试。')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('答卷提交失败，请检查网络后重试。')));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);

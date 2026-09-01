@@ -337,8 +337,9 @@ final class _MockExamPageState extends ConsumerState<MockExamPage>
     } catch (error) {
       if (!mounted) return;
       setState(() => _busy = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('试卷照片上传失败，请重试')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('试卷照片上传失败，请重试')));
     }
   }
 }

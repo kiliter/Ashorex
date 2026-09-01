@@ -19,10 +19,11 @@ import 'package:shangan_ios/features/profile/data/preferences_repository.dart';
 import 'package:shangan_ios/features/quiz/data/quiz_repository.dart';
 import 'package:shangan_ios/features/reporting/data/report_repository.dart';
 
-typedef ConfiguredAppBuilder = Widget Function(
-  BuildContext context,
-  ServerConfigurationController controller,
-);
+typedef ConfiguredAppBuilder =
+    Widget Function(
+      BuildContext context,
+      ServerConfigurationController controller,
+    );
 
 /// App 最外层启动组件，负责读取连接配置并在服务器切换后重建全部依赖。
 final class ApplicationBootstrap extends StatefulWidget {

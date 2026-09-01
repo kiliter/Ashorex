@@ -120,9 +120,9 @@ final class RemoteCatalogRepository implements CatalogRepository {
 
   @override
   Future<List<CourseSummary>> listCourses() async {
-    return (await _api.getJsonList('/api/v1/courses'))
-        .map(CourseSummary.fromJson)
-        .toList();
+    return (await _api.getJsonList(
+      '/api/v1/courses',
+    )).map(CourseSummary.fromJson).toList();
   }
 
   @override

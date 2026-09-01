@@ -70,9 +70,9 @@ final class _CatalogRepository implements CatalogRepository {
   );
 
   @override
-  Future<LessonSummary> loadLesson(String lessonId) async =>
-      (await loadCourse('course-1')).lessons
-          .firstWhere((lesson) => lesson.id == lessonId);
+  Future<LessonSummary> loadLesson(String lessonId) async => (await loadCourse(
+    'course-1',
+  )).lessons.firstWhere((lesson) => lesson.id == lessonId);
 
   @override
   Future<LessonStudyContentData> loadStudyContent(String lessonId) {
