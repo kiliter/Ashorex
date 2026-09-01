@@ -1,0 +1,21 @@
+README.md
+  s_73dd1583cd0fea::t_8ce3e27808a63a 26,29
+docs/assets/readme/mobile-showcase.html
+  s_73dd1583cd0fea::t_d5ca3ae099d79f 1-713
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "b02e4894ac848872ff76595a2c349c7be9164e29",
+  "prompts": {},
+  "sessions": {
+    "s_73dd1583cd0fea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05895-5df5-7e93-a5e3-7560bc9c3d61",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
