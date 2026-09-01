@@ -1,0 +1,20 @@
+README.md
+  s_73dd1583cd0fea::t_a4014c127e5386 1,3,5,7-12,14,16,18-63,65-163,166-171,174-176,178-221,225-238
+  s_73dd1583cd0fea::t_0a95c0c3217b9b 64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "b7d52a5aaac012ae1dda227012910e3fd0c1671b",
+  "prompts": {},
+  "sessions": {
+    "s_73dd1583cd0fea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05895-5df5-7e93-a5e3-7560bc9c3d61",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
