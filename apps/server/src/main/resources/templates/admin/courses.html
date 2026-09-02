@@ -5,32 +5,94 @@
     <div class="admin-shell">
       <header th:replace="~{admin/fragments :: navigation('courses')}"></header>
       <main class="admin-main">
-        <section class="page-head"><div class="container page-head-row"><div><h1 class="page-title" data-code="CRS/03">课程管理</h1><p class="page-desc">绑定 Emby 目录并维护课程、课时与内容生产链路</p></div><span class="badge" th:text="|${#lists.size(courses)} 门课程|">0 门课程</span></div></section>
+        <section class="page-head"><div class="container page-head-row"><div><h1 class="page-title" data-code="CRS/03">课程管理</h1><p class="page-desc">从已绑定媒体库查找剧集或电影，一键建课并同步完整视频目录</p></div><div class="actions"><a class="btn btn-secondary" th:href="@{/admin/courses/archived}">已归档课程</a><span class="badge" th:text="|${#lists.size(courses)} 门活动课程|">0 门活动课程</span></div></div></section>
         <div class="container workspace">
-          <section class="panel">
-            <div class="panel-head"><div><h2>CREATE / 添加课程</h2><p>填写 Emby 父节点 ID 后即可同步视频课时。</p></div></div>
-            <form class="form-grid form-grid--two panel-body" method="post" th:action="@{/admin/courses}">
-              <label class="field">课程名称<input name="name" placeholder="例如 申论基础课" required /></label>
-              <label class="field">Emby 父节点 ID<input class="data-text" name="embyParentItemId" placeholder="输入 Emby Item ID" required /></label>
-              <label class="field form-grid__wide">课程说明<textarea name="description" placeholder="简要说明课程目标和适用阶段"></textarea></label>
-              <div class="actions form-grid__wide"><button type="submit">创建课程</button></div>
+          <div class="alert alert--success" th:if="${param.archived}">课程已归档，课时和全部学习历史均已保留。</div>
+          <div class="alert" th:if="${batchError != null}" th:text="${batchError}">批量添加失败</div>
+
+          <section class="panel" th:if="${batchResult != null}">
+            <div class="panel-head"><div><h2>RESULT / 添加结果</h2><p>每门课程独立同步；失败项可在课程目录中稍后重试。</p></div></div>
+            <div class="table-wrap"><table class="ds-table">
+              <thead><tr><th>Emby 来源</th><th>课程动作</th><th>同步结果</th><th>说明</th></tr></thead>
+              <tbody><tr th:each="item : ${batchResult.items}">
+                <td><div class="cell-main" th:text="${item.sourceName}">来源</div><div class="cell-sub num" th:text="${item.sourceId}">ID</div></td>
+                <td><span class="badge" th:text="${item.action.name() == 'CREATED' ? '已创建' : (item.action.name() == 'RESTORED' ? '已恢复' : '已跳过')}">动作</span></td>
+                <td><span class="badge" th:classappend="${item.syncStatus.name() == 'FAILED' ? ' danger' : (item.syncStatus.name() == 'SUCCESS' ? ' success' : '')}" th:text="${item.syncStatus.name() == 'FAILED' ? '同步失败' : (item.syncStatus.name() == 'SUCCESS' ? '同步成功' : '未重复同步')}">结果</span></td>
+                <td th:text="${item.message}">说明</td>
+              </tr></tbody>
+            </table></div>
+          </section>
+
+          <section class="panel source-builder" data-source-picker data-search-url="/admin/emby/sources" data-mode="multiple">
+            <div class="panel-head"><div><h2>CREATE / 一键添加课程</h2><p>从已绑定媒体库选择剧集或电影；最多选择 50 个来源。</p></div><span class="badge" data-source-count>0 / 50</span></div>
+            <form class="panel-body source-builder__form" method="post" th:action="@{/admin/courses/batch}">
+              <div class="source-picker-launch">
+                <div><strong>Emby 课程来源</strong><p>点击后展示已绑定媒体库下的全部剧集和电影，可在弹窗中搜索并勾选。</p></div>
+                <button type="button" data-source-open>选择 Emby 课程</button>
+              </div>
+              <div class="source-tray" data-source-tray>
+                <div class="source-tray__empty" data-source-empty>还没有选择来源。选择一个来源可直接添加，选择多个来源可批量添加。</div>
+              </div>
+              <div data-source-hidden></div>
+              <details class="advanced-source">
+                <summary>高级兼容：手工填写媒体库、Series、Folder 或 Movie Item ID</summary>
+                <label class="field">Emby Item ID<input class="data-text" name="sourceIds" data-manual-source placeholder="可与上方已选来源一起批量添加" /></label>
+                <p class="help">手工来源仍会在提交时校验是否存在以及当前 Emby 用户是否有权访问。</p>
+              </details>
+              <div class="actions">
+                <button type="submit" data-single-submit disabled>添加并同步</button>
+                <button class="btn-secondary" type="submit" data-batch-submit disabled>批量添加并同步</button>
+              </div>
+              <div class="source-picker-modal" data-source-modal hidden>
+                <button class="source-picker-modal__backdrop" type="button" data-source-close aria-label="关闭课程选择弹窗"></button>
+                <section class="source-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="course-source-dialog-title">
+                  <header class="source-picker-dialog__head"><div><small>EMBY / COURSE SOURCE</small><h3 id="course-source-dialog-title">选择 Emby 课程</h3></div><span class="badge" data-modal-source-count>已选 0 / 50</span></header>
+                  <div class="source-picker-dialog__body">
+                    <label class="field">搜索已加载课程<input type="search" autocomplete="off" data-source-query placeholder="输入课程名称或 Item ID" /></label>
+                    <div class="source-picker-dialog__status">
+                      <p class="help" data-source-status>正在准备课程列表…</p>
+                      <button class="source-picker-select-all" type="button" data-source-select-all disabled>全选当前结果</button>
+                    </div>
+                    <div class="source-picker-list" data-source-options aria-live="polite"></div>
+                  </div>
+                  <footer class="source-picker-dialog__foot"><button class="btn-secondary" type="button" data-source-close>取消</button><button type="button" data-source-confirm>确定绑定</button></footer>
+                </section>
+              </div>
             </form>
           </section>
 
           <section class="panel">
-            <div class="panel-head"><div><h2>COURSE / 课程目录</h2><p>同步失败会保留最后一次可用的本地课程快照。</p></div></div>
-            <div class="empty-state" th:if="${#lists.isEmpty(courses)}"><strong>还没有课程</strong>使用上方表单添加第一门课程。</div>
+            <div class="panel-head">
+              <div><h2>COURSE / 课程目录</h2><p>同步失败会保留最后一次可用快照；归档不会删除任何学习历史。</p></div>
+              <div class="actions" aria-label="课程目录统计">
+                <span class="badge" th:text="|${#lists.size(courses)} 门课程|">0 门课程</span>
+                <span class="badge" th:text="|${totalLessonCount} 个课时|">0 个课时</span>
+                <span class="badge" th:text="|总时长 ${totalLessonDuration}|">总时长 0 小时</span>
+              </div>
+            </div>
+            <div class="empty-state" th:if="${#lists.isEmpty(courses)}"><strong>还没有活动课程</strong>使用上方来源选择器添加第一门课程。</div>
             <div class="table-wrap" th:unless="${#lists.isEmpty(courses)}"><table class="ds-table">
               <thead><tr><th>课程名称 / 说明</th><th>Emby 父节点 ID</th><th>最近同步</th><th>结果</th><th class="right">操作</th></tr></thead>
               <tbody><tr th:each="course : ${courses}">
-                <td><div class="cell-main" th:text="${course.name}">课程</div><div class="cell-sub" th:text="${#strings.isEmpty(course.description) ? '未填写课程说明' : course.description}">说明</div></td>
+                <td>
+                  <div class="cell-main" th:text="${course.name}">课程</div>
+                  <div class="cell-sub">
+                    <span th:text="|共 ${courseLessonCounts[course.id]} 个课时|">共 0 个课时</span>
+                    <span aria-hidden="true"> · </span>
+                    <span th:text="${courseLessonDurations[course.id]}">0 小时</span>
+                    <span aria-hidden="true"> · </span>
+                    <span th:text="${#strings.isEmpty(course.description) ? '使用 Emby 来源名称创建' : course.description}">说明</span>
+                  </div>
+                </td>
                 <td class="num" th:text="${course.embyParentItemId}">ID</td>
                 <td class="num" th:text="${course.lastSyncedAt != null ? T(com.shangan.admin.AdminDisplayFormatter).dateTime(course.lastSyncedAt) : '尚未同步'}">尚未同步</td>
                 <td><span class="badge" th:classappend="${course.lastSyncError == null ? ' success' : ' danger'}" th:text="${course.lastSyncError ?: '同步正常'}">状态</span></td>
                 <td><div class="row-actions">
                   <a class="btn btn-secondary btn-sm" th:href="@{/admin/courses/{id}/lessons(id=${course.id})}">管理课时</a>
+                  <a class="btn btn-secondary btn-sm" th:href="@{/admin/courses/{id}/source(id=${course.id})}">更换媒体来源</a>
                   <a class="btn btn-secondary btn-sm" th:href="@{/admin/courses/{id}/quiz-drafts(id=${course.id})}">题目草稿</a>
                   <form method="post" th:action="@{/admin/courses/{id}/sync(id=${course.id})}"><button class="btn-sm" type="submit">立即同步</button></form>
+                  <a class="btn btn-danger btn-sm" th:href="@{/admin/courses/{id}/archive(id=${course.id})}">归档课程</a>
                 </div></td>
               </tr></tbody>
             </table></div>
@@ -39,5 +101,6 @@
         </div>
       </main>
     </div>
+    <script th:src="@{/assets/course-source-picker.js}" defer></script>
   </body>
 </html>

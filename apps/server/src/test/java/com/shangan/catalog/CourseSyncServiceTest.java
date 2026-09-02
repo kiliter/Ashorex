@@ -1,12 +1,15 @@
 package com.shangan.catalog;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.shangan.catalog.application.CatalogSnapshotWriter;
 import com.shangan.catalog.application.CourseSyncService;
+import com.shangan.catalog.application.MediaMappingPlanner;
 import com.shangan.catalog.domain.Course;
 import com.shangan.catalog.domain.MediaItem;
 import com.shangan.catalog.infrastructure.CourseRepository;
+import com.shangan.common.api.BusinessException;
 import com.shangan.media.emby.EmbyDtos;
 import com.shangan.media.emby.EmbyGateway;
 import java.time.Clock;
@@ -46,7 +49,8 @@ class CourseSyncServiceTest {
             new CatalogSnapshotWriter(
                 repository,
                 () -> "generated-" + repository.items.size(),
-                Clock.fixed(Instant.parse("2026-08-30T00:00:00Z"), ZoneOffset.UTC)));
+                Clock.fixed(Instant.parse("2026-08-30T00:00:00Z"), ZoneOffset.UTC)),
+            new MediaMappingPlanner());
 
     service.syncCourse("course-1");
     service.syncCourse("course-1");
@@ -60,9 +64,76 @@ class CourseSyncServiceTest {
     assertThat(repository.items.get("emby-removed").available()).isFalse();
   }
 
+  @Test
+  void rebindsLegacyLessonInPlaceAndAuditsChangedEmbyId() {
+    FakeRepository repository = new FakeRepository();
+    repository.course = new Course("course-1", "蓝牙课程", "", "deleted-parent", true, 0, null, null);
+    repository.items.put(
+        "old-emby",
+        new MediaItem("local-lesson", "course-1", "old-emby", "第一课", 60_000, false, 9, true));
+    EmbyGateway emby =
+        parentId ->
+            List.of(
+                new EmbyDtos.MediaItem(
+                    "new-emby", "第一课", 61_500, 1, "Movie", "path-sha256-v1:new"));
+    Clock clock = Clock.fixed(Instant.parse("2026-09-02T00:00:00Z"), ZoneOffset.UTC);
+    CourseSyncService service =
+        new CourseSyncService(
+            repository,
+            emby,
+            () -> "generated-" + (++repository.generatedIds),
+            clock,
+            new CatalogSnapshotWriter(
+                repository, () -> "generated-" + (++repository.generatedIds), clock),
+            new MediaMappingPlanner());
+
+    service.rebindCourse("course-1", "new-parent", Map.of());
+
+    assertThat(repository.course.embyParentItemId()).isEqualTo("new-parent");
+    assertThat(repository.items).containsOnlyKeys("new-emby");
+    assertThat(repository.items.get("new-emby"))
+        .extracting(
+            MediaItem::id, MediaItem::embyItemType, MediaItem::enabled, MediaItem::sortOrder)
+        .containsExactly("local-lesson", "Movie", false, 9);
+    assertThat(repository.mappingAudit)
+        .containsExactly("old-emby->new-emby:UNIQUE_LEGACY_METADATA");
+  }
+
+  @Test
+  void rejectsSubmittedMappingThatIsNotAConflictCandidate() {
+    FakeRepository repository = new FakeRepository();
+    repository.course = new Course("course-1", "行测", "", "old-parent", true, 0, null, null);
+    repository.items.put(
+        "same-emby",
+        new MediaItem("local-lesson", "course-1", "same-emby", "第一课", 60_000, true, 1, true));
+    EmbyGateway emby = parentId -> List.of(new EmbyDtos.MediaItem("same-emby", "第一课", 60_000, 1));
+    Clock clock = Clock.fixed(Instant.parse("2026-09-02T00:00:00Z"), ZoneOffset.UTC);
+    CourseSyncService service =
+        new CourseSyncService(
+            repository,
+            emby,
+            () -> "generated-" + (++repository.generatedIds),
+            clock,
+            new CatalogSnapshotWriter(
+                repository, () -> "generated-" + (++repository.generatedIds), clock),
+            new MediaMappingPlanner());
+
+    assertThatThrownBy(
+            () ->
+                service.rebindCourse("course-1", "new-parent", Map.of("same-emby", "local-lesson")))
+        .isInstanceOfSatisfying(
+            BusinessException.class,
+            exception ->
+                assertThat(exception.errorCode()).isEqualTo("EMBY_MEDIA_MAPPING_CONFLICT"));
+    assertThat(repository.course.embyParentItemId()).isEqualTo("old-parent");
+    assertThat(repository.mappingAudit).isEmpty();
+  }
+
   private static final class FakeRepository implements CourseRepository {
     private Course course;
     private final Map<String, MediaItem> items = new LinkedHashMap<>();
+    private final List<String> mappingAudit = new ArrayList<>();
+    private int generatedIds;
 
     @Override
     public Optional<Course> findCourse(String courseId) {
@@ -90,38 +161,73 @@ class CourseSyncServiceTest {
     }
 
     @Override
-    public void upsertMediaItem(MediaItem item, Instant now) {
-      MediaItem existing = items.get(item.embyItemId());
-      items.put(
-          item.embyItemId(),
-          existing == null
-              ? item
-              : new MediaItem(
-                  existing.id(),
-                  existing.courseId(),
-                  existing.embyItemId(),
-                  item.title(),
-                  item.durationMs(),
-                  existing.enabled(),
-                  existing.sortOrder(),
-                  true));
+    public void insertMediaItem(MediaItem item, Instant now) {
+      items.put(item.embyItemId(), item);
     }
 
     @Override
-    public void markUnavailableExcept(String courseId, List<String> availableEmbyIds, Instant now) {
+    public void updateMediaItemFromRemote(MediaItem item, Instant now) {
+      items.entrySet().removeIf(entry -> entry.getValue().id().equals(item.id()));
+      items.put(item.embyItemId(), item);
+    }
+
+    @Override
+    public void insertMediaItemSourceMapping(
+        String id,
+        String mediaItemId,
+        String oldEmbyItemId,
+        String newEmbyItemId,
+        String matchType,
+        Instant now) {
+      mappingAudit.add(oldEmbyItemId + "->" + newEmbyItemId + ":" + matchType);
+    }
+
+    @Override
+    public void markUnavailableExceptMediaIds(
+        String courseId, List<String> availableMediaItemIds, Instant now) {
       items.replaceAll(
           (id, item) ->
-              availableEmbyIds.contains(id)
+              availableMediaItemIds.contains(item.id())
                   ? item
                   : new MediaItem(
                       item.id(),
                       item.courseId(),
                       item.embyItemId(),
+                      item.embyItemType(),
+                      item.sourceFingerprint(),
                       item.title(),
                       item.durationMs(),
                       item.enabled(),
                       item.sortOrder(),
                       false));
+    }
+
+    @Override
+    public void updateCourseSource(String courseId, String embyParentItemId, Instant now) {
+      course =
+          new Course(
+              course.id(),
+              course.name(),
+              course.description(),
+              embyParentItemId,
+              course.enabled(),
+              course.sortOrder(),
+              course.lastSyncedAt(),
+              course.lastSyncError());
+    }
+
+    @Override
+    public void updateCourseEnabled(String courseId, boolean enabled, Instant now) {
+      course =
+          new Course(
+              course.id(),
+              course.name(),
+              course.description(),
+              course.embyParentItemId(),
+              enabled,
+              course.sortOrder(),
+              course.lastSyncedAt(),
+              course.lastSyncError());
     }
 
     @Override

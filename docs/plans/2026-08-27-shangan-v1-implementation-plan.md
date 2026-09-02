@@ -22,8 +22,8 @@
 - 所有日期边界按用户时区处理，数据库时间统一 UTC Epoch Milliseconds。
 - 所有状态机和时间规则必须通过注入的 `java.time.Clock` 做纯逻辑测试。
 - 服务端自动化测试不得启动 SQLite、Flyway 或其他真实数据库；历史 Task 中的数据库集成测试要求统一由 Task 23 替代。
-- 每个 Task 独立完成测试、评审和提交，禁止一次提交跨越多个 Task。
-- Task 1–3 在应用脚手架尚未齐全时运行各 Task 明确的验证命令；从 Task 4 起，每次提交前运行 `make format && make verify`。
+- 每个 Task 独立完成新增或直接修改相关的窄测试、评审和提交，禁止一次提交跨越多个 Task；全量测试统一由 GitHub CI 执行，本地不得运行。
+- Task 1–3 在应用脚手架尚未齐全时运行各 Task 明确的窄验证命令；从 Task 4 起，每次提交前本地运行 `make format` 和本次新增或修改相关的窄测试，`make verify` 只由 GitHub CI 运行。
 - 禁止用跳过测试、删除断言或放宽业务规则的方式让测试通过。
 
 ---
@@ -2325,6 +2325,296 @@ cd apps/ios && fvm flutter build apk --debug
 
 检查没有真实数据库测试残留、没有依赖预发布版本、没有密钥或调试产物，并提交一次可评审变更。
 
+### Task 24：Emby 媒体库同步与稳定课时重映射
+
+**前置文档：**
+
+- `docs/adr/0015-emby-library-remapping.md`
+
+**主要文件：**
+
+- 新建：`apps/server/src/main/resources/db/migration/V025__emby_source_mapping.sql`
+- 修改：`apps/server/src/main/java/com/shangan/media/emby/EmbyClient.java`
+- 修改：`apps/server/src/main/java/com/shangan/media/emby/EmbyDtos.java`
+- 修改：`apps/server/src/main/java/com/shangan/media/emby/EmbyGateway.java`
+- 新建：Emby 来源指纹计算与分页结果校验组件
+- 修改：`catalog` 的课程、课时、Repository、同步服务和快照写入边界
+- 修改：`CourseAdminController`、课程管理模板和课时管理模板
+- 测试：Emby 媒体库协议、分页、混合类型、来源指纹和重新绑定应用服务测试
+
+**接口：**
+
+- ADMIN：读取当前 Emby 用户可见媒体库，在创建课程时选择媒体库，并把已有课程原子重新绑定到新媒体库。
+- 不新增或修改 `/api/v1` 学习端契约。
+- `media_items.id` 保持内部不可变身份，`emby_item_id` 变为可安全替换的当前播放源标识。
+
+- [ ] **步骤 1：先写失败的 Emby 协议测试**
+
+覆盖媒体库列表、`/Users/{EMBY_USER_ID}/Items` 用户作用域、Movie/Episode/Video 混合类型、`StartIndex/Limit` 分页、稳定排序、Item ID 去重、任一页失败不返回部分结果，以及父节点 404 的稳定错误。所有断言不得输出 Base URL、API Key 或原始媒体路径。
+
+- [ ] **步骤 2：先写失败的重映射逻辑测试**
+
+覆盖：
+
+```text
+相同 Item ID -> 更新远端字段并保留本地控制字段
+唯一来源指纹 -> 原位更新 Item ID，本地课时 ID 不变
+无指纹历史课时的唯一标题与 2 秒内时长 -> 一次性兼容映射
+同名、近似时长的一对多或多对一 -> EMBY_MEDIA_MAPPING_CONFLICT
+冲突 -> 不调用快照写入和课程重绑边界
+父节点不存在 -> 保留最后一次可用快照
+新视频 -> 新建课时
+远端删除 -> 仅在父节点有效且完整分页成功后标记不可用
+```
+
+- [ ] **步骤 3：追加 V025 并实现稳定来源身份**
+
+向 `media_items` 追加可空来源指纹和媒体类型，创建非空指纹唯一索引与不含路径的 Item ID 映射审计表。不得修改 V001～V024。来源指纹只在内存中从规范化 Emby `Path` 计算版本化 SHA-256；原始路径不得写入数据库、日志、错误或页面。
+
+- [ ] **步骤 4：实现分页媒体库同步和原子重新绑定**
+
+先在事务外验证父节点并完整读取全部页，再构造确定性的匹配计划。应用服务在单个短事务中完成课程父节点更新、已确认课时原位映射、新课时写入、远端缺失标记和映射审计。任何冲突或远端分页失败都不得产生部分修改。
+
+- [ ] **步骤 5：实现后台媒体库选择与冲突确认**
+
+创建课程页面显示配置用户可见的视频媒体库名称、类型和 ID，并保留 Series/Folder ID 高级入口。已有课程支持“更换媒体来源”；提交前展示自动映射、新增、不可用和冲突数量。冲突必须由管理员逐项确认，不能仅凭标题静默合并。页面不得显示媒体原始路径。
+
+- [ ] **步骤 6：验证并人工检查迁移**
+
+自动化测试只使用 Fake Repository 和 Emby 协议服务器，不启动 SQLite 或 Flyway。运行：
+
+```bash
+cd apps/server
+./mvnw -Dtest='EmbyClientContractTest,*CourseSync*,*MediaMapping*' test
+cd ../..
+make format
+make verify
+```
+
+按 ADR-0014 人工审查 V025 SQL，并在独立备份副本启动服务验证迁移；不得直接改写当前 `apps/server/data/study.db`。
+
+- [ ] **步骤 7：检查并提交**
+
+检查变更范围、映射歧义、事务边界、原始路径和密钥泄露、旧父节点失败行为及测试结果，然后提交一次：
+
+```bash
+git add docs apps/server
+git commit -m "feat(catalog): remap rebuilt emby libraries"
+```
+
+### Task 25：Emby 来源联想、批量建课与课程归档
+
+**状态：** ADR-0016 已获人工批准，可以实施。
+
+**前置文档：**
+
+- `docs/adr/0016-emby-source-discovery-batch-course-archive.md`
+
+**主要文件：**
+
+- 修改：`apps/server/src/main/java/com/shangan/media/emby/EmbyClient.java`
+- 修改：`apps/server/src/main/java/com/shangan/media/emby/EmbyDtos.java`
+- 修改：`apps/server/src/main/java/com/shangan/media/emby/EmbyGateway.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/application/CourseSyncService.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/infrastructure/CourseRepository.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/infrastructure/JdbcCourseRepository.java`
+- 修改：`apps/server/src/main/java/com/shangan/admin/CourseAdminController.java`
+- 修改：课程管理与媒体来源 Thymeleaf 模板、必要的后台静态资源
+- 测试：Emby 来源搜索协议、批量建课、归档恢复、Controller 和后台交互测试
+
+**接口：**
+
+- ADMIN 配置：绑定多个当前 Emby 用户可见的媒体库，并为每个绑定选择剧集、电影或混合类型。
+- ADMIN JSON：在管理员打开选择弹窗后，分页返回已绑定媒体库下符合类型的全部 Series 和 Movie，仅返回安全元数据；服务端不增加来源类型硬限制。
+- ADMIN：单个“添加并同步”、最多 50 个来源的“批量添加并同步”、课程归档、归档列表和恢复。
+- ADMIN：已有课程的重新绑定页复用来源联想，但继续执行 ADR-0015 的预览与冲突确认。
+- 不新增或修改 `/api/v1` 学习端契约。
+
+- [x] **步骤 1：先写失败的 Emby 来源发现协议测试**
+
+覆盖配置用户作用域、多媒体库绑定、Series/Movie 类型过滤、空关键字全量读取、`StartIndex/Limit` 分页、稳定排序、Item ID 去重、空结果和后续页失败。响应、断言和错误不得输出 Base URL、API Key 或原始媒体路径。
+
+- [x] **步骤 2：先写失败的批量与归档应用服务测试**
+
+覆盖：
+
+```text
+单个来源 -> 使用来源名称创建课程并触发同步
+多个来源 -> 按选择顺序创建并串行同步
+活动课程同来源 -> 幂等跳过
+已归档课程同来源 -> 恢复原课程 ID 后同步
+任一来源提交前失效 -> 不创建本批次课程
+单门同步失败 -> 记录该课程安全错误，其他课程继续
+归档 -> enabled=false，课时和历史不删除，定时同步忽略
+恢复 -> 原课程 ID 和课时 ID 不变
+```
+
+- [x] **步骤 3：实现用户作用域的来源搜索端口**
+
+Emby 适配器只查询固定配置主机、配置用户和后台已绑定媒体库，并按每个绑定的剧集、电影或混合类型分页读取 Series/Movie，统一映射为安全 DTO。不得返回或记录 Emby `Path`。外部调用设置连接/读取超时，完整取得全部分页后再返回。
+
+- [x] **步骤 4：实现单个与批量添加边界**
+
+提交最多 50 个来源。先在事务外验证全部来源，再在一个短事务中创建、跳过或恢复课程；事务提交后按选择顺序逐门调用既有同步服务。返回逐项结果，不把 Emby 请求放入 SQLite 事务。课程父节点唯一约束继续作为最终防线。
+
+- [x] **步骤 5：实现可恢复课程归档**
+
+后台删除只把 `courses.enabled` 设为 `false`，不得删除 `courses`、`media_items` 或任何业务历史。App 查询、计划新增和定时同步只读取活动课程；后台提供已归档列表和恢复操作。删除确认展示课程名、课时数和“历史保留”说明。
+
+- [x] **步骤 6：实现统一来源选择器与批量选择托盘**
+
+沿用现有后台的白纸/墨色/可信蓝视觉语言和系统字体，不重新设计全站主题。服务配置页提供多媒体库勾选和剧集/电影/混合类型选择；创建页和重新绑定页只显示“选择 Emby 课程”按钮，点击后打开可键盘操作的弹窗并分页加载全部候选，弹窗支持搜索过滤、勾选和“确定绑定”，结果显示名称、类型和 ID，同时保留兼容来源与手工 ID 能力；已选择来源进入紧凑的“待添加课程”托盘，可逐项移除。按钮使用明确动词：“确定绑定”“添加并同步”“批量添加并同步”“预览映射”“归档课程”“恢复课程”。加载、空结果、失效来源和部分同步失败都必须给出可执行提示，弹窗可取消并在 Escape 后可靠隐藏。
+
+- [ ] **步骤 7：验证并执行真实启动 Smoke Test**
+
+自动化测试不得连接真实 Emby、SQLite 或 Flyway。运行：
+
+```bash
+cd apps/server
+./mvnw -Dtest='EmbyClientContractTest,*CourseBatch*,*CourseArchive*,*CourseAdmin*' test
+cd ../..
+make format
+make verify
+./run.sh server
+```
+
+确认 `/actuator/health` 为 `UP`，再在后台人工验证联想、单个添加、批量添加、重新绑定预览、归档和恢复。真实测试不得物理删除学习数据，页面与日志不得出现媒体路径或密钥。
+
+- [ ] **步骤 8：检查并提交**
+
+检查批量幂等、事务边界、归档数据保留、映射歧义、防重复提交、Secret/Path 泄漏和启动结果，然后提交一次：
+
+```bash
+git add docs apps/server
+git commit -m "feat(catalog): discover and batch add emby sources"
+```
+
+### Task 26：已归档课程单个与批量删除
+
+> **历史 Task，删除语义已被 Task 27 和 ADR-0018 取代。** V027 的 `removed_at` 与移除审计仅保留迁移兼容，不再作为最终删除行为。
+
+**状态：** ADR-0017 已获人工批准，可以实施。
+
+**前置文档：**
+
+- `docs/adr/0017-remove-archived-courses.md`
+
+**主要文件：**
+
+- 新增：追加式 Flyway 迁移，为课程增加 `removed_at`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/application/CourseSyncService.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/infrastructure/CourseRepository.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/infrastructure/JdbcCourseRepository.java`
+- 修改：`apps/server/src/main/java/com/shangan/admin/CourseAdminController.java`
+- 修改：已归档课程 Thymeleaf 模板及必要的后台静态资源
+- 测试：课程移除应用服务、Controller 与二次确认交互测试
+
+**接口：**
+
+- ADMIN：单个删除已归档课程。
+- ADMIN：勾选、全选当前列表并批量删除最多 50 门已归档课程。
+- ADMIN：二次确认展示课程数量、课时总数和不可手工恢复提示。
+- 不新增或修改 `/api/v1` 学习端契约。
+
+- [x] **步骤 1：获得范围变更批准并冻结删除语义**
+
+确认“删除”只将课程标记为已移除并隐藏，不物理删除学习历史；相同 Emby 来源以后重新添加时复用原课程身份。批准后把 ADR-0017 状态改为“已接受”，再开始实现。
+
+- [x] **步骤 2：先写失败的课程移除应用服务测试**
+
+覆盖单个删除、最多 50 门批量删除、只允许已归档课程、整批校验失败不写入、重复提交幂等、学习历史仓储不接收删除调用，以及重新添加同来源时恢复原身份并清除 `removed_at`。
+
+- [x] **步骤 3：追加迁移并实现应用服务边界**
+
+通过新迁移增加可空 UTC Epoch Milliseconds `removed_at`，不得编辑现有迁移。应用服务在一个短事务中校验全部课程、写入移除时间并记录安全审计；Repository 只负责持久化，不在 Controller 中使用 `JdbcClient`。
+
+- [x] **步骤 4：实现已归档课程批量操作和二次确认**
+
+列表提供逐行复选框、整行点击高亮、全选当前列表、单个删除和“删除所选”。二次确认展示课程数、课时总数与历史保留说明；默认焦点落在取消按钮，Escape 和点击取消不提交，确认后使用明确反馈说明删除结果。
+
+- [ ] **步骤 5：执行窄测试与人工检查**
+
+本地只运行课程移除新增或直接修改相关的窄测试与 `make format`；全量 `make verify` 交给 GitHub CI。再启动后端人工确认单个删除、全选、批量删除、取消确认、重复提交和相同来源重新添加。检查迁移追加性、事务边界、CSRF、越权、请求 ID、秘密与媒体路径泄漏。
+
+- [ ] **步骤 6：检查并提交**
+
+```bash
+git add docs apps/server
+git commit -m "feat(catalog): remove archived courses"
+```
+
+### Task 27：物理删除已归档课程完整关联数据图
+
+**状态：** ADR-0018 已获人工批准，可以实施；真实删除仍只能由管理员二次确认触发。
+
+**前置文档：**
+
+- `docs/adr/0018-hard-delete-archived-course-graph.md`
+
+**主要文件：**
+
+- 新增：课程删除影响预览 DTO、应用服务和专用 Repository 边界
+- 修改：`apps/server/src/main/java/com/shangan/catalog/application/CourseSyncService.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/infrastructure/CourseRepository.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/infrastructure/JdbcCourseRepository.java`
+- 修改：内容任务、观看会话、报表和日终结果的显式删除/失效端口
+- 修改：`apps/server/src/main/java/com/shangan/admin/CourseAdminController.java`
+- 修改：已归档课程 Thymeleaf 模板及必要的后台静态资源
+- 新增：必要的追加式 Flyway 迁移或删除统计索引；不得修改 V027
+- 测试：课程关联图物理删除、影响预览、批量原子性、并发失效、Controller 和二次确认交互测试
+
+**接口：**
+
+- ADMIN：预览单个或最多 50 门已归档课程的完整删除影响。
+- ADMIN：携带预览校验信息确认物理删除完整关联数据图。
+- 不新增或修改 `/api/v1` 学习端契约。
+
+- [x] **步骤 1：获得 ADR-0018 人工批准并冻结删除图**
+
+确认删除包含课程、课时、计划项目、欠债、观看与进度、题库与答题、学习内容、内容任务与草稿、映射和审计，以及受影响的作战单修订和报表派生数据。批准前不得修改删除实现或真实数据库。
+
+- [x] **步骤 2：先写失败的删除图应用服务窄测试**
+
+使用 Fake/Mock Repository，不启动 SQLite 或 Flyway，覆盖：
+
+```text
+只有已归档课程可删除
+单门和最多 50 门批量删除
+预览返回每类精确影响数量
+预览失效或任一活动课程 -> 整批零写入
+依赖按叶子到根顺序删除且不遗漏间接关系
+同计划其他课程项目和计划容器保留
+受影响修订、日报和日终结果失效并重建
+活动观看与内容任务删除后不能回写
+重复确认不删除新建的同来源课程
+同来源重新添加 -> 新课程 ID 和新课时 ID
+```
+
+- [x] **步骤 3：实现影响预览和应用边界**
+
+预览只返回数量和安全标识，不返回媒体路径、密钥、课程正文或题目正文。应用服务校验归档状态与预览版本，在一个短事务中编排显式 Repository 删除命令；Controller 不直接访问数据库。
+
+- [x] **步骤 4：实现完整关联图删除**
+
+按 ADR-0018 的范围先删除题目草稿/答题明细、内容任务日志、验活、偿还等叶子记录，再删除课时级、课程级记录和课程本身。显式处理 `daily_plan_items.debt_id`、作战单修订 JSON、日报快照和日终结果等非完整外键关系。受控附件先校验目录，事务提交后清理，失败进入安全重试。
+
+- [x] **步骤 5：更新二次确认和重新添加语义**
+
+确认弹窗展示课程、课时及各类关联记录数量，明确“全部永久删除、不可恢复、重新添加会生成新课程”。默认焦点为取消；Escape、关闭和取消不提交。移除同来源历史恢复分支，物理删除后创建全新身份。
+
+- [x] **步骤 6：运行本次新增或直接修改的窄测试与格式化**
+
+只运行 Task 27 新增或直接修改相关的服务、Controller 和页面窄测试，再运行 `make format`。本地不运行模块全量测试或 `make verify`；全量验证由 GitHub CI 执行。
+
+- [ ] **步骤 7：人工检查并提交**
+
+在数据库备份副本上人工验证外键完整性、删除统计、同计划其他课程保留、派生数据重建和同来源新建身份。不得直接操作当前生产性 `study.db`。检查 CSRF、事务边界、并发任务、附件路径、秘密与媒体路径泄漏后提交：
+
+```bash
+git add docs apps/server
+git commit -m "feat(catalog): hard delete archived course graph"
+```
+
 ## Cross-Task Review Gates
 
 After Tasks 1–4:
@@ -2445,6 +2735,25 @@ Flutter 3.44.7、Dart 3.12.x、pubspec 和 CI 版本一致
 移动端依赖覆盖 iPhone、iPad 和 Android
 服务端自动化测试不启动 SQLite、Flyway 或真实数据库
 日终分类等核心规则由纯逻辑测试覆盖
+```
+
+Task 24 之后：
+
+```text
+后台可直接选择配置用户可见的 Emby 媒体库
+Movie、Episode 和普通 Video 可分页完整同步
+父节点失效不会把最后一次可用课时快照清空
+媒体库重建后安全更新外部 Item ID，本地课时与全部学习历史保持不变
+歧义映射必须人工确认，原始媒体路径和 Emby 密钥不落库、不出页面、不进日志
+```
+
+Task 27 之后：
+
+```text
+已归档课程删除会物理清理完整关联数据图，不再只写 removed_at
+删除预览展示各类实际影响数量，预览失效或批量校验失败时整批不写入
+同一作战单内其他课程数据保留，作战单修订和报表派生数据不残留已删除课程贡献
+相同 Emby 来源重新添加时创建全新的课程和课时身份
 ```
 
 ---

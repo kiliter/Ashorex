@@ -1,6 +1,7 @@
 package com.shangan.admin;
 
 import com.shangan.common.integration.RuntimeIntegrationSettings;
+import java.util.List;
 
 /** 管理后台外部服务配置表单；敏感字段只在 ADMIN 页面回填。 */
 public record IntegrationSettingsForm(
@@ -73,8 +74,15 @@ public record IntegrationSettingsForm(
 
   /** 构造待校验的完整配置快照。 */
   public RuntimeIntegrationSettings toSettings() {
+    return toSettings(List.of());
+  }
+
+  /** 保存其他服务配置时显式保留已绑定媒体库，避免整表替换意外清空搜索范围。 */
+  public RuntimeIntegrationSettings toSettings(
+      List<RuntimeIntegrationSettings.EmbyLibrary> embyLibraries) {
     return new RuntimeIntegrationSettings(
         new RuntimeIntegrationSettings.Emby(embyBaseUrl, embyApiKey, embyUserId),
+        embyLibraries,
         new RuntimeIntegrationSettings.Asr(
             asrBaseUrl,
             asrApiKey,

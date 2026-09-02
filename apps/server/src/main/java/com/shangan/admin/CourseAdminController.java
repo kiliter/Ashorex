@@ -1,7 +1,10 @@
 package com.shangan.admin;
 
+import com.shangan.catalog.application.CourseBatchService;
+import com.shangan.catalog.application.CourseDeletionService;
 import com.shangan.catalog.application.CourseSyncService;
 import com.shangan.catalog.application.LessonStudyContentImportService;
+import com.shangan.catalog.domain.Course;
 import com.shangan.catalog.domain.MediaItem;
 import com.shangan.common.api.BusinessException;
 import com.shangan.quiz.application.QuizService;
@@ -9,6 +12,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotBlank;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -29,21 +33,51 @@ import org.springframework.web.multipart.MultipartFile;
 public class CourseAdminController {
 
   private final CourseSyncService courses;
+  private final CourseBatchService courseBatches;
+  private final CourseDeletionService courseDeletions;
   private final LessonStudyContentImportService studyContents;
   private final QuizService quizzes;
 
   public CourseAdminController(
       CourseSyncService courses,
+      CourseBatchService courseBatches,
+      CourseDeletionService courseDeletions,
       LessonStudyContentImportService studyContents,
       QuizService quizzes) {
     this.courses = courses;
+    this.courseBatches = courseBatches;
+    this.courseDeletions = courseDeletions;
     this.studyContents = studyContents;
     this.quizzes = quizzes;
   }
 
   @GetMapping("/admin/courses")
   String courses(Model model) {
-    model.addAttribute("courses", courses.listAdminCourses());
+    populateCoursesModel(model);
+    return "admin/courses";
+  }
+
+  /** 供可键盘操作的来源选择器使用；响应只包含 Emby 安全元数据。 */
+  @ResponseBody
+  @GetMapping(value = "/admin/emby/sources", produces = MediaType.APPLICATION_JSON_VALUE)
+  List<com.shangan.media.emby.EmbyDtos.MediaSource> searchSources(
+      @RequestParam(defaultValue = "") String query) {
+    return courseBatches.searchSources(query);
+  }
+
+  /** 一次提交最多 50 个来源；先全量验证，再创建或恢复，并逐门串行同步。 */
+  @PostMapping("/admin/courses/batch")
+  String batchAddCourses(
+      @RequestParam(name = "sourceIds", required = false) List<String> sourceIds,
+      Model model,
+      HttpServletResponse response) {
+    try {
+      model.addAttribute("batchResult", courseBatches.addAndSynchronize(sourceIds));
+    } catch (BusinessException exception) {
+      response.setStatus(exception.status().value());
+      model.addAttribute("batchError", exception.getMessage());
+    }
+    populateCoursesModel(model);
     return "admin/courses";
   }
 
@@ -51,8 +85,10 @@ public class CourseAdminController {
   String createCourse(
       @RequestParam @NotBlank String name,
       @RequestParam(defaultValue = "") String description,
-      @RequestParam @NotBlank String embyParentItemId) {
-    courses.createCourse(name, description, embyParentItemId);
+      @RequestParam(defaultValue = "") String selectedParentItemId,
+      @RequestParam(defaultValue = "") String manualParentItemId) {
+    courses.createCourse(
+        name, description, preferredParentId(selectedParentItemId, manualParentItemId));
     return "redirect:/admin/courses";
   }
 
@@ -60,6 +96,108 @@ public class CourseAdminController {
   String sync(@PathVariable String courseId) {
     courses.syncCourse(courseId);
     return "redirect:/admin/courses/" + courseId + "/lessons";
+  }
+
+  /** 删除前展示课程名称、课时数量和历史保留说明，避免把归档误认为物理删除。 */
+  @GetMapping("/admin/courses/{courseId}/archive")
+  String archiveConfirmation(@PathVariable String courseId, Model model) {
+    model.addAttribute("course", courses.getAdminCourse(courseId));
+    model.addAttribute("lessonCount", courses.countAdminLessons(courseId));
+    return "admin/course-archive";
+  }
+
+  /** 后台删除仅逻辑归档，不删除课时、计划、进度、欠债或内容数据。 */
+  @PostMapping("/admin/courses/{courseId}/archive")
+  String archive(@PathVariable String courseId) {
+    courses.archiveCourse(courseId);
+    return "redirect:/admin/courses?archived=1";
+  }
+
+  /** 已归档课程单独展示，并提供恢复原课程身份的操作。 */
+  @GetMapping("/admin/courses/archived")
+  String archivedCourses(Model model) {
+    populateArchivedCoursesModel(model);
+    return "admin/course-archived";
+  }
+
+  /** 返回实时关联图统计和预览令牌，确认弹窗不再依赖浏览器估算删除影响。 */
+  @ResponseBody
+  @GetMapping(
+      value = "/admin/courses/archived/removal-preview",
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  CourseDeletionService.Preview removalPreview(
+      @RequestParam(name = "courseIds", required = false) List<String> courseIds) {
+    return courseDeletions.preview(courseIds);
+  }
+
+  /** 单个和批量删除共用完整关联图事务；错误时保留归档列表并返回可执行提示。 */
+  @PostMapping("/admin/courses/archived/remove")
+  String removeArchivedCourses(
+      @RequestParam(name = "courseIds", required = false) List<String> courseIds,
+      @RequestParam String previewToken,
+      HttpServletResponse response,
+      Model model) {
+    try {
+      int removedCount = courseDeletions.delete(courseIds, previewToken);
+      return "redirect:/admin/courses/archived?removed=" + removedCount;
+    } catch (BusinessException exception) {
+      response.setStatus(exception.status().value());
+      model.addAttribute("removeError", exception.getMessage());
+      populateArchivedCoursesModel(model);
+      return "admin/course-archived";
+    }
+  }
+
+  private void populateArchivedCoursesModel(Model model) {
+    List<Course> archived = courses.listArchivedCourses();
+    CourseDirectoryStatistics statistics = courseDirectoryStatistics(archived);
+    model.addAttribute("courses", archived);
+    model.addAttribute("courseLessonCounts", statistics.lessonCounts());
+    model.addAttribute("totalArchivedLessonCount", statistics.totalLessonCount());
+  }
+
+  @PostMapping("/admin/courses/{courseId}/restore")
+  String restore(@PathVariable String courseId) {
+    courses.restoreCourse(courseId);
+    return "redirect:/admin/courses/archived?restored=1";
+  }
+
+  /** 打开媒体来源更换页；只展示媒体库安全元数据，不展示 Emby 物理路径。 */
+  @GetMapping("/admin/courses/{courseId}/source")
+  String source(@PathVariable String courseId, Model model) {
+    populateSourceModel(courseId, model);
+    return "admin/course-source";
+  }
+
+  /** 在事务外读取新来源并预览自动映射、新课时、失效课时和冲突。 */
+  @PostMapping("/admin/courses/{courseId}/source/preview")
+  String previewSource(
+      @PathVariable String courseId,
+      @RequestParam(defaultValue = "") String selectedParentItemId,
+      @RequestParam(defaultValue = "") String manualParentItemId,
+      Model model,
+      HttpServletResponse response) {
+    populateSourceModel(courseId, model);
+    try {
+      var preview =
+          courses.previewSource(
+              courseId, preferredParentId(selectedParentItemId, manualParentItemId));
+      model.addAttribute("preview", preview);
+    } catch (BusinessException exception) {
+      response.setStatus(exception.status().value());
+      model.addAttribute("sourceError", exception.getMessage());
+    }
+    return "admin/course-source";
+  }
+
+  /** 重新读取远端完整快照，并携带管理员对歧义项的一对一确认执行原子重绑。 */
+  @PostMapping("/admin/courses/{courseId}/source")
+  String rebindSource(
+      @PathVariable String courseId,
+      @RequestParam String targetParentItemId,
+      @RequestParam(required = false) List<String> mapping) {
+    courses.rebindCourse(courseId, targetParentItemId, confirmedMappings(mapping));
+    return "redirect:/admin/courses/" + courseId + "/source?rebound=1";
   }
 
   @GetMapping("/admin/courses/{courseId}/lessons")
@@ -177,6 +315,61 @@ public class CourseAdminController {
     model.addAttribute("importError", importError);
   }
 
+  private void populateCoursesModel(Model model) {
+    List<Course> activeCourses = courses.listAdminCourses();
+    CourseDirectoryStatistics statistics = courseDirectoryStatistics(activeCourses);
+    model.addAttribute("courses", activeCourses);
+    model.addAttribute("courseLessonCounts", statistics.lessonCounts());
+    model.addAttribute("courseLessonDurations", statistics.lessonDurations());
+    // 课程目录头部直接展示当前活动课程包含的全部课时数量。
+    model.addAttribute("totalLessonCount", statistics.totalLessonCount());
+    model.addAttribute(
+        "totalLessonDuration", AdminDisplayFormatter.lessonDuration(statistics.totalDurationMs()));
+  }
+
+  private void populateSourceModel(String courseId, Model model) {
+    model.addAttribute("course", courses.getAdminCourse(courseId));
+  }
+
+  /** 一次读取并汇总各课程的课时数量与媒体时长，避免为同一课程重复查询课时。 */
+  private CourseDirectoryStatistics courseDirectoryStatistics(List<Course> courseList) {
+    Map<String, Integer> counts = new LinkedHashMap<>();
+    Map<String, String> durations = new LinkedHashMap<>();
+    int totalLessonCount = 0;
+    long totalDurationMs = 0L;
+    for (Course course : courseList) {
+      List<MediaItem> lessons = courses.listAdminLessons(course.id());
+      int lessonCount = lessons.size();
+      long durationMs = lessons.stream().mapToLong(MediaItem::durationMs).sum();
+      counts.put(course.id(), lessonCount);
+      durations.put(course.id(), AdminDisplayFormatter.lessonDuration(durationMs));
+      totalLessonCount += lessonCount;
+      totalDurationMs += durationMs;
+    }
+    return new CourseDirectoryStatistics(counts, durations, totalLessonCount, totalDurationMs);
+  }
+
+  private String preferredParentId(String selectedParentItemId, String manualParentItemId) {
+    return manualParentItemId == null || manualParentItemId.isBlank()
+        ? selectedParentItemId
+        : manualParentItemId;
+  }
+
+  /** 解析页面的 remoteId|localId 值；非法项会被忽略并在重新规划时继续形成冲突。 */
+  private Map<String, String> confirmedMappings(List<String> submitted) {
+    Map<String, String> result = new LinkedHashMap<>();
+    if (submitted == null) {
+      return result;
+    }
+    for (String value : submitted) {
+      String[] parts = value == null ? new String[0] : value.split("\\|", 2);
+      if (parts.length == 2 && !parts[0].isBlank() && !parts[1].isBlank()) {
+        result.put(parts[0], parts[1]);
+      }
+    }
+    return result;
+  }
+
   @PostMapping("/admin/courses/{courseId}/lessons/{lessonId}")
   String updateLesson(
       @PathVariable String courseId,
@@ -189,6 +382,13 @@ public class CourseAdminController {
 
   /** 课时台账轮询响应，不包含正文和题目明细。 */
   private record LessonListLiveResponse(List<LessonLiveView> lessons) {}
+
+  /** 课程目录统计只服务后台展示，不进入课程领域模型。 */
+  private record CourseDirectoryStatistics(
+      Map<String, Integer> lessonCounts,
+      Map<String, String> lessonDurations,
+      int totalLessonCount,
+      long totalDurationMs) {}
 
   /** 单行课时最新状态。 */
   private record LessonLiveView(

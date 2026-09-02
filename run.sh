@@ -28,6 +28,10 @@ print_usage() {
   SERVER_PORT        Spring Boot 本地端口，默认 18080
   FLUTTER_DEVICE_ID  指定模拟器 UDID；未设置时自动复用或启动一个 iPhone 模拟器
   JWT_SECRET         覆盖本地 JWT 密钥；未设置时使用 .run/jwt-secret 中的随机密钥
+
+开发说明：
+  后端直接读取 src/main/resources 下的模板和静态文件。
+  修改 HTML、CSS 或 JavaScript 后刷新浏览器即可，无需重启后端；Java 代码改动仍需重启。
 USAGE
 }
 
@@ -87,6 +91,16 @@ configure_local_jwt_secret() {
   [[ ${#JWT_SECRET} -ge 32 ]] || fail 'JWT_SECRET 至少需要 32 字节。'
 }
 
+# 本地开发直接从源码目录读取模板和静态资源，避免每次调整后台页面都重启 Spring Boot。
+configure_server_hot_reload() {
+  export SPRING_THYMELEAF_CACHE=false
+  export SPRING_THYMELEAF_PREFIX="file:$SERVER_DIR/src/main/resources/templates/"
+  export SPRING_WEB_RESOURCES_STATIC_LOCATIONS="file:$SERVER_DIR/src/main/resources/static/,classpath:/static/"
+  export SPRING_WEB_RESOURCES_CACHE_PERIOD=0
+  export SPRING_WEB_RESOURCES_CHAIN_CACHE=false
+  log '已启用后台模板和静态资源热重载，修改后刷新浏览器即可。'
+}
+
 resolve_flutter_command() {
   if [[ -x "$IOS_DIR/.fvm/flutter_sdk/bin/flutter" ]]; then
     FLUTTER_COMMAND=("$IOS_DIR/.fvm/flutter_sdk/bin/flutter")
@@ -107,6 +121,7 @@ server_is_healthy() {
 run_server_foreground() {
   configure_java_21
   configure_local_jwt_secret
+  configure_server_hot_reload
   log "启动 Spring Boot：http://127.0.0.1:$SERVER_PORT"
   cd "$SERVER_DIR"
   exec ./mvnw spring-boot:run
@@ -127,6 +142,7 @@ start_server_background() {
 
   configure_java_21
   configure_local_jwt_secret
+  configure_server_hot_reload
   log "启动 Spring Boot，日志写入 $server_log"
   (
     cd "$SERVER_DIR"

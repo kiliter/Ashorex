@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f2f6fa" />
     <title th:text="${pageTitle}">上岸管理后台</title>
-    <link rel="stylesheet" th:href="@{/assets/admin.css}" />
+    <!-- 静态版本参数用于后台样式发布后立即失效浏览器缓存。 -->
+    <link rel="stylesheet" th:href="@{/assets/admin.css(v='20260902-3')}" />
   </head>
   <body>
     <!-- 高密度桌面后台统一使用顶部导航；小屏仅允许横向滚动，不切回侧栏。 -->
