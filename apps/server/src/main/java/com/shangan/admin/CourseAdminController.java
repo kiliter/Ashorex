@@ -1,18 +1,16 @@
 package com.shangan.admin;
 
 import com.shangan.catalog.application.CourseBatchService;
+import com.shangan.catalog.application.CourseDeletionService;
 import com.shangan.catalog.application.CourseSyncService;
 import com.shangan.catalog.application.LessonStudyContentImportService;
 import com.shangan.catalog.domain.Course;
 import com.shangan.catalog.domain.MediaItem;
 import com.shangan.common.api.BusinessException;
-import com.shangan.common.api.RequestIdFilter;
 import com.shangan.quiz.application.QuizService;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotBlank;
 import java.io.IOException;
-import java.security.Principal;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -36,16 +34,19 @@ public class CourseAdminController {
 
   private final CourseSyncService courses;
   private final CourseBatchService courseBatches;
+  private final CourseDeletionService courseDeletions;
   private final LessonStudyContentImportService studyContents;
   private final QuizService quizzes;
 
   public CourseAdminController(
       CourseSyncService courses,
       CourseBatchService courseBatches,
+      CourseDeletionService courseDeletions,
       LessonStudyContentImportService studyContents,
       QuizService quizzes) {
     this.courses = courses;
     this.courseBatches = courseBatches;
+    this.courseDeletions = courseDeletions;
     this.studyContents = studyContents;
     this.quizzes = quizzes;
   }
@@ -119,18 +120,25 @@ public class CourseAdminController {
     return "admin/course-archived";
   }
 
-  /** 单个和批量删除共用一个事务边界；错误时保留归档列表并返回可执行提示。 */
+  /** 返回实时关联图统计和预览令牌，确认弹窗不再依赖浏览器估算删除影响。 */
+  @ResponseBody
+  @GetMapping(
+      value = "/admin/courses/archived/removal-preview",
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  CourseDeletionService.Preview removalPreview(
+      @RequestParam(name = "courseIds", required = false) List<String> courseIds) {
+    return courseDeletions.preview(courseIds);
+  }
+
+  /** 单个和批量删除共用完整关联图事务；错误时保留归档列表并返回可执行提示。 */
   @PostMapping("/admin/courses/archived/remove")
   String removeArchivedCourses(
       @RequestParam(name = "courseIds", required = false) List<String> courseIds,
-      Principal principal,
-      HttpServletRequest request,
+      @RequestParam String previewToken,
       HttpServletResponse response,
       Model model) {
     try {
-      int removedCount =
-          courses.removeArchivedCourses(
-              courseIds, principal == null ? "unknown" : principal.getName(), requestId(request));
+      int removedCount = courseDeletions.delete(courseIds, previewToken);
       return "redirect:/admin/courses/archived?removed=" + removedCount;
     } catch (BusinessException exception) {
       response.setStatus(exception.status().value());
@@ -146,12 +154,6 @@ public class CourseAdminController {
     model.addAttribute("courses", archived);
     model.addAttribute("courseLessonCounts", statistics.lessonCounts());
     model.addAttribute("totalArchivedLessonCount", statistics.totalLessonCount());
-  }
-
-  /** Request ID 由过滤器生成；独立 Controller 测试未安装过滤器时使用安全占位值。 */
-  private String requestId(HttpServletRequest request) {
-    Object value = request.getAttribute(RequestIdFilter.ATTRIBUTE);
-    return value instanceof String requestId && !requestId.isBlank() ? requestId : "unknown";
   }
 
   @PostMapping("/admin/courses/{courseId}/restore")

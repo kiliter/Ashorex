@@ -3,6 +3,7 @@ package com.shangan.catalog.application;
 import com.shangan.catalog.domain.Course;
 import com.shangan.catalog.infrastructure.CourseRepository;
 import com.shangan.common.IdGenerator;
+import com.shangan.common.api.BusinessException;
 import com.shangan.media.emby.EmbyDtos;
 import java.time.Clock;
 import java.time.Instant;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +47,10 @@ public class CourseBatchWriter {
       if (existing != null && existing.enabled()) {
         prepared.add(new PreparedCourse(source, existing, Action.SKIPPED));
         continue;
+      }
+      if (existing != null && existing.removed()) {
+        throw new BusinessException(
+            HttpStatus.CONFLICT, "COURSE_PENDING_HARD_DELETE", "该来源存在历史移除课程，请先在已归档课程中彻底删除后再添加");
       }
       if (existing != null) {
         courses.updateCourseEnabled(existing.id(), true, now);

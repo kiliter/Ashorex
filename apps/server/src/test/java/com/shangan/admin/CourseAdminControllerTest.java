@@ -12,8 +12,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.shangan.catalog.application.CourseBatchService;
 import com.shangan.catalog.application.CourseBatchWriter;
+import com.shangan.catalog.application.CourseDeletionService;
 import com.shangan.catalog.application.CourseSyncService;
 import com.shangan.catalog.domain.Course;
+import com.shangan.catalog.domain.CourseDeletionGraph;
 import com.shangan.media.emby.EmbyDtos;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,12 +29,14 @@ class CourseAdminControllerTest {
 
   private final StubCourses courses = new StubCourses();
   private final StubBatches batches = new StubBatches();
+  private final StubDeletions deletions = new StubDeletions();
   private MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
     mockMvc =
-        MockMvcBuilders.standaloneSetup(new CourseAdminController(courses, batches, null, null))
+        MockMvcBuilders.standaloneSetup(
+                new CourseAdminController(courses, batches, deletions, null, null))
             .build();
   }
 
@@ -117,14 +121,23 @@ class CourseAdminControllerTest {
   void removesSelectedArchivedCoursesThroughOnePostBoundary() throws Exception {
     mockMvc
         .perform(
+            get("/admin/courses/archived/removal-preview")
+                .param("courseIds", "course-1", "course-2"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.impact.courseCount").value(2))
+        .andExpect(jsonPath("$.impact.lessonCount").value(66))
+        .andExpect(jsonPath("$.token").value("preview-token"));
+
+    mockMvc
+        .perform(
             post("/admin/courses/archived/remove")
                 .param("courseIds", "course-1", "course-2")
-                .principal(() -> "admin"))
+                .param("previewToken", "preview-token"))
         .andExpect(status().is3xxRedirection())
         .andExpect(redirectedUrl("/admin/courses/archived?removed=2"));
 
-    assertThat(courses.removedCourseIds).containsExactly("course-1", "course-2");
-    assertThat(courses.removalAdministrator).isEqualTo("admin");
+    assertThat(deletions.deletedCourseIds).containsExactly("course-1", "course-2");
+    assertThat(deletions.confirmedToken).isEqualTo("preview-token");
   }
 
   /** 控制器测试专用 Stub，只覆盖当前路由会调用的课程服务方法。 */
@@ -133,8 +146,6 @@ class CourseAdminControllerTest {
     private int lessonCount;
     private String archivedCourseId;
     private String restoredCourseId;
-    private List<String> removedCourseIds;
-    private String removalAdministrator;
 
     private StubCourses() {
       super(null, null, null, null, null, null);
@@ -164,12 +175,29 @@ class CourseAdminControllerTest {
     public void restoreCourse(String courseId) {
       restoredCourseId = courseId;
     }
+  }
+
+  /** 删除服务 Stub 同时验证预览和确认提交使用完全相同的课程集合。 */
+  private static final class StubDeletions extends CourseDeletionService {
+    private List<String> deletedCourseIds = List.of();
+    private String confirmedToken;
+
+    private StubDeletions() {
+      super(null, null, null, null);
+    }
 
     @Override
-    public int removeArchivedCourses(
-        List<String> courseIds, String administrator, String requestId) {
-      removedCourseIds = List.copyOf(courseIds);
-      removalAdministrator = administrator;
+    public Preview preview(List<String> courseIds) {
+      return new Preview(
+          courseIds,
+          new CourseDeletionGraph.Impact(2, 66, 2, 1, 4, 2, 3, 2, 4, 5, 2, 1, 1, 1, 1, 0, 2),
+          "preview-token");
+    }
+
+    @Override
+    public int delete(List<String> courseIds, String confirmedToken) {
+      this.deletedCourseIds = List.copyOf(courseIds);
+      this.confirmedToken = confirmedToken;
       return courseIds.size();
     }
   }

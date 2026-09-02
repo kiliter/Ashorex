@@ -11,6 +11,27 @@
 
   const selectionLimit = 50;
   let returnFocus = null;
+  let previewSequence = 0;
+
+  const impactUnits = {
+    courseCount: "门",
+    lessonCount: "条",
+    sourceMappingCount: "条",
+    courseBindingCount: "条",
+    planItemCount: "条",
+    debtCount: "条",
+    watchSessionCount: "条",
+    videoProgressCount: "条",
+    questionCount: "条",
+    quizAttemptCount: "条",
+    studyContentCount: "条",
+    contentJobCount: "条",
+    quizDraftCount: "条",
+    reviewEventCount: "条",
+    focusSessionCount: "条",
+    attachmentCount: "个",
+    derivedSnapshotCount: "条",
+  };
 
   const selectedRows = () =>
     rows.filter((row) => row.querySelector("[data-archive-checkbox]").checked);
@@ -30,27 +51,73 @@
     selectAll.indeterminate = selected.length > 0 && !selectAll.checked;
   };
 
-  /** 打开确认弹窗时依据真实勾选项计算课程数和课时总数。 */
+  /** 从服务端读取完整关联图；只有统计成功后才允许提交危险操作。 */
+  const loadPreview = async (selected, sequence) => {
+    const previewUrl = new URL(modal.dataset.removePreviewUrl, window.location.origin);
+    selected.forEach((row) => {
+      previewUrl.searchParams.append(
+        "courseIds",
+        row.querySelector("[data-archive-checkbox]").value,
+      );
+    });
+    const errorBox = modal.querySelector("[data-remove-preview-error]");
+    const confirmButton = modal.querySelector("[data-remove-confirm]");
+    const tokenInput = document.querySelector("[data-remove-preview-token]");
+    try {
+      const response = await fetch(previewUrl, {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+      });
+      if (!response.ok) throw new Error("preview_failed");
+      const preview = await response.json();
+      if (sequence !== previewSequence || modal.hidden) return;
+      Object.entries(impactUnits).forEach(([name, unit]) => {
+        const value = Number(preview.impact?.[name] || 0);
+        modal.querySelector(`[data-impact="${name}"]`).textContent = `${value} ${unit}`;
+      });
+      modal.querySelector("[data-remove-dialog-count]").textContent =
+        `${preview.impact.courseCount} 门课程`;
+      modal.querySelector("#archive-remove-description").textContent =
+        "请核对以下实时影响。确认后将永久删除完整关联数据图，此操作无法撤销。";
+      tokenInput.value = preview.token;
+      errorBox.hidden = true;
+      confirmButton.disabled = false;
+    } catch (_error) {
+      if (sequence !== previewSequence || modal.hidden) return;
+      tokenInput.value = "";
+      errorBox.hidden = false;
+      confirmButton.disabled = true;
+      modal.querySelector("#archive-remove-description").textContent =
+        "无法读取最新删除影响，请取消后刷新页面重试。";
+    }
+  };
+
+  /** 打开确认弹窗后立即读取服务端实时影响，浏览器不自行猜测删除数量。 */
   const openConfirmation = (trigger) => {
     const selected = selectedRows();
     if (!selected.length) return;
-    const lessonTotal = selected.reduce(
-      (sum, row) => sum + Number.parseInt(row.dataset.lessonCount || "0", 10),
-      0,
-    );
     const names = selected.map((row) => row.dataset.courseName || "未命名课程");
     modal.querySelector("[data-remove-dialog-count]").textContent = `${selected.length} 门课程`;
-    modal.querySelector("[data-remove-course-count]").textContent = `${selected.length} 门`;
-    modal.querySelector("[data-remove-lesson-count]").textContent = `${lessonTotal} 个`;
+    modal.querySelectorAll("[data-impact]").forEach((node) => {
+      node.textContent = "读取中…";
+    });
     modal.querySelector("[data-remove-course-names]").textContent = names.join("、");
+    modal.querySelector("[data-remove-preview-error]").hidden = true;
+    modal.querySelector("[data-remove-confirm]").disabled = true;
+    document.querySelector("[data-remove-preview-token]").value = "";
+    modal.querySelector("#archive-remove-description").textContent =
+      "正在读取课程完整关联图，请等待统计完成后再确认。";
     returnFocus = trigger;
     modal.hidden = false;
     document.body.classList.add("modal-open");
     // 危险按钮不接收默认焦点，避免按回车误删。
     modal.querySelector("[data-remove-cancel]").focus();
+    previewSequence += 1;
+    void loadPreview(selected, previewSequence);
   };
 
   const closeConfirmation = () => {
+    previewSequence += 1;
     modal.hidden = true;
     document.body.classList.remove("modal-open");
     if (returnFocus instanceof HTMLElement) returnFocus.focus();

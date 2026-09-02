@@ -9,9 +9,7 @@ import com.shangan.media.emby.EmbyDtos;
 import com.shangan.media.emby.EmbyGateway;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -75,9 +73,7 @@ public class CourseSyncService implements CourseSynchronizer {
   /** 后台单独展示已归档课程，避免默认课程目录混入不可学习的历史课程。 */
   @Transactional(readOnly = true)
   public List<Course> listArchivedCourses() {
-    return courses.findAllCourses(false).stream()
-        .filter(course -> !course.enabled() && !course.removed())
-        .toList();
+    return courses.findAllCourses(false).stream().filter(course -> !course.enabled()).toList();
   }
 
   /** 读取当前配置用户可见的视频媒体库，供后台创建和重新绑定课程。 */
@@ -123,43 +119,6 @@ public class CourseSyncService implements CourseSynchronizer {
     if (!course.enabled()) {
       courses.updateCourseEnabled(courseId, true, clock.instant());
     }
-  }
-
-  /** 从归档区域单个或批量移除课程；只写状态和安全审计，不删除任何学习数据。 */
-  @Transactional
-  public int removeArchivedCourses(
-      List<String> submittedCourseIds, String administrator, String requestId) {
-    List<String> courseIds = normalizedCourseIds(submittedCourseIds);
-    List<Course> selectedCourses = new ArrayList<>();
-    for (String courseId : courseIds) {
-      Course course =
-          courses
-              .findCourse(courseId)
-              .orElseThrow(
-                  () ->
-                      new BusinessException(
-                          HttpStatus.NOT_FOUND, "COURSE_NOT_FOUND", "所选课程不存在，请刷新后重试"));
-      if (course.enabled()) {
-        throw new BusinessException(HttpStatus.CONFLICT, "COURSE_NOT_ARCHIVED", "只能删除已归档课程，请刷新后重试");
-      }
-      selectedCourses.add(course);
-    }
-
-    Instant now = clock.instant();
-    int removedCount = 0;
-    for (Course course : selectedCourses) {
-      // 已成功移除的课程再次提交时直接跳过，保证浏览器重复请求幂等。
-      if (course.removed()) continue;
-      courses.updateCourseRemoved(course.id(), now);
-      courses.insertCourseRemovalAudit(
-          ids.nextId(),
-          course.id(),
-          safeAuditValue(administrator, "unknown"),
-          safeAuditValue(requestId, "unknown"),
-          now);
-      removedCount++;
-    }
-    return removedCount;
   }
 
   /** 读取管理员正在维护的课时，并通过应用层统一返回稳定业务错误。 */
@@ -277,32 +236,6 @@ public class CourseSyncService implements CourseSynchronizer {
           HttpStatus.BAD_REQUEST, "EMBY_PARENT_REQUIRED", "请选择或填写 Emby 媒体来源");
     }
     return parentItemId.trim();
-  }
-
-  /** 归一化批量课程 ID，并在进入事务写入前限制数量和空选择。 */
-  private List<String> normalizedCourseIds(List<String> submittedCourseIds) {
-    LinkedHashSet<String> uniqueIds = new LinkedHashSet<>();
-    if (submittedCourseIds != null) {
-      for (String courseId : submittedCourseIds) {
-        if (courseId != null && !courseId.isBlank()) uniqueIds.add(courseId.trim());
-      }
-    }
-    if (uniqueIds.isEmpty()) {
-      throw new BusinessException(
-          HttpStatus.BAD_REQUEST, "COURSE_SELECTION_REQUIRED", "请至少选择一门已归档课程");
-    }
-    if (uniqueIds.size() > 50) {
-      throw new BusinessException(
-          HttpStatus.BAD_REQUEST, "COURSE_SELECTION_LIMIT", "一次最多删除 50 门课程");
-    }
-    return List.copyOf(uniqueIds);
-  }
-
-  /** 审计字段只保存短文本标识，避免异常认证数据进入长期记录。 */
-  private String safeAuditValue(String value, String fallback) {
-    if (value == null || value.isBlank()) return fallback;
-    String normalized = value.trim();
-    return normalized.length() <= 128 ? normalized : normalized.substring(0, 128);
   }
 
   private String safeSyncError(Exception exception) {

@@ -2491,6 +2491,8 @@ git commit -m "feat(catalog): discover and batch add emby sources"
 
 ### Task 26：已归档课程单个与批量删除
 
+> **历史 Task，删除语义已被 Task 27 和 ADR-0018 取代。** V027 的 `removed_at` 与移除审计仅保留迁移兼容，不再作为最终删除行为。
+
 **状态：** ADR-0017 已获人工批准，可以实施。
 
 **前置文档：**
@@ -2539,6 +2541,78 @@ git commit -m "feat(catalog): discover and batch add emby sources"
 ```bash
 git add docs apps/server
 git commit -m "feat(catalog): remove archived courses"
+```
+
+### Task 27：物理删除已归档课程完整关联数据图
+
+**状态：** ADR-0018 已获人工批准，可以实施；真实删除仍只能由管理员二次确认触发。
+
+**前置文档：**
+
+- `docs/adr/0018-hard-delete-archived-course-graph.md`
+
+**主要文件：**
+
+- 新增：课程删除影响预览 DTO、应用服务和专用 Repository 边界
+- 修改：`apps/server/src/main/java/com/shangan/catalog/application/CourseSyncService.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/infrastructure/CourseRepository.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/infrastructure/JdbcCourseRepository.java`
+- 修改：内容任务、观看会话、报表和日终结果的显式删除/失效端口
+- 修改：`apps/server/src/main/java/com/shangan/admin/CourseAdminController.java`
+- 修改：已归档课程 Thymeleaf 模板及必要的后台静态资源
+- 新增：必要的追加式 Flyway 迁移或删除统计索引；不得修改 V027
+- 测试：课程关联图物理删除、影响预览、批量原子性、并发失效、Controller 和二次确认交互测试
+
+**接口：**
+
+- ADMIN：预览单个或最多 50 门已归档课程的完整删除影响。
+- ADMIN：携带预览校验信息确认物理删除完整关联数据图。
+- 不新增或修改 `/api/v1` 学习端契约。
+
+- [x] **步骤 1：获得 ADR-0018 人工批准并冻结删除图**
+
+确认删除包含课程、课时、计划项目、欠债、观看与进度、题库与答题、学习内容、内容任务与草稿、映射和审计，以及受影响的作战单修订和报表派生数据。批准前不得修改删除实现或真实数据库。
+
+- [x] **步骤 2：先写失败的删除图应用服务窄测试**
+
+使用 Fake/Mock Repository，不启动 SQLite 或 Flyway，覆盖：
+
+```text
+只有已归档课程可删除
+单门和最多 50 门批量删除
+预览返回每类精确影响数量
+预览失效或任一活动课程 -> 整批零写入
+依赖按叶子到根顺序删除且不遗漏间接关系
+同计划其他课程项目和计划容器保留
+受影响修订、日报和日终结果失效并重建
+活动观看与内容任务删除后不能回写
+重复确认不删除新建的同来源课程
+同来源重新添加 -> 新课程 ID 和新课时 ID
+```
+
+- [x] **步骤 3：实现影响预览和应用边界**
+
+预览只返回数量和安全标识，不返回媒体路径、密钥、课程正文或题目正文。应用服务校验归档状态与预览版本，在一个短事务中编排显式 Repository 删除命令；Controller 不直接访问数据库。
+
+- [x] **步骤 4：实现完整关联图删除**
+
+按 ADR-0018 的范围先删除题目草稿/答题明细、内容任务日志、验活、偿还等叶子记录，再删除课时级、课程级记录和课程本身。显式处理 `daily_plan_items.debt_id`、作战单修订 JSON、日报快照和日终结果等非完整外键关系。受控附件先校验目录，事务提交后清理，失败进入安全重试。
+
+- [x] **步骤 5：更新二次确认和重新添加语义**
+
+确认弹窗展示课程、课时及各类关联记录数量，明确“全部永久删除、不可恢复、重新添加会生成新课程”。默认焦点为取消；Escape、关闭和取消不提交。移除同来源历史恢复分支，物理删除后创建全新身份。
+
+- [x] **步骤 6：运行本次新增或直接修改的窄测试与格式化**
+
+只运行 Task 27 新增或直接修改相关的服务、Controller 和页面窄测试，再运行 `make format`。本地不运行模块全量测试或 `make verify`；全量验证由 GitHub CI 执行。
+
+- [ ] **步骤 7：人工检查并提交**
+
+在数据库备份副本上人工验证外键完整性、删除统计、同计划其他课程保留、派生数据重建和同来源新建身份。不得直接操作当前生产性 `study.db`。检查 CSRF、事务边界、并发任务、附件路径、秘密与媒体路径泄漏后提交：
+
+```bash
+git add docs apps/server
+git commit -m "feat(catalog): hard delete archived course graph"
 ```
 
 ## Cross-Task Review Gates
@@ -2671,6 +2745,15 @@ Movie、Episode 和普通 Video 可分页完整同步
 父节点失效不会把最后一次可用课时快照清空
 媒体库重建后安全更新外部 Item ID，本地课时与全部学习历史保持不变
 歧义映射必须人工确认，原始媒体路径和 Emby 密钥不落库、不出页面、不进日志
+```
+
+Task 27 之后：
+
+```text
+已归档课程删除会物理清理完整关联数据图，不再只写 removed_at
+删除预览展示各类实际影响数量，预览失效或批量校验失败时整批不写入
+同一作战单内其他课程数据保留，作战单修订和报表派生数据不残留已删除课程贡献
+相同 Emby 来源重新添加时创建全新的课程和课时身份
 ```
 
 ---

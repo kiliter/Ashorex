@@ -91,6 +91,39 @@ class CourseBatchServiceTest {
     assertThat(repository.courses).isEmpty();
   }
 
+  @Test
+  void historicalRemovedCourseMustBeHardDeletedBeforeTheSourceCanBeAddedAgain() {
+    FakeRepository repository = new FakeRepository();
+    repository.courses.put(
+        "removed",
+        new Course(
+            "removed",
+            "历史移除课程",
+            "",
+            "source-1",
+            false,
+            0,
+            null,
+            null,
+            Instant.parse("2026-09-02T04:00:00Z")));
+    FakeEmbyGateway emby = new FakeEmbyGateway();
+    emby.addSource("source-1", "重新添加课程", "Series");
+    CourseBatchService service =
+        new CourseBatchService(
+            emby,
+            new CourseBatchWriter(
+                repository,
+                () -> "new-course",
+                Clock.fixed(Instant.parse("2026-09-02T05:00:00Z"), ZoneOffset.UTC)),
+            courseId -> {});
+
+    assertThatThrownBy(() -> service.addAndSynchronize(List.of("source-1")))
+        .isInstanceOfSatisfying(
+            BusinessException.class,
+            exception -> assertThat(exception.errorCode()).isEqualTo("COURSE_PENDING_HARD_DELETE"));
+    assertThat(repository.courses).doesNotContainKey("new-course");
+  }
+
   private static final class FakeEmbyGateway implements EmbyGateway {
     private final Map<String, EmbyDtos.MediaSource> sources = new LinkedHashMap<>();
 
