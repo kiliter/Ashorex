@@ -318,14 +318,14 @@ legend { padding: 0 6px; font: 11px var(--font-mono); }
 .source-picker-dialog__body .help { margin: 0; }
 .source-picker-dialog__foot { display: flex; padding: 10px 16px; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 92%, var(--bg)); }
 .source-picker-list { min-height: 220px; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--border); background: var(--surface); }
-/* 提高选择器权重，覆盖全局 button 的 inline-flex，恢复左对齐的课程三列台账。 */
-.source-picker-list > button.source-picker-row { display: grid; width: 100%; min-height: 54px !important; padding: 7px 12px !important; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; justify-content: stretch; gap: 10px; border: 0 !important; border-bottom: 1px solid var(--border) !important; border-radius: 0 !important; background: var(--surface) !important; color: var(--fg) !important; box-shadow: none !important; text-align: left; letter-spacing: 0 !important; }
+/* 全局按钮规则包含两个 :not，权重更高；这里明确强制恢复课程行的三列网格。 */
+.source-picker-list > button.source-picker-row { display: grid !important; width: 100%; min-height: 54px !important; padding: 7px 12px !important; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; justify-content: stretch !important; justify-items: stretch; gap: 10px; border: 0 !important; border-bottom: 1px solid var(--border) !important; border-radius: 0 !important; background: var(--surface) !important; color: var(--fg) !important; box-shadow: none !important; text-align: left; letter-spacing: 0 !important; }
 .source-picker-row:last-child { border-bottom: 0 !important; }
 .source-picker-row:hover, .source-picker-row:focus-visible { transform: none !important; background: var(--accent-soft) !important; box-shadow: inset 3px 0 0 var(--accent) !important; }
 .source-picker-row.is-selected { background: color-mix(in oklch, var(--accent) 9%, var(--surface)) !important; box-shadow: inset 3px 0 0 var(--accent) !important; }
 .source-picker-row__check { display: grid; width: 18px; height: 18px; place-items: center; border: 1px solid var(--border-strong); background: var(--surface); color: var(--surface); font: 700 11px var(--font-mono); }
 .source-picker-row.is-selected .source-picker-row__check { border-color: var(--accent); background: var(--accent); }
-.source-picker-row__copy { display: grid; min-width: 0; justify-items: start; gap: 2px; }
+.source-picker-row__copy { display: grid; min-width: 0; justify-items: start; gap: 2px; text-align: left; }
 .source-picker-row__copy strong, .source-picker-row__copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .source-picker-row__copy strong { max-width: 100%; font: 600 12px/1.35 var(--font-body); }
 .source-picker-row__copy small { max-width: 100%; color: var(--muted); font: 9px/1.3 var(--font-mono); }
