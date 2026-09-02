@@ -1,0 +1,23 @@
+apps/server/src/main/resources/templates/admin/courses.html
+  s_d11d2e0a6d2d4e::t_7276dbbfc4227c 52-55
+apps/server/src/main/resources/static/assets/course-source-picker.js
+  s_d11d2e0a6d2d4e::t_7276dbbfc4227c 23,119-147,172,181,284
+apps/server/src/main/resources/static/assets/admin.css
+  s_d11d2e0a6d2d4e::t_7276dbbfc4227c 319-321
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "8de081a4b855c189f069a213d1105f6bd8a915cd",
+  "prompts": {},
+  "sessions": {
+    "s_d11d2e0a6d2d4e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05fed-0bd9-7313-9c21-a4ecd9750720",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
