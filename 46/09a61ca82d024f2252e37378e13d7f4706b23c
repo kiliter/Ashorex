@@ -1,0 +1,25 @@
+apps/server/src/main/java/com/shangan/admin/CourseAdminController.java
+  s_d11d2e0a6d2d4e::t_801d7ab2512620 116,118,283,285-286,288,290,297-298,300-302,304-310,312,349-354
+  s_d11d2e0a6d2d4e::t_1660309a0fe798 355
+apps/server/src/main/resources/templates/admin/courses.html
+  s_d11d2e0a6d2d4e::t_241771a4b5f50b 70,82
+  s_d11d2e0a6d2d4e::t_574c955cbd00a7 83
+apps/server/src/main/java/com/shangan/admin/AdminDisplayFormatter.java
+  s_d11d2e0a6d2d4e::t_801d7ab2512620 40-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "4609a61ca82d024f2252e37378e13d7f4706b23c",
+  "prompts": {},
+  "sessions": {
+    "s_d11d2e0a6d2d4e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05fed-0bd9-7313-9c21-a4ecd9750720",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
