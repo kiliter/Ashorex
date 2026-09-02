@@ -177,12 +177,12 @@ docker compose --env-file .env -f infra/compose.yml up --build -d
 
 | 产物 | 获取方式 | 说明 |
 |---|---|---|
-| 无签名 IPA | [移动端验证](https://github.com/kiliter/Ashorex/actions/workflows/ios-verify.yml) 中的 `shangan-ios-unsigned` | 需要自行签名后才能安装到真机。 |
-| Android Debug APK | [移动端验证](https://github.com/kiliter/Ashorex/actions/workflows/ios-verify.yml) 中的 `shangan-android-debug` | 用于开发和内部验证，不是正式发布包。 |
-| Docker 镜像归档 | [服务端验证](https://github.com/kiliter/Ashorex/actions/workflows/server-verify.yml) 中的 `ashorex-server-image` | 下载后可通过 `docker load` 导入。 |
+| 无签名 IPA | [Releases](https://github.com/kiliter/Ashorex/releases) 或手动运行“移动端验证” | 需要自行签名后才能安装到真机。 |
+| Android Debug APK | [Releases](https://github.com/kiliter/Ashorex/releases) 或手动运行“移动端验证” | 用于开发和内部验证，不是正式发布包。 |
+| Docker 镜像归档 | [Releases](https://github.com/kiliter/Ashorex/releases) 或手动运行“服务端验证” | 下载后可通过 `docker load` 导入。 |
 | GHCR 镜像 | `ghcr.io/kiliter/ashorex-server:latest` | `main` 分支验证通过后推送。 |
 
-Actions 构建产物保留 14 天。也可以直接拉取最新服务端镜像：
+普通 Push 和 Pull Request 只执行验证，不保存大体积 Artifact。手动运行工作流时，临时 Artifact 保留 3 天；推送 `v*` 标签时，三个安装产物会自动进入对应 GitHub Release。也可以直接拉取最新服务端镜像：
 
 ```bash
 docker pull ghcr.io/kiliter/ashorex-server:latest

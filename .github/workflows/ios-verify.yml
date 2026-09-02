@@ -3,6 +3,8 @@ name: 移动端验证
 on:
   workflow_dispatch:
   push:
+    tags:
+      - "v*"
     paths:
       - "apps/ios/**"
       - "Makefile"
@@ -32,6 +34,8 @@ jobs:
       - name: 构建无签名 iOS 应用
         run: cd apps/ios && flutter build ios --release --no-codesign
       - name: 打包无签名 IPA
+        # 普通 Push/PR 只验证构建；仅手动运行或版本标签需要形成可下载安装包。
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
         run: |
           cd apps/ios
           mkdir -p build/unsigned-ipa/Payload
@@ -41,16 +45,50 @@ jobs:
       - name: 构建 Android Debug APK
         run: cd apps/ios && flutter build apk --debug
       - name: 上传无签名 IPA
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: shangan-ios-unsigned
           path: apps/ios/build/shangan-ios-unsigned.ipa
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
       - name: 上传 Android APK
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: shangan-android-debug
           path: apps/ios/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
+
+  mobile-release-assets:
+    name: 发布移动端安装包
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: ios-verify
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: 下载移动端构建产物
+        uses: actions/download-artifact@v4
+        with:
+          pattern: shangan-*
+          path: release-assets
+          merge-multiple: true
+      - name: 规范发布文件名
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mv release-assets/shangan-ios-unsigned.ipa "release-assets/Ashorex-${version}-ios-unsigned.ipa"
+          mv release-assets/app-debug.apk "release-assets/Ashorex-${version}-android-debug.apk"
+      - name: 上传到 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          # 两个发布工作流可能同时创建 Release；最后一次查询用于安全处理并发创建。
+          gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 \
+            || gh release create "${GITHUB_REF_NAME}" --title "上岸 ${GITHUB_REF_NAME#v}" --generate-notes \
+            || gh release view "${GITHUB_REF_NAME}" >/dev/null
+          gh release upload "${GITHUB_REF_NAME}" release-assets/* --clobber
