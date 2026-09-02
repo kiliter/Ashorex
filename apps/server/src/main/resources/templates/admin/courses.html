@@ -62,12 +62,25 @@
           </section>
 
           <section class="panel">
-            <div class="panel-head"><div><h2>COURSE / 课程目录</h2><p>同步失败会保留最后一次可用快照；归档不会删除任何学习历史。</p></div></div>
+            <div class="panel-head">
+              <div><h2>COURSE / 课程目录</h2><p>同步失败会保留最后一次可用快照；归档不会删除任何学习历史。</p></div>
+              <div class="actions" aria-label="课程目录统计">
+                <span class="badge" th:text="|${#lists.size(courses)} 门课程|">0 门课程</span>
+                <span class="badge" th:text="|${totalLessonCount} 个课时|">0 个课时</span>
+              </div>
+            </div>
             <div class="empty-state" th:if="${#lists.isEmpty(courses)}"><strong>还没有活动课程</strong>使用上方来源选择器添加第一门课程。</div>
             <div class="table-wrap" th:unless="${#lists.isEmpty(courses)}"><table class="ds-table">
               <thead><tr><th>课程名称 / 说明</th><th>Emby 父节点 ID</th><th>最近同步</th><th>结果</th><th class="right">操作</th></tr></thead>
               <tbody><tr th:each="course : ${courses}">
-                <td><div class="cell-main" th:text="${course.name}">课程</div><div class="cell-sub" th:text="${#strings.isEmpty(course.description) ? '使用 Emby 来源名称创建' : course.description}">说明</div></td>
+                <td>
+                  <div class="cell-main" th:text="${course.name}">课程</div>
+                  <div class="cell-sub">
+                    <span th:text="|共 ${courseLessonCounts[course.id]} 个课时|">共 0 个课时</span>
+                    <span aria-hidden="true"> · </span>
+                    <span th:text="${#strings.isEmpty(course.description) ? '使用 Emby 来源名称创建' : course.description}">说明</span>
+                  </div>
+                </td>
                 <td class="num" th:text="${course.embyParentItemId}">ID</td>
                 <td class="num" th:text="${course.lastSyncedAt != null ? T(com.shangan.admin.AdminDisplayFormatter).dateTime(course.lastSyncedAt) : '尚未同步'}">尚未同步</td>
                 <td><span class="badge" th:classappend="${course.lastSyncError == null ? ' success' : ' danger'}" th:text="${course.lastSyncError ?: '同步正常'}">状态</span></td>

@@ -114,7 +114,7 @@ public class CourseAdminController {
   String archivedCourses(Model model) {
     List<Course> archived = courses.listArchivedCourses();
     model.addAttribute("courses", archived);
-    model.addAttribute("courseLessonCounts", archivedLessonCounts(archived));
+    model.addAttribute("courseLessonCounts", lessonCounts(archived));
     return "admin/course-archived";
   }
 
@@ -278,16 +278,24 @@ public class CourseAdminController {
   }
 
   private void populateCoursesModel(Model model) {
-    model.addAttribute("courses", courses.listAdminCourses());
+    List<Course> activeCourses = courses.listAdminCourses();
+    Map<String, Integer> courseLessonCounts = lessonCounts(activeCourses);
+    model.addAttribute("courses", activeCourses);
+    model.addAttribute("courseLessonCounts", courseLessonCounts);
+    // 课程目录头部直接展示当前活动课程包含的全部课时数量。
+    model.addAttribute(
+        "totalLessonCount",
+        courseLessonCounts.values().stream().mapToInt(Integer::intValue).sum());
   }
 
   private void populateSourceModel(String courseId, Model model) {
     model.addAttribute("course", courses.getAdminCourse(courseId));
   }
 
-  private Map<String, Integer> archivedLessonCounts(List<Course> archivedCourses) {
+  /** 按课程 ID 汇总课时数量，供活动课程与归档课程台账复用。 */
+  private Map<String, Integer> lessonCounts(List<Course> courseList) {
     Map<String, Integer> counts = new LinkedHashMap<>();
-    for (Course course : archivedCourses) {
+    for (Course course : courseList) {
       counts.put(course.id(), courses.countAdminLessons(course.id()));
     }
     return counts;
