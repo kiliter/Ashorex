@@ -20,6 +20,7 @@
     const empty = root.querySelector("[data-source-empty]");
     const pageCount = root.querySelector("[data-source-count]");
     const modalCount = root.querySelector("[data-modal-source-count]");
+    const selectAllButton = root.querySelector("[data-source-select-all]");
     const singleSubmit = root.querySelector("[data-single-submit]");
     const batchSubmit = root.querySelector("[data-batch-submit]");
     const manualInput = root.querySelector("[data-manual-source]");
@@ -115,6 +116,35 @@
       );
     };
 
+    /** 全选只作用于当前搜索结果，并继续遵守一次最多 50 门课程的限制。 */
+    const updateSelectAllButton = (visible = visibleCandidates()) => {
+      if (!selectAllButton) return;
+      const selectedVisibleCount = visible.filter((source) => draftSelected.has(source.id)).length;
+      const allVisibleSelected = visible.length > 0 && selectedVisibleCount === visible.length;
+      selectAllButton.textContent = allVisibleSelected ? "取消全选" : "全选当前结果";
+      selectAllButton.disabled = loading || visible.length === 0
+        || (!allVisibleSelected && draftSelected.size >= selectionLimit);
+    };
+
+    const toggleVisibleCandidates = () => {
+      const visible = visibleCandidates();
+      const allVisibleSelected = visible.length > 0
+        && visible.every((source) => draftSelected.has(source.id));
+      if (allVisibleSelected) {
+        visible.forEach((source) => draftSelected.delete(source.id));
+      } else {
+        for (const source of visible) {
+          if (draftSelected.size >= selectionLimit) break;
+          draftSelected.set(source.id, source);
+        }
+        if (visible.some((source) => !draftSelected.has(source.id))) {
+          status.textContent = `已选择前 ${selectionLimit} 个课程，达到本次批量上限。`;
+        }
+      }
+      updateModalCount();
+      renderOptions();
+    };
+
     const updateModalCount = () => {
       modalCount.textContent = `已选 ${draftSelected.size} / ${selectionLimit}`;
     };
@@ -139,6 +169,7 @@
     const renderOptions = () => {
       options.replaceChildren();
       if (loading) {
+        updateSelectAllButton([]);
         const loadingState = document.createElement("div");
         loadingState.className = "source-picker-loading";
         loadingState.textContent = "正在读取已绑定媒体库下的全部课程…";
@@ -147,6 +178,7 @@
       }
 
       const visible = visibleCandidates();
+      updateSelectAllButton(visible);
       if (visible.length === 0) {
         const emptyState = document.createElement("div");
         emptyState.className = "source-picker-empty";
@@ -249,6 +281,7 @@
     openButton.addEventListener("click", openModal);
     closeButtons.forEach((button) => button.addEventListener("click", () => closeModal(false)));
     confirmButton.addEventListener("click", () => closeModal(true));
+    selectAllButton?.addEventListener("click", toggleVisibleCandidates);
     queryInput.addEventListener("input", renderOptions);
     manualInput?.addEventListener("input", updateActions);
     document.addEventListener("keydown", (event) => {

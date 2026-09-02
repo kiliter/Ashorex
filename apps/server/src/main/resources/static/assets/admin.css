@@ -316,6 +316,9 @@ legend { padding: 0 6px; font: 11px var(--font-mono); }
 .source-picker-dialog__body { display: grid; min-height: 330px; padding: 14px 16px 16px; grid-template-rows: auto auto minmax(0, 1fr); gap: 8px; overflow: hidden; }
 .source-picker-dialog__body .field { padding: 0; }
 .source-picker-dialog__body .help { margin: 0; }
+.source-picker-dialog__status { display: flex; min-height: 30px; align-items: center; justify-content: space-between; gap: 12px; }
+.source-picker-select-all { min-height: 28px !important; padding: 0 9px !important; border-color: color-mix(in oklch, var(--accent) 38%, var(--border)) !important; background: var(--surface) !important; color: var(--accent) !important; box-shadow: none !important; font: 600 10px var(--font-body) !important; letter-spacing: 0 !important; white-space: nowrap; }
+.source-picker-select-all:hover { transform: none !important; border-color: var(--accent) !important; background: var(--accent-soft) !important; box-shadow: none !important; }
 .source-picker-dialog__foot { display: flex; padding: 10px 16px; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 92%, var(--bg)); }
 .source-picker-list { min-height: 220px; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--border); background: var(--surface); }
 /* 全局按钮规则包含两个 :not，权重更高；这里明确强制恢复课程行的三列网格。 */

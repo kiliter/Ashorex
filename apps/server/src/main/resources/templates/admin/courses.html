@@ -49,7 +49,10 @@
                   <header class="source-picker-dialog__head"><div><small>EMBY / COURSE SOURCE</small><h3 id="course-source-dialog-title">选择 Emby 课程</h3></div><span class="badge" data-modal-source-count>已选 0 / 50</span></header>
                   <div class="source-picker-dialog__body">
                     <label class="field">搜索已加载课程<input type="search" autocomplete="off" data-source-query placeholder="输入课程名称或 Item ID" /></label>
-                    <p class="help" data-source-status>正在准备课程列表…</p>
+                    <div class="source-picker-dialog__status">
+                      <p class="help" data-source-status>正在准备课程列表…</p>
+                      <button class="source-picker-select-all" type="button" data-source-select-all disabled>全选当前结果</button>
+                    </div>
                     <div class="source-picker-list" data-source-options aria-live="polite"></div>
                   </div>
                   <footer class="source-picker-dialog__foot"><button class="btn-secondary" type="button" data-source-close>取消</button><button type="button" data-source-confirm>确定绑定</button></footer>
