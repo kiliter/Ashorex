@@ -113,8 +113,9 @@ public class CourseAdminController {
   @GetMapping("/admin/courses/archived")
   String archivedCourses(Model model) {
     List<Course> archived = courses.listArchivedCourses();
+    CourseDirectoryStatistics statistics = courseDirectoryStatistics(archived);
     model.addAttribute("courses", archived);
-    model.addAttribute("courseLessonCounts", lessonCounts(archived));
+    model.addAttribute("courseLessonCounts", statistics.lessonCounts());
     return "admin/course-archived";
   }
 
@@ -279,26 +280,36 @@ public class CourseAdminController {
 
   private void populateCoursesModel(Model model) {
     List<Course> activeCourses = courses.listAdminCourses();
-    Map<String, Integer> courseLessonCounts = lessonCounts(activeCourses);
+    CourseDirectoryStatistics statistics = courseDirectoryStatistics(activeCourses);
     model.addAttribute("courses", activeCourses);
-    model.addAttribute("courseLessonCounts", courseLessonCounts);
+    model.addAttribute("courseLessonCounts", statistics.lessonCounts());
+    model.addAttribute("courseLessonDurations", statistics.lessonDurations());
     // 课程目录头部直接展示当前活动课程包含的全部课时数量。
+    model.addAttribute("totalLessonCount", statistics.totalLessonCount());
     model.addAttribute(
-        "totalLessonCount",
-        courseLessonCounts.values().stream().mapToInt(Integer::intValue).sum());
+        "totalLessonDuration", AdminDisplayFormatter.lessonDuration(statistics.totalDurationMs()));
   }
 
   private void populateSourceModel(String courseId, Model model) {
     model.addAttribute("course", courses.getAdminCourse(courseId));
   }
 
-  /** 按课程 ID 汇总课时数量，供活动课程与归档课程台账复用。 */
-  private Map<String, Integer> lessonCounts(List<Course> courseList) {
+  /** 一次读取并汇总各课程的课时数量与媒体时长，避免为同一课程重复查询课时。 */
+  private CourseDirectoryStatistics courseDirectoryStatistics(List<Course> courseList) {
     Map<String, Integer> counts = new LinkedHashMap<>();
+    Map<String, String> durations = new LinkedHashMap<>();
+    int totalLessonCount = 0;
+    long totalDurationMs = 0L;
     for (Course course : courseList) {
-      counts.put(course.id(), courses.countAdminLessons(course.id()));
+      List<MediaItem> lessons = courses.listAdminLessons(course.id());
+      int lessonCount = lessons.size();
+      long durationMs = lessons.stream().mapToLong(MediaItem::durationMs).sum();
+      counts.put(course.id(), lessonCount);
+      durations.put(course.id(), AdminDisplayFormatter.lessonDuration(durationMs));
+      totalLessonCount += lessonCount;
+      totalDurationMs += durationMs;
     }
-    return counts;
+    return new CourseDirectoryStatistics(counts, durations, totalLessonCount, totalDurationMs);
   }
 
   private String preferredParentId(String selectedParentItemId, String manualParentItemId) {
@@ -334,6 +345,13 @@ public class CourseAdminController {
 
   /** 课时台账轮询响应，不包含正文和题目明细。 */
   private record LessonListLiveResponse(List<LessonLiveView> lessons) {}
+
+  /** 课程目录统计只服务后台展示，不进入课程领域模型。 */
+  private record CourseDirectoryStatistics(
+      Map<String, Integer> lessonCounts,
+      Map<String, String> lessonDurations,
+      int totalLessonCount,
+      long totalDurationMs) {}
 
   /** 单行课时最新状态。 */
   private record LessonLiveView(

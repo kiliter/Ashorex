@@ -37,4 +37,12 @@ public final class AdminDisplayFormatter {
     long minutes = totalSeconds % 3_600L / 60L;
     return minutes == 0L ? hours + " h" : hours + " h " + minutes + " m";
   }
+
+  /** 将课程媒体总时长展示为中文小时和分钟，便于管理员直接判断课程体量。 */
+  public static String lessonDuration(long milliseconds) {
+    long totalMinutes = Math.max(0L, milliseconds) / 60_000L;
+    long hours = totalMinutes / 60L;
+    long minutes = totalMinutes % 60L;
+    return minutes == 0L ? hours + " 小时" : hours + " 小时 " + minutes + " 分钟";
+  }
 }
