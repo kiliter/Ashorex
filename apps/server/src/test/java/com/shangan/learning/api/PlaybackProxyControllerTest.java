@@ -1,7 +1,9 @@
 package com.shangan.learning.api;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.shangan.learning.application.PlaybackSessionService;
@@ -12,6 +14,7 @@ import java.net.URI;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 /** 播放代理回归测试，确保 HLS 分片始终按字节流返回而不是进入 JSON 转换器。 */
@@ -45,8 +48,15 @@ class PlaybackProxyControllerTest {
     MockMvc mockMvc =
         MockMvcBuilders.standaloneSetup(new PlaybackProxyController(playback, proxy)).build();
 
+    // StreamingResponseBody 会在异步线程中写入响应，先等待异步完成再校验真实响应内容。
+    MvcResult asyncResult =
+        mockMvc
+            .perform(get("/api/v1/playback/ticket-1/proxy/Videos/lesson-1/segment.ts"))
+            .andExpect(request().asyncStarted())
+            .andReturn();
+
     mockMvc
-        .perform(get("/api/v1/playback/ticket-1/proxy/Videos/lesson-1/segment.ts"))
+        .perform(asyncDispatch(asyncResult))
         .andExpect(status().isOk())
         .andExpect(content().contentType("video/mp2t"))
         .andExpect(content().bytes(segment));
