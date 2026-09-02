@@ -5,6 +5,7 @@ import com.shangan.common.integration.RuntimeIntegrationSettings;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -26,8 +27,11 @@ public class EmbyClient implements EmbyGateway {
 
   private static final long TICKS_PER_MILLISECOND = 10_000L;
   private static final int DEFAULT_PAGE_SIZE = 500;
+  private static final int SOURCE_SEARCH_LIMIT = 50;
   private static final Set<String> SUPPORTED_LIBRARY_TYPES =
       Set.of("", "movies", "tvshows", "mixed", "homevideos", "musicvideos", "folders");
+  private static final Set<String> SUPPORTED_SOURCE_ITEM_TYPES =
+      Set.of("collectionfolder", "series", "folder", "movie");
 
   private final EmbyProperties properties;
   private final ObjectMapper objectMapper;
@@ -81,12 +85,90 @@ public class EmbyClient implements EmbyGateway {
     }
   }
 
+  /** 默认只在后台已绑定媒体库内联想 Series/Movie；空关键字不铺开大量来源。 */
+  @Override
+  public List<EmbyDtos.MediaSource> searchSources(String query) {
+    RuntimeIntegrationSettings runtime = requiredSettings();
+    RuntimeIntegrationSettings.Emby configuration = runtime.emby();
+    String normalizedQuery = query == null ? "" : query.trim();
+    if (normalizedQuery.isBlank() || runtime.embyLibraries().isEmpty()) {
+      return List.of();
+    }
+    try {
+      Map<String, EmbyDtos.MediaSource> uniqueSources = new LinkedHashMap<>();
+      for (RuntimeIntegrationSettings.EmbyLibrary library : runtime.embyLibraries()) {
+        String includeItemTypes = includeItemTypes(library.contentType());
+        String body =
+            requestSourceSearch(configuration, library.id(), normalizedQuery, includeItemTypes);
+        for (JsonNode item : objectMapper.readTree(body).path("Items")) {
+          EmbyDtos.MediaSource source = sourceFromNode(item);
+          if (source != null && includedType(source.itemType(), includeItemTypes)) {
+            uniqueSources.putIfAbsent(source.id(), source);
+          }
+        }
+        if (uniqueSources.size() >= SOURCE_SEARCH_LIMIT) {
+          break;
+        }
+      }
+      return uniqueSources.values().stream()
+          .sorted(
+              Comparator.comparing(EmbyDtos.MediaSource::name, String.CASE_INSENSITIVE_ORDER)
+                  .thenComparing(EmbyDtos.MediaSource::id))
+          .limit(SOURCE_SEARCH_LIMIT)
+          .toList();
+    } catch (BusinessException exception) {
+      throw exception;
+    } catch (Exception exception) {
+      throw unavailable();
+    }
+  }
+
+  /** 提交批量建课或重新绑定前重新校验来源存在、可访问且类型受支持。 */
+  @Override
+  public EmbyDtos.MediaSource getSource(String itemId) {
+    RuntimeIntegrationSettings.Emby configuration = requiredConfiguration();
+    try {
+      String body =
+          client(configuration)
+              .get()
+              .uri(
+                  builder ->
+                      builder
+                          .path("/Users/{userId}/Items/{itemId}")
+                          .queryParam("Fields", "ParentId")
+                          .build(configuration.userId(), itemId))
+              .retrieve()
+              .body(String.class);
+      EmbyDtos.MediaSource source = sourceFromNode(objectMapper.readTree(body));
+      if (source == null) {
+        throw new BusinessException(
+            HttpStatus.BAD_REQUEST,
+            "EMBY_SOURCE_TYPE_UNSUPPORTED",
+            "请选择媒体库、Series、Folder 或 Movie 作为课程来源");
+      }
+      return source;
+    } catch (RestClientResponseException exception) {
+      if (exception.getStatusCode().value() == HttpStatus.NOT_FOUND.value()
+          || exception.getStatusCode().value() == HttpStatus.FORBIDDEN.value()) {
+        throw parentNotFound();
+      }
+      throw unavailable();
+    } catch (BusinessException exception) {
+      throw exception;
+    } catch (Exception exception) {
+      throw unavailable();
+    }
+  }
+
   /** 验证父节点后，在配置用户作用域内分页递归读取全部电影、剧集和普通视频。 */
   @Override
   public List<EmbyDtos.MediaItem> listChildren(String parentItemId) {
     RuntimeIntegrationSettings.Emby configuration = requiredConfiguration();
-    validateParent(configuration, parentItemId);
+    JsonNode parent = readParent(configuration, parentItemId);
     try {
+      if (parent.path("Type").asText("").equalsIgnoreCase("Movie")) {
+        return List.of(mediaItemFromNode(parent, 1));
+      }
       Map<String, EmbyDtos.MediaItem> uniqueItems = new LinkedHashMap<>();
       int startIndex = 0;
       int totalRecordCount;
@@ -102,15 +184,7 @@ public class EmbyClient implements EmbyGateway {
         for (JsonNode item : items) {
           if (validIdentity(item)) {
             String id = item.path("Id").asText();
-            uniqueItems.putIfAbsent(
-                id,
-                new EmbyDtos.MediaItem(
-                    id,
-                    item.path("Name").asText(),
-                    Math.max(0, item.path("RunTimeTicks").asLong() / TICKS_PER_MILLISECOND),
-                    uniqueItems.size() + 1,
-                    item.path("Type").asText("Video"),
-                    EmbySourceFingerprint.fromPath(item.path("Path").asText(null))));
+            uniqueItems.putIfAbsent(id, mediaItemFromNode(item, uniqueItems.size() + 1));
           }
         }
         startIndex += pageItemCount;
@@ -124,17 +198,20 @@ public class EmbyClient implements EmbyGateway {
   }
 
   /** 父节点存在性必须单独验证，避免已删除节点的空结果清空本地快照。 */
-  private void validateParent(RuntimeIntegrationSettings.Emby configuration, String parentItemId) {
+  private JsonNode readParent(RuntimeIntegrationSettings.Emby configuration, String parentItemId) {
     try {
-      client(configuration)
-          .get()
-          .uri(
-              builder ->
-                  builder
-                      .path("/Users/{userId}/Items/{parentItemId}")
-                      .build(configuration.userId(), parentItemId))
-          .retrieve()
-          .toBodilessEntity();
+      String body =
+          client(configuration)
+              .get()
+              .uri(
+                  builder ->
+                      builder
+                          .path("/Users/{userId}/Items/{parentItemId}")
+                          .queryParam("Fields", "RunTimeTicks,Path")
+                          .build(configuration.userId(), parentItemId))
+              .retrieve()
+              .body(String.class);
+      return objectMapper.readTree(body);
     } catch (RestClientResponseException exception) {
       if (exception.getStatusCode().value() == HttpStatus.NOT_FOUND.value()
           || exception.getStatusCode().value() == HttpStatus.FORBIDDEN.value()) {
@@ -170,6 +247,31 @@ public class EmbyClient implements EmbyGateway {
         .body(String.class);
   }
 
+  private String requestSourceSearch(
+      RuntimeIntegrationSettings.Emby configuration,
+      String libraryId,
+      String query,
+      String includeItemTypes) {
+    return client(configuration)
+        .get()
+        .uri(
+            builder ->
+                builder
+                    .path("/Users/{userId}/Items")
+                    .queryParam("ParentId", libraryId)
+                    .queryParam("Recursive", true)
+                    .queryParam("SearchTerm", query)
+                    .queryParam("IncludeItemTypes", includeItemTypes)
+                    .queryParam("Fields", "ParentId,SortName")
+                    .queryParam("SortBy", "SortName")
+                    .queryParam("SortOrder", "Ascending")
+                    .queryParam("StartIndex", 0)
+                    .queryParam("Limit", SOURCE_SEARCH_LIMIT)
+                    .build(configuration.userId()))
+        .retrieve()
+        .body(String.class);
+  }
+
   private RestClient client(RuntimeIntegrationSettings.Emby configuration) {
     return RestClient.builder()
         .baseUrl(configuration.baseUrl())
@@ -181,17 +283,81 @@ public class EmbyClient implements EmbyGateway {
   }
 
   private RuntimeIntegrationSettings.Emby requiredConfiguration() {
-    RuntimeIntegrationSettings.Emby configuration = properties.current();
+    return requiredSettings().emby();
+  }
+
+  private RuntimeIntegrationSettings requiredSettings() {
+    RuntimeIntegrationSettings settings = properties.snapshot();
+    RuntimeIntegrationSettings.Emby configuration = settings.emby();
     if (!configuration.configured()
         || configuration.userId() == null
         || configuration.userId().isBlank()) {
       throw unavailable();
     }
-    return configuration;
+    return settings;
   }
 
   private boolean validIdentity(JsonNode item) {
     return !item.path("Id").asText("").isBlank() && !item.path("Name").asText("").isBlank();
+  }
+
+  private EmbyDtos.MediaSource sourceFromNode(JsonNode item) {
+    if (!validIdentity(item)) {
+      return null;
+    }
+    String itemType = item.path("Type").asText("");
+    if (!SUPPORTED_SOURCE_ITEM_TYPES.contains(itemType.toLowerCase(Locale.ROOT))) {
+      return null;
+    }
+    String collectionType = item.path("CollectionType").asText("");
+    if (itemType.equalsIgnoreCase("CollectionFolder")
+        && !SUPPORTED_LIBRARY_TYPES.contains(collectionType.toLowerCase(Locale.ROOT))) {
+      return null;
+    }
+    return new EmbyDtos.MediaSource(
+        item.path("Id").asText(),
+        item.path("Name").asText(),
+        itemType,
+        collectionType,
+        item.path("ParentId").asText(""));
+  }
+
+  /** 把媒体库绑定类型转换为 Emby Items API 接受的 IncludeItemTypes。 */
+  private String includeItemTypes(RuntimeIntegrationSettings.EmbyLibraryType contentType) {
+    return switch (contentType) {
+      case SERIES -> "Series";
+      case MOVIE -> "Movie";
+      case MIXED -> "Series,Movie";
+    };
+  }
+
+  /** 对上游结果再次做类型白名单过滤，避免 Emby 版本差异把 Folder 混入默认候选。 */
+  private boolean includedType(String itemType, String includeItemTypes) {
+    for (String included : includeItemTypes.split(",")) {
+      if (included.equalsIgnoreCase(itemType)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** 将一个可播放项转换为课程课时安全快照，不向业务层暴露物理路径。 */
+  private EmbyDtos.MediaItem mediaItemFromNode(JsonNode item, int indexNumber) {
+    if (!validIdentity(item)) {
+      throw unavailable();
+    }
+    return new EmbyDtos.MediaItem(
+        item.path("Id").asText(),
+        item.path("Name").asText(),
+        Math.max(0, item.path("RunTimeTicks").asLong() / TICKS_PER_MILLISECOND),
+        indexNumber,
+        item.path("Type").asText("Video"),
+        EmbySourceFingerprint.fromPath(item.path("Path").asText(null)));
+  }
+
+  private BusinessException parentNotFound() {
+    return new BusinessException(
+        HttpStatus.CONFLICT, "EMBY_PARENT_NOT_FOUND", "Emby 媒体来源不存在或当前用户无权访问");
   }
 
   private BusinessException unavailable() {

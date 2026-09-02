@@ -1,7 +1,9 @@
 package com.shangan.admin;
 
+import com.shangan.catalog.application.CourseBatchService;
 import com.shangan.catalog.application.CourseSyncService;
 import com.shangan.catalog.application.LessonStudyContentImportService;
+import com.shangan.catalog.domain.Course;
 import com.shangan.catalog.domain.MediaItem;
 import com.shangan.common.api.BusinessException;
 import com.shangan.quiz.application.QuizService;
@@ -30,20 +32,47 @@ import org.springframework.web.multipart.MultipartFile;
 public class CourseAdminController {
 
   private final CourseSyncService courses;
+  private final CourseBatchService courseBatches;
   private final LessonStudyContentImportService studyContents;
   private final QuizService quizzes;
 
   public CourseAdminController(
       CourseSyncService courses,
+      CourseBatchService courseBatches,
       LessonStudyContentImportService studyContents,
       QuizService quizzes) {
     this.courses = courses;
+    this.courseBatches = courseBatches;
     this.studyContents = studyContents;
     this.quizzes = quizzes;
   }
 
   @GetMapping("/admin/courses")
   String courses(Model model) {
+    populateCoursesModel(model);
+    return "admin/courses";
+  }
+
+  /** 供可键盘操作的来源选择器使用；响应只包含 Emby 安全元数据。 */
+  @ResponseBody
+  @GetMapping(value = "/admin/emby/sources", produces = MediaType.APPLICATION_JSON_VALUE)
+  List<com.shangan.media.emby.EmbyDtos.MediaSource> searchSources(
+      @RequestParam(defaultValue = "") String query) {
+    return courseBatches.searchSources(query);
+  }
+
+  /** 一次提交最多 50 个来源；先全量验证，再创建或恢复，并逐门串行同步。 */
+  @PostMapping("/admin/courses/batch")
+  String batchAddCourses(
+      @RequestParam(name = "sourceIds", required = false) List<String> sourceIds,
+      Model model,
+      HttpServletResponse response) {
+    try {
+      model.addAttribute("batchResult", courseBatches.addAndSynchronize(sourceIds));
+    } catch (BusinessException exception) {
+      response.setStatus(exception.status().value());
+      model.addAttribute("batchError", exception.getMessage());
+    }
     populateCoursesModel(model);
     return "admin/courses";
   }
@@ -63,6 +92,36 @@ public class CourseAdminController {
   String sync(@PathVariable String courseId) {
     courses.syncCourse(courseId);
     return "redirect:/admin/courses/" + courseId + "/lessons";
+  }
+
+  /** 删除前展示课程名称、课时数量和历史保留说明，避免把归档误认为物理删除。 */
+  @GetMapping("/admin/courses/{courseId}/archive")
+  String archiveConfirmation(@PathVariable String courseId, Model model) {
+    model.addAttribute("course", courses.getAdminCourse(courseId));
+    model.addAttribute("lessonCount", courses.countAdminLessons(courseId));
+    return "admin/course-archive";
+  }
+
+  /** 后台删除仅逻辑归档，不删除课时、计划、进度、欠债或内容数据。 */
+  @PostMapping("/admin/courses/{courseId}/archive")
+  String archive(@PathVariable String courseId) {
+    courses.archiveCourse(courseId);
+    return "redirect:/admin/courses?archived=1";
+  }
+
+  /** 已归档课程单独展示，并提供恢复原课程身份的操作。 */
+  @GetMapping("/admin/courses/archived")
+  String archivedCourses(Model model) {
+    List<Course> archived = courses.listArchivedCourses();
+    model.addAttribute("courses", archived);
+    model.addAttribute("courseLessonCounts", archivedLessonCounts(archived));
+    return "admin/course-archived";
+  }
+
+  @PostMapping("/admin/courses/{courseId}/restore")
+  String restore(@PathVariable String courseId) {
+    courses.restoreCourse(courseId);
+    return "redirect:/admin/courses/archived?restored=1";
   }
 
   /** 打开媒体来源更换页；只展示媒体库安全元数据，不展示 Emby 物理路径。 */
@@ -220,22 +279,18 @@ public class CourseAdminController {
 
   private void populateCoursesModel(Model model) {
     model.addAttribute("courses", courses.listAdminCourses());
-    populateMediaLibraries(model);
   }
 
   private void populateSourceModel(String courseId, Model model) {
     model.addAttribute("course", courses.getAdminCourse(courseId));
-    populateMediaLibraries(model);
   }
 
-  private void populateMediaLibraries(Model model) {
-    try {
-      model.addAttribute("mediaLibraries", courses.listMediaLibraries());
-      model.addAttribute("mediaLibraryError", null);
-    } catch (BusinessException exception) {
-      model.addAttribute("mediaLibraries", List.of());
-      model.addAttribute("mediaLibraryError", exception.getMessage());
+  private Map<String, Integer> archivedLessonCounts(List<Course> archivedCourses) {
+    Map<String, Integer> counts = new LinkedHashMap<>();
+    for (Course course : archivedCourses) {
+      counts.put(course.id(), courses.countAdminLessons(course.id()));
     }
+    return counts;
   }
 
   private String preferredParentId(String selectedParentItemId, String manualParentItemId) {

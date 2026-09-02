@@ -8,20 +8,25 @@
         <section class="page-head"><div class="container page-head-row"><div><h1 class="page-title" data-code="SRC/04">媒体来源</h1><p class="page-desc" th:text="|${course.name} · 当前父节点 ${course.embyParentItemId}|">课程媒体来源</p></div><a class="btn btn-secondary" th:href="@{/admin/courses}">返回课程</a></div></section>
         <div class="container workspace">
           <div class="alert alert--success" th:if="${param.rebound}">媒体来源已更新；原本地课时及其学习历史保持不变。</div>
-          <div class="alert" th:if="${mediaLibraryError != null}" th:text="${mediaLibraryError}">媒体库读取失败</div>
           <div class="alert" th:if="${sourceError != null}" th:text="${sourceError}">来源预览失败</div>
 
-          <section class="panel">
-            <div class="panel-head"><div><h2>SELECT / 选择新来源</h2><p>先预览完整映射；预览不会修改课程或课时。</p></div></div>
-            <form class="form-grid form-grid--two panel-body" method="post" th:action="@{/admin/courses/{id}/source/preview(id=${course.id})}">
-              <label class="field">Emby 媒体库
-                <select name="selectedParentItemId">
-                  <option value="">请选择媒体库</option>
-                  <option th:each="library : ${mediaLibraries}" th:value="${library.id}" th:text="|${library.name} · ${#strings.isEmpty(library.collectionType) ? '混合视频' : library.collectionType} · ${library.id}|">媒体库</option>
-                </select>
-              </label>
-              <label class="field">Series / Folder ID（高级）<input class="data-text" name="manualParentItemId" placeholder="填写后优先于媒体库选择" /></label>
-              <div class="actions form-grid__wide"><button type="submit">预览映射</button></div>
+          <section class="panel" data-source-picker data-search-url="/admin/emby/sources" data-mode="single">
+            <div class="panel-head"><div><h2>SELECT / 选择新来源</h2><p>默认从已绑定媒体库查找剧集或电影，然后生成安全映射预览。</p></div></div>
+            <form class="panel-body source-builder__form" method="post" th:action="@{/admin/courses/{id}/source/preview(id=${course.id})}">
+              <div class="source-combobox" role="combobox" aria-haspopup="listbox" aria-expanded="false">
+                <label class="field">查找 Emby 来源
+                  <input type="search" autocomplete="off" data-source-query aria-autocomplete="list" aria-controls="rebind-source-options" placeholder="例如：判断推理、申论导学" />
+                </label>
+                <div class="source-options" id="rebind-source-options" role="listbox" data-source-options hidden></div>
+                <p class="help" data-source-status>输入关键字查找剧集或电影；搜索范围在 Emby 系统配置中绑定。</p>
+              </div>
+              <div class="source-tray source-tray--single" data-source-tray><div class="source-tray__empty" data-source-empty>尚未选择新的媒体来源。</div></div>
+              <div data-source-hidden></div>
+              <details class="advanced-source">
+                <summary>高级兼容：手工填写媒体库、Series、Folder 或 Movie Item ID</summary>
+                <label class="field">Emby Item ID<input class="data-text" name="manualParentItemId" data-manual-source placeholder="手工 ID 会优先于联想选择" /></label>
+              </details>
+              <div class="actions"><button type="submit" data-single-submit disabled>预览映射</button></div>
             </form>
           </section>
 
@@ -54,5 +59,6 @@
         </div>
       </main>
     </div>
+    <script th:src="@{/assets/course-source-picker.js}" defer></script>
   </body>
 </html>

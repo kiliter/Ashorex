@@ -2,8 +2,12 @@ package com.shangan.common.integration;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /** 使用 JdbcClient 读取和整体替换固定的运行时配置行。 */
 @Repository
@@ -11,9 +15,11 @@ public class JdbcRuntimeIntegrationSettingsRepository
     implements RuntimeIntegrationSettingsRepository {
 
   private final JdbcClient jdbc;
+  private final ObjectMapper objectMapper;
 
-  public JdbcRuntimeIntegrationSettingsRepository(JdbcClient jdbc) {
+  public JdbcRuntimeIntegrationSettingsRepository(JdbcClient jdbc, ObjectMapper objectMapper) {
     this.jdbc = jdbc;
+    this.objectMapper = objectMapper;
   }
 
   @Override
@@ -34,14 +40,15 @@ public class JdbcRuntimeIntegrationSettingsRepository
               llm_base_url, llm_api_key, llm_model, llm_context_length,
               llm_max_completion_tokens, llm_timeout_seconds, llm_reasoning_effort,
               openrouter_api_key, content_auto_fill_enabled,
-              content_auto_fill_interval_minutes, updated_at
+              content_auto_fill_interval_minutes, emby_libraries_json, updated_at
             ) values (
               'default', :embyBaseUrl, :embyApiKey, :embyUserId,
               :asrBaseUrl, :asrApiKey, :asrModel, :asrLanguage,
               :asrChunkDurationSeconds, :asrTimeoutSeconds,
               :llmBaseUrl, :llmApiKey, :llmModel, :llmContextLength,
               :llmMaxCompletionTokens, :llmTimeoutSeconds, :llmReasoningEffort,
-              :openRouterApiKey, :autoFillEnabled, :autoFillIntervalMinutes, :updatedAt
+              :openRouterApiKey, :autoFillEnabled, :autoFillIntervalMinutes,
+              :embyLibrariesJson, :updatedAt
             )
             on conflict(id) do update set
               emby_base_url = excluded.emby_base_url,
@@ -63,6 +70,7 @@ public class JdbcRuntimeIntegrationSettingsRepository
               openrouter_api_key = excluded.openrouter_api_key,
               content_auto_fill_enabled = excluded.content_auto_fill_enabled,
               content_auto_fill_interval_minutes = excluded.content_auto_fill_interval_minutes,
+              emby_libraries_json = :embyLibrariesJson,
               updated_at = excluded.updated_at
             """)
         .param("embyBaseUrl", value.emby().baseUrl())
@@ -84,6 +92,7 @@ public class JdbcRuntimeIntegrationSettingsRepository
         .param("openRouterApiKey", value.openRouter().apiKey())
         .param("autoFillEnabled", value.autoFill().enabled() ? 1 : 0)
         .param("autoFillIntervalMinutes", value.autoFill().intervalMinutes())
+        .param("embyLibrariesJson", librariesJson(value.embyLibraries()))
         .param("updatedAt", value.updatedAt())
         .update();
   }
@@ -94,6 +103,7 @@ public class JdbcRuntimeIntegrationSettingsRepository
             row.getString("emby_base_url"),
             row.getString("emby_api_key"),
             row.getString("emby_user_id")),
+        parseLibraries(row.getString("emby_libraries_json")),
         new RuntimeIntegrationSettings.Asr(
             row.getString("asr_base_url"),
             row.getString("asr_api_key"),
@@ -114,5 +124,31 @@ public class JdbcRuntimeIntegrationSettingsRepository
             row.getInt("content_auto_fill_enabled") == 1,
             row.getInt("content_auto_fill_interval_minutes")),
         row.getLong("updated_at"));
+  }
+
+  private String librariesJson(List<RuntimeIntegrationSettings.EmbyLibrary> libraries) {
+    try {
+      return objectMapper.writeValueAsString(libraries);
+    } catch (Exception exception) {
+      throw new IllegalStateException("Emby 媒体库绑定无法序列化", exception);
+    }
+  }
+
+  private List<RuntimeIntegrationSettings.EmbyLibrary> parseLibraries(String json)
+      throws SQLException {
+    try {
+      List<RuntimeIntegrationSettings.EmbyLibrary> result = new ArrayList<>();
+      for (JsonNode node : objectMapper.readTree(json == null ? "[]" : json)) {
+        result.add(
+            new RuntimeIntegrationSettings.EmbyLibrary(
+                node.path("id").asText(),
+                node.path("name").asText(),
+                RuntimeIntegrationSettings.EmbyLibraryType.valueOf(
+                    node.path("contentType").asText())));
+      }
+      return List.copyOf(result);
+    } catch (Exception exception) {
+      throw new SQLException("Emby 媒体库绑定配置损坏", exception);
+    }
   }
 }

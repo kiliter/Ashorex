@@ -3,6 +3,8 @@ package com.shangan.common.integration;
 import java.net.URI;
 import java.time.Clock;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
@@ -38,6 +40,26 @@ public class RuntimeIntegrationSettingsService implements IntegrationSettingsPro
   /** 在数据库提交完成后才替换内存快照，提交失败时旧配置继续可用。 */
   public RuntimeIntegrationSettings save(RuntimeIntegrationSettings submitted) {
     RuntimeIntegrationSettings validated = validate(submitted);
+    return commit(validated);
+  }
+
+  /** 单独更新 Emby 媒体库绑定，不要求管理员重复提交或暴露其他服务密钥。 */
+  public RuntimeIntegrationSettings saveEmbyLibraries(
+      List<RuntimeIntegrationSettings.EmbyLibrary> libraries) {
+    RuntimeIntegrationSettings previous = current.get();
+    RuntimeIntegrationSettings submitted =
+        new RuntimeIntegrationSettings(
+            previous.emby(),
+            libraries,
+            previous.asr(),
+            previous.llm(),
+            previous.openRouter(),
+            previous.autoFill(),
+            clock.instant().toEpochMilli());
+    return commit(validate(submitted));
+  }
+
+  private RuntimeIntegrationSettings commit(RuntimeIntegrationSettings validated) {
     RuntimeIntegrationSettings committed =
         Objects.requireNonNull(
             transaction.execute(
@@ -56,6 +78,8 @@ public class RuntimeIntegrationSettingsService implements IntegrationSettingsPro
             url("embyBaseUrl", "Emby Base URL", submitted.emby().baseUrl(), errors),
             text(submitted.emby().apiKey()),
             text(submitted.emby().userId()));
+    List<RuntimeIntegrationSettings.EmbyLibrary> embyLibraries =
+        validatedEmbyLibraries(submitted.embyLibraries(), errors);
     RuntimeIntegrationSettings.Asr asr =
         new RuntimeIntegrationSettings.Asr(
             url("asrBaseUrl", "ASR Base URL", submitted.asr().baseUrl(), errors),
@@ -110,11 +134,43 @@ public class RuntimeIntegrationSettingsService implements IntegrationSettingsPro
     if (!errors.isEmpty()) throw new IntegrationSettingsValidationException(errors);
     return new RuntimeIntegrationSettings(
         emby,
+        embyLibraries,
         asr,
         llm,
         new RuntimeIntegrationSettings.OpenRouter(text(submitted.openRouter().apiKey())),
         autoFill,
         clock.instant().toEpochMilli());
+  }
+
+  private List<RuntimeIntegrationSettings.EmbyLibrary> validatedEmbyLibraries(
+      List<RuntimeIntegrationSettings.EmbyLibrary> submitted, Map<String, String> errors) {
+    if (submitted == null || submitted.isEmpty()) {
+      return List.of();
+    }
+    if (submitted.size() > 50) {
+      errors.put("embyLibraries", "最多绑定 50 个 Emby 媒体库");
+    }
+    LinkedHashSet<String> ids = new LinkedHashSet<>();
+    List<RuntimeIntegrationSettings.EmbyLibrary> normalized =
+        submitted.stream()
+            .map(
+                library ->
+                    new RuntimeIntegrationSettings.EmbyLibrary(
+                        text(library.id()), text(library.name()), library.contentType()))
+            .filter(
+                library -> {
+                  boolean valid =
+                      !library.id().isBlank()
+                          && !library.name().isBlank()
+                          && library.contentType() != null
+                          && ids.add(library.id());
+                  if (!valid) {
+                    errors.put("embyLibraries", "Emby 媒体库绑定包含无效或重复项目");
+                  }
+                  return valid;
+                })
+            .toList();
+    return List.copyOf(normalized);
   }
 
   private int range(

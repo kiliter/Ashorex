@@ -2402,6 +2402,93 @@ git add docs apps/server
 git commit -m "feat(catalog): remap rebuilt emby libraries"
 ```
 
+### Task 25：Emby 来源联想、批量建课与课程归档
+
+**状态：** ADR-0016 已获人工批准，可以实施。
+
+**前置文档：**
+
+- `docs/adr/0016-emby-source-discovery-batch-course-archive.md`
+
+**主要文件：**
+
+- 修改：`apps/server/src/main/java/com/shangan/media/emby/EmbyClient.java`
+- 修改：`apps/server/src/main/java/com/shangan/media/emby/EmbyDtos.java`
+- 修改：`apps/server/src/main/java/com/shangan/media/emby/EmbyGateway.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/application/CourseSyncService.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/infrastructure/CourseRepository.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/infrastructure/JdbcCourseRepository.java`
+- 修改：`apps/server/src/main/java/com/shangan/admin/CourseAdminController.java`
+- 修改：课程管理与媒体来源 Thymeleaf 模板、必要的后台静态资源
+- 测试：Emby 来源搜索协议、批量建课、归档恢复、Controller 和后台交互测试
+
+**接口：**
+
+- ADMIN 配置：绑定多个当前 Emby 用户可见的媒体库，并为每个绑定选择剧集、电影或混合类型。
+- ADMIN JSON：默认按关键字只搜索已绑定媒体库下符合类型的 Series 和 Movie，仅返回安全元数据；服务端不增加来源类型硬限制。
+- ADMIN：单个“添加并同步”、最多 50 个来源的“批量添加并同步”、课程归档、归档列表和恢复。
+- ADMIN：已有课程的重新绑定页复用来源联想，但继续执行 ADR-0015 的预览与冲突确认。
+- 不新增或修改 `/api/v1` 学习端契约。
+
+- [x] **步骤 1：先写失败的 Emby 来源发现协议测试**
+
+覆盖配置用户作用域、多媒体库绑定、Series/Movie 类型过滤、关键字、`StartIndex/Limit` 分页、最多 50 条、稳定排序、Item ID 去重、空结果和后续页失败。响应、断言和错误不得输出 Base URL、API Key 或原始媒体路径。
+
+- [x] **步骤 2：先写失败的批量与归档应用服务测试**
+
+覆盖：
+
+```text
+单个来源 -> 使用来源名称创建课程并触发同步
+多个来源 -> 按选择顺序创建并串行同步
+活动课程同来源 -> 幂等跳过
+已归档课程同来源 -> 恢复原课程 ID 后同步
+任一来源提交前失效 -> 不创建本批次课程
+单门同步失败 -> 记录该课程安全错误，其他课程继续
+归档 -> enabled=false，课时和历史不删除，定时同步忽略
+恢复 -> 原课程 ID 和课时 ID 不变
+```
+
+- [x] **步骤 3：实现用户作用域的来源搜索端口**
+
+Emby 适配器只查询固定配置主机、配置用户和后台已绑定媒体库，并按每个绑定的剧集、电影或混合类型搜索 Series/Movie，统一映射为安全 DTO。不得返回或记录 Emby `Path`。外部调用设置连接/读取超时，完整取得当前页后再返回。
+
+- [x] **步骤 4：实现单个与批量添加边界**
+
+提交最多 50 个来源。先在事务外验证全部来源，再在一个短事务中创建、跳过或恢复课程；事务提交后按选择顺序逐门调用既有同步服务。返回逐项结果，不把 Emby 请求放入 SQLite 事务。课程父节点唯一约束继续作为最终防线。
+
+- [x] **步骤 5：实现可恢复课程归档**
+
+后台删除只把 `courses.enabled` 设为 `false`，不得删除 `courses`、`media_items` 或任何业务历史。App 查询、计划新增和定时同步只读取活动课程；后台提供已归档列表和恢复操作。删除确认展示课程名、课时数和“历史保留”说明。
+
+- [x] **步骤 6：实现统一来源选择器与批量选择托盘**
+
+沿用现有后台的白纸/墨色/可信蓝视觉语言和系统字体，不重新设计全站主题。服务配置页提供多媒体库勾选和剧集/电影/混合类型选择；创建页和重新绑定页共用可键盘操作的 Combobox：输入名称或 Item ID 默认联想已绑定媒体库下的 Series/Movie，结果显示名称、类型和 ID，同时保留兼容来源与手工 ID 能力；已选择来源进入紧凑的“待添加课程”托盘，可逐项移除。按钮使用明确动词：“添加并同步”“批量添加并同步”“预览映射”“归档课程”“恢复课程”。加载、空结果、失效来源和部分同步失败都必须给出可执行提示，候选层在选择、失焦和 Escape 后可靠隐藏。
+
+- [ ] **步骤 7：验证并执行真实启动 Smoke Test**
+
+自动化测试不得连接真实 Emby、SQLite 或 Flyway。运行：
+
+```bash
+cd apps/server
+./mvnw -Dtest='EmbyClientContractTest,*CourseBatch*,*CourseArchive*,*CourseAdmin*' test
+cd ../..
+make format
+make verify
+./run.sh server
+```
+
+确认 `/actuator/health` 为 `UP`，再在后台人工验证联想、单个添加、批量添加、重新绑定预览、归档和恢复。真实测试不得物理删除学习数据，页面与日志不得出现媒体路径或密钥。
+
+- [ ] **步骤 8：检查并提交**
+
+检查批量幂等、事务边界、归档数据保留、映射歧义、防重复提交、Secret/Path 泄漏和启动结果，然后提交一次：
+
+```bash
+git add docs apps/server
+git commit -m "feat(catalog): discover and batch add emby sources"
+```
+
 ## Cross-Task Review Gates
 
 After Tasks 1–4:

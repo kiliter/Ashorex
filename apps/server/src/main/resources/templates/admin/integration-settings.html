@@ -74,6 +74,29 @@
               </label>
               <label class="field">Emby 用户 ID<input type="text" th:field="*{embyUserId}" /></label>
             </div>
+            <div class="emby-library-binding">
+              <div class="emby-library-binding__head">
+                <div><strong>课程媒体库范围</strong><p>先保存上方连接配置，再绑定课程可以搜索的媒体库；每个媒体库可提供剧集、电影或两者。</p></div>
+                <button class="button button--secondary button--small" type="button" data-library-save th:attr="data-save-url=@{/admin/settings/integrations/emby-libraries}">保存媒体库绑定</button>
+              </div>
+              <div class="alert" th:if="${embyLibraryError != null and !embyLibraryError.isBlank()}" th:text="${embyLibraryError}">媒体库读取失败</div>
+              <div class="empty-state" th:if="${#lists.isEmpty(availableEmbyLibraries)}"><strong>暂时没有可选择的媒体库</strong>请先保存有效的 Emby 地址、API Key 和用户 ID，然后刷新本页。</div>
+              <div class="emby-library-list" th:unless="${#lists.isEmpty(availableEmbyLibraries)}">
+                <div class="emby-library-row" th:each="library : ${availableEmbyLibraries}" data-library-row>
+                  <label class="emby-library-row__identity">
+                    <input type="checkbox" name="librarySelection" data-library-check th:checked="${boundEmbyLibraryTypes.containsKey(library.id)}" th:value="${library.id + '|' + (boundEmbyLibraryTypes.containsKey(library.id) ? boundEmbyLibraryTypes.get(library.id) : 'MIXED')}" />
+                    <span><strong th:text="${library.name}">媒体库</strong><small class="num" th:text="|${library.collectionType} · ${library.id}|">类型 · ID</small></span>
+                  </label>
+                  <label class="field emby-library-row__type">课程来源类型
+                    <select data-library-type>
+                      <option value="SERIES" th:selected="${boundEmbyLibraryTypes.get(library.id) == 'SERIES'}">剧集</option>
+                      <option value="MOVIE" th:selected="${boundEmbyLibraryTypes.get(library.id) == 'MOVIE'}">电影</option>
+                      <option value="MIXED" th:selected="${!boundEmbyLibraryTypes.containsKey(library.id) or boundEmbyLibraryTypes.get(library.id) == 'MIXED'}">混合</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+            </div>
           </section>
 
           <section id="settings-asr" class="panel config-panel settings-panel" role="tabpanel" data-settings-panel hidden>
@@ -271,6 +294,41 @@
         } finally {
           button.disabled = false;
           button.textContent = button.dataset.idleLabel;
+        }
+      });
+      // 媒体库绑定单独保存，避免为改变搜索范围而重复发送其他服务密钥。
+      document.querySelectorAll("[data-library-row]").forEach((row) => {
+        const checkbox = row.querySelector("[data-library-check]");
+        const type = row.querySelector("[data-library-type]");
+        const updateValue = () => {
+          checkbox.value = `${checkbox.value.split("|")[0]}|${type.value}`;
+          row.classList.toggle("is-selected", checkbox.checked);
+        };
+        checkbox.addEventListener("change", updateValue);
+        type.addEventListener("change", updateValue);
+        updateValue();
+      });
+      const librarySaveButton = document.querySelector("[data-library-save]");
+      librarySaveButton?.addEventListener("click", async () => {
+        const body = new FormData();
+        const csrf = settingsForm.querySelector('input[name="_csrf"]');
+        if (csrf) body.append("_csrf", csrf.value);
+        document.querySelectorAll("[data-library-check]:checked").forEach((checkbox) => {
+          body.append("librarySelection", checkbox.value);
+        });
+        librarySaveButton.disabled = true;
+        try {
+          const response = await fetch(librarySaveButton.dataset.saveUrl, {
+            method: "POST",
+            body,
+            headers: { Accept: "application/json" },
+          });
+          const payload = await response.json();
+          showToast(payload.message || "媒体库绑定保存失败。", response.ok && payload.success);
+        } catch (error) {
+          showToast("媒体库绑定请求未完成，请检查服务端是否正在运行。", false);
+        } finally {
+          librarySaveButton.disabled = false;
         }
       });
       // 模型目录刷新同样使用局部请求，页面只更新缓存数量。

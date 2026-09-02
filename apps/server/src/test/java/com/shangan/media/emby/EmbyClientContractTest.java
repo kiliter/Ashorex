@@ -2,8 +2,10 @@ package com.shangan.media.emby;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.groups.Tuple.tuple;
 
 import com.shangan.common.api.BusinessException;
+import com.shangan.common.integration.RuntimeIntegrationSettings;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
@@ -14,6 +16,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -128,6 +131,145 @@ class EmbyClientContractTest {
   }
 
   @Test
+  void searchesSeriesAndMoviesOnlyInsideConfiguredLibraryBindings() throws Exception {
+    List<Map<String, String>> searchQueries = new ArrayList<>();
+    startServer(
+        exchange -> {
+          String path = exchange.getRequestURI().getPath();
+          if (path.equals("/Users/user-1/Views")) {
+            respond(
+                exchange,
+                200,
+                "{\"Items\":[{\"Id\":\"library-series\",\"Name\":\"剧集库\",\"Type\":\"CollectionFolder\",\"CollectionType\":\"tvshows\"},{\"Id\":\"library-movie\",\"Name\":\"电影库\",\"Type\":\"CollectionFolder\",\"CollectionType\":\"movies\"},{\"Id\":\"library-other\",\"Name\":\"未绑定库\",\"Type\":\"CollectionFolder\",\"CollectionType\":\"mixed\"}]}");
+            return;
+          }
+          if (path.equals("/Users/user-1/Items/series-1")) {
+            respond(
+                exchange,
+                200,
+                "{\"Id\":\"series-1\",\"Name\":\"判断推理\",\"Type\":\"Series\",\"ParentId\":\"library-1\",\"Path\":\"/private/study/series\"}");
+            return;
+          }
+          if (path.equals("/Users/user-1/Items")) {
+            Map<String, String> requestQuery = query(exchange);
+            searchQueries.add(requestQuery);
+            if (requestQuery.get("ParentId").equals("library-series")) {
+              respond(
+                  exchange,
+                  200,
+                  """
+                  {"Items":[
+                    {"Id":"series-1","Name":"判断推理","Type":"Series","ParentId":"library-series","Path":"/private/study/series"},
+                    {"Id":"folder-1","Name":"不应出现","Type":"Folder","ParentId":"library-series","Path":"/private/study/folder"}
+                  ],"TotalRecordCount":2}
+                  """);
+            } else if (requestQuery.get("ParentId").equals("library-movie")) {
+              respond(
+                  exchange,
+                  200,
+                  """
+                  {"Items":[
+                    {"Id":"movie-1","Name":"判断题电影","Type":"Movie","ParentId":"library-movie","Path":"/private/study/movie.mp4"}
+                  ],"TotalRecordCount":1}
+                  """);
+            } else {
+              respond(
+                  exchange,
+                  200,
+                  """
+                  {"Items":[
+                    {"Id":"series-1","Name":"判断推理","Type":"Series","ParentId":"library-series"},
+                    {"Id":"movie-2","Name":"判断专项","Type":"Movie","ParentId":"library-mixed"},
+                    {"Id":"folder-2","Name":"不应出现","Type":"Folder","ParentId":"library-mixed"}
+                  ],"TotalRecordCount":3}
+                  """);
+            }
+            return;
+          }
+          respond(exchange, 404, "not found");
+        });
+    EmbyClient client =
+        client(
+            2,
+            List.of(
+                new RuntimeIntegrationSettings.EmbyLibrary(
+                    "library-series", "剧集库", RuntimeIntegrationSettings.EmbyLibraryType.SERIES),
+                new RuntimeIntegrationSettings.EmbyLibrary(
+                    "library-movie", "电影库", RuntimeIntegrationSettings.EmbyLibraryType.MOVIE),
+                new RuntimeIntegrationSettings.EmbyLibrary(
+                    "library-mixed", "混合库", RuntimeIntegrationSettings.EmbyLibraryType.MIXED)));
+
+    List<EmbyDtos.MediaSource> sources = client.searchSources("判断");
+    EmbyDtos.MediaSource resolved = client.getSource("series-1");
+
+    assertThat(sources)
+        .extracting(EmbyDtos.MediaSource::id, EmbyDtos.MediaSource::itemType)
+        .containsExactlyInAnyOrder(
+            tuple("series-1", "Series"), tuple("movie-1", "Movie"), tuple("movie-2", "Movie"));
+    assertThat(resolved)
+        .extracting(
+            EmbyDtos.MediaSource::id, EmbyDtos.MediaSource::name, EmbyDtos.MediaSource::parentId)
+        .containsExactly("series-1", "判断推理", "library-1");
+    assertThat(searchQueries)
+        .extracting(query -> query.get("ParentId"), query -> query.get("IncludeItemTypes"))
+        .containsExactly(
+            tuple("library-series", "Series"),
+            tuple("library-movie", "Movie"),
+            tuple("library-mixed", "Series,Movie"));
+    assertThat(searchQueries)
+        .allSatisfy(
+            query ->
+                assertThat(query)
+                    .containsEntry("SearchTerm", "判断")
+                    .containsEntry("StartIndex", "0")
+                    .containsEntry("Limit", "50"));
+    assertThat(sources.toString()).doesNotContain("/private/", "server-secret-token");
+  }
+
+  @Test
+  void sourceSearchReturnsEmptyWithoutBoundLibraries() throws Exception {
+    startServer(exchange -> respond(exchange, 500, "不应访问 Emby"));
+
+    assertThat(client(2).searchSources("判断")).isEmpty();
+    assertThat(client(2).searchSources("")).isEmpty();
+  }
+
+  @Test
+  void movieSourceSynchronizesTheMovieItselfAsTheOnlyLesson() throws Exception {
+    AtomicBoolean requestedChildren = new AtomicBoolean();
+    startServer(
+        exchange -> {
+          String path = exchange.getRequestURI().getPath();
+          if (path.equals("/Users/user-1/Items/movie-1")) {
+            respond(
+                exchange,
+                200,
+                "{\"Id\":\"movie-1\",\"Name\":\"申论导学\",\"Type\":\"Movie\",\"RunTimeTicks\":36000000000,\"Path\":\"/study/movie-1.mp4\"}");
+            return;
+          }
+          if (path.equals("/Users/user-1/Items")) {
+            requestedChildren.set(true);
+          }
+          respond(exchange, 500, "不应查询电影子项");
+        });
+
+    List<EmbyDtos.MediaItem> items = client(2).listChildren("movie-1");
+
+    assertThat(items)
+        .singleElement()
+        .satisfies(
+            item -> {
+              assertThat(item.id()).isEqualTo("movie-1");
+              assertThat(item.title()).isEqualTo("申论导学");
+              assertThat(item.durationMs()).isEqualTo(3_600_000L);
+              assertThat(item.indexNumber()).isEqualTo(1);
+              assertThat(item.itemType()).isEqualTo("Movie");
+              assertThat(item.sourceFingerprint()).isNotBlank();
+            });
+    assertThat(requestedChildren).isFalse();
+  }
+
+  @Test
   void parentNotFoundReturnsStableErrorWithoutRequestingPages() throws Exception {
     startServer(exchange -> respond(exchange, 404, "not found"));
 
@@ -164,6 +306,17 @@ class EmbyClientContractTest {
     return new EmbyClient(
         new EmbyProperties(
             "http://127.0.0.1:" + server.getAddress().getPort(), "server-secret-token", "user-1"),
+        new ObjectMapper(),
+        pageSize);
+  }
+
+  private EmbyClient client(int pageSize, List<RuntimeIntegrationSettings.EmbyLibrary> libraries) {
+    return new EmbyClient(
+        new EmbyProperties(
+            "http://127.0.0.1:" + server.getAddress().getPort(),
+            "server-secret-token",
+            "user-1",
+            libraries),
         new ObjectMapper(),
         pageSize);
   }

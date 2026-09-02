@@ -217,6 +217,20 @@ class CourseSyncServiceTest {
     }
 
     @Override
+    public void updateCourseEnabled(String courseId, boolean enabled, Instant now) {
+      course =
+          new Course(
+              course.id(),
+              course.name(),
+              course.description(),
+              course.embyParentItemId(),
+              enabled,
+              course.sortOrder(),
+              course.lastSyncedAt(),
+              course.lastSyncError());
+    }
+
+    @Override
     public void updateCourseSyncResult(String courseId, Instant syncedAt, String error) {}
 
     @Override

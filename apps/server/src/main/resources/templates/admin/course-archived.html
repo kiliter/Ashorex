@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="~{admin/fragments :: head('已归档课程 - 上岸管理台')}"></head>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <header th:replace="~{admin/fragments :: navigation('courses')}"></header>
+      <main class="admin-main">
+        <section class="page-head"><div class="container page-head-row"><div><h1 class="page-title" data-code="ARC/05">已归档课程</h1><p class="page-desc">课程与全部历史仍然存在，恢复后沿用原课程和课时身份</p></div><a class="btn btn-secondary" th:href="@{/admin/courses}">返回活动课程</a></div></section>
+        <div class="container workspace">
+          <div class="alert alert--success" th:if="${param.restored}">课程已恢复，可返回活动课程目录手动同步。</div>
+          <section class="panel">
+            <div class="panel-head"><div><h2>ARCHIVE / 归档目录</h2><p>恢复操作不会创建新的课程 ID。</p></div><span class="badge" th:text="|${#lists.size(courses)} 门|">0 门</span></div>
+            <div class="empty-state" th:if="${#lists.isEmpty(courses)}"><strong>没有已归档课程</strong>所有课程当前都处于活动状态。</div>
+            <div class="table-wrap" th:unless="${#lists.isEmpty(courses)}"><table class="ds-table">
+              <thead><tr><th>课程名称</th><th>Emby 父节点 ID</th><th>保留课时</th><th>最近同步</th><th class="right">操作</th></tr></thead>
+              <tbody><tr th:each="course : ${courses}">
+                <td><div class="cell-main" th:text="${course.name}">课程</div><div class="cell-sub">课时及全部学习历史已保留</div></td>
+                <td class="num" th:text="${course.embyParentItemId}">ID</td>
+                <td th:text="|${courseLessonCounts[course.id]} 个|">0 个</td>
+                <td class="num" th:text="${course.lastSyncedAt != null ? T(com.shangan.admin.AdminDisplayFormatter).dateTime(course.lastSyncedAt) : '尚未同步'}">尚未同步</td>
+                <td><form class="row-actions" method="post" th:action="@{/admin/courses/{id}/restore(id=${course.id})}"><button type="submit">恢复课程</button></form></td>
+              </tr></tbody>
+            </table></div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

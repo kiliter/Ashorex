@@ -182,6 +182,13 @@ public class JdbcCourseRepository implements CourseRepository {
   }
 
   @Override
+  public void updateCourseEnabled(String courseId, boolean enabled, Instant now) {
+    jdbc.sql("update courses set enabled = :enabled, updated_at = :now where id = :id")
+        .params(Map.of("enabled", enabled ? 1 : 0, "now", now.toEpochMilli(), "id", courseId))
+        .update();
+  }
+
+  @Override
   public void updateCourseSyncResult(String courseId, Instant syncedAt, String error) {
     jdbc.sql(
             "update courses set last_synced_at = :syncedAt, last_sync_error = :error, "

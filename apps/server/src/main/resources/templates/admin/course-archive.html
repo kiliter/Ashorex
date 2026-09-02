@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="~{admin/fragments :: head('归档课程 - 上岸管理台')}"></head>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <header th:replace="~{admin/fragments :: navigation('courses')}"></header>
+      <main class="admin-main">
+        <section class="page-head"><div class="container page-head-row"><div><h1 class="page-title" data-code="ARC/04">归档课程</h1><p class="page-desc">删除课程采用可恢复归档，不会物理删除学习数据</p></div><a class="btn btn-secondary" th:href="@{/admin/courses}">取消并返回</a></div></section>
+        <div class="container workspace">
+          <section class="panel archive-confirmation">
+            <div class="panel-head"><div><h2>CONFIRM / 确认归档</h2><p>请核对课程和影响范围。</p></div><span class="badge warning">可恢复操作</span></div>
+            <div class="panel-body">
+              <dl class="archive-facts"><div><dt>课程名称</dt><dd th:text="${course.name}">课程</dd></div><div><dt>课时数量</dt><dd th:text="|${lessonCount} 个|">0 个</dd></div><div><dt>归档后</dt><dd>App 课程目录、计划新增选择和定时 Emby 同步将忽略本课程。</dd></div></dl>
+              <div class="callout archive-history-note"><strong>全部历史都会保留</strong><p>课程 ID、课时 ID、可信观看进度、作战单、欠债、题目、全文、摘要和内容任务均不会删除；之后可从“已归档课程”恢复。</p></div>
+              <form method="post" th:action="@{/admin/courses/{id}/archive(id=${course.id})}"><div class="actions"><button class="btn-danger" type="submit">确认归档课程</button><a class="btn btn-secondary" th:href="@{/admin/courses}">不归档</a></div></form>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

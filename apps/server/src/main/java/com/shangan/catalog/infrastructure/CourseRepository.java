@@ -35,6 +35,9 @@ public interface CourseRepository {
 
   void updateCourseSource(String courseId, String embyParentItemId, Instant now);
 
+  /** 逻辑归档或恢复课程，只改变可见性，不删除课程与任何学习历史。 */
+  void updateCourseEnabled(String courseId, boolean enabled, Instant now);
+
   void updateCourseSyncResult(String courseId, Instant syncedAt, String error);
 
   void updateMediaControls(String mediaItemId, boolean enabled, int sortOrder);

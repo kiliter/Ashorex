@@ -5,7 +5,11 @@ import com.shangan.common.api.BusinessException;
 import com.shangan.common.integration.IntegrationSettingsValidationException;
 import com.shangan.common.integration.RuntimeIntegrationSettings;
 import com.shangan.common.integration.RuntimeIntegrationSettingsService;
+import com.shangan.media.emby.EmbyDtos;
+import com.shangan.media.emby.EmbyGateway;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
@@ -24,14 +28,20 @@ public class IntegrationSettingsAdminController {
   private final RuntimeIntegrationSettingsService settings;
   private final OpenRouterModelCatalogService modelCatalog;
   private final IntegrationConnectionTestService connectionTest;
+  private final EmbyGateway emby;
+  private final EmbyLibraryBindingValidator libraryBindings;
 
   public IntegrationSettingsAdminController(
       RuntimeIntegrationSettingsService settings,
       OpenRouterModelCatalogService modelCatalog,
-      IntegrationConnectionTestService connectionTest) {
+      IntegrationConnectionTestService connectionTest,
+      EmbyGateway emby,
+      EmbyLibraryBindingValidator libraryBindings) {
     this.settings = settings;
     this.modelCatalog = modelCatalog;
     this.connectionTest = connectionTest;
+    this.emby = emby;
+    this.libraryBindings = libraryBindings;
   }
 
   /** 使用已保存配置和内置“你好”MP3 验证 ASR 接口，并返回局部通知所需结果。 */
@@ -83,6 +93,7 @@ public class IntegrationSettingsAdminController {
     model.addAttribute("refreshError", effectiveRefreshError);
     model.addAttribute("catalogModels", modelCatalog.search(""));
     model.addAttribute("catalogCount", modelCatalog.count());
+    populateEmbyLibraries(model, current);
     return "admin/integration-settings";
   }
 
@@ -105,7 +116,7 @@ public class IntegrationSettingsAdminController {
   ResponseEntity<IntegrationSaveResponse> save(
       @ModelAttribute IntegrationSettingsForm settingsForm) {
     try {
-      settings.save(settingsForm.toSettings());
+      settings.save(settingsForm.toSettings(settings.current().embyLibraries()));
       return ResponseEntity.ok(new IntegrationSaveResponse(true, "配置已保存并立即生效", Map.of()));
     } catch (IntegrationSettingsValidationException exception) {
       return ResponseEntity.badRequest()
@@ -117,6 +128,49 @@ public class IntegrationSettingsAdminController {
       return ResponseEntity.internalServerError()
           .body(new IntegrationSaveResponse(false, "配置保存失败，请查看服务端日志", Map.of()));
     }
+  }
+
+  /** 单独保存媒体库绑定，不要求浏览器再次提交 Emby API Key 或其他外部服务密钥。 */
+  @PostMapping("/admin/settings/integrations/emby-libraries")
+  ResponseEntity<IntegrationSaveResponse> saveEmbyLibraries(
+      @RequestParam(name = "librarySelection", required = false) List<String> selections) {
+    try {
+      List<RuntimeIntegrationSettings.EmbyLibrary> resolved =
+          libraryBindings.validate(emby.listMediaLibraries(), selections);
+      settings.saveEmbyLibraries(resolved);
+      return ResponseEntity.ok(
+          new IntegrationSaveResponse(true, "媒体库绑定已保存，共 " + resolved.size() + " 个", Map.of()));
+    } catch (BusinessException exception) {
+      return ResponseEntity.status(exception.status())
+          .body(new IntegrationSaveResponse(false, exception.getMessage(), Map.of()));
+    } catch (IntegrationSettingsValidationException exception) {
+      return ResponseEntity.badRequest()
+          .body(
+              new IntegrationSaveResponse(
+                  false, "媒体库绑定未保存：" + exception.getMessage(), exception.fieldErrors()));
+    } catch (DataAccessException exception) {
+      return ResponseEntity.internalServerError()
+          .body(new IntegrationSaveResponse(false, "媒体库绑定保存失败，请查看服务端日志", Map.of()));
+    }
+  }
+
+  private void populateEmbyLibraries(Model model, RuntimeIntegrationSettings current) {
+    List<EmbyDtos.MediaLibrary> available = List.of();
+    String error = "";
+    if (current.emby().configured() && !current.emby().userId().isBlank()) {
+      try {
+        available = emby.listMediaLibraries();
+      } catch (BusinessException exception) {
+        error = exception.getMessage();
+      }
+    }
+    Map<String, String> boundTypes = new LinkedHashMap<>();
+    for (RuntimeIntegrationSettings.EmbyLibrary library : current.embyLibraries()) {
+      boundTypes.put(library.id(), library.contentType().name());
+    }
+    model.addAttribute("availableEmbyLibraries", available);
+    model.addAttribute("boundEmbyLibraryTypes", boundTypes);
+    model.addAttribute("embyLibraryError", error);
   }
 
   private void preventCaching(HttpServletResponse response) {

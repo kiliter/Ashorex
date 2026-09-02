@@ -20,6 +20,7 @@
 | EMBY-001 | 选择 Emby 媒体库或绑定 Series/Folder，并按配置用户分页同步 Movie、Episode、Video | 5、24 | Emby 媒体库、用户作用域、混合类型和分页协议测试 | 新增电影、剧集和普通视频均可同步为课程课时 |
 | EMBY-002 | Emby Key 仅存在服务端 | 5、8、16 | 配置和响应安全测试 | App 流量中不出现 Key |
 | EMBY-003 | Emby 媒体库删除重建后原位映射新 Item ID，保留本地课时和全部学习历史 | 24 | 来源指纹、历史唯一匹配、冲突拒绝和重新绑定应用服务测试 | 父节点失效不清空快照；重新绑定后本地课时 ID、进度、计划、欠债、题目和内容不变 |
+| EMBY-004 | 在配置页绑定多个媒体库及剧集/电影/混合类型，课程页只联想绑定范围内的 Series/Movie，支持单个或批量添加并同步；课程删除采用可恢复归档 | 25 | 媒体库绑定与来源搜索协议、批量幂等、归档恢复、同步失败隔离和后台交互测试 | 课程页不铺开媒体库；无需手工查 ID；批量逐项给出结果；删除与恢复不丢失任何学习历史 |
 | PLAY-001 | 服务端签发短期播放票据 | 8 | `PlaybackTicketServiceTest` | 过期/越权票据被拒绝 |
 | PLAY-002 | 支持 Range 与 HLS 代理 | 8 | `RangeProxyIntegrationTest`、`HlsManifestRewriteTest` | iPhone 可播放直放与转码源 |
 | WATCH-001 | 禁止跳入未验证观看区间 | 9、10 | `WatchProgressPolicyTest`、播放器 Widget 测试 | 拖动只能到可信边界 |

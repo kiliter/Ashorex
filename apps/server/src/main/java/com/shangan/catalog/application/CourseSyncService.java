@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** 编排 Emby 课程同步，并在失败时保留最后一次可用本地快照。 */
 @Service
-public class CourseSyncService {
+public class CourseSyncService implements CourseSynchronizer {
 
   private static final Logger log = LoggerFactory.getLogger(CourseSyncService.class);
 
@@ -67,7 +67,13 @@ public class CourseSyncService {
 
   @Transactional(readOnly = true)
   public List<Course> listAdminCourses() {
-    return courses.findAllCourses(false);
+    return courses.findAllCourses(true);
+  }
+
+  /** 后台单独展示已归档课程，避免默认课程目录混入不可学习的历史课程。 */
+  @Transactional(readOnly = true)
+  public List<Course> listArchivedCourses() {
+    return courses.findAllCourses(false).stream().filter(course -> !course.enabled()).toList();
   }
 
   /** 读取当前配置用户可见的视频媒体库，供后台创建和重新绑定课程。 */
@@ -89,6 +95,31 @@ public class CourseSyncService {
     return courses.findMediaItems(courseId, false);
   }
 
+  /** 删除确认只需要安全计数，不读取或暴露课时内容。 */
+  @Transactional(readOnly = true)
+  public int countAdminLessons(String courseId) {
+    getAdminCourse(courseId);
+    return courses.findMediaItems(courseId, false).size();
+  }
+
+  /** “删除课程”仅逻辑归档，课程、课时及全部学习历史都保持原身份。 */
+  @Transactional
+  public void archiveCourse(String courseId) {
+    Course course = getAdminCourse(courseId);
+    if (course.enabled()) {
+      courses.updateCourseEnabled(courseId, false, clock.instant());
+    }
+  }
+
+  /** 恢复课程沿用原课程 ID 和课时 ID；同步仍由管理员另行触发。 */
+  @Transactional
+  public void restoreCourse(String courseId) {
+    Course course = getAdminCourse(courseId);
+    if (!course.enabled()) {
+      courses.updateCourseEnabled(courseId, true, clock.instant());
+    }
+  }
+
   /** 读取管理员正在维护的课时，并通过应用层统一返回稳定业务错误。 */
   @Transactional(readOnly = true)
   public MediaItem getAdminLesson(String lessonId) {
@@ -105,6 +136,7 @@ public class CourseSyncService {
   }
 
   /** 同步一门课程；远端请求不占用事务，本地快照由独立短事务原子写入。 */
+  @Override
   public void syncCourse(String courseId) {
     Course course =
         courses
@@ -155,7 +187,7 @@ public class CourseSyncService {
   /** 每 15 分钟串行同步全部课程；日志不包含主机、密钥或完整异常内容。 */
   @Scheduled(fixedDelay = 900_000L)
   public void synchronizeAll() {
-    for (Course course : courses.findAllCourses(false)) {
+    for (Course course : courses.findAllCourses(true)) {
       try {
         syncCourse(course.id());
       } catch (Exception exception) {
