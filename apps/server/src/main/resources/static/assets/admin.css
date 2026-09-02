@@ -362,6 +362,30 @@ legend { padding: 0 6px; font: 11px var(--font-mono); }
 .archive-facts dd { margin: 0; font-size: 12px; }
 .archive-history-note { color: var(--fg); border-color: color-mix(in oklch, var(--warning) 32%, var(--border)); background: color-mix(in oklch, var(--warning) 7%, var(--surface)); }
 .archive-history-note p { margin: 4px 0 0; color: var(--muted); line-height: 1.6; }
+.archive-select-cell { width: 64px; text-align: center !important; }
+.archive-select-cell input { width: 18px; height: 18px; accent-color: var(--danger); }
+/* 归档删除选择使用危险色整行高亮，避免与普通蓝色来源选择混淆。 */
+.ds-table tbody tr[data-archive-row].is-selected { background: color-mix(in oklch, var(--danger) 11%, var(--surface)); box-shadow: inset 4px 0 0 var(--danger); }
+.ds-table tbody tr[data-archive-row].is-selected:hover { background: color-mix(in oklch, var(--danger) 14%, var(--surface)); }
+.archive-remove-modal[hidden] { display: none; }
+.archive-remove-modal { position: fixed; z-index: 120; inset: 0; display: grid; padding: 5vh 24px; place-items: center; }
+.archive-remove-modal__backdrop { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: color-mix(in oklch, var(--fg) 46%, transparent) !important; box-shadow: none !important; }
+.archive-remove-modal__backdrop:hover { transform: none !important; box-shadow: none !important; }
+.archive-remove-dialog { position: relative; z-index: 1; display: grid; width: min(620px, 100%); max-height: 88vh; grid-template-rows: auto minmax(0, 1fr) auto; border: 1px solid color-mix(in oklch, var(--danger) 55%, var(--border)); background: var(--surface); box-shadow: 9px 11px 0 color-mix(in oklch, var(--danger) 18%, transparent); }
+.archive-remove-dialog__head { display: flex; min-height: 68px; padding: 11px 16px; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); box-shadow: inset 4px 0 0 var(--danger); }
+.archive-remove-dialog__head small { color: var(--danger); font: 9px var(--font-mono); letter-spacing: .09em; }
+.archive-remove-dialog__head h2 { margin: 3px 0 0; font-size: 18px; }
+.archive-remove-dialog__body { padding: 16px; overflow: auto; }
+.archive-remove-dialog__body > p { color: var(--fg); line-height: 1.65; }
+.archive-remove-facts { display: grid; margin: 14px 0; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--border); }
+.archive-remove-facts > div { padding: 11px 12px; border-right: 1px solid var(--border); }
+.archive-remove-facts > div:last-child { border-right: 0; }
+.archive-remove-facts dt { color: var(--muted); font-size: 10px; }
+.archive-remove-facts dd { margin: 3px 0 0; font: 700 16px var(--font-mono); }
+.archive-remove-warning { display: grid; padding: 11px 12px; gap: 4px; border: 1px solid color-mix(in oklch, var(--warning) 35%, var(--border)); background: color-mix(in oklch, var(--warning) 7%, var(--surface)); }
+.archive-remove-warning span { color: var(--muted); font-size: 11px; line-height: 1.6; }
+.archive-remove-names { margin-top: 12px; padding: 10px 11px; overflow-wrap: anywhere; border-left: 3px solid var(--danger); background: color-mix(in oklch, var(--danger) 5%, var(--surface)); color: var(--muted); font-size: 11px; line-height: 1.6; }
+.archive-remove-dialog__foot { display: flex; padding: 11px 16px; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 92%, var(--bg)); }
 .lesson-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 12px; }
 .lesson-import-panel { padding-bottom: 14px; }
 .lesson-import-panel .form-grid { padding: 0 14px; }

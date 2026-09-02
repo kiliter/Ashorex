@@ -5,25 +5,51 @@
     <div class="admin-shell">
       <header th:replace="~{admin/fragments :: navigation('courses')}"></header>
       <main class="admin-main">
-        <section class="page-head"><div class="container page-head-row"><div><h1 class="page-title" data-code="ARC/05">已归档课程</h1><p class="page-desc">课程与全部历史仍然存在，恢复后沿用原课程和课时身份</p></div><a class="btn btn-secondary" th:href="@{/admin/courses}">返回活动课程</a></div></section>
+        <section class="page-head"><div class="container page-head-row"><div><h1 class="page-title" data-code="ARC/05">已归档课程</h1><p class="page-desc">可恢复课程，或从归档区域移除；课程与可信学习历史始终保留</p></div><a class="btn btn-secondary" th:href="@{/admin/courses}">返回活动课程</a></div></section>
         <div class="container workspace">
           <div class="alert alert--success" th:if="${param.restored}">课程已恢复，可返回活动课程目录手动同步。</div>
+          <div class="alert alert--success" th:if="${param.removed}" th:text="|已删除 ${param.removed[0]} 门归档课程，学习历史仍然保留。|">归档课程已删除。</div>
+          <div class="alert alert--danger" th:if="${removeError}" th:text="${removeError}">删除失败</div>
           <section class="panel">
-            <div class="panel-head"><div><h2>ARCHIVE / 归档目录</h2><p>恢复操作不会创建新的课程 ID。</p></div><span class="badge" th:text="|${#lists.size(courses)} 门|">0 门</span></div>
+            <div class="panel-head">
+              <div><h2>ARCHIVE / 归档目录</h2><p>恢复操作不会创建新的课程 ID；删除只移出归档区域。</p></div>
+              <div class="actions" th:unless="${#lists.isEmpty(courses)}">
+                <label class="check-field"><input type="checkbox" data-archive-select-all aria-label="全选当前归档课程" /><span>全选</span></label>
+                <span class="muted" data-archive-selected-count>已选 0 门</span>
+                <button class="btn btn-danger" type="button" data-remove-selected disabled>删除所选</button>
+                <span class="badge" th:text="|${#lists.size(courses)} 门|">0 门</span>
+              </div>
+            </div>
             <div class="empty-state" th:if="${#lists.isEmpty(courses)}"><strong>没有已归档课程</strong>所有课程当前都处于活动状态。</div>
             <div class="table-wrap" th:unless="${#lists.isEmpty(courses)}"><table class="ds-table">
-              <thead><tr><th>课程名称</th><th>Emby 父节点 ID</th><th>保留课时</th><th>最近同步</th><th class="right">操作</th></tr></thead>
-              <tbody><tr th:each="course : ${courses}">
+              <thead><tr><th class="archive-select-cell">选择</th><th>课程名称</th><th>Emby 父节点 ID</th><th>保留课时</th><th>最近同步</th><th class="right">操作</th></tr></thead>
+              <tbody><tr th:each="course : ${courses}" data-archive-row th:data-course-name="${course.name}" th:data-lesson-count="${courseLessonCounts[course.id]}">
+                <td class="archive-select-cell"><input type="checkbox" name="courseIds" th:value="${course.id}" form="archived-remove-form" data-archive-checkbox th:aria-label="|选择课程 ${course.name}|" /></td>
                 <td><div class="cell-main" th:text="${course.name}">课程</div><div class="cell-sub">课时及全部学习历史已保留</div></td>
                 <td class="num" th:text="${course.embyParentItemId}">ID</td>
                 <td th:text="|${courseLessonCounts[course.id]} 个|">0 个</td>
                 <td class="num" th:text="${course.lastSyncedAt != null ? T(com.shangan.admin.AdminDisplayFormatter).dateTime(course.lastSyncedAt) : '尚未同步'}">尚未同步</td>
-                <td><form class="row-actions" method="post" th:action="@{/admin/courses/{id}/restore(id=${course.id})}"><button type="submit">恢复课程</button></form></td>
+                <td><div class="row-actions"><form method="post" th:action="@{/admin/courses/{id}/restore(id=${course.id})}"><button type="submit">恢复课程</button></form><button class="btn btn-danger btn-sm" type="button" data-remove-one>删除</button></div></td>
               </tr></tbody>
             </table></div>
           </section>
         </div>
       </main>
     </div>
+    <form id="archived-remove-form" method="post" th:action="@{/admin/courses/archived/remove}"></form>
+    <div class="archive-remove-modal" data-archive-remove-modal hidden>
+      <button class="archive-remove-modal__backdrop" type="button" data-remove-close aria-label="关闭删除确认"></button>
+      <section class="archive-remove-dialog" role="dialog" aria-modal="true" aria-labelledby="archive-remove-title" aria-describedby="archive-remove-description">
+        <header class="archive-remove-dialog__head"><div><small>DANGER / REMOVE</small><h2 id="archive-remove-title">确认删除归档课程</h2></div><span class="badge danger" data-remove-dialog-count>0 门课程</span></header>
+        <div class="archive-remove-dialog__body">
+          <p id="archive-remove-description">删除后课程将从归档区域永久移除，不能再从后台手工恢复。</p>
+          <dl class="archive-remove-facts"><div><dt>所选课程</dt><dd data-remove-course-count>0 门</dd></div><div><dt>保留课时</dt><dd data-remove-lesson-count>0 个</dd></div></dl>
+          <div class="archive-remove-warning"><strong>学习历史不会被删除</strong><span>可信进度、计划、欠债、题目、全文和摘要仍然保留；以后添加相同 Emby 来源时会恢复原课程身份。</span></div>
+          <div class="archive-remove-names" data-remove-course-names></div>
+        </div>
+        <footer class="archive-remove-dialog__foot"><button class="btn btn-secondary" type="button" data-remove-close data-remove-cancel>取消</button><button class="btn btn-danger" type="submit" form="archived-remove-form">确认删除</button></footer>
+      </section>
+    </div>
+    <script th:src="@{/assets/archived-course-removal.js}" defer></script>
   </body>
 </html>

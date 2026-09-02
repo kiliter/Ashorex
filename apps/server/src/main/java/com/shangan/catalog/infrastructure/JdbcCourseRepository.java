@@ -183,8 +183,41 @@ public class JdbcCourseRepository implements CourseRepository {
 
   @Override
   public void updateCourseEnabled(String courseId, boolean enabled, Instant now) {
-    jdbc.sql("update courses set enabled = :enabled, updated_at = :now where id = :id")
+    jdbc.sql(
+            "update courses set enabled = :enabled, "
+                + "removed_at = case when :enabled = 1 then null else removed_at end, "
+                + "updated_at = :now where id = :id")
         .params(Map.of("enabled", enabled ? 1 : 0, "now", now.toEpochMilli(), "id", courseId))
+        .update();
+  }
+
+  @Override
+  public void updateCourseRemoved(String courseId, Instant now) {
+    jdbc.sql(
+            "update courses set removed_at = :now, updated_at = :now "
+                + "where id = :id and enabled = 0 and removed_at is null")
+        .params(Map.of("now", now.toEpochMilli(), "id", courseId))
+        .update();
+  }
+
+  @Override
+  public void insertCourseRemovalAudit(
+      String id, String courseId, String administrator, String requestId, Instant now) {
+    jdbc.sql(
+            """
+            insert into course_removal_audits (
+              id, course_id, administrator, request_id, removed_at
+            ) values (
+              :id, :courseId, :administrator, :requestId, :removedAt
+            )
+            """)
+        .params(
+            Map.of(
+                "id", id,
+                "courseId", courseId,
+                "administrator", administrator,
+                "requestId", requestId,
+                "removedAt", now.toEpochMilli()))
         .update();
   }
 
@@ -215,7 +248,8 @@ public class JdbcCourseRepository implements CourseRepository {
         rs.getInt("enabled") == 1,
         rs.getInt("sort_order"),
         instantOrNull(rs, "last_synced_at"),
-        rs.getString("last_sync_error"));
+        rs.getString("last_sync_error"),
+        instantOrNull(rs, "removed_at"));
   }
 
   private MediaItem mapMediaItem(ResultSet rs, int row) throws SQLException {

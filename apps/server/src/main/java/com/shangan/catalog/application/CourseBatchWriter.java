@@ -72,7 +72,8 @@ public class CourseBatchWriter {
         enabled,
         course.sortOrder(),
         course.lastSyncedAt(),
-        course.lastSyncError());
+        course.lastSyncError(),
+        enabled ? null : course.removedAt());
   }
 
   /** 批量写入动作；同步结果由事务外的编排服务单独记录。 */

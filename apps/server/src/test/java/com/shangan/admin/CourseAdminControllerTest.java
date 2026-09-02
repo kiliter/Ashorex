@@ -113,12 +113,28 @@ class CourseAdminControllerTest {
     assertThat(courses.restoredCourseId).isEqualTo("course-1");
   }
 
+  @Test
+  void removesSelectedArchivedCoursesThroughOnePostBoundary() throws Exception {
+    mockMvc
+        .perform(
+            post("/admin/courses/archived/remove")
+                .param("courseIds", "course-1", "course-2")
+                .principal(() -> "admin"))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/admin/courses/archived?removed=2"));
+
+    assertThat(courses.removedCourseIds).containsExactly("course-1", "course-2");
+    assertThat(courses.removalAdministrator).isEqualTo("admin");
+  }
+
   /** 控制器测试专用 Stub，只覆盖当前路由会调用的课程服务方法。 */
   private static final class StubCourses extends CourseSyncService {
     private Course course;
     private int lessonCount;
     private String archivedCourseId;
     private String restoredCourseId;
+    private List<String> removedCourseIds;
+    private String removalAdministrator;
 
     private StubCourses() {
       super(null, null, null, null, null, null);
@@ -147,6 +163,14 @@ class CourseAdminControllerTest {
     @Override
     public void restoreCourse(String courseId) {
       restoredCourseId = courseId;
+    }
+
+    @Override
+    public int removeArchivedCourses(
+        List<String> courseIds, String administrator, String requestId) {
+      removedCourseIds = List.copyOf(courseIds);
+      removalAdministrator = administrator;
+      return courseIds.size();
     }
   }
 

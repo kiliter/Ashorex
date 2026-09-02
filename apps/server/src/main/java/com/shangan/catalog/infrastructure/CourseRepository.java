@@ -38,6 +38,17 @@ public interface CourseRepository {
   /** 逻辑归档或恢复课程，只改变可见性，不删除课程与任何学习历史。 */
   void updateCourseEnabled(String courseId, boolean enabled, Instant now);
 
+  /** 将已归档课程从后台归档区域移除，底层课程与学习数据保持不变。 */
+  default void updateCourseRemoved(String courseId, Instant now) {
+    throw new UnsupportedOperationException("课程仓储尚未实现归档移除");
+  }
+
+  /** 为课程移除操作写入不含媒体路径和密钥的安全审计。 */
+  default void insertCourseRemovalAudit(
+      String id, String courseId, String administrator, String requestId, Instant now) {
+    throw new UnsupportedOperationException("课程仓储尚未实现移除审计");
+  }
+
   void updateCourseSyncResult(String courseId, Instant syncedAt, String error);
 
   void updateMediaControls(String mediaItemId, boolean enabled, int sortOrder);

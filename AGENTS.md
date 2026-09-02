@@ -169,6 +169,8 @@ make ios-test
 make verify
 ```
 
+本地开发只运行本次新增或直接修改所对应的窄测试。`make server-test`、`make ios-test` 和 `make verify` 属于全量验证，只允许交给 GitHub CI 执行；Codex 本地不得运行。`make format` 仍可在提交前本地执行。
+
 Server:
 
 ```bash
@@ -198,7 +200,7 @@ fvm flutter test
 fvm flutter run
 ```
 
-Task 1–3 use the verification command specified in the plan while both applications are being bootstrapped. From Task 4 onward, a task is not complete until its narrow test and `make verify` pass.
+Task 1–3 use the narrow verification command specified in the plan while both applications are being bootstrapped. From Task 4 onward，本地只要求本次新增或直接修改的窄测试通过；全量 `make verify` 由 GitHub CI 验证。
 
 ## Task 开发流程
 
@@ -210,8 +212,8 @@ For each implementation Task:
 4. Run it and confirm the expected failure.
 5. Implement the minimum complete behavior.
 6. Run the narrow test.
-7. Run module tests.
-8. Run `make format && make verify`.
+7. 只补充运行本次新增或直接修改所对应的窄测试，不运行模块全量测试。
+8. Run `make format`; push 后由 GitHub CI 运行 `make verify`。
 9. Review diff for scope expansion, accidental secrets and missing tests.
 10. Commit once with the Task commit subject.
 11. Stop at review gates and report commands plus results.
@@ -452,7 +454,7 @@ A change is complete only when:
 
 - required behavior exists;
 - narrow tests pass;
-- full verification passes;
+- GitHub CI 中的 full verification passes；本地不运行全量测试；
 - 涉及启动边界时，真实 ApplicationContext 启动和健康检查通过；
 - API docs are current;
 - no secret or debug artifact is present;

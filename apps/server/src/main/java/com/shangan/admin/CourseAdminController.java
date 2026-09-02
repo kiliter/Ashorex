@@ -6,10 +6,13 @@ import com.shangan.catalog.application.LessonStudyContentImportService;
 import com.shangan.catalog.domain.Course;
 import com.shangan.catalog.domain.MediaItem;
 import com.shangan.common.api.BusinessException;
+import com.shangan.common.api.RequestIdFilter;
 import com.shangan.quiz.application.QuizService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotBlank;
 import java.io.IOException;
+import java.security.Principal;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -112,11 +115,43 @@ public class CourseAdminController {
   /** 已归档课程单独展示，并提供恢复原课程身份的操作。 */
   @GetMapping("/admin/courses/archived")
   String archivedCourses(Model model) {
+    populateArchivedCoursesModel(model);
+    return "admin/course-archived";
+  }
+
+  /** 单个和批量删除共用一个事务边界；错误时保留归档列表并返回可执行提示。 */
+  @PostMapping("/admin/courses/archived/remove")
+  String removeArchivedCourses(
+      @RequestParam(name = "courseIds", required = false) List<String> courseIds,
+      Principal principal,
+      HttpServletRequest request,
+      HttpServletResponse response,
+      Model model) {
+    try {
+      int removedCount =
+          courses.removeArchivedCourses(
+              courseIds, principal == null ? "unknown" : principal.getName(), requestId(request));
+      return "redirect:/admin/courses/archived?removed=" + removedCount;
+    } catch (BusinessException exception) {
+      response.setStatus(exception.status().value());
+      model.addAttribute("removeError", exception.getMessage());
+      populateArchivedCoursesModel(model);
+      return "admin/course-archived";
+    }
+  }
+
+  private void populateArchivedCoursesModel(Model model) {
     List<Course> archived = courses.listArchivedCourses();
     CourseDirectoryStatistics statistics = courseDirectoryStatistics(archived);
     model.addAttribute("courses", archived);
     model.addAttribute("courseLessonCounts", statistics.lessonCounts());
-    return "admin/course-archived";
+    model.addAttribute("totalArchivedLessonCount", statistics.totalLessonCount());
+  }
+
+  /** Request ID 由过滤器生成；独立 Controller 测试未安装过滤器时使用安全占位值。 */
+  private String requestId(HttpServletRequest request) {
+    Object value = request.getAttribute(RequestIdFilter.ATTRIBUTE);
+    return value instanceof String requestId && !requestId.isBlank() ? requestId : "unknown";
   }
 
   @PostMapping("/admin/courses/{courseId}/restore")

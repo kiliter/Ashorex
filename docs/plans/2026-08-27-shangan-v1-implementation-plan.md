@@ -22,8 +22,8 @@
 - 所有日期边界按用户时区处理，数据库时间统一 UTC Epoch Milliseconds。
 - 所有状态机和时间规则必须通过注入的 `java.time.Clock` 做纯逻辑测试。
 - 服务端自动化测试不得启动 SQLite、Flyway 或其他真实数据库；历史 Task 中的数据库集成测试要求统一由 Task 23 替代。
-- 每个 Task 独立完成测试、评审和提交，禁止一次提交跨越多个 Task。
-- Task 1–3 在应用脚手架尚未齐全时运行各 Task 明确的验证命令；从 Task 4 起，每次提交前运行 `make format && make verify`。
+- 每个 Task 独立完成新增或直接修改相关的窄测试、评审和提交，禁止一次提交跨越多个 Task；全量测试统一由 GitHub CI 执行，本地不得运行。
+- Task 1–3 在应用脚手架尚未齐全时运行各 Task 明确的窄验证命令；从 Task 4 起，每次提交前本地运行 `make format` 和本次新增或修改相关的窄测试，`make verify` 只由 GitHub CI 运行。
 - 禁止用跳过测试、删除断言或放宽业务规则的方式让测试通过。
 
 ---
@@ -2487,6 +2487,58 @@ make verify
 ```bash
 git add docs apps/server
 git commit -m "feat(catalog): discover and batch add emby sources"
+```
+
+### Task 26：已归档课程单个与批量删除
+
+**状态：** ADR-0017 已获人工批准，可以实施。
+
+**前置文档：**
+
+- `docs/adr/0017-remove-archived-courses.md`
+
+**主要文件：**
+
+- 新增：追加式 Flyway 迁移，为课程增加 `removed_at`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/application/CourseSyncService.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/infrastructure/CourseRepository.java`
+- 修改：`apps/server/src/main/java/com/shangan/catalog/infrastructure/JdbcCourseRepository.java`
+- 修改：`apps/server/src/main/java/com/shangan/admin/CourseAdminController.java`
+- 修改：已归档课程 Thymeleaf 模板及必要的后台静态资源
+- 测试：课程移除应用服务、Controller 与二次确认交互测试
+
+**接口：**
+
+- ADMIN：单个删除已归档课程。
+- ADMIN：勾选、全选当前列表并批量删除最多 50 门已归档课程。
+- ADMIN：二次确认展示课程数量、课时总数和不可手工恢复提示。
+- 不新增或修改 `/api/v1` 学习端契约。
+
+- [x] **步骤 1：获得范围变更批准并冻结删除语义**
+
+确认“删除”只将课程标记为已移除并隐藏，不物理删除学习历史；相同 Emby 来源以后重新添加时复用原课程身份。批准后把 ADR-0017 状态改为“已接受”，再开始实现。
+
+- [x] **步骤 2：先写失败的课程移除应用服务测试**
+
+覆盖单个删除、最多 50 门批量删除、只允许已归档课程、整批校验失败不写入、重复提交幂等、学习历史仓储不接收删除调用，以及重新添加同来源时恢复原身份并清除 `removed_at`。
+
+- [x] **步骤 3：追加迁移并实现应用服务边界**
+
+通过新迁移增加可空 UTC Epoch Milliseconds `removed_at`，不得编辑现有迁移。应用服务在一个短事务中校验全部课程、写入移除时间并记录安全审计；Repository 只负责持久化，不在 Controller 中使用 `JdbcClient`。
+
+- [x] **步骤 4：实现已归档课程批量操作和二次确认**
+
+列表提供逐行复选框、整行点击高亮、全选当前列表、单个删除和“删除所选”。二次确认展示课程数、课时总数与历史保留说明；默认焦点落在取消按钮，Escape 和点击取消不提交，确认后使用明确反馈说明删除结果。
+
+- [ ] **步骤 5：执行窄测试与人工检查**
+
+本地只运行课程移除新增或直接修改相关的窄测试与 `make format`；全量 `make verify` 交给 GitHub CI。再启动后端人工确认单个删除、全选、批量删除、取消确认、重复提交和相同来源重新添加。检查迁移追加性、事务边界、CSRF、越权、请求 ID、秘密与媒体路径泄漏。
+
+- [ ] **步骤 6：检查并提交**
+
+```bash
+git add docs apps/server
+git commit -m "feat(catalog): remove archived courses"
 ```
 
 ## Cross-Task Review Gates
