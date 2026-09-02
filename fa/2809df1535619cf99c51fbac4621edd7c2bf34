@@ -1,0 +1,98 @@
+apps/server/src/main/java/com/shangan/media/emby/EmbyClient.java
+  s_d11d2e0a6d2d4e::t_aca98161682912 28-29,54,60,62,69
+  s_d11d2e0a6d2d4e::t_f842a1587ff443 5-6,107,124
+  s_d11d2e0a6d2d4e::t_603be098aee42c 15,34,45-51,173
+  s_d11d2e0a6d2d4e::t_261367af3ca79b 8,10-12,18,22,27,33,37-41,44,56-57,65-68,71-72,81-106,108-123,125-172,174-193
+apps/server/src/main/java/com/shangan/catalog/infrastructure/CourseRepository.java
+  s_d11d2e0a6d2d4e::t_e0486cf2ef4d5b 21,23-36
+apps/server/src/main/java/com/shangan/media/emby/EmbyDtos.java
+  s_d11d2e0a6d2d4e::t_0a43aef1b6d1cb 8-10,12-24
+apps/server/src/main/resources/db/migration/V025__emby_source_mapping.sql
+  s_d11d2e0a6d2d4e::t_e0486cf2ef4d5b 1-24
+apps/server/src/test/java/com/shangan/catalog/CourseSyncServiceTest.java
+  s_d11d2e0a6d2d4e::t_3f984605a8bf7c 4,12,100-108,110-122,124-129
+  s_d11d2e0a6d2d4e::t_6764beab4074ef 52-53,67-95,97,130-131,135-136,164-165,169-187,190,196-197,205-216
+  s_d11d2e0a6d2d4e::t_f842a1587ff443 8,96,98-99
+  s_d11d2e0a6d2d4e::t_da4c41b28f16b0 109,123
+  s_d11d2e0a6d2d4e::t_8462c9ebcad56b 217-218
+apps/server/src/main/resources/templates/admin/course-source.html
+  s_d11d2e0a6d2d4e::t_aca98161682912 33-34
+  s_d11d2e0a6d2d4e::t_ea310646ed2653 46
+  s_d11d2e0a6d2d4e::t_3d52540fa4e221 1-32,35-45,47-58
+docs/adr/0015-emby-library-remapping.md
+  s_d11d2e0a6d2d4e::t_cfa81c5bbbceb8 3
+  s_d11d2e0a6d2d4e::t_913e066ff09abe 1-2,4-47
+apps/server/src/main/resources/templates/admin/courses.html
+  s_d11d2e0a6d2d4e::t_3d52540fa4e221 11-12,15-16,34
+apps/server/src/main/java/com/shangan/catalog/application/CourseSyncService.java
+  s_d11d2e0a6d2d4e::t_da4c41b28f16b0 145-146,192
+  s_d11d2e0a6d2d4e::t_1013492d790800 114-123
+  s_d11d2e0a6d2d4e::t_6ccaae8729acfb 196-197
+  s_d11d2e0a6d2d4e::t_f842a1587ff443 138
+  s_d11d2e0a6d2d4e::t_b1cf1f51a1c59d 59
+  s_d11d2e0a6d2d4e::t_aca98161682912 12,142-144,148-150,172-191,193-195
+  s_d11d2e0a6d2d4e::t_590560bace373c 14,33,40-41,47,73-77,124-137,139-141,147,151-152,166-171,198-221
+apps/server/src/main/java/com/shangan/catalog/application/CatalogSnapshotWriter.java
+  s_d11d2e0a6d2d4e::t_f842a1587ff443 37,100
+  s_d11d2e0a6d2d4e::t_228ef017eaf31a 6,9,11,15,29,31-36,38-46,48-80,85-99,101-113,117-123
+apps/server/src/main/java/com/shangan/admin/CourseAdminController.java
+  s_d11d2e0a6d2d4e::t_39f584f547ce3a 12,47,55-58,68-105,221-260
+  s_d11d2e0a6d2d4e::t_e0deff9a18208f 261
+apps/server/src/main/java/com/shangan/catalog/infrastructure/JdbcCourseRepository.java
+  s_d11d2e0a6d2d4e::t_e71eb551aaa27e 83,87-88,90-91,93-116,118-145,149-154,159-160,164,167-172,177-178,181-183,219-220
+  s_d11d2e0a6d2d4e::t_f842a1587ff443 179-180
+docs/traceability/2026-08-27-shangan-v1-traceability.md
+  s_d11d2e0a6d2d4e::t_c1cb1acf5b9ad2 20,22
+docs/plans/2026-08-27-shangan-v1-implementation-plan.md
+  s_d11d2e0a6d2d4e::t_bc715985f00117 2328-2404
+  s_d11d2e0a6d2d4e::t_4ba41c51eba7b1 2527-2536
+docs/specs/2026-08-27-shangan-v1-design.md
+  s_d11d2e0a6d2d4e::t_23259c797911e9 747-748,762-775
+  s_d11d2e0a6d2d4e::t_988c34b39805cc 1284,1288-1304
+  s_d11d2e0a6d2d4e::t_4caefe95b20fe4 1645-1646,1748-1749
+  s_d11d2e0a6d2d4e::t_e6a914da9ba0fd 98-99,424
+  s_d11d2e0a6d2d4e::t_5ad4973be3062e 2040-2050,2072
+  s_d11d2e0a6d2d4e::t_c335f3c6d51f92 2097
+apps/server/src/test/java/com/shangan/media/emby/EmbySourceFingerprintTest.java
+  s_d11d2e0a6d2d4e::t_56d388a2479805 1-19
+apps/server/src/test/java/com/shangan/catalog/MediaMappingPlannerTest.java
+  s_d11d2e0a6d2d4e::t_56d388a2479805 1-24,27-43,46-61,64-65,68-69,72-79,107-112,114-116
+  s_d11d2e0a6d2d4e::t_da4c41b28f16b0 86
+  s_d11d2e0a6d2d4e::t_f842a1587ff443 25-26,44-45,62-63,66-67,70-71,113
+  s_d11d2e0a6d2d4e::t_aca98161682912 80-85,87-106
+apps/server/src/test/java/com/shangan/media/emby/EmbyClientContractTest.java
+  s_d11d2e0a6d2d4e::t_aca98161682912 42,49-51
+  s_d11d2e0a6d2d4e::t_f842a1587ff443 96-97,101-111,151
+  s_d11d2e0a6d2d4e::t_56d388a2479805 4,6-7,9,11,13-16,22,35,37-41,43-48,52-95,98-100,112-150,152-156,159,161-165,168,170-184,186-195
+apps/server/src/main/java/com/shangan/catalog/application/MediaMappingPlanner.java
+  s_d11d2e0a6d2d4e::t_bdae3f74a33091 21,103-107
+  s_d11d2e0a6d2d4e::t_f842a1587ff443 67,69,80,252
+  s_d11d2e0a6d2d4e::t_638d28db58c594 50,90,97-100,109-113,116
+  s_d11d2e0a6d2d4e::t_aca98161682912 129,139-154,235-247
+  s_d11d2e0a6d2d4e::t_346918f87f503d 159
+  s_d11d2e0a6d2d4e::t_fa9bf851c1e189 1-20,22-49,51-66,68,70-79,81-89,91-96,101-102,108,114-115,117-128,130-138,155-158,160-234,248-251,253-269
+apps/server/src/main/java/com/shangan/media/emby/EmbyGateway.java
+  s_d11d2e0a6d2d4e::t_69903b3b1f8583 7-10
+  s_d11d2e0a6d2d4e::t_0a43aef1b6d1cb 11
+apps/server/src/main/java/com/shangan/media/emby/EmbySourceFingerprint.java
+  s_d11d2e0a6d2d4e::t_0a43aef1b6d1cb 1-33
+apps/server/src/main/java/com/shangan/catalog/domain/MediaItem.java
+  s_d11d2e0a6d2d4e::t_fa9bf851c1e189 8-9,14-25,27-28
+  s_d11d2e0a6d2d4e::t_f842a1587ff443 26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "fa2809df1535619cf99c51fbac4621edd7c2bf34",
+  "prompts": {},
+  "sessions": {
+    "s_d11d2e0a6d2d4e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05fed-0bd9-7313-9c21-a4ecd9750720",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
