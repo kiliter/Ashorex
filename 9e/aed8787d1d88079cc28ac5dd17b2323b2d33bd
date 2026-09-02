@@ -1,0 +1,87 @@
+apps/server/src/main/java/com/shangan/catalog/application/CourseDeletionDerivedDataRefresher.java
+  s_d11d2e0a6d2d4e::t_dd0e185cb5b616 1-10
+apps/server/src/main/java/com/shangan/catalog/infrastructure/SafeCourseAttachmentCleaner.java
+  s_d11d2e0a6d2d4e::t_18333d8c8d1653 1-36
+apps/server/src/test/java/com/shangan/catalog/CourseDeletionServiceTest.java
+  s_d11d2e0a6d2d4e::t_8c491938425236 91,164
+  s_d11d2e0a6d2d4e::t_c9a76c9aeb6872 6-8,10,12,16,24-25,28-33,38-39,42-50,55-62,66-83,86,89-90,98-99,118,123,127,160-163,165-197
+  s_d11d2e0a6d2d4e::t_bd8efd8b9d89f2 34-37,40-41,84-85
+apps/server/src/main/java/com/shangan/catalog/infrastructure/CourseRepository.java
+  s_d11d2e0a6d2d4e::t_f56a9cd334e25e 41,46
+apps/server/src/main/java/com/shangan/admin/CourseAdminController.java
+  s_d11d2e0a6d2d4e::t_b09d8e07ed9f74 4,37,44,49,123-133,137,141
+apps/server/src/test/java/com/shangan/admin/CourseAdminControllerTest.java
+  s_d11d2e0a6d2d4e::t_23d28af9dcd029 15,18,32,38-39,122-130,135,139-140,178-192,194-195,198-200
+  s_d11d2e0a6d2d4e::t_8c491938425236 193
+docs/plans/2026-08-27-shangan-v1-implementation-plan.md
+  s_d11d2e0a6d2d4e::t_36403a5f75f472 2616,2750-2758
+  s_d11d2e0a6d2d4e::t_1aa1263673b7a3 2548,2572
+  s_d11d2e0a6d2d4e::t_007510002790b2 2576,2593,2597,2601,2605
+  s_d11d2e0a6d2d4e::t_8a43a0e8c26635 2494-2495,2546-2547,2549-2571,2573-2575,2577-2592,2594-2596,2598-2600,2602-2604,2606-2615
+  s_d11d2e0a6d2d4e::t_cc0d4e02befa09 2617
+apps/server/src/main/java/com/shangan/catalog/application/CourseAttachmentCleaner.java
+  s_d11d2e0a6d2d4e::t_dd0e185cb5b616 1-9
+apps/server/src/main/java/com/shangan/catalog/infrastructure/CourseDeletionRepository.java
+  s_d11d2e0a6d2d4e::t_dd0e185cb5b616 1-12
+apps/server/src/test/java/com/shangan/catalog/CourseBatchServiceTest.java
+  s_d11d2e0a6d2d4e::t_bd8efd8b9d89f2 123
+  s_d11d2e0a6d2d4e::t_bb7cdf4e334ebe 94-122,124-126
+docs/adr/0017-remove-archived-courses.md
+  s_d11d2e0a6d2d4e::t_8a43a0e8c26635 3,9
+  s_d11d2e0a6d2d4e::t_3f95fc4197c5fc 10
+docs/adr/0018-hard-delete-archived-course-graph.md
+  s_d11d2e0a6d2d4e::t_1aa1263673b7a3 3
+  s_d11d2e0a6d2d4e::t_8a43a0e8c26635 1-2,4-64
+apps/server/src/main/java/com/shangan/catalog/application/CourseSyncService.java
+  s_d11d2e0a6d2d4e::t_bd8efd8b9d89f2 76
+apps/server/src/main/resources/static/assets/archived-course-removal.js
+  s_d11d2e0a6d2d4e::t_8c491938425236 19-20
+  s_d11d2e0a6d2d4e::t_ac11772f552b62 14-18,21-34,54-95,101-103,105-109,115-116,120
+apps/server/src/main/resources/db/migration/V028__course_hard_deletion_indexes.sql
+  s_d11d2e0a6d2d4e::t_9a8fb7ca51dfd9 1-10
+apps/server/src/main/java/com/shangan/catalog/domain/CourseDeletionGraph.java
+  s_d11d2e0a6d2d4e::t_dd0e185cb5b616 1-14,17-41
+  s_d11d2e0a6d2d4e::t_8c491938425236 15-16
+docs/traceability/2026-08-27-shangan-v1-traceability.md
+  s_d11d2e0a6d2d4e::t_8a43a0e8c26635 24
+  s_d11d2e0a6d2d4e::t_36403a5f75f472 3
+apps/server/src/main/resources/templates/admin/course-archived.html
+  s_d11d2e0a6d2d4e::t_b38924cda1aa78 8,11,15,25,28,32,39-40,45-48,51-52,54,57,60,62-66,69
+  s_d11d2e0a6d2d4e::t_8c491938425236 49-50,53,55-56,58-59,61
+apps/server/src/main/java/com/shangan/catalog/application/CourseBatchWriter.java
+  s_d11d2e0a6d2d4e::t_bd8efd8b9d89f2 14,53
+  s_d11d2e0a6d2d4e::t_f56a9cd334e25e 6,51-52
+  s_d11d2e0a6d2d4e::t_6e41cf9841fb78 54
+apps/server/src/main/resources/static/assets/admin.css
+  s_d11d2e0a6d2d4e::t_b38924cda1aa78 385-389,394
+apps/server/src/main/java/com/shangan/catalog/application/CourseDeletionService.java
+  s_d11d2e0a6d2d4e::t_dd0e185cb5b616 1-50,53-62,67-86,88-151,153-157
+  s_d11d2e0a6d2d4e::t_bd8efd8b9d89f2 51-52,63-66,87,152
+apps/server/src/main/java/com/shangan/reporting/application/ReportingCourseDeletionDerivedDataRefresher.java
+  s_d11d2e0a6d2d4e::t_d0167a9dbf8b93 9-10,27
+  s_d11d2e0a6d2d4e::t_18333d8c8d1653 1-8,11-26,28-35
+apps/server/src/main/java/com/shangan/catalog/infrastructure/JdbcCourseDeletionRepository.java
+  s_d11d2e0a6d2d4e::t_8c491938425236 89-97,99-114,117-123,126-133,140-144,147-154,164,168-170
+  s_d11d2e0a6d2d4e::t_d0167a9dbf8b93 248-249,314-319
+  s_d11d2e0a6d2d4e::t_bd8efd8b9d89f2 214-215,227,251
+  s_d11d2e0a6d2d4e::t_20b9264dcf5245 1-88,98,115-116,124-125,134-139,145-146,155-163,165-167,171-213,216-226,228-247,250,252-313,320-369
+docs/specs/2026-08-27-shangan-v1-design.md
+  s_d11d2e0a6d2d4e::t_36403a5f75f472 5
+  s_d11d2e0a6d2d4e::t_8a43a0e8c26635 4,101,1317-1321,2074-2075,2077-2078
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "9eaed8787d1d88079cc28ac5dd17b2323b2d33bd",
+  "prompts": {},
+  "sessions": {
+    "s_d11d2e0a6d2d4e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05fed-0bd9-7313-9c21-a4ecd9750720",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
