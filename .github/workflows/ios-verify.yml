@@ -83,8 +83,9 @@ jobs:
         shell: bash
         run: |
           version="${GITHUB_REF_NAME#v}"
-          mv release-assets/shangan-ios-unsigned.ipa "release-assets/Ashorex-${version}-ios-unsigned.ipa"
-          mv release-assets/app-debug.apk "release-assets/Ashorex-${version}-android-debug.apk"
+          # 对外附件统一使用仓库名、版本号和平台名，不在文件名中暴露构建类型。
+          mv release-assets/shangan-ios-unsigned.ipa "release-assets/Ashorex-${version}-ios.ipa"
+          mv release-assets/app-debug.apk "release-assets/Ashorex-${version}-android.apk"
       - name: 上传到 GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
