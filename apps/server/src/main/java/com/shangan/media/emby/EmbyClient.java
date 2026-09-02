@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -27,7 +28,6 @@ public class EmbyClient implements EmbyGateway {
 
   private static final long TICKS_PER_MILLISECOND = 10_000L;
   private static final int DEFAULT_PAGE_SIZE = 500;
-  private static final int SOURCE_SEARCH_LIMIT = 50;
   private static final Set<String> SUPPORTED_LIBRARY_TYPES =
       Set.of("", "movies", "tvshows", "mixed", "homevideos", "musicvideos", "folders");
   private static final Set<String> SUPPORTED_SOURCE_ITEM_TYPES =
@@ -85,36 +85,45 @@ public class EmbyClient implements EmbyGateway {
     }
   }
 
-  /** 默认只在后台已绑定媒体库内联想 Series/Movie；空关键字不铺开大量来源。 */
+  /** 弹窗打开后分页读取绑定媒体库内的全部 Series/Movie；关键字仅用于可选的服务端过滤。 */
   @Override
   public List<EmbyDtos.MediaSource> searchSources(String query) {
     RuntimeIntegrationSettings runtime = requiredSettings();
     RuntimeIntegrationSettings.Emby configuration = runtime.emby();
     String normalizedQuery = query == null ? "" : query.trim();
-    if (normalizedQuery.isBlank() || runtime.embyLibraries().isEmpty()) {
+    if (runtime.embyLibraries().isEmpty()) {
       return List.of();
     }
     try {
       Map<String, EmbyDtos.MediaSource> uniqueSources = new LinkedHashMap<>();
       for (RuntimeIntegrationSettings.EmbyLibrary library : runtime.embyLibraries()) {
         String includeItemTypes = includeItemTypes(library.contentType());
-        String body =
-            requestSourceSearch(configuration, library.id(), normalizedQuery, includeItemTypes);
-        for (JsonNode item : objectMapper.readTree(body).path("Items")) {
-          EmbyDtos.MediaSource source = sourceFromNode(item);
-          if (source != null && includedType(source.itemType(), includeItemTypes)) {
-            uniqueSources.putIfAbsent(source.id(), source);
+        int startIndex = 0;
+        int totalRecordCount;
+        do {
+          String body =
+              requestSourceSearch(
+                  configuration, library.id(), normalizedQuery, includeItemTypes, startIndex);
+          JsonNode response = objectMapper.readTree(body);
+          JsonNode items = response.path("Items");
+          totalRecordCount = response.path("TotalRecordCount").asInt(items.size());
+          int pageItemCount = items.size();
+          if (pageItemCount == 0 && startIndex < totalRecordCount) {
+            throw unavailable();
           }
-        }
-        if (uniqueSources.size() >= SOURCE_SEARCH_LIMIT) {
-          break;
-        }
+          for (JsonNode item : items) {
+            EmbyDtos.MediaSource source = sourceFromNode(item);
+            if (source != null && includedType(source.itemType(), includeItemTypes)) {
+              uniqueSources.putIfAbsent(source.id(), source);
+            }
+          }
+          startIndex += pageItemCount;
+        } while (startIndex < totalRecordCount);
       }
       return uniqueSources.values().stream()
           .sorted(
               Comparator.comparing(EmbyDtos.MediaSource::name, String.CASE_INSENSITIVE_ORDER)
                   .thenComparing(EmbyDtos.MediaSource::id))
-          .limit(SOURCE_SEARCH_LIMIT)
           .toList();
     } catch (BusinessException exception) {
       throw exception;
@@ -251,7 +260,8 @@ public class EmbyClient implements EmbyGateway {
       RuntimeIntegrationSettings.Emby configuration,
       String libraryId,
       String query,
-      String includeItemTypes) {
+      String includeItemTypes,
+      int startIndex) {
     return client(configuration)
         .get()
         .uri(
@@ -260,13 +270,14 @@ public class EmbyClient implements EmbyGateway {
                     .path("/Users/{userId}/Items")
                     .queryParam("ParentId", libraryId)
                     .queryParam("Recursive", true)
-                    .queryParam("SearchTerm", query)
+                    .queryParamIfPresent(
+                        "SearchTerm", query.isBlank() ? Optional.empty() : Optional.of(query))
                     .queryParam("IncludeItemTypes", includeItemTypes)
                     .queryParam("Fields", "ParentId,SortName")
                     .queryParam("SortBy", "SortName")
                     .queryParam("SortOrder", "Ascending")
-                    .queryParam("StartIndex", 0)
-                    .queryParam("Limit", SOURCE_SEARCH_LIMIT)
+                    .queryParam("StartIndex", startIndex)
+                    .queryParam("Limit", pageSize)
                     .build(configuration.userId()))
         .retrieve()
         .body(String.class);

@@ -11,14 +11,11 @@
           <div class="alert" th:if="${sourceError != null}" th:text="${sourceError}">来源预览失败</div>
 
           <section class="panel" data-source-picker data-search-url="/admin/emby/sources" data-mode="single">
-            <div class="panel-head"><div><h2>SELECT / 选择新来源</h2><p>默认从已绑定媒体库查找剧集或电影，然后生成安全映射预览。</p></div></div>
+            <div class="panel-head"><div><h2>SELECT / 选择新来源</h2><p>从已绑定媒体库选择剧集或电影，然后生成安全映射预览。</p></div></div>
             <form class="panel-body source-builder__form" method="post" th:action="@{/admin/courses/{id}/source/preview(id=${course.id})}">
-              <div class="source-combobox" role="combobox" aria-haspopup="listbox" aria-expanded="false">
-                <label class="field">查找 Emby 来源
-                  <input type="search" autocomplete="off" data-source-query aria-autocomplete="list" aria-controls="rebind-source-options" placeholder="例如：判断推理、申论导学" />
-                </label>
-                <div class="source-options" id="rebind-source-options" role="listbox" data-source-options hidden></div>
-                <p class="help" data-source-status>输入关键字查找剧集或电影；搜索范围在 Emby 系统配置中绑定。</p>
+              <div class="source-picker-launch">
+                <div><strong>新的 Emby 来源</strong><p>点击后展示已绑定媒体库下的全部剧集和电影，一次选择一个来源。</p></div>
+                <button type="button" data-source-open>选择 Emby 课程</button>
               </div>
               <div class="source-tray source-tray--single" data-source-tray><div class="source-tray__empty" data-source-empty>尚未选择新的媒体来源。</div></div>
               <div data-source-hidden></div>
@@ -27,6 +24,18 @@
                 <label class="field">Emby Item ID<input class="data-text" name="manualParentItemId" data-manual-source placeholder="手工 ID 会优先于联想选择" /></label>
               </details>
               <div class="actions"><button type="submit" data-single-submit disabled>预览映射</button></div>
+              <div class="source-picker-modal" data-source-modal hidden>
+                <button class="source-picker-modal__backdrop" type="button" data-source-close aria-label="关闭课程选择弹窗"></button>
+                <section class="source-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="rebind-source-dialog-title">
+                  <header class="source-picker-dialog__head"><div><small>EMBY / REBIND SOURCE</small><h3 id="rebind-source-dialog-title">选择新的 Emby 来源</h3></div><span class="badge" data-modal-source-count>已选 0 / 1</span></header>
+                  <div class="source-picker-dialog__body">
+                    <label class="field">搜索已加载课程<input type="search" autocomplete="off" data-source-query placeholder="输入课程名称或 Item ID" /></label>
+                    <p class="help" data-source-status>正在准备课程列表…</p>
+                    <div class="source-picker-list" data-source-options aria-live="polite"></div>
+                  </div>
+                  <footer class="source-picker-dialog__foot"><button class="btn-secondary" type="button" data-source-close>取消</button><button type="button" data-source-confirm>确定绑定</button></footer>
+                </section>
+              </div>
             </form>
           </section>
 

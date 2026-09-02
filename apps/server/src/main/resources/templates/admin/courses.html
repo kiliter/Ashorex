@@ -24,14 +24,11 @@
           </section>
 
           <section class="panel source-builder" data-source-picker data-search-url="/admin/emby/sources" data-mode="multiple">
-            <div class="panel-head"><div><h2>CREATE / 一键添加课程</h2><p>默认联想已绑定媒体库中的剧集和电影；最多选择 50 个来源。</p></div><span class="badge" data-source-count>0 / 50</span></div>
+            <div class="panel-head"><div><h2>CREATE / 一键添加课程</h2><p>从已绑定媒体库选择剧集或电影；最多选择 50 个来源。</p></div><span class="badge" data-source-count>0 / 50</span></div>
             <form class="panel-body source-builder__form" method="post" th:action="@{/admin/courses/batch}">
-              <div class="source-combobox" role="combobox" aria-haspopup="listbox" aria-expanded="false">
-                <label class="field">查找 Emby 来源
-                  <input type="search" autocomplete="off" data-source-query aria-autocomplete="list" aria-controls="course-source-options" placeholder="例如：判断推理、申论导学" />
-                </label>
-                <div class="source-options" id="course-source-options" role="listbox" data-source-options hidden></div>
-                <p class="help" data-source-status>输入关键字查找剧集或电影；搜索范围在“系统配置 → Emby 媒体服务”中绑定。</p>
+              <div class="source-picker-launch">
+                <div><strong>Emby 课程来源</strong><p>点击后展示已绑定媒体库下的全部剧集和电影，可在弹窗中搜索并勾选。</p></div>
+                <button type="button" data-source-open>选择 Emby 课程</button>
               </div>
               <div class="source-tray" data-source-tray>
                 <div class="source-tray__empty" data-source-empty>还没有选择来源。选择一个来源可直接添加，选择多个来源可批量添加。</div>
@@ -45,6 +42,18 @@
               <div class="actions">
                 <button type="submit" data-single-submit disabled>添加并同步</button>
                 <button class="btn-secondary" type="submit" data-batch-submit disabled>批量添加并同步</button>
+              </div>
+              <div class="source-picker-modal" data-source-modal hidden>
+                <button class="source-picker-modal__backdrop" type="button" data-source-close aria-label="关闭课程选择弹窗"></button>
+                <section class="source-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="course-source-dialog-title">
+                  <header class="source-picker-dialog__head"><div><small>EMBY / COURSE SOURCE</small><h3 id="course-source-dialog-title">选择 Emby 课程</h3></div><span class="badge" data-modal-source-count>已选 0 / 50</span></header>
+                  <div class="source-picker-dialog__body">
+                    <label class="field">搜索已加载课程<input type="search" autocomplete="off" data-source-query placeholder="输入课程名称或 Item ID" /></label>
+                    <p class="help" data-source-status>正在准备课程列表…</p>
+                    <div class="source-picker-list" data-source-options aria-live="polite"></div>
+                  </div>
+                  <footer class="source-picker-dialog__foot"><button class="btn-secondary" type="button" data-source-close>取消</button><button type="button" data-source-confirm>确定绑定</button></footer>
+                </section>
               </div>
             </form>
           </section>

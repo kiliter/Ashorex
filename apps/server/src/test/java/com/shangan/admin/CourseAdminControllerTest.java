@@ -55,6 +55,19 @@ class CourseAdminControllerTest {
   }
 
   @Test
+  void listsAllSafeEmbySourcesWhenTheDialogOpensWithoutAQuery() throws Exception {
+    batches.searchResults =
+        List.of(new EmbyDtos.MediaSource("movie-1", "申论导学", "Movie", "", "library-1"));
+
+    mockMvc
+        .perform(get("/admin/emby/sources"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value("movie-1"));
+
+    assertThat(batches.lastQuery).isEmpty();
+  }
+
+  @Test
   void batchAddReturnsPerSourceResultOnTheCoursePage() throws Exception {
     var item =
         new CourseBatchService.BatchItem(

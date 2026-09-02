@@ -222,8 +222,65 @@ class EmbyClientContractTest {
                 assertThat(query)
                     .containsEntry("SearchTerm", "判断")
                     .containsEntry("StartIndex", "0")
-                    .containsEntry("Limit", "50"));
+                    .containsEntry("Limit", "2"));
     assertThat(sources.toString()).doesNotContain("/private/", "server-secret-token");
+  }
+
+  @Test
+  void blankQueryListsEverySourceAcrossAllPagesAfterTheDialogOpens() throws Exception {
+    List<Map<String, String>> sourceQueries = new ArrayList<>();
+    startServer(
+        exchange -> {
+          if (!exchange.getRequestURI().getPath().equals("/Users/user-1/Items")) {
+            respond(exchange, 404, "not found");
+            return;
+          }
+          Map<String, String> requestQuery = query(exchange);
+          sourceQueries.add(requestQuery);
+          if (requestQuery.get("StartIndex").equals("0")) {
+            respond(
+                exchange,
+                200,
+                """
+                {"Items":[
+                  {"Id":"series-1","Name":"行测系统课","Type":"Series","ParentId":"library-mixed"},
+                  {"Id":"movie-1","Name":"申论导学","Type":"Movie","ParentId":"library-mixed"}
+                ],"TotalRecordCount":3}
+                """);
+          } else {
+            respond(
+                exchange,
+                200,
+                """
+                {"Items":[
+                  {"Id":"series-2","Name":"面试系统课","Type":"Series","ParentId":"library-mixed"}
+                ],"TotalRecordCount":3}
+                """);
+          }
+        });
+    EmbyClient client =
+        client(
+            2,
+            List.of(
+                new RuntimeIntegrationSettings.EmbyLibrary(
+                    "library-mixed", "考公", RuntimeIntegrationSettings.EmbyLibraryType.MIXED)));
+
+    List<EmbyDtos.MediaSource> sources = client.searchSources("");
+
+    assertThat(sources)
+        .extracting(EmbyDtos.MediaSource::id)
+        .containsExactlyInAnyOrder("series-1", "movie-1", "series-2");
+    assertThat(sourceQueries).hasSize(2);
+    assertThat(sourceQueries)
+        .extracting(query -> query.get("StartIndex"), query -> query.get("Limit"))
+        .containsExactly(tuple("0", "2"), tuple("2", "2"));
+    assertThat(sourceQueries)
+        .allSatisfy(
+            query ->
+                assertThat(query)
+                    .containsEntry("ParentId", "library-mixed")
+                    .containsEntry("IncludeItemTypes", "Series,Movie")
+                    .doesNotContainKey("SearchTerm"));
   }
 
   @Test

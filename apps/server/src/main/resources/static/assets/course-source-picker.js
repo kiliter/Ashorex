@@ -1,69 +1,75 @@
 /**
- * 后台 Emby 来源选择器：只请求服务端安全 DTO，不直接接触 Emby 主机、密钥或物理路径。
- * 同一实现同时支持课程批量添加和已有课程的单来源重新绑定。
+ * 后台 Emby 课程选择弹窗。
+ *
+ * 页面只在管理员主动打开弹窗后读取候选；搜索只过滤本次已经加载的安全 DTO。
+ * 正式选择与弹窗草稿分离，取消、背景关闭和 Escape 都不会改动待添加课程。
  */
 (() => {
-  const MAX_SOURCES = 50;
-  const SEARCH_DELAY_MS = 220;
+  const MAX_MULTIPLE_SOURCES = 50;
 
   document.querySelectorAll("[data-source-picker]").forEach((root) => {
+    const openButton = root.querySelector("[data-source-open]");
+    const modal = root.querySelector("[data-source-modal]");
+    const closeButtons = root.querySelectorAll("[data-source-close]");
+    const confirmButton = root.querySelector("[data-source-confirm]");
     const queryInput = root.querySelector("[data-source-query]");
     const options = root.querySelector("[data-source-options]");
     const status = root.querySelector("[data-source-status]");
     const tray = root.querySelector("[data-source-tray]");
     const hidden = root.querySelector("[data-source-hidden]");
     const empty = root.querySelector("[data-source-empty]");
-    const count = root.querySelector("[data-source-count]");
+    const pageCount = root.querySelector("[data-source-count]");
+    const modalCount = root.querySelector("[data-modal-source-count]");
     const singleSubmit = root.querySelector("[data-single-submit]");
     const batchSubmit = root.querySelector("[data-batch-submit]");
     const manualInput = root.querySelector("[data-manual-source]");
     const mode = root.dataset.mode || "single";
+    const selectionLimit = mode === "multiple" ? MAX_MULTIPLE_SOURCES : 1;
+
     const selected = new Map();
+    let draftSelected = new Map();
     let candidates = [];
-    let activeIndex = -1;
-    let timer;
+    let candidatesLoaded = false;
+    let loading = false;
     let request;
 
-    const typeLabel = (source) => {
-      if (source.itemType === "CollectionFolder") {
-        return source.collectionType ? `媒体库 · ${source.collectionType}` : "媒体库 · 混合视频";
-      }
-      return {
-        Series: "剧集",
-        Movie: "电影",
-        Folder: "文件夹",
-      }[source.itemType] || source.itemType || "文件夹";
-    };
+    /** 将 Emby 类型转换为管理员能直接理解的中文标签。 */
+    const typeLabel = (source) => ({
+      Series: "剧集",
+      Movie: "电影",
+      CollectionFolder: source.collectionType ? `媒体库 · ${source.collectionType}` : "媒体库",
+      Folder: "文件夹",
+    })[source.itemType] || source.itemType || "视频来源";
 
-    const setExpanded = (expanded) => {
-      root.querySelector("[role='combobox']")?.setAttribute("aria-expanded", String(expanded));
-      options.hidden = !expanded;
-    };
-
+    /** 手工 Item ID 继续作为兼容入口，并与弹窗选择共同参与提交状态判断。 */
     const updateActions = () => {
-      const size = selected.size;
-      const manualReady = Boolean(manualInput?.value.trim());
-      const manualIsSelected = manualReady && selected.has(manualInput.value.trim());
-      const effectiveSize = size + (manualReady && !manualIsSelected ? 1 : 0);
-      const overLimit = effectiveSize > MAX_SOURCES;
+      const manualId = manualInput?.value.trim() || "";
+      const manualIsDuplicate = manualId && selected.has(manualId);
+      const effectiveSize = selected.size + (manualId && !manualIsDuplicate ? 1 : 0);
+      const overLimit = effectiveSize > MAX_MULTIPLE_SOURCES;
+
       if (singleSubmit) {
-        singleSubmit.disabled = overLimit || (mode === "multiple" ? effectiveSize !== 1 : size !== 1 && !manualReady);
+        // 重映射页的手工 ID 会由服务端优先采用，因此即使托盘已有联想选择也应允许预览。
+        singleSubmit.disabled = overLimit
+          || (mode === "multiple" ? effectiveSize !== 1 : selected.size !== 1 && !manualId);
       }
       if (batchSubmit) {
         batchSubmit.disabled = overLimit || effectiveSize < 2;
       }
-      if (count) {
-        count.textContent = `${effectiveSize} / ${MAX_SOURCES}`;
+      if (pageCount) {
+        pageCount.textContent = `${effectiveSize} / ${MAX_MULTIPLE_SOURCES}`;
       }
       if (overLimit) {
-        status.textContent = `每次最多选择 ${MAX_SOURCES} 个来源，请移除一个来源或清空手工 Item ID。`;
+        status.textContent = `每次最多绑定 ${MAX_MULTIPLE_SOURCES} 个来源，请先移除一个来源。`;
       }
     };
 
+    /** 把已确认来源渲染到页面托盘，并生成服务端表单字段。 */
     const renderTray = () => {
       tray.querySelectorAll("[data-selected-source]").forEach((element) => element.remove());
       empty.hidden = selected.size > 0;
       hidden.replaceChildren();
+
       selected.forEach((source) => {
         const card = document.createElement("div");
         card.className = "source-chip";
@@ -84,7 +90,6 @@
         remove.addEventListener("click", () => {
           selected.delete(source.id);
           renderTray();
-          renderOptions();
         });
         card.append(copy, remove);
         tray.append(card);
@@ -92,130 +97,165 @@
         const field = document.createElement("input");
         field.type = "hidden";
         field.name = mode === "multiple" ? "sourceIds" : "selectedParentItemId";
-        field.value = source.id;
+        // 显式写入 value 属性，确保原生表单序列化和后台自动化检查得到同一个 Item ID。
+        field.setAttribute("value", source.id);
         hidden.append(field);
       });
       updateActions();
     };
 
-    const choose = (source) => {
-      if (mode === "single") {
-        selected.clear();
-      }
-      if (!selected.has(source.id) && selected.size >= MAX_SOURCES) {
-        status.textContent = `每次最多选择 ${MAX_SOURCES} 个来源，请先移除其他来源。`;
-        return;
-      }
-      selected.set(source.id, source);
-      queryInput.value = "";
-      renderTray();
-      setExpanded(false);
-      status.textContent = mode === "single" ? "已选择来源，可以预览映射。" : "可以继续搜索并加入更多来源。";
+    /** 当前搜索只做客户端过滤，空关键字始终展示全部已加载课程。 */
+    const visibleCandidates = () => {
+      const query = queryInput.value.trim().toLocaleLowerCase("zh-CN");
+      if (!query) return candidates;
+      return candidates.filter((source) =>
+        [source.name, source.id, source.itemType, typeLabel(source)]
+          .filter(Boolean)
+          .some((value) => String(value).toLocaleLowerCase("zh-CN").includes(query)),
+      );
     };
 
-    const renderOptions = () => {
-      options.replaceChildren();
-      if (candidates.length === 0) {
-        const noResult = document.createElement("div");
-        noResult.className = "source-option source-option--empty";
-        noResult.textContent = "没有找到可用来源，请换一个名称或 Item ID。";
-        options.append(noResult);
-        activeIndex = -1;
+    const updateModalCount = () => {
+      modalCount.textContent = `已选 ${draftSelected.size} / ${selectionLimit}`;
+    };
+
+    /** 点击一行即可勾选；单选重映射模式会直接替换上一次草稿选择。 */
+    const toggleDraft = (source) => {
+      if (draftSelected.has(source.id)) {
+        draftSelected.delete(source.id);
+      } else if (mode === "single") {
+        draftSelected = new Map([[source.id, source]]);
+      } else if (draftSelected.size < selectionLimit) {
+        draftSelected.set(source.id, source);
+      } else {
+        status.textContent = `每次最多选择 ${selectionLimit} 个课程，请先取消一个已选项。`;
         return;
       }
-      activeIndex = Math.min(activeIndex, candidates.length - 1);
-      candidates.forEach((source, index) => {
-        const option = document.createElement("button");
-        option.type = "button";
-        option.className = "source-option";
-        option.role = "option";
-        option.dataset.optionIndex = String(index);
-        option.setAttribute("aria-selected", String(selected.has(source.id)));
-        if (index === activeIndex) {
-          option.classList.add("is-active");
-        }
+      updateModalCount();
+      renderOptions();
+    };
+
+    /** 候选行同时呈现课程名、类型、Item ID 和明确的勾选状态。 */
+    const renderOptions = () => {
+      options.replaceChildren();
+      if (loading) {
+        const loadingState = document.createElement("div");
+        loadingState.className = "source-picker-loading";
+        loadingState.textContent = "正在读取已绑定媒体库下的全部课程…";
+        options.append(loadingState);
+        return;
+      }
+
+      const visible = visibleCandidates();
+      if (visible.length === 0) {
+        const emptyState = document.createElement("div");
+        emptyState.className = "source-picker-empty";
+        const title = document.createElement("strong");
+        title.textContent = candidates.length === 0 ? "没有可选课程" : "没有匹配课程";
+        const description = document.createElement("span");
+        description.textContent = candidates.length === 0
+          ? "请先到 Emby 系统配置绑定媒体库，并确认媒体库内已有剧集或电影。"
+          : "清空搜索词可重新查看全部课程。";
+        emptyState.append(title, description);
+        options.append(emptyState);
+        return;
+      }
+
+      visible.forEach((source) => {
+        const isSelected = draftSelected.has(source.id);
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "source-picker-row";
+        row.classList.toggle("is-selected", isSelected);
+        row.setAttribute("role", "option");
+        row.setAttribute("aria-selected", String(isSelected));
+        row.setAttribute("aria-label", `${isSelected ? "取消选择" : "选择"} ${source.name}`);
+
+        const marker = document.createElement("span");
+        marker.className = "source-picker-row__check";
+        marker.setAttribute("aria-hidden", "true");
+        marker.textContent = isSelected ? "✓" : "";
+        const copy = document.createElement("span");
+        copy.className = "source-picker-row__copy";
         const title = document.createElement("strong");
         title.textContent = source.name;
-        const meta = document.createElement("span");
+        const meta = document.createElement("small");
         meta.textContent = `${typeLabel(source)} · ${source.id}`;
-        const state = document.createElement("em");
-        state.textContent = selected.has(source.id) ? "已选择" : "选择";
-        option.append(title, meta, state);
-        option.addEventListener("mousedown", (event) => event.preventDefault());
-        option.addEventListener("click", () => choose(source));
-        options.append(option);
+        copy.append(title, meta);
+        const action = document.createElement("em");
+        action.textContent = isSelected ? "已勾选" : "勾选";
+        row.append(marker, copy, action);
+        row.addEventListener("click", () => toggleDraft(source));
+        options.append(row);
       });
     };
 
-    const search = async () => {
+    /** 首次打开时一次读取全部候选，后续重复打开复用本页缓存。 */
+    const loadCandidates = async () => {
+      if (candidatesLoaded || loading) return;
       request?.abort();
-      const query = queryInput.value.trim();
-      if (!query) {
-        candidates = [];
-        activeIndex = -1;
-        setExpanded(false);
-        status.textContent = "输入关键字查找剧集或电影；也可以展开高级兼容入口填写 Item ID。";
-        return;
-      }
       request = new AbortController();
-      status.textContent = "正在读取可用媒体来源…";
-      setExpanded(true);
+      loading = true;
+      status.textContent = "正在读取已绑定媒体库下的全部课程…";
+      renderOptions();
       try {
         const url = new URL(root.dataset.searchUrl, window.location.origin);
-        url.searchParams.set("query", query);
+        url.searchParams.set("query", "");
         const response = await fetch(url, {
           headers: { Accept: "application/json" },
           signal: request.signal,
           credentials: "same-origin",
         });
-        if (!response.ok) {
-          throw new Error("source search failed");
-        }
-        candidates = await response.json();
-        activeIndex = candidates.length > 0 ? 0 : -1;
-        renderOptions();
+        if (!response.ok) throw new Error("course sources unavailable");
+        const payload = await response.json();
+        candidates = Array.isArray(payload) ? payload : [];
+        candidatesLoaded = true;
         status.textContent = candidates.length > 0
-          ? `找到 ${candidates.length} 个可用来源，使用方向键和回车也可以选择。`
-          : "没有匹配结果，请换个名称，或检查 Emby 系统配置中的媒体库绑定。";
+          ? `共加载 ${candidates.length} 个课程，可直接勾选或输入关键字过滤。`
+          : "当前绑定范围内没有可选课程。";
       } catch (error) {
         if (error.name === "AbortError") return;
         candidates = [];
+        status.textContent = "课程读取失败，请检查 Emby 连接和媒体库绑定后重新打开弹窗。";
+      } finally {
+        loading = false;
         renderOptions();
-        status.textContent = "来源读取失败，请检查 Emby 配置或稍后重试。";
       }
     };
 
-    const scheduleSearch = () => {
-      window.clearTimeout(timer);
-      timer = window.setTimeout(search, SEARCH_DELAY_MS);
-    };
-
-    queryInput.addEventListener("focus", search);
-    queryInput.addEventListener("input", scheduleSearch);
-    queryInput.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
-        setExpanded(false);
-        return;
-      }
-      if (event.key !== "ArrowDown" && event.key !== "ArrowUp" && event.key !== "Enter") return;
-      if (candidates.length === 0) return;
-      event.preventDefault();
-      if (event.key === "ArrowDown") activeIndex = (activeIndex + 1) % candidates.length;
-      if (event.key === "ArrowUp") activeIndex = (activeIndex - 1 + candidates.length) % candidates.length;
-      if (event.key === "Enter" && activeIndex >= 0) {
-        choose(candidates[activeIndex]);
-        return;
-      }
+    const openModal = () => {
+      draftSelected = new Map(selected);
+      queryInput.value = "";
+      modal.hidden = false;
+      document.body.classList.add("modal-open");
+      updateModalCount();
       renderOptions();
-      options.querySelector(".is-active")?.scrollIntoView({ block: "nearest" });
-    });
-    queryInput.addEventListener("blur", () => {
-      // 失焦时同时取消延迟任务和在途请求，防止候选层在隐藏后被异步搜索再次展开。
-      window.clearTimeout(timer);
-      request?.abort();
-      setExpanded(false);
-    });
+      void loadCandidates();
+      window.requestAnimationFrame(() => queryInput.focus());
+    };
+
+    /** 关闭默认丢弃草稿；只有“确定绑定”会先覆盖正式选择。 */
+    const closeModal = (commit = false) => {
+      if (commit) {
+        selected.clear();
+        draftSelected.forEach((source, id) => selected.set(id, source));
+        renderTray();
+      }
+      modal.hidden = true;
+      document.body.classList.remove("modal-open");
+      openButton.focus();
+    };
+
+    openButton.addEventListener("click", openModal);
+    closeButtons.forEach((button) => button.addEventListener("click", () => closeModal(false)));
+    confirmButton.addEventListener("click", () => closeModal(true));
+    queryInput.addEventListener("input", renderOptions);
     manualInput?.addEventListener("input", updateActions);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !modal.hidden) closeModal(false);
+    });
+    window.addEventListener("pagehide", () => request?.abort());
+
     renderTray();
   });
 })();
