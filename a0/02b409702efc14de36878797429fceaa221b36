@@ -1,0 +1,19 @@
+apps/server/src/test/java/com/shangan/learning/api/PlaybackProxyControllerTest.java
+  s_d11d2e0a6d2d4e::t_9d13a99bb968ea 3,6,17,51-57,59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "a002b409702efc14de36878797429fceaa221b36",
+  "prompts": {},
+  "sessions": {
+    "s_d11d2e0a6d2d4e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05fed-0bd9-7313-9c21-a4ecd9750720",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
