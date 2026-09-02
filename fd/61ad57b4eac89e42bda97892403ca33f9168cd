@@ -1,0 +1,19 @@
+apps/server/src/main/resources/static/assets/admin.css
+  s_d11d2e0a6d2d4e::t_7024cf7c646725 312-313,315-316,319-322,326,328,330-332
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "fd61ad57b4eac89e42bda97892403ca33f9168cd",
+  "prompts": {},
+  "sessions": {
+    "s_d11d2e0a6d2d4e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05fed-0bd9-7313-9c21-a4ecd9750720",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
