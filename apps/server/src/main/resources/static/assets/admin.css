@@ -309,26 +309,27 @@ legend { padding: 0 6px; font: 11px var(--font-mono); }
 .source-picker-modal { position: fixed; z-index: 110; inset: 0; display: grid; padding: 5vh 24px; place-items: center; }
 .source-picker-modal__backdrop { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: color-mix(in oklch, var(--fg) 42%, transparent) !important; box-shadow: none !important; }
 .source-picker-modal__backdrop:hover { transform: none !important; box-shadow: none !important; }
-.source-picker-dialog { position: relative; z-index: 1; display: grid; width: min(820px, 100%); max-height: 90vh; grid-template-rows: auto minmax(0, 1fr) auto; border: 1px solid var(--fg); background: var(--surface); box-shadow: 10px 12px 0 color-mix(in oklch, var(--fg) 20%, transparent); }
-.source-picker-dialog__head { display: flex; min-height: 68px; padding: 11px 14px; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 88%, var(--bg)); }
+.source-picker-dialog { position: relative; z-index: 1; display: grid; width: min(880px, 100%); max-height: 84vh; grid-template-rows: auto minmax(0, 1fr) auto; border: 1px solid var(--border-strong); background: var(--surface); box-shadow: 8px 10px 0 color-mix(in oklch, var(--fg) 16%, transparent); }
+.source-picker-dialog__head { display: flex; min-height: 62px; padding: 10px 16px; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); background: var(--surface); }
 .source-picker-dialog__head small { color: var(--accent); font: 9px var(--font-mono); letter-spacing: .08em; }
-.source-picker-dialog__head h3 { margin: 3px 0 0; font: 600 18px var(--font-display); }
-.source-picker-dialog__body { display: grid; min-height: 330px; padding: 14px; grid-template-rows: auto auto minmax(0, 1fr); gap: 9px; overflow: hidden; }
+.source-picker-dialog__head h3 { margin: 2px 0 0; font: 600 17px var(--font-display); }
+.source-picker-dialog__body { display: grid; min-height: 330px; padding: 14px 16px 16px; grid-template-rows: auto auto minmax(0, 1fr); gap: 8px; overflow: hidden; }
 .source-picker-dialog__body .field { padding: 0; }
 .source-picker-dialog__body .help { margin: 0; }
-.source-picker-dialog__foot { display: flex; padding: 11px 14px; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 88%, var(--bg)); }
-.source-picker-list { min-height: 220px; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--border); background: color-mix(in oklch, var(--bg) 48%, var(--surface)); }
-.source-picker-row { display: grid; width: 100%; min-height: 62px !important; padding: 9px 11px !important; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 10px; border: 0 !important; border-bottom: 1px solid var(--border) !important; border-radius: 0 !important; background: var(--surface) !important; color: var(--fg) !important; box-shadow: none !important; text-align: left; letter-spacing: 0 !important; }
+.source-picker-dialog__foot { display: flex; padding: 10px 16px; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 92%, var(--bg)); }
+.source-picker-list { min-height: 220px; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--border); background: var(--surface); }
+/* 提高选择器权重，覆盖全局 button 的 inline-flex，恢复左对齐的课程三列台账。 */
+.source-picker-list > button.source-picker-row { display: grid; width: 100%; min-height: 54px !important; padding: 7px 12px !important; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; justify-content: stretch; gap: 10px; border: 0 !important; border-bottom: 1px solid var(--border) !important; border-radius: 0 !important; background: var(--surface) !important; color: var(--fg) !important; box-shadow: none !important; text-align: left; letter-spacing: 0 !important; }
 .source-picker-row:last-child { border-bottom: 0 !important; }
 .source-picker-row:hover, .source-picker-row:focus-visible { transform: none !important; background: var(--accent-soft) !important; box-shadow: inset 3px 0 0 var(--accent) !important; }
 .source-picker-row.is-selected { background: color-mix(in oklch, var(--accent) 9%, var(--surface)) !important; box-shadow: inset 3px 0 0 var(--accent) !important; }
-.source-picker-row__check { display: grid; width: 19px; height: 19px; place-items: center; border: 1px solid var(--border-strong); background: var(--surface); color: var(--surface); font: 700 12px var(--font-mono); }
+.source-picker-row__check { display: grid; width: 18px; height: 18px; place-items: center; border: 1px solid var(--border-strong); background: var(--surface); color: var(--surface); font: 700 11px var(--font-mono); }
 .source-picker-row.is-selected .source-picker-row__check { border-color: var(--accent); background: var(--accent); }
-.source-picker-row__copy { display: grid; min-width: 0; gap: 4px; }
+.source-picker-row__copy { display: grid; min-width: 0; justify-items: start; gap: 2px; }
 .source-picker-row__copy strong, .source-picker-row__copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.source-picker-row__copy strong { font: 600 12px var(--font-body); }
-.source-picker-row__copy small { color: var(--muted); font: 10px var(--font-mono); }
-.source-picker-row em { color: var(--accent); font: normal 10px var(--font-mono); }
+.source-picker-row__copy strong { max-width: 100%; font: 600 12px/1.35 var(--font-body); }
+.source-picker-row__copy small { max-width: 100%; color: var(--muted); font: 9px/1.3 var(--font-mono); }
+.source-picker-row em { padding: 4px 7px; border: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 92%, var(--bg)); color: var(--accent); font: normal 9px var(--font-mono); white-space: nowrap; }
 .source-picker-row.is-selected em { color: var(--success); }
 .source-picker-empty, .source-picker-loading { display: grid; min-height: 220px; padding: 24px; place-content: center; gap: 5px; color: var(--muted); font-size: 11px; text-align: center; }
 .source-picker-empty strong { color: var(--fg); font: 600 15px var(--font-display); }
