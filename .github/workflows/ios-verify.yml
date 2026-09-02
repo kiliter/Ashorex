@@ -3,6 +3,9 @@ name: 移动端验证
 on:
   workflow_dispatch:
   push:
+    # 显式保留普通分支 Push；只配置 tags 会让 GitHub 排除分支事件。
+    branches:
+      - "**"
     tags:
       - "v*"
     paths:
