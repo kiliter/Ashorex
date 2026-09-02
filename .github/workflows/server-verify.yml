@@ -86,6 +86,8 @@ jobs:
       - name: 上传到 GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          # 发布 Job 不检出仓库，显式指定目标仓库，避免 gh CLI 无法推断上下文。
+          GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
           # 与移动端发布工作流并发时，重复创建失败后再次查询现有 Release。

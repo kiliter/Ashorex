@@ -88,6 +88,8 @@ jobs:
       - name: 上传到 GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          # 发布 Job 不检出仓库，显式指定目标仓库，避免 gh CLI 无法推断上下文。
+          GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
           # 两个发布工作流可能同时创建 Release；最后一次查询用于安全处理并发创建。
