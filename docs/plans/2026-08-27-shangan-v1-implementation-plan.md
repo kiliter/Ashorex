@@ -2325,6 +2325,83 @@ cd apps/ios && fvm flutter build apk --debug
 
 检查没有真实数据库测试残留、没有依赖预发布版本、没有密钥或调试产物，并提交一次可评审变更。
 
+### Task 24：Emby 媒体库同步与稳定课时重映射
+
+**前置文档：**
+
+- `docs/adr/0015-emby-library-remapping.md`
+
+**主要文件：**
+
+- 新建：`apps/server/src/main/resources/db/migration/V025__emby_source_mapping.sql`
+- 修改：`apps/server/src/main/java/com/shangan/media/emby/EmbyClient.java`
+- 修改：`apps/server/src/main/java/com/shangan/media/emby/EmbyDtos.java`
+- 修改：`apps/server/src/main/java/com/shangan/media/emby/EmbyGateway.java`
+- 新建：Emby 来源指纹计算与分页结果校验组件
+- 修改：`catalog` 的课程、课时、Repository、同步服务和快照写入边界
+- 修改：`CourseAdminController`、课程管理模板和课时管理模板
+- 测试：Emby 媒体库协议、分页、混合类型、来源指纹和重新绑定应用服务测试
+
+**接口：**
+
+- ADMIN：读取当前 Emby 用户可见媒体库，在创建课程时选择媒体库，并把已有课程原子重新绑定到新媒体库。
+- 不新增或修改 `/api/v1` 学习端契约。
+- `media_items.id` 保持内部不可变身份，`emby_item_id` 变为可安全替换的当前播放源标识。
+
+- [ ] **步骤 1：先写失败的 Emby 协议测试**
+
+覆盖媒体库列表、`/Users/{EMBY_USER_ID}/Items` 用户作用域、Movie/Episode/Video 混合类型、`StartIndex/Limit` 分页、稳定排序、Item ID 去重、任一页失败不返回部分结果，以及父节点 404 的稳定错误。所有断言不得输出 Base URL、API Key 或原始媒体路径。
+
+- [ ] **步骤 2：先写失败的重映射逻辑测试**
+
+覆盖：
+
+```text
+相同 Item ID -> 更新远端字段并保留本地控制字段
+唯一来源指纹 -> 原位更新 Item ID，本地课时 ID 不变
+无指纹历史课时的唯一标题与 2 秒内时长 -> 一次性兼容映射
+同名、近似时长的一对多或多对一 -> EMBY_MEDIA_MAPPING_CONFLICT
+冲突 -> 不调用快照写入和课程重绑边界
+父节点不存在 -> 保留最后一次可用快照
+新视频 -> 新建课时
+远端删除 -> 仅在父节点有效且完整分页成功后标记不可用
+```
+
+- [ ] **步骤 3：追加 V025 并实现稳定来源身份**
+
+向 `media_items` 追加可空来源指纹和媒体类型，创建非空指纹唯一索引与不含路径的 Item ID 映射审计表。不得修改 V001～V024。来源指纹只在内存中从规范化 Emby `Path` 计算版本化 SHA-256；原始路径不得写入数据库、日志、错误或页面。
+
+- [ ] **步骤 4：实现分页媒体库同步和原子重新绑定**
+
+先在事务外验证父节点并完整读取全部页，再构造确定性的匹配计划。应用服务在单个短事务中完成课程父节点更新、已确认课时原位映射、新课时写入、远端缺失标记和映射审计。任何冲突或远端分页失败都不得产生部分修改。
+
+- [ ] **步骤 5：实现后台媒体库选择与冲突确认**
+
+创建课程页面显示配置用户可见的视频媒体库名称、类型和 ID，并保留 Series/Folder ID 高级入口。已有课程支持“更换媒体来源”；提交前展示自动映射、新增、不可用和冲突数量。冲突必须由管理员逐项确认，不能仅凭标题静默合并。页面不得显示媒体原始路径。
+
+- [ ] **步骤 6：验证并人工检查迁移**
+
+自动化测试只使用 Fake Repository 和 Emby 协议服务器，不启动 SQLite 或 Flyway。运行：
+
+```bash
+cd apps/server
+./mvnw -Dtest='EmbyClientContractTest,*CourseSync*,*MediaMapping*' test
+cd ../..
+make format
+make verify
+```
+
+按 ADR-0014 人工审查 V025 SQL，并在独立备份副本启动服务验证迁移；不得直接改写当前 `apps/server/data/study.db`。
+
+- [ ] **步骤 7：检查并提交**
+
+检查变更范围、映射歧义、事务边界、原始路径和密钥泄露、旧父节点失败行为及测试结果，然后提交一次：
+
+```bash
+git add docs apps/server
+git commit -m "feat(catalog): remap rebuilt emby libraries"
+```
+
 ## Cross-Task Review Gates
 
 After Tasks 1–4:
@@ -2445,6 +2522,16 @@ Flutter 3.44.7、Dart 3.12.x、pubspec 和 CI 版本一致
 移动端依赖覆盖 iPhone、iPad 和 Android
 服务端自动化测试不启动 SQLite、Flyway 或真实数据库
 日终分类等核心规则由纯逻辑测试覆盖
+```
+
+Task 24 之后：
+
+```text
+后台可直接选择配置用户可见的 Emby 媒体库
+Movie、Episode 和普通 Video 可分页完整同步
+父节点失效不会把最后一次可用课时快照清空
+媒体库重建后安全更新外部 Item ID，本地课时与全部学习历史保持不变
+歧义映射必须人工确认，原始媒体路径和 Emby 密钥不落库、不出页面、不进日志
 ```
 
 ---

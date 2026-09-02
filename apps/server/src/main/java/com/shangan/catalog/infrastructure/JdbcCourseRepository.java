@@ -80,47 +80,105 @@ public class JdbcCourseRepository implements CourseRepository {
   }
 
   @Override
-  public void upsertMediaItem(MediaItem item, Instant now) {
+  public void insertMediaItem(MediaItem item, Instant now) {
     jdbc.sql(
             """
             insert into media_items (
-              id, course_id, emby_item_id, title, duration_ms, enabled,
-              sort_order, available, created_at, updated_at
+              id, course_id, emby_item_id, emby_item_type, source_fingerprint,
+              title, duration_ms, enabled, sort_order, available, created_at, updated_at
             ) values (
-              :id, :courseId, :embyId, :title, :durationMs, :enabled,
-              :sortOrder, 1, :now, :now
+              :id, :courseId, :embyId, :embyItemType, :sourceFingerprint,
+              :title, :durationMs, :enabled, :sortOrder, 1, :now, :now
             )
-            on conflict(emby_item_id) do update set
-              title = excluded.title,
-              duration_ms = excluded.duration_ms,
-              available = 1,
-              updated_at = excluded.updated_at
             """)
-        .params(
-            Map.of(
-                "id", item.id(),
-                "courseId", item.courseId(),
-                "embyId", item.embyItemId(),
-                "title", item.title(),
-                "durationMs", item.durationMs(),
-                "enabled", item.enabled() ? 1 : 0,
-                "sortOrder", item.sortOrder(),
-                "now", now.toEpochMilli()))
+        .param("id", item.id())
+        .param("courseId", item.courseId())
+        .param("embyId", item.embyItemId())
+        .param("embyItemType", item.embyItemType())
+        .param("sourceFingerprint", item.sourceFingerprint())
+        .param("title", item.title())
+        .param("durationMs", item.durationMs())
+        .param("enabled", item.enabled() ? 1 : 0)
+        .param("sortOrder", item.sortOrder())
+        .param("now", now.toEpochMilli())
         .update();
   }
 
   @Override
-  public void markUnavailableExcept(String courseId, List<String> availableEmbyIds, Instant now) {
+  public void updateMediaItemFromRemote(MediaItem item, Instant now) {
+    jdbc.sql(
+            """
+            update media_items set
+              emby_item_id = :embyId,
+              emby_item_type = :embyItemType,
+              source_fingerprint = :sourceFingerprint,
+              title = :title,
+              duration_ms = :durationMs,
+              available = 1,
+              updated_at = :now
+            where id = :id
+            """)
+        .param("id", item.id())
+        .param("embyId", item.embyItemId())
+        .param("embyItemType", item.embyItemType())
+        .param("sourceFingerprint", item.sourceFingerprint())
+        .param("title", item.title())
+        .param("durationMs", item.durationMs())
+        .param("now", now.toEpochMilli())
+        .update();
+  }
+
+  @Override
+  public void insertMediaItemSourceMapping(
+      String id,
+      String mediaItemId,
+      String oldEmbyItemId,
+      String newEmbyItemId,
+      String matchType,
+      Instant now) {
+    jdbc.sql(
+            """
+            insert into media_item_source_mappings (
+              id, media_item_id, old_emby_item_id, new_emby_item_id, match_type, mapped_at
+            ) values (
+              :id, :mediaItemId, :oldEmbyItemId, :newEmbyItemId, :matchType, :mappedAt
+            )
+            """)
+        .params(
+            Map.of(
+                "id", id,
+                "mediaItemId", mediaItemId,
+                "oldEmbyItemId", oldEmbyItemId,
+                "newEmbyItemId", newEmbyItemId,
+                "matchType", matchType,
+                "mappedAt", now.toEpochMilli()))
+        .update();
+  }
+
+  @Override
+  public void markUnavailableExceptMediaIds(
+      String courseId, List<String> availableMediaItemIds, Instant now) {
     jdbc.sql("update media_items set available = 0, updated_at = :now where course_id = :courseId")
         .params(Map.of("now", now.toEpochMilli(), "courseId", courseId))
         .update();
-    for (String embyId : availableEmbyIds) {
+    for (String mediaItemId : availableMediaItemIds) {
       jdbc.sql(
               "update media_items set available = 1, updated_at = :now "
-                  + "where course_id = :courseId and emby_item_id = :embyId")
-          .params(Map.of("now", now.toEpochMilli(), "courseId", courseId, "embyId", embyId))
+                  + "where course_id = :courseId and id = :mediaItemId")
+          .params(
+              Map.of(
+                  "now", now.toEpochMilli(),
+                  "courseId", courseId,
+                  "mediaItemId", mediaItemId))
           .update();
     }
+  }
+
+  @Override
+  public void updateCourseSource(String courseId, String embyParentItemId, Instant now) {
+    jdbc.sql("update courses set emby_parent_item_id = :parentId, updated_at = :now where id = :id")
+        .params(Map.of("parentId", embyParentItemId, "now", now.toEpochMilli(), "id", courseId))
+        .update();
   }
 
   @Override
@@ -158,6 +216,8 @@ public class JdbcCourseRepository implements CourseRepository {
         rs.getString("id"),
         rs.getString("course_id"),
         rs.getString("emby_item_id"),
+        rs.getString("emby_item_type"),
+        rs.getString("source_fingerprint"),
         rs.getString("title"),
         rs.getLong("duration_ms"),
         rs.getInt("enabled") == 1,

@@ -8,10 +8,12 @@
         <section class="page-head"><div class="container page-head-row"><div><h1 class="page-title" data-code="CRS/03">课程管理</h1><p class="page-desc">绑定 Emby 目录并维护课程、课时与内容生产链路</p></div><span class="badge" th:text="|${#lists.size(courses)} 门课程|">0 门课程</span></div></section>
         <div class="container workspace">
           <section class="panel">
-            <div class="panel-head"><div><h2>CREATE / 添加课程</h2><p>填写 Emby 父节点 ID 后即可同步视频课时。</p></div></div>
+            <div class="panel-head"><div><h2>CREATE / 添加课程</h2><p>直接选择当前 Emby 用户可见的媒体库，或使用高级入口填写 Series / Folder ID。</p></div></div>
+            <div class="alert" th:if="${mediaLibraryError != null}" th:text="${mediaLibraryError}">媒体库读取失败</div>
             <form class="form-grid form-grid--two panel-body" method="post" th:action="@{/admin/courses}">
               <label class="field">课程名称<input name="name" placeholder="例如 申论基础课" required /></label>
-              <label class="field">Emby 父节点 ID<input class="data-text" name="embyParentItemId" placeholder="输入 Emby Item ID" required /></label>
+              <label class="field">Emby 媒体库<select name="selectedParentItemId"><option value="">请选择媒体库</option><option th:each="library : ${mediaLibraries}" th:value="${library.id}" th:text="|${library.name} · ${#strings.isEmpty(library.collectionType) ? '混合视频' : library.collectionType} · ${library.id}|">媒体库</option></select></label>
+              <label class="field form-grid__wide">Series / Folder ID（高级）<input class="data-text" name="manualParentItemId" placeholder="填写后优先于媒体库选择" /></label>
               <label class="field form-grid__wide">课程说明<textarea name="description" placeholder="简要说明课程目标和适用阶段"></textarea></label>
               <div class="actions form-grid__wide"><button type="submit">创建课程</button></div>
             </form>
@@ -29,6 +31,7 @@
                 <td><span class="badge" th:classappend="${course.lastSyncError == null ? ' success' : ' danger'}" th:text="${course.lastSyncError ?: '同步正常'}">状态</span></td>
                 <td><div class="row-actions">
                   <a class="btn btn-secondary btn-sm" th:href="@{/admin/courses/{id}/lessons(id=${course.id})}">管理课时</a>
+                  <a class="btn btn-secondary btn-sm" th:href="@{/admin/courses/{id}/source(id=${course.id})}">更换媒体来源</a>
                   <a class="btn btn-secondary btn-sm" th:href="@{/admin/courses/{id}/quiz-drafts(id=${course.id})}">题目草稿</a>
                   <form method="post" th:action="@{/admin/courses/{id}/sync(id=${course.id})}"><button class="btn-sm" type="submit">立即同步</button></form>
                 </div></td>

@@ -18,9 +18,22 @@ public interface CourseRepository {
 
   void insertCourse(Course course, Instant now);
 
-  void upsertMediaItem(MediaItem item, Instant now);
+  void insertMediaItem(MediaItem item, Instant now);
 
-  void markUnavailableExcept(String courseId, List<String> availableEmbyIds, Instant now);
+  void updateMediaItemFromRemote(MediaItem item, Instant now);
+
+  void insertMediaItemSourceMapping(
+      String id,
+      String mediaItemId,
+      String oldEmbyItemId,
+      String newEmbyItemId,
+      String matchType,
+      Instant now);
+
+  void markUnavailableExceptMediaIds(
+      String courseId, List<String> availableMediaItemIds, Instant now);
+
+  void updateCourseSource(String courseId, String embyParentItemId, Instant now);
 
   void updateCourseSyncResult(String courseId, Instant syncedAt, String error);
 

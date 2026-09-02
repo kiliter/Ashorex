@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotBlank;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -43,7 +44,7 @@ public class CourseAdminController {
 
   @GetMapping("/admin/courses")
   String courses(Model model) {
-    model.addAttribute("courses", courses.listAdminCourses());
+    populateCoursesModel(model);
     return "admin/courses";
   }
 
@@ -51,8 +52,10 @@ public class CourseAdminController {
   String createCourse(
       @RequestParam @NotBlank String name,
       @RequestParam(defaultValue = "") String description,
-      @RequestParam @NotBlank String embyParentItemId) {
-    courses.createCourse(name, description, embyParentItemId);
+      @RequestParam(defaultValue = "") String selectedParentItemId,
+      @RequestParam(defaultValue = "") String manualParentItemId) {
+    courses.createCourse(
+        name, description, preferredParentId(selectedParentItemId, manualParentItemId));
     return "redirect:/admin/courses";
   }
 
@@ -60,6 +63,44 @@ public class CourseAdminController {
   String sync(@PathVariable String courseId) {
     courses.syncCourse(courseId);
     return "redirect:/admin/courses/" + courseId + "/lessons";
+  }
+
+  /** 打开媒体来源更换页；只展示媒体库安全元数据，不展示 Emby 物理路径。 */
+  @GetMapping("/admin/courses/{courseId}/source")
+  String source(@PathVariable String courseId, Model model) {
+    populateSourceModel(courseId, model);
+    return "admin/course-source";
+  }
+
+  /** 在事务外读取新来源并预览自动映射、新课时、失效课时和冲突。 */
+  @PostMapping("/admin/courses/{courseId}/source/preview")
+  String previewSource(
+      @PathVariable String courseId,
+      @RequestParam(defaultValue = "") String selectedParentItemId,
+      @RequestParam(defaultValue = "") String manualParentItemId,
+      Model model,
+      HttpServletResponse response) {
+    populateSourceModel(courseId, model);
+    try {
+      var preview =
+          courses.previewSource(
+              courseId, preferredParentId(selectedParentItemId, manualParentItemId));
+      model.addAttribute("preview", preview);
+    } catch (BusinessException exception) {
+      response.setStatus(exception.status().value());
+      model.addAttribute("sourceError", exception.getMessage());
+    }
+    return "admin/course-source";
+  }
+
+  /** 重新读取远端完整快照，并携带管理员对歧义项的一对一确认执行原子重绑。 */
+  @PostMapping("/admin/courses/{courseId}/source")
+  String rebindSource(
+      @PathVariable String courseId,
+      @RequestParam String targetParentItemId,
+      @RequestParam(required = false) List<String> mapping) {
+    courses.rebindCourse(courseId, targetParentItemId, confirmedMappings(mapping));
+    return "redirect:/admin/courses/" + courseId + "/source?rebound=1";
   }
 
   @GetMapping("/admin/courses/{courseId}/lessons")
@@ -175,6 +216,47 @@ public class CourseAdminController {
         contentsByLessonId.values().stream().filter(value -> value.summaryReady()).count());
     model.addAttribute("imported", imported);
     model.addAttribute("importError", importError);
+  }
+
+  private void populateCoursesModel(Model model) {
+    model.addAttribute("courses", courses.listAdminCourses());
+    populateMediaLibraries(model);
+  }
+
+  private void populateSourceModel(String courseId, Model model) {
+    model.addAttribute("course", courses.getAdminCourse(courseId));
+    populateMediaLibraries(model);
+  }
+
+  private void populateMediaLibraries(Model model) {
+    try {
+      model.addAttribute("mediaLibraries", courses.listMediaLibraries());
+      model.addAttribute("mediaLibraryError", null);
+    } catch (BusinessException exception) {
+      model.addAttribute("mediaLibraries", List.of());
+      model.addAttribute("mediaLibraryError", exception.getMessage());
+    }
+  }
+
+  private String preferredParentId(String selectedParentItemId, String manualParentItemId) {
+    return manualParentItemId == null || manualParentItemId.isBlank()
+        ? selectedParentItemId
+        : manualParentItemId;
+  }
+
+  /** 解析页面的 remoteId|localId 值；非法项会被忽略并在重新规划时继续形成冲突。 */
+  private Map<String, String> confirmedMappings(List<String> submitted) {
+    Map<String, String> result = new LinkedHashMap<>();
+    if (submitted == null) {
+      return result;
+    }
+    for (String value : submitted) {
+      String[] parts = value == null ? new String[0] : value.split("\\|", 2);
+      if (parts.length == 2 && !parts[0].isBlank() && !parts[1].isBlank()) {
+        result.put(parts[0], parts[1]);
+      }
+    }
+    return result;
   }
 
   @PostMapping("/admin/courses/{courseId}/lessons/{lessonId}")

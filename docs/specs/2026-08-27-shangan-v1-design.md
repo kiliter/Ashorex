@@ -95,7 +95,8 @@ V1 的价值判断标准：
 - 管理员登录。
 - 创建和禁用用户。
 - 查看 Emby 连接状态。
-- 绑定 Emby 剧集或目录为课程。
+- 从当前 Emby 用户可见列表选择媒体库，或手工绑定 Emby 剧集/目录为课程。
+- Emby 媒体库删除后可将课程重新绑定到重建的媒体库，并保留原课时及其学习历史。
 - 手动同步课程。
 - 启用、禁用和排序视频。
 - 为视频配置单选题和判断题。
@@ -420,7 +421,7 @@ PENDING → RUNNING → AWAITING_UPLOAD → COMPLETED
 - 摘要只整理视频全文明确讲到的内容，不联想、不推断、不评价，不补充视频中未出现的知识、结论或学习建议。
 - 管理员仍可按课程上传 ZIP 包作为人工覆盖和故障兜底。
 - 题目草稿支持课程级批量通过、驳回和删除；通过即校验后发布，驳回保留记录，删除只允许未发布草稿。
-- 每集通过 Emby Item ID 与本地课时精确匹配。
+- ZIP 中每集通过当前 Emby Item ID 与本地课时精确匹配；课时完成外部 Item ID 映射后，既有全文和摘要继续绑定不可变的本地课时 ID。
 - 每集必须同时提供 UTF-8 `transcript.txt` 和 `summary.md`。
 - 全包校验成功后一次性写入；任意错误均不产生部分导入。
 - 重复上传覆盖对应课时旧内容。
@@ -743,6 +744,8 @@ PRAGMA synchronous = NORMAL;
 - `id`
 - `course_id`
 - `emby_item_id`
+- `emby_item_type`：Movie / Episode / Video
+- `source_fingerprint`：可空；由规范化媒体路径计算的版本化 SHA-256，不保存原始路径
 - `title`
 - `overview`
 - `duration_ms`
@@ -756,7 +759,20 @@ PRAGMA synchronous = NORMAL;
 - `created_at`
 - `updated_at`
 
-唯一约束：`emby_item_id`。
+唯一约束：`emby_item_id`；非空 `source_fingerprint` 也必须唯一。
+
+`id` 是上岸内部不可变课时身份；确认同一物理媒体在 Emby 中取得新 Item ID 时，只更新 `emby_item_id` 和远端快照字段，不修改 `id` 或任何业务外键。
+
+#### `media_item_source_mappings`
+
+- `id`
+- `media_item_id`
+- `old_emby_item_id`
+- `new_emby_item_id`
+- `match_type`：SOURCE_FINGERPRINT / UNIQUE_LEGACY_METADATA / ADMIN_CONFIRMED
+- `mapped_at`
+
+映射审计不得保存 Emby 原始媒体路径。
 
 ### 10.3 每日计划
 
@@ -1265,16 +1281,27 @@ EMBY_USER_ID
 
 ### 12.2 同步
 
-管理员将一个 Emby Series 或 Folder 绑定到课程。
+管理员可以从配置用户可见的 Emby 媒体库列表中选择一个媒体库绑定到课程，也可以手工绑定 Series 或 Folder。媒体库允许包含 `Movie`、`Episode` 和普通 `Video`；音乐、播放列表等非视频媒体不作为课时同步。
 
 同步流程：
 
-1. 读取父节点下视频。
-2. 更新本地 `media_items` 快照。
-3. 保留本地启用状态、排序和题目。
-4. 新视频默认启用。
-5. Emby 删除的视频在本地标记为不可用，不级联删除学习记录。
-6. 定时每 15 分钟同步，也支持管理员手动同步。
+1. 先验证父节点仍存在且配置用户有权访问；不存在或无权访问时保留最后一次可用快照。
+2. 使用 `/Users/{EMBY_USER_ID}/Items` 按页递归读取父节点下全部 `Movie`、`Episode` 和 `Video`，只接受非 Folder 的视频媒体。
+3. 全部分页成功后按 Emby Item ID 去重并生成稳定顺序；任一页失败时不写入部分结果。
+4. 更新本地 `media_items` 快照，保留本地启用状态、排序、题目和全部学习业务关系。
+5. 新视频默认启用。
+6. 父节点有效时，Emby 删除的视频在本地标记为不可用，不级联删除学习记录。
+7. 定时每 15 分钟同步，也支持管理员手动同步。
+
+删除并重建媒体库后的重新绑定规则：
+
+1. `media_items.id` 始终不变，`emby_item_id` 只代表当前 Emby 播放源。
+2. 同步只保存由 Emby `Path` 规范化后计算的版本化 SHA-256 来源指纹，不保存、展示或记录原始路径。
+3. 优先按当前 Item ID 匹配，其次按课程内唯一来源指纹匹配。
+4. 对没有来源指纹的历史课时，仅当规范化标题完全一致、时长差不超过 2 秒，且新旧候选均唯一时自动兼容映射。
+5. 自动映射只原位更新当前 Emby Item ID 和远端元数据，因此可信进度、作战单、欠债、题目、全文、摘要和内容任务继续关联原本地课时。
+6. 任何一对多或多对一歧义都不得自动合并；重新绑定不写入部分结果，管理员必须明确确认映射后再提交。
+7. Item ID 变化写入不含路径的映射审计记录。
 
 本地快照用于：
 
@@ -1615,6 +1642,8 @@ WATCH_HEARTBEAT_REJECTED
 ALIVE_CHECK_REQUIRED
 QUIZ_LOCKED
 EMBY_UNAVAILABLE
+EMBY_PARENT_NOT_FOUND
+EMBY_MEDIA_MAPPING_CONFLICT
 MEDIA_NOT_AVAILABLE
 LESSON_STUDY_CONTENT_NOT_FOUND
 STUDY_CONTENT_IMPORT_INVALID
@@ -1716,6 +1745,8 @@ sqlite3 /data/study.db ".backup '/backup/study-YYYYMMDD-HHMMSS.db'"
 - 不启动 SQLite、Flyway 或其他真实数据库，不测试具体 SQL、数据库约束、事务和迁移。
 - Controller 与 Spring Security 使用不连接数据库的测试切片。
 - Emby、ASR、LLM 和 OpenRouter Models API 使用 WireMock。
+- Emby 协议测试覆盖媒体库列表、配置用户作用域、Movie/Episode/Video 混合类型、分页失败不返回部分结果和父节点不存在。
+- 课程同步应用服务测试覆盖来源指纹映射、无指纹历史课时唯一兼容、歧义拒绝、重新绑定原子性和本地课时 ID 不变。
 - ZIP 解析、全包校验和批量写入命令生成使用内存对象验证；数据库原子性转为代码评审和人工发布验证。
 - Range 转发和 HLS 重写使用内存流或 WireMock，不连接业务数据库。
 
@@ -2006,6 +2037,17 @@ V1 同时面向 iPhone、iPad 和 Android，以下设计保持平台中立：
 7. 定时补全默认关闭；开启后只补缺失全文或摘要，不生成题目，不覆盖已有内容。
 8. OpenRouter 模型目录刷新失败时仍可使用缓存模型或手动模型配置。
 
+### 场景 K：Emby 媒体库重建与无缝重映射
+
+1. 管理员从 Emby 媒体库列表选择一个包含 Movie、Episode 和 Video 的混合媒体库创建课程。
+2. 服务端按配置用户权限分页同步全部视频，电影、剧集和普通视频均不遗漏。
+3. 用户产生可信进度、计划、欠债、题目、全文和摘要数据。
+4. 管理员在 Emby 删除该媒体库，并以相同媒体文件重新创建，父节点和视频 Item ID 发生变化。
+5. 旧父节点同步返回稳定错误并保留本地快照，不把全部课时标记为不可用。
+6. 管理员将原课程重新绑定到新媒体库；来源指纹或唯一历史元数据映射在一个事务中更新外部 Item ID。
+7. 重新绑定后本地课时 ID、可信进度、计划、欠债、题目、全文和摘要保持不变，新播放使用新的 Emby Item ID。
+8. 存在同名同长度等歧义时系统拒绝自动合并，管理员确认全部冲突后才能提交重新绑定。
+
 ---
 
 ## 28. Definition of Done
@@ -2027,6 +2069,7 @@ V1 只有同时满足以下条件才完成：
 - 没有 PC Web、微服务、Redis、向量库等越界实现。
 - 服务端地址切换经过健康检查，且不会向新服务器发送旧 Token。
 - 管理员保存外部服务配置后，新请求无需重启即可使用最新配置。
+- Emby 媒体库删除或重建不会静默丢失、复制或错误合并本地课时与可信学习历史。
 
 ---
 
@@ -2051,6 +2094,7 @@ V1 只有同时满足以下条件才完成：
 15. 课程自动转写、摘要、AI 出题、模型目录和内容任务后台。
 16. 作战单编排、模拟考试预置与附件、复习审计、独立专注工具和自动日终结果。
 17. 播放器全屏与摘要、启动容错、课时学习状态和报表日期选择器。
+18. Emby 媒体库选择、混合视频分页同步和媒体库重建后的稳定课时重映射。
 
 每个切片必须独立测试、独立提交，不允许先铺满空壳再统一补实现。
 

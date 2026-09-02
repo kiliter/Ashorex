@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="~{admin/fragments :: head('媒体来源 - 上岸管理台')}"></head>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <header th:replace="~{admin/fragments :: navigation('courses')}"></header>
+      <main class="admin-main">
+        <section class="page-head"><div class="container page-head-row"><div><h1 class="page-title" data-code="SRC/04">媒体来源</h1><p class="page-desc" th:text="|${course.name} · 当前父节点 ${course.embyParentItemId}|">课程媒体来源</p></div><a class="btn btn-secondary" th:href="@{/admin/courses}">返回课程</a></div></section>
+        <div class="container workspace">
+          <div class="alert alert--success" th:if="${param.rebound}">媒体来源已更新；原本地课时及其学习历史保持不变。</div>
+          <div class="alert" th:if="${mediaLibraryError != null}" th:text="${mediaLibraryError}">媒体库读取失败</div>
+          <div class="alert" th:if="${sourceError != null}" th:text="${sourceError}">来源预览失败</div>
+
+          <section class="panel">
+            <div class="panel-head"><div><h2>SELECT / 选择新来源</h2><p>先预览完整映射；预览不会修改课程或课时。</p></div></div>
+            <form class="form-grid form-grid--two panel-body" method="post" th:action="@{/admin/courses/{id}/source/preview(id=${course.id})}">
+              <label class="field">Emby 媒体库
+                <select name="selectedParentItemId">
+                  <option value="">请选择媒体库</option>
+                  <option th:each="library : ${mediaLibraries}" th:value="${library.id}" th:text="|${library.name} · ${#strings.isEmpty(library.collectionType) ? '混合视频' : library.collectionType} · ${library.id}|">媒体库</option>
+                </select>
+              </label>
+              <label class="field">Series / Folder ID（高级）<input class="data-text" name="manualParentItemId" placeholder="填写后优先于媒体库选择" /></label>
+              <div class="actions form-grid__wide"><button type="submit">预览映射</button></div>
+            </form>
+          </section>
+
+          <section class="panel" th:if="${preview != null}">
+            <div class="panel-head"><div><h2>PREVIEW / 映射预览</h2><p th:text="|目标父节点 ${preview.targetParentItemId}；确认时会重新读取完整远端快照。|">映射摘要</p></div><span class="badge" th:classappend="${preview.plan.hasConflicts() ? ' warning' : ' success'}" th:text="${preview.plan.hasConflicts() ? '需要人工确认' : '可以安全重绑'}">状态</span></div>
+            <div class="panel-body">
+              <div class="metric-grid">
+                <div class="metric-card"><span>远端视频</span><strong th:text="${#lists.size(preview.plan.mappings) + #lists.size(preview.plan.conflicts)}">0</strong></div>
+                <div class="metric-card"><span>自动映射</span><strong th:text="${preview.plan.automaticMappingCount()}">0</strong></div>
+                <div class="metric-card"><span>将新增课时</span><strong th:text="${preview.plan.newItemCount()}">0</strong></div>
+                <div class="metric-card"><span>待确认冲突</span><strong th:text="${#lists.size(preview.plan.conflicts)}">0</strong></div>
+                <div class="metric-card"><span>将标记不可用</span><strong th:text="${#lists.size(preview.plan.unavailableLocalIds)}">0</strong></div>
+              </div>
+
+              <form method="post" th:action="@{/admin/courses/{id}/source(id=${course.id})}">
+                <input type="hidden" name="targetParentItemId" th:value="${preview.targetParentItemId}" />
+                <div class="table-wrap" th:unless="${#lists.isEmpty(preview.plan.conflicts)}"><table class="ds-table">
+                  <thead><tr><th>新 Emby 视频</th><th>可能的原课时</th><th>管理员确认</th></tr></thead>
+                  <tbody><tr th:each="conflict : ${preview.plan.conflicts}">
+                    <td><div class="cell-main" th:text="${conflict.remote.title}">新视频</div><div class="cell-sub num" th:text="|${conflict.remote.itemType} · ${conflict.remote.id}|">类型</div></td>
+                    <td><div th:each="candidate : ${conflict.candidates}" class="cell-sub" th:text="|${candidate.title} · ${candidate.durationMs / 1000}s · 本地 ${candidate.id}|">候选</div></td>
+                    <td><label class="field">对应关系<select name="mapping" required><option value="">请选择</option><option th:each="candidate : ${conflict.candidates}" th:value="${conflict.remote.id + '|' + candidate.id}" th:text="|映射到：${candidate.title}|">映射</option><option th:value="${conflict.remote.id + '|__NEW__'}">作为新课时</option></select></label></td>
+                  </tr></tbody>
+                </table></div>
+                <p class="help" th:if="${preview.plan.hasConflicts()}">所有冲突都必须明确选择。系统不会仅凭同名视频静默合并学习历史。</p>
+                <div class="actions"><button type="submit" th:text="${preview.plan.hasConflicts() ? '按确认结果重新绑定' : '确认安全重新绑定'}">确认重新绑定</button></div>
+              </form>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
