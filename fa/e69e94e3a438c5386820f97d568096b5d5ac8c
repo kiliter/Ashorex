@@ -1,0 +1,21 @@
+.github/workflows/server-verify.yml
+  s_73dd1583cd0fea::t_af9dcaa46f302b 6-8
+.github/workflows/ios-verify.yml
+  s_73dd1583cd0fea::t_af9dcaa46f302b 6-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "fae69e94e3a438c5386820f97d568096b5d5ac8c",
+  "prompts": {},
+  "sessions": {
+    "s_73dd1583cd0fea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05895-5df5-7e93-a5e3-7560bc9c3d61",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
