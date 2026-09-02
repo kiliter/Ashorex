@@ -46,7 +46,51 @@ jobs:
           cd build/unsigned-ipa
           zip -qry ../shangan-ios-unsigned.ipa Payload
       - name: 构建 Android Debug APK
+        if: github.event_name != 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/v')
         run: cd apps/ios && flutter build apk --debug
+      - name: 准备 Android 正式签名
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          # 缺少任一签名项都立即失败，不允许回退为 Debug 或未签名包。
+          test -n "${ANDROID_KEYSTORE_BASE64}"
+          test -n "${ANDROID_KEYSTORE_PASSWORD}"
+          test -n "${ANDROID_KEY_ALIAS}"
+          test -n "${ANDROID_KEY_PASSWORD}"
+          printf '%s' "${ANDROID_KEYSTORE_BASE64}" \
+            | openssl base64 -d -A -out apps/ios/android/app/ashorex-release.p12
+          chmod 600 apps/ios/android/app/ashorex-release.p12
+      - name: 构建 Android Release APK
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/apps/ios/android/app/ashorex-release.p12
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          cd apps/ios
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            flutter build apk --release \
+              --build-name "${version}" \
+              --build-number "${GITHUB_RUN_NUMBER}"
+          else
+            flutter build apk --release --build-number "${GITHUB_RUN_NUMBER}"
+          fi
+      - name: 校验 Android 正式签名
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          # 使用 Android SDK 内置 apksigner 校验 APK 的完整性和签名。
+          apksigner_path="$(find "${ANDROID_HOME}/build-tools" -type f -name apksigner | sort | tail -1)"
+          test -n "${apksigner_path}"
+          "${apksigner_path}" verify --verbose apps/ios/build/app/outputs/flutter-apk/app-release.apk
       - name: 上传无签名 IPA
         if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
@@ -59,10 +103,13 @@ jobs:
         if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
-          name: shangan-android-debug
-          path: apps/ios/build/app/outputs/flutter-apk/app-debug.apk
+          name: shangan-android-release
+          path: apps/ios/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 3
+      - name: 清理 Android 签名私钥
+        if: always() && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v'))
+        run: rm -f apps/ios/android/app/ashorex-release.p12
 
   mobile-release-assets:
     name: 发布移动端安装包
@@ -85,7 +132,7 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           # 对外附件统一使用仓库名、版本号和平台名，不在文件名中暴露构建类型。
           mv release-assets/shangan-ios-unsigned.ipa "release-assets/Ashorex-${version}-ios.ipa"
-          mv release-assets/app-debug.apk "release-assets/Ashorex-${version}-android.apk"
+          mv release-assets/app-release.apk "release-assets/Ashorex-${version}-android.apk"
       - name: 上传到 GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

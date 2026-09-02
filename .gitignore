@@ -25,6 +25,12 @@ apps/ios/ios/Flutter/ephemeral/
 apps/ios/ios/Pods/
 apps/ios/ios/.symlinks/
 
+# Android 签名私钥和本地签名配置永远不得进入仓库
+*.jks
+*.keystore
+*.p12
+apps/ios/android/key.properties
+
 # 本地运行数据、备份和临时文件
 /.run/
 /data/
