@@ -1,0 +1,20 @@
+AGENTS.md
+  s_d11d2e0a6d2d4e::t_966f81c400c6d3 3-14,32,43,56,91,141,161,180-189,203,221-223,241,286
+  s_d11d2e0a6d2d4e::t_5133a48cb4d3b5 303-315,346,372,401,412,423,435,449,456
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "9cfb64ac5eb08c1b38b75a546b7cd6718d276471",
+  "prompts": {},
+  "sessions": {
+    "s_d11d2e0a6d2d4e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05fed-0bd9-7313-9c21-a4ecd9750720",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": null
+    }
+  }
+}
