@@ -6,10 +6,14 @@ import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
 import 'package:shangan_ios/features/focus/data/mock_exam_repository.dart';
 import 'package:shangan_ios/features/planning/data/plan_repository.dart';
+import 'package:shangan_ios/features/planning/presentation/battle_order_widgets.dart';
 
 /// 作战单编排区使用本地草稿集中编辑，只有点击“保存作战单”才会整单提交。
 final class PlanPage extends ConsumerStatefulWidget {
-  const PlanPage({super.key});
+  const PlanPage({super.key, this.date});
+
+  /// 为空时编辑当天；历史日期进入后只读。
+  final DateTime? date;
 
   @override
   ConsumerState<PlanPage> createState() => _PlanPageState();
@@ -24,9 +28,21 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
   bool _saving = false;
   bool _dirty = false;
 
+  bool get _isToday {
+    final now = DateTime.now();
+    return shanganSameDay(widget.date ?? now, now);
+  }
+
+  bool get _isFutureOrToday {
+    final now = DateUtils.dateOnly(DateTime.now());
+    final target = DateUtils.dateOnly(widget.date ?? now);
+    return !target.isBefore(now);
+  }
+
   bool get _editable =>
-      _plan == null ||
-      const {'NONE', 'DRAFT', 'ACTIVE'}.contains(_plan!.status);
+      _isFutureOrToday &&
+      (_plan == null ||
+          const {'NONE', 'DRAFT', 'ACTIVE'}.contains(_plan!.status));
 
   @override
   void initState() {
@@ -42,7 +58,10 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
       });
     }
     try {
-      final plan = await ref.read(planRepositoryProvider).loadToday();
+      final repository = ref.read(planRepositoryProvider);
+      final plan = widget.date == null
+          ? await repository.loadToday()
+          : await repository.load(widget.date!);
       if (!mounted) return;
       setState(() {
         _plan = plan;
@@ -153,7 +172,10 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
         const Divider(color: ShanganColors.ink, thickness: 2),
         if (!_editable) ...[
           const SizedBox(height: 14),
-          const ShanganNotice(title: '今日作战单已结算', message: '结算后的项目只可查看，不能继续修改。'),
+          ShanganNotice(
+            title: _isToday ? '今日作战单已结算' : '历史作战单只读',
+            message: _isToday ? '结算后的项目只可查看，不能继续修改。' : '过去的作战单不能修改，未完成部分已记为欠债。',
+          ),
         ],
         if (_drafts.isEmpty)
           const Padding(
@@ -163,7 +185,7 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
               message: '加入今天准备学习的课时，或选择一个模拟考试预置。',
             ),
           ),
-        ..._drafts.indexed.map((entry) => _buildDraft(entry.$1, entry.$2)),
+        ..._groupedDraftTiles(),
         if (_editable) ...[
           const SizedBox(height: 20),
           OutlinedButton.icon(
@@ -181,6 +203,45 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
         ],
       ],
     );
+  }
+
+  /// 草稿按课程分组展开，删除仍使用全局序号以免打乱固有顺序。
+  List<Widget> _groupedDraftTiles() {
+    final groups = <({String key, String title, List<int> indexes})>[];
+    for (final entry in _drafts.indexed) {
+      final draft = entry.$2;
+      final key =
+          draft.courseId ??
+          (draft.itemType == 'MOCK_EXAM' ? 'mock-exam' : 'other');
+      final title =
+          draft.courseName ?? (draft.itemType == 'MOCK_EXAM' ? '模拟考试' : '其它任务');
+      if (groups.isEmpty || groups.last.key != key) {
+        groups.add((key: key, title: title, indexes: [entry.$1]));
+      } else {
+        groups.last.indexes.add(entry.$1);
+      }
+    }
+    return [
+      for (final entry in groups.indexed)
+        Padding(
+          padding: EdgeInsets.only(top: entry.$1 == 0 ? 4 : 12),
+          child: BattleOrderCourseGroup(
+            key: Key('draft-group-${entry.$2.key}'),
+            title: entry.$2.title,
+            accentIndex: entry.$1,
+            kindLabel: entry.$2.key == 'debt'
+                ? '欠债'
+                : entry.$2.key == 'mock-exam'
+                ? '模拟考试'
+                : '课程 ${entry.$1 + 1}',
+            itemCount: entry.$2.indexes.length,
+            children: [
+              for (final index in entry.$2.indexes)
+                _buildDraft(index, _drafts[index]),
+            ],
+          ),
+        ),
+    ];
   }
 
   Widget _buildDraft(int index, BattleOrderDraft draft) {
@@ -620,6 +681,8 @@ final class _BattleOrderPickerSheetState
                           plannedSeconds: (lesson.durationMs / 1000).ceil(),
                           immutable: false,
                           catalogOrder: _lessonOrders[lesson.id],
+                          courseId: match.course.id,
+                          courseName: match.course.name,
                         ),
                         selected,
                       );

@@ -7,6 +7,7 @@ import 'package:shangan_ios/features/catalog/presentation/course_detail_page.dar
 import 'package:shangan_ios/features/dashboard/presentation/app_shell.dart';
 import 'package:shangan_ios/features/debt/presentation/debt_page.dart';
 import 'package:shangan_ios/features/exam/presentation/exam_goal_page.dart';
+import 'package:shangan_ios/features/exam/presentation/exam_settings_page.dart';
 import 'package:shangan_ios/features/focus/presentation/focus_timer_page.dart';
 import 'package:shangan_ios/features/focus/presentation/mock_exam_page.dart';
 import 'package:shangan_ios/features/focus/presentation/mock_exam_preset_page.dart';
@@ -21,6 +22,7 @@ import 'package:shangan_ios/features/reporting/presentation/weekly_report_page.d
 GoRouter createRouter(AuthController authController) {
   return GoRouter(
     initialLocation: '/',
+    observers: [shanganRouteObserver],
     refreshListenable: authController,
     redirect: (context, state) {
       final status = authController.state.status;
@@ -56,10 +58,23 @@ GoRouter createRouter(AuthController authController) {
       ),
       GoRoute(path: '/home', builder: (context, state) => const AppShell()),
       GoRoute(
-        path: '/exam-goal',
-        builder: (context, state) => const ExamGoalPage(),
+        path: '/exam-settings',
+        builder: (context, state) => const ExamSettingsPage(),
       ),
-      GoRoute(path: '/plan', builder: (context, state) => const PlanPage()),
+      GoRoute(
+        path: '/exam-goal',
+        builder: (context, state) => ExamGoalPage(
+          allowBack: state.uri.queryParameters['edit'] == 'true',
+          goalId: state.uri.queryParameters['id'],
+        ),
+      ),
+      GoRoute(
+        path: '/plan',
+        builder: (context, state) {
+          final raw = state.uri.queryParameters['date'];
+          return PlanPage(date: raw == null ? null : DateTime.tryParse(raw));
+        },
+      ),
       GoRoute(path: '/debts', builder: (context, state) => const DebtPage()),
       GoRoute(
         path: '/mock-exam',
@@ -85,6 +100,7 @@ GoRouter createRouter(AuthController authController) {
           lessonId: state.pathParameters['lessonId']!,
           planItemId: state.uri.queryParameters['planItemId'],
           title: state.uri.queryParameters['title'] ?? '视频学习',
+          preview: state.uri.queryParameters['preview'] == 'true',
         ),
       ),
       GoRoute(

@@ -35,7 +35,7 @@ public class DailyPlanController {
       CurrentUser user,
       @PathVariable LocalDate date,
       @Valid @RequestBody SaveBattleOrderRequest request) {
-    return battleOrders.save(user.userId(), date, request.toCommand());
+    return battleOrders.save(user.userId(), user.timezone(), date, request.toCommand());
   }
 
   record SaveBattleOrderRequest(

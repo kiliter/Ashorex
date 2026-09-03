@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/profile/data/preferences_repository.dart';
 
@@ -100,6 +101,7 @@ final class _SettingsPageState extends ConsumerState<SettingsPage> {
                   const ShanganEyebrow('视频进度验活'),
                   const SizedBox(height: 8),
                   ShanganSurface(
+                    borderColor: ShanganColors.blue,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -160,26 +162,36 @@ final class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  TextFormField(
-                    key: const Key('dayEndField'),
-                    controller: _dayEndController,
-                    keyboardType: TextInputType.datetime,
-                    decoration: const InputDecoration(
-                      labelText: '日终时间',
-                      hintText: '23:59',
-                      helperText: '使用 24 小时制 HH:mm',
+                  ShanganSurface(
+                    borderColor: ShanganColors.blue,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const ShanganEyebrow('日终边界'),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          key: const Key('dayEndField'),
+                          controller: _dayEndController,
+                          keyboardType: TextInputType.datetime,
+                          decoration: const InputDecoration(
+                            labelText: '日终时间',
+                            hintText: '23:59',
+                            helperText: '使用 24 小时制 HH:mm',
+                          ),
+                          validator: (value) {
+                            final match = RegExp(
+                              r'^(?:[01]\d|2[0-3]):[0-5]\d$',
+                            ).hasMatch(value ?? '');
+                            return match ? null : '请输入有效的 24 小时时间';
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        ShanganNotice(
+                          title: '用户时区 $_timezone',
+                          message: '日终关闭、日报和周报边界都按服务端保存的 IANA 时区计算。',
+                        ),
+                      ],
                     ),
-                    validator: (value) {
-                      final match = RegExp(
-                        r'^(?:[01]\d|2[0-3]):[0-5]\d$',
-                      ).hasMatch(value ?? '');
-                      return match ? null : '请输入有效的 24 小时时间';
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  ShanganNotice(
-                    title: '用户时区 $_timezone',
-                    message: '日终关闭、日报和周报边界都按服务端保存的 IANA 时区计算。',
                   ),
                   if (_message != null) ...[
                     const SizedBox(height: 16),

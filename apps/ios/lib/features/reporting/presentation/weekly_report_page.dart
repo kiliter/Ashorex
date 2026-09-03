@@ -55,168 +55,205 @@ final class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
               : value,
         );
         return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
+          padding: shanganPagePadding,
           children: [
-            const ShanganEyebrow('学习周报'),
-            const SizedBox(height: 7),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    key: const Key('selectWeeklyReportDate'),
-                    onPressed: _selectWeek,
-                    icon: const Icon(Icons.calendar_month_outlined),
-                    label: Text(
-                      '${_date(report.weekStart)} 起',
-                      style: shanganNumberStyle(context, fontSize: 14),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                TextButton(
-                  onPressed: _goCurrentWeek,
-                  child: const Text('回到本周'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            ShanganMetricGrid(
-              metrics: [
-                (
-                  value: _duration(report.totalEffectiveStudySeconds),
-                  label: '本周有效学习',
-                  tone: ShanganTagTone.info,
-                ),
-                (
-                  value: '${report.planCompletionRate}%',
-                  label: '计划完成率',
-                  tone: ShanganTagTone.success,
-                ),
-                (
-                  value: '${report.answerAccuracy}%',
-                  label: '答题正确率',
-                  tone: ShanganTagTone.warning,
-                ),
-                (
-                  value: _signedDuration(report.effectiveStudySecondsChange),
-                  label: '较上周时长',
-                  tone: ShanganTagTone.risk,
-                ),
-                (
-                  value: '${_sign(report.planCompletionRateChange)}%',
-                  label: '较上周完成率',
-                  tone: ShanganTagTone.info,
-                ),
-                (
-                  value: _duration(report.newDebtSeconds),
-                  label: '本周新增欠债',
-                  tone: ShanganTagTone.risk,
-                ),
-                (
-                  value: '${report.slackedDayCount} 天',
-                  label: '自动开摆日',
-                  tone: ShanganTagTone.warning,
-                ),
-              ],
-            ),
-            const SizedBox(height: 22),
-            Text('每日趋势', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
             ShanganSurface(
-              child: SizedBox(
-                height: 146,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: report.days.map((day) {
-                    final heightFactor =
-                        0.18 + 0.82 * day.effectiveStudySeconds / maxStudy;
-                    return Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            _compactDuration(day.effectiveStudySeconds),
-                            style: Theme.of(context).textTheme.labelSmall,
+              borderColor: ShanganColors.blue,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const ShanganEyebrow('学习周报'),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          key: const Key('selectWeeklyReportDate'),
+                          onPressed: _selectWeek,
+                          icon: const Icon(Icons.calendar_month_outlined),
+                          label: Text(
+                            '${_date(report.weekStart)} 起',
+                            style: shanganNumberStyle(context, fontSize: 14),
                           ),
-                          const SizedBox(height: 4),
-                          // 柱体占用标签之外的剩余高度，避免小屏或动态字体造成纵向溢出。
-                          Expanded(
-                            child: Align(
-                              alignment: Alignment.bottomCenter,
-                              child: FractionallySizedBox(
-                                heightFactor: heightFactor.clamp(0, 1),
-                                widthFactor: 1,
-                                child: Container(
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: ShanganColors.blue,
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(4),
-                                    ),
-                                    border: Border.all(
-                                      color: ShanganColors.ink,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      TextButton(
+                        onPressed: _goCurrentWeek,
+                        child: const Text('回到本周'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ShanganCompletionHero(
+                    percent: report.planCompletionRate,
+                    caption: '本周计划完成率',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            ShanganSurface(
+              borderColor: ShanganColors.blue,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const ShanganEyebrow('本周数据'),
+                  const SizedBox(height: 8),
+                  ShanganMetricGrid(
+                    embedded: true,
+                    metrics: [
+                      (
+                        value: _duration(report.totalEffectiveStudySeconds),
+                        label: '本周有效学习',
+                        tone: ShanganTagTone.info,
+                      ),
+                      (
+                        value: '${report.answerAccuracy}%',
+                        label: '答题正确率',
+                        tone: ShanganTagTone.warning,
+                      ),
+                      (
+                        value: _signedDuration(
+                          report.effectiveStudySecondsChange,
+                        ),
+                        label: '较上周时长',
+                        tone: ShanganTagTone.risk,
+                      ),
+                      (
+                        value: '${_sign(report.planCompletionRateChange)}%',
+                        label: '较上周完成率',
+                        tone: ShanganTagTone.info,
+                      ),
+                      (
+                        value: _duration(report.newDebtSeconds),
+                        label: '本周新增欠债',
+                        tone: ShanganTagTone.risk,
+                      ),
+                      (
+                        value: '${report.slackedDayCount} 天',
+                        label: '自动开摆日',
+                        tone: ShanganTagTone.warning,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            ShanganSurface(
+              borderColor: ShanganColors.blue,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const ShanganEyebrow('每日趋势'),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 146,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: report.days.map((day) {
+                        final heightFactor =
+                            0.18 + 0.82 * day.effectiveStudySeconds / maxStudy;
+                        return Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text(
+                                _compactDuration(day.effectiveStudySeconds),
+                                style: Theme.of(context).textTheme.labelSmall,
+                              ),
+                              const SizedBox(height: 4),
+                              // 柱体占用标签之外的剩余高度，避免小屏或动态字体造成纵向溢出。
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.bottomCenter,
+                                  child: FractionallySizedBox(
+                                    heightFactor: heightFactor.clamp(0, 1),
+                                    widthFactor: 1,
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: ShanganColors.blue,
+                                        borderRadius:
+                                            const BorderRadius.vertical(
+                                              top: Radius.circular(4),
+                                            ),
+                                        border: Border.all(
+                                          color: ShanganColors.ink,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
+                              const SizedBox(height: 5),
+                              Text(
+                                _weekday(day.date.weekday),
+                                style: Theme.of(context).textTheme.labelSmall,
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...report.days.map(
+                    (day) => Container(
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: ShanganColors.rule),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _date(day.date),
+                              style: shanganNumberStyle(context, fontSize: 12),
                             ),
                           ),
-                          const SizedBox(height: 5),
                           Text(
-                            _weekday(day.date.weekday),
-                            style: Theme.of(context).textTheme.labelSmall,
+                            '完成 ${day.completionRate}% · 欠债 ${_duration(day.newDebtSeconds)}',
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Divider(color: ShanganColors.ink),
-            ...report.days.map(
-              (day) => Container(
-                padding: const EdgeInsets.symmetric(vertical: 11),
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: ShanganColors.rule)),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _date(day.date),
-                        style: shanganNumberStyle(context, fontSize: 12),
-                      ),
                     ),
-                    Text(
-                      '完成 ${day.completionRate}% · 欠债 ${_duration(day.newDebtSeconds)}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             if (report.reviewedLessons.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              Text('复习审计', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 8),
-              const Text('仅记录复习过的课时和次数，不计入有效学习时长。'),
-              const SizedBox(height: 10),
-              ...report.reviewedLessons.map(
-                (lesson) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(
-                    Icons.history_edu_outlined,
-                    color: ShanganColors.blue,
-                  ),
-                  title: Text(lesson.lessonTitle),
-                  trailing: ShanganStatusTag(
-                    '${lesson.reviewCount} 次',
-                    tone: ShanganTagTone.info,
-                  ),
+              const SizedBox(height: 16),
+              ShanganSurface(
+                borderColor: ShanganColors.blue,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const ShanganEyebrow('复习审计'),
+                    const SizedBox(height: 6),
+                    const Text('仅记录复习过的课时和次数，不计入有效学习时长。'),
+                    const SizedBox(height: 8),
+                    ...report.reviewedLessons.map(
+                      (lesson) => ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(
+                          Icons.history_edu_outlined,
+                          color: ShanganColors.blue,
+                        ),
+                        title: Text(lesson.lessonTitle),
+                        trailing: ShanganStatusTag(
+                          '${lesson.reviewCount} 次',
+                          tone: ShanganTagTone.info,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -259,16 +296,13 @@ String _date(DateTime value) =>
     '${value.month.toString().padLeft(2, '0')}-'
     '${value.day.toString().padLeft(2, '0')}';
 
-String _duration(int seconds) =>
-    '${seconds ~/ 3600} 小时 ${(seconds % 3600) ~/ 60} 分';
+String _duration(int seconds) => shanganDuration(seconds);
 
-String _signedDuration(int seconds) =>
-    '${seconds >= 0 ? '+' : '-'}${_duration(seconds.abs())}';
+String _signedDuration(int seconds) => shanganSignedDuration(seconds);
 
 String _sign(int value) => value >= 0 ? '+$value' : '$value';
 
-String _compactDuration(int seconds) =>
-    '${seconds ~/ 3600}:${((seconds % 3600) ~/ 60).toString().padLeft(2, '0')}';
+String _compactDuration(int seconds) => shanganDuration(seconds);
 
 String _weekday(int weekday) =>
     const ['一', '二', '三', '四', '五', '六', '日'][weekday - 1];

@@ -16,7 +16,7 @@
 - iOS 最低版本为 16。
 - Android 最低版本为 API 24。
 - 后端只能运行一个实例，SQLite 文件必须位于本机磁盘。
-- 服务端只允许课时转写、摘要和 AI 题目草稿；不包含 AI Chat、智能体、MCP、联网搜索或 AI 业务写能力。
+- 服务端只允许课时转写、摘要和 AI 题目草稿；不包含 AI Chat、智能体、MCP、联网搜索或 AI 业务写能力。Flutter 学习伙伴只是本地精灵，不是 AI 入口。
 - Emby 密钥不能进入 Flutter、日志或业务 API 响应；仅允许存在于服务端存储和 ADMIN 配置页面。
 - 不使用 Redis、Kafka、向量数据库、微服务或对象存储。
 - 所有日期边界按用户时区处理，数据库时间统一 UTC Epoch Milliseconds。
@@ -2615,6 +2615,50 @@ git add docs apps/server
 git commit -m "feat(catalog): hard delete archived course graph"
 ```
 
+### Task 28：学习日历、历史只读与首页作战单改版
+
+**目标：** 按 ADR-0019 把学习 Tab 改为作战日历，首页按考试 → 今日作战单任务列表排序，并禁止修改历史作战单。
+
+**Files:**
+
+- 新增：`docs/adr/0019-study-calendar-and-home-battle-order.md`
+- 修改：V1 spec、implementation plan、traceability、`docs/api/openapi.yaml`
+- 修改：`BattleOrderService`、`BattleOrderRepository`、`DailyPlanController`
+- 新增：作战单日历查询 API
+- 修改：Flutter 首页、学习 Tab、作战单编排页与相关 Widget 测试
+
+**接口：**
+
+```text
+GET /api/v1/plans?from={date}&to={date}
+GET /api/v1/plans/{date}
+PUT /api/v1/plans/{date}
+```
+
+- [ ] **步骤 1：先写日历摘要与非当天保存失败测试**
+- [ ] **步骤 2：实现月历摘要、项目课程字段和当天写保护**
+- [ ] **步骤 3：首页改版与学习日历 Widget 测试**
+- [ ] **步骤 4：实现学习 Tab 日历、按课程分组和历史只读**
+- [ ] **步骤 5：运行本次窄测试并格式化**
+
+### Task 29：全局可视化学习伙伴
+
+**目标：** 按 ADR-0021 在登录后的根导航上叠加可拖动的「毛线团团」。全屏播放贴边隐藏。不增加 AI 入口。
+
+**Files:**
+
+- 新增：`docs/adr/0021-visual-study-companion.md`
+- 修改：V1 spec、implementation plan、traceability
+- 新增：`apps/ios/assets/pets/maoxian-tuantuan/`
+- 新增：Flutter `features/companion`
+- 修改：`ShanganApp`、学习播放器全屏状态
+- 新增：学习伙伴 Widget 测试
+
+- [ ] **步骤 1：先写未登录不出现、可拖动、全屏贴边的失败测试**
+- [ ] **步骤 2：打包精灵表并实现帧动画与拖动**
+- [ ] **步骤 3：全屏贴边隐藏，退出全屏恢复位置**
+- [ ] **步骤 4：运行本次窄测试并格式化**
+
 ## Cross-Task Review Gates
 
 After Tasks 1–4:
@@ -2754,6 +2798,15 @@ Task 27 之后：
 删除预览展示各类实际影响数量，预览失效或批量校验失败时整批不写入
 同一作战单内其他课程数据保留，作战单修订和报表派生数据不残留已删除课程贡献
 相同 Emby 来源重新添加时创建全新的课程和课时身份
+```
+
+Task 28 之后：
+
+```text
+学习 Tab 为作战日历，课程列表不再作为 Tab 根页
+日历对完成日打勾、对欠债日做标记，默认先列出过去未完成作战单
+只有当天未结算作战单可保存，历史日只读
+首页顺序为考试倒计时、今日作战单任务列表、欠债，无「今日追赶中」
 ```
 
 ---

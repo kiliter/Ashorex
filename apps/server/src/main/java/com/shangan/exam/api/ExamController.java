@@ -1,5 +1,6 @@
 package com.shangan.exam.api;
 
+import com.shangan.common.api.BusinessException;
 import com.shangan.common.auth.CurrentUser;
 import com.shangan.exam.application.ExamGoalService;
 import com.shangan.exam.application.ExamProgressCalculator;
@@ -12,8 +13,10 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,11 +42,43 @@ public class ExamController {
         .orElseGet(() -> ResponseEntity.noContent().build());
   }
 
+  @GetMapping("/exam-goals")
+  List<ExamGoalResponse> goals(CurrentUser currentUser) {
+    return exams.listGoals(currentUser.userId()).stream().map(ExamGoalResponse::from).toList();
+  }
+
+  @GetMapping("/exam-goals/{goalId}")
+  ExamGoalResponse goalById(CurrentUser currentUser, @PathVariable String goalId) {
+    return ExamGoalResponse.from(
+        exams
+            .findGoal(currentUser.userId(), goalId)
+            .orElseThrow(
+                () ->
+                    new BusinessException(HttpStatus.NOT_FOUND, "EXAM_GOAL_NOT_FOUND", "考试目标不存在")));
+  }
+
   @PutMapping("/exam-goal")
   ExamGoalResponse save(CurrentUser currentUser, @Valid @RequestBody ExamGoalRequest request) {
     return ExamGoalResponse.from(
         exams.saveGoal(
             currentUser.userId(),
+            currentUser.timezone(),
+            request.name(),
+            request.examDate(),
+            request.targetCompletionDate(),
+            request.reviewBufferDays(),
+            request.courseIds()));
+  }
+
+  @PutMapping("/exam-goals/{goalId}")
+  ExamGoalResponse update(
+      CurrentUser currentUser,
+      @PathVariable String goalId,
+      @Valid @RequestBody ExamGoalRequest request) {
+    return ExamGoalResponse.from(
+        exams.updateGoal(
+            currentUser.userId(),
+            goalId,
             currentUser.timezone(),
             request.name(),
             request.examDate(),

@@ -37,15 +37,47 @@ public class JdbcBattleOrderRepository implements BattleOrderRepository {
   }
 
   @Override
+  public List<PlanDayRow> listPlanDays(String userId, LocalDate from, LocalDate to) {
+    return jdbc.sql(
+            """
+            select p.plan_date, p.lifecycle_status,
+              count(i.id) as item_count,
+              coalesce(sum(case when i.status='COMPLETED' then 1 else 0 end), 0) as completed_item_count,
+              coalesce(sum(i.planned_seconds), 0) as planned_seconds
+            from daily_plans p
+            left join daily_plan_items i on i.plan_id=p.id
+            where p.user_id=:userId and p.plan_date>=:fromDate and p.plan_date<=:toDate
+            group by p.id, p.plan_date, p.lifecycle_status
+            order by p.plan_date
+            """)
+        .param("userId", userId)
+        .param("fromDate", from.toString())
+        .param("toDate", to.toString())
+        .query(
+            (rs, row) ->
+                new PlanDayRow(
+                    LocalDate.parse(rs.getString("plan_date")),
+                    rs.getString("lifecycle_status"),
+                    rs.getInt("item_count"),
+                    rs.getInt("completed_item_count"),
+                    rs.getLong("planned_seconds")))
+        .list();
+  }
+
+  @Override
   public List<ItemRow> findItems(String planId) {
     return jdbc.sql(
             """
             select i.*,
+              m.course_id as course_id,
+              c.name as course_name,
               case when i.status <> 'PENDING' or i.completed_seconds > 0
                 or exists(select 1 from watch_sessions w where w.plan_item_id=i.id)
                 or exists(select 1 from mock_exam_sessions m where m.plan_item_id=i.id)
               then 1 else 0 end as immutable_item
             from daily_plan_items i
+            left join media_items m on m.id=i.media_item_id
+            left join courses c on c.id=m.course_id
             where i.plan_id=:planId
             order by i.sort_order,i.id
             """)
@@ -180,6 +212,10 @@ public class JdbcBattleOrderRepository implements BattleOrderRepository {
         rs.getLong("completed_seconds"),
         rs.getString("status"),
         rs.getInt("sort_order"),
-        rs.getInt("immutable_item") == 1);
+        rs.getInt("immutable_item") == 1,
+        rs.getString("course_id"),
+        rs.getString("course_name"),
+        rs.getInt("quiz_required") == 1,
+        rs.getString("debt_id"));
   }
 }

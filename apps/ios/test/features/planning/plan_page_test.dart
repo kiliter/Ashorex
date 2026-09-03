@@ -75,7 +75,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('考试预置设置'), findsOneWidget);
     expect(find.text('行测模拟卷'), findsOneWidget);
-    expect(find.text('2 小时 00 分'), findsOneWidget);
+    expect(find.text('2.0h'), findsOneWidget);
   });
 
   testWidgets('已选择课时可再次点击取消且课时按视频顺序保存', (tester) async {
@@ -195,6 +195,15 @@ final class _PlanRepository implements PlanRepository {
 
   @override
   Future<DailyPlanData> loadToday() async => _plan(4);
+
+  @override
+  Future<DailyPlanData> load(DateTime date) async => _plan(4);
+
+  @override
+  Future<List<PlanCalendarDay>> loadCalendar({
+    required DateTime from,
+    required DateTime to,
+  }) async => const [];
 
   @override
   Future<DailyPlanData> saveToday({

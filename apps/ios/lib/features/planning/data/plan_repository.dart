@@ -15,6 +15,10 @@ final class PlanItemData {
     required this.status,
     required this.sortOrder,
     required this.immutable,
+    this.courseId,
+    this.courseName,
+    this.quizRequired = false,
+    this.debtId,
   });
 
   final String id;
@@ -28,6 +32,10 @@ final class PlanItemData {
   final String status;
   final int sortOrder;
   final bool immutable;
+  final String? courseId;
+  final String? courseName;
+  final bool quizRequired;
+  final String? debtId;
 
   factory PlanItemData.fromJson(Map<String, dynamic> json) => PlanItemData(
     id: json['id'] as String,
@@ -41,6 +49,10 @@ final class PlanItemData {
     status: json['status'] as String,
     sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
     immutable: json['immutable'] as bool? ?? false,
+    courseId: json['courseId'] as String?,
+    courseName: json['courseName'] as String?,
+    quizRequired: json['quizRequired'] as bool? ?? false,
+    debtId: json['debtId'] as String?,
   );
 }
 
@@ -85,6 +97,8 @@ final class BattleOrderDraft {
     required this.plannedSeconds,
     required this.immutable,
     required this.catalogOrder,
+    this.courseId,
+    this.courseName,
   });
 
   final String? existingItemId;
@@ -97,6 +111,8 @@ final class BattleOrderDraft {
 
   /// 课时在服务端课程目录中的固有顺序；模拟考试为 null，并统一排在课时之后。
   final int? catalogOrder;
+  final String? courseId;
+  final String? courseName;
 
   factory BattleOrderDraft.fromSaved(PlanItemData item) => BattleOrderDraft(
     existingItemId: item.id,
@@ -107,6 +123,8 @@ final class BattleOrderDraft {
     plannedSeconds: item.plannedSeconds,
     immutable: item.immutable,
     catalogOrder: item.mediaItemId == null ? null : item.sortOrder,
+    courseId: item.courseId,
+    courseName: item.courseName,
   );
 
   Map<String, dynamic> toJson(int sortOrder) => {
@@ -126,6 +144,8 @@ final class LearningDebtData {
     required this.title,
     required this.remainingSeconds,
     required this.status,
+    this.mediaItemId,
+    this.openedOn,
   });
 
   final String id;
@@ -133,19 +153,64 @@ final class LearningDebtData {
   final String title;
   final int remainingSeconds;
   final String status;
+  final String? mediaItemId;
+  final DateTime? openedOn;
 
-  factory LearningDebtData.fromJson(Map<String, dynamic> json) =>
-      LearningDebtData(
-        id: json['id'] as String,
-        debtType: json['debtType'] as String,
-        title: json['title'] as String,
-        remainingSeconds: (json['remainingSeconds'] as num).toInt(),
+  factory LearningDebtData.fromJson(Map<String, dynamic> json) {
+    final opened = json['openedOn'] as String?;
+    return LearningDebtData(
+      id: json['id'] as String,
+      debtType: json['debtType'] as String,
+      title: json['title'] as String,
+      remainingSeconds: (json['remainingSeconds'] as num).toInt(),
+      status: json['status'] as String,
+      mediaItemId: json['mediaItemId'] as String?,
+      openedOn: opened == null ? null : DateTime.tryParse(opened),
+    );
+  }
+}
+
+/// 学习日历用的单日摘要，不携带项目明细。
+final class PlanCalendarDay {
+  const PlanCalendarDay({
+    required this.date,
+    required this.status,
+    required this.completed,
+    required this.hasDebt,
+    required this.itemCount,
+    required this.completedItemCount,
+    this.plannedSeconds = 0,
+  });
+
+  final DateTime date;
+  final String status;
+  final bool completed;
+  final bool hasDebt;
+  final int itemCount;
+  final int completedItemCount;
+  final int plannedSeconds;
+
+  factory PlanCalendarDay.fromJson(Map<String, dynamic> json) =>
+      PlanCalendarDay(
+        date: DateTime.parse(json['date'] as String),
         status: json['status'] as String,
+        completed: json['completed'] as bool? ?? false,
+        hasDebt: json['hasDebt'] as bool? ?? false,
+        itemCount: (json['itemCount'] as num?)?.toInt() ?? 0,
+        completedItemCount: (json['completedItemCount'] as num?)?.toInt() ?? 0,
+        plannedSeconds: (json['plannedSeconds'] as num?)?.toInt() ?? 0,
       );
 }
 
 abstract interface class PlanRepository {
   Future<DailyPlanData> loadToday();
+
+  Future<DailyPlanData> load(DateTime date);
+
+  Future<List<PlanCalendarDay>> loadCalendar({
+    required DateTime from,
+    required DateTime to,
+  });
 
   Future<DailyPlanData> saveToday({
     required int expectedVersion,
@@ -161,16 +226,37 @@ final class RemotePlanRepository implements PlanRepository {
 
   final ApiClient _api;
 
-  String get _today {
-    final value = DateTime.now();
-    return '${value.year.toString().padLeft(4, '0')}-'
-        '${value.month.toString().padLeft(2, '0')}-'
-        '${value.day.toString().padLeft(2, '0')}';
+  String _datePath(DateTime date) {
+    return '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
   }
 
+  String get _today => _datePath(DateTime.now());
+
   @override
-  Future<DailyPlanData> loadToday() async =>
-      DailyPlanData.fromJson(await _api.getJson('/api/v1/plans/$_today'));
+  Future<DailyPlanData> loadToday() async => load(DateTime.now());
+
+  @override
+  Future<DailyPlanData> load(DateTime date) async => DailyPlanData.fromJson(
+    await _api.getJson('/api/v1/plans/${_datePath(date)}'),
+  );
+
+  @override
+  Future<List<PlanCalendarDay>> loadCalendar({
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    final json = await _api.getJson(
+      '/api/v1/plans?from=${_datePath(from)}&to=${_datePath(to)}',
+    );
+    return (json['days'] as List<dynamic>? ?? const [])
+        .map(
+          (item) =>
+              PlanCalendarDay.fromJson(Map<String, dynamic>.from(item as Map)),
+        )
+        .toList();
+  }
 
   @override
   Future<DailyPlanData> saveToday({

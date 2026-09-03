@@ -139,6 +139,6 @@ jobs:
         run: |
           # 两个发布工作流可能同时创建 Release；最后一次查询用于安全处理并发创建。
           gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 \
-            || gh release create "${GITHUB_REF_NAME}" --title "上岸 ${GITHUB_REF_NAME#v}" --generate-notes \
+            || gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes \
             || gh release view "${GITHUB_REF_NAME}" >/dev/null
           gh release upload "${GITHUB_REF_NAME}" release-assets/* --clobber

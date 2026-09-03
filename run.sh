@@ -215,7 +215,7 @@ run_ios() {
   device_id="$(resolve_iphone_simulator)"
   log "启动 Flutter，API 地址：$api_base_url"
   cd "$IOS_DIR"
-  "${FLUTTER_COMMAND[@]}" run -d "$device_id" --dart-define="API_BASE_URL=$api_base_url"
+  "${FLUTTER_COMMAND[@]}" run -d "$device_id" --no-enable-impeller --dart-define="API_BASE_URL=$api_base_url"
 }
 
 run_all() {

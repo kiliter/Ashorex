@@ -7,6 +7,8 @@ import com.shangan.focus.application.MockExamPresetService;
 import com.shangan.planning.infrastructure.BattleOrderRepository;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -55,10 +57,37 @@ public class BattleOrderService {
         .orElse(new PlanView(null, date, "NONE", 0, List.of()));
   }
 
+  /** 只返回已有作战单的日期摘要；空日期不占位，由客户端按月历补齐。 */
+  @Transactional(readOnly = true)
+  public CalendarView calendar(String userId, LocalDate from, LocalDate to) {
+    if (from == null || to == null || from.isAfter(to) || ChronoUnit.DAYS.between(from, to) > 62) {
+      throw invalid(HttpStatus.BAD_REQUEST, "PLAN_CALENDAR_RANGE_INVALID", "日历查询范围无效");
+    }
+    return new CalendarView(
+        from,
+        to,
+        orders.listPlanDays(userId, from, to).stream()
+            .map(
+                row ->
+                    new DayView(
+                        row.date(),
+                        row.lifecycleStatus(),
+                        "COMPLETED".equals(row.lifecycleStatus()),
+                        "CLOSED_WITH_DEBT".equals(row.lifecycleStatus()),
+                        row.itemCount(),
+                        row.completedItemCount(),
+                        row.plannedSeconds()))
+            .toList());
+  }
+
   @Transactional
-  public PlanView save(String userId, LocalDate date, SaveCommand command) {
+  public PlanView save(String userId, String timezone, LocalDate date, SaveCommand command) {
     if (command == null || command.items() == null || command.expectedVersion() < 0) {
       throw invalid(HttpStatus.BAD_REQUEST, "BATTLE_ORDER_INVALID", "作战单内容无效");
+    }
+    LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(timezone)));
+    if (date.isBefore(today)) {
+      throw invalid(HttpStatus.CONFLICT, "PLAN_DATE_NOT_EDITABLE", "不能修改已经过去的作战单");
     }
 
     var now = clock.instant();
@@ -290,6 +319,17 @@ public class BattleOrderService {
   public record PlanView(
       String id, LocalDate date, String status, long version, List<ItemView> items) {}
 
+  public record CalendarView(LocalDate from, LocalDate to, List<DayView> days) {}
+
+  public record DayView(
+      LocalDate date,
+      String status,
+      boolean completed,
+      boolean hasDebt,
+      int itemCount,
+      int completedItemCount,
+      long plannedSeconds) {}
+
   public record ItemView(
       String id,
       String itemType,
@@ -301,7 +341,11 @@ public class BattleOrderService {
       long completedSeconds,
       String status,
       int sortOrder,
-      boolean immutable) {
+      boolean immutable,
+      String courseId,
+      String courseName,
+      boolean quizRequired,
+      String debtId) {
     static ItemView from(BattleOrderRepository.ItemRow item) {
       return new ItemView(
           item.id(),
@@ -314,7 +358,11 @@ public class BattleOrderService {
           item.completedSeconds(),
           item.status(),
           item.sortOrder(),
-          item.immutable());
+          item.immutable(),
+          item.courseId(),
+          item.courseName(),
+          item.quizRequired(),
+          item.debtId());
     }
   }
 

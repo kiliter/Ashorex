@@ -27,21 +27,29 @@ public class DashboardController {
 
   @GetMapping
   DashboardResponse dashboard(CurrentUser currentUser) {
-    ExamGoalResponse goal =
-        exams.findGoal(currentUser.userId()).map(ExamGoalResponse::from).orElse(null);
-    ExamProgressCalculator.Progress progress =
-        goal == null ? null : exams.progress(currentUser.userId());
+    java.util.List<ExamCard> examCards =
+        exams.listGoals(currentUser.userId()).stream()
+            .map(
+                goal ->
+                    new ExamCard(
+                        ExamGoalResponse.from(goal),
+                        exams.progress(currentUser.userId(), goal.id())))
+            .toList();
+    ExamCard first = examCards.isEmpty() ? null : examCards.getFirst();
     DailyPlanService.PlanSummary plan =
         plans.todaySummary(currentUser.userId(), currentUser.timezone());
     return new DashboardResponse(
-        goal,
+        first == null ? null : first.exam(),
         new TodayPlan(plan.status(), plan.plannedSeconds(), plan.completedSeconds()),
         debts.openSeconds(currentUser.userId()),
         0,
         0,
         null,
-        progress);
+        first == null ? null : first.progressPressure(),
+        examCards);
   }
+
+  record ExamCard(ExamGoalResponse exam, ExamProgressCalculator.Progress progressPressure) {}
 
   record DashboardResponse(
       ExamGoalResponse exam,
@@ -50,7 +58,8 @@ public class DashboardController {
       long studyTodaySeconds,
       double answerAccuracy,
       Object continueLesson,
-      ExamProgressCalculator.Progress progressPressure) {}
+      ExamProgressCalculator.Progress progressPressure,
+      java.util.List<ExamCard> exams) {}
 
   record TodayPlan(String status, long plannedSeconds, long completedSeconds) {}
 }

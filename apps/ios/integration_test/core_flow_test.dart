@@ -129,6 +129,12 @@ final class _FakeExamRepository implements ExamRepository {
   Future<ExamGoal?> loadGoal() async => goal;
 
   @override
+  Future<List<ExamGoal>> listGoals() async => [?goal];
+
+  @override
+  Future<ExamGoal> loadGoalById(String goalId) async => goal!;
+
+  @override
   Future<ExamGoal> saveGoal(ExamGoalDraft draft) async {
     goal = ExamGoal(
       id: 'goal-1',
@@ -141,6 +147,10 @@ final class _FakeExamRepository implements ExamRepository {
     );
     return goal!;
   }
+
+  @override
+  Future<ExamGoal> updateGoal(String goalId, ExamGoalDraft draft) async =>
+      saveGoal(draft);
 }
 
 final class _FakePlanRepository implements PlanRepository {
@@ -199,6 +209,15 @@ final class _FakePlanRepository implements PlanRepository {
 
   @override
   Future<DailyPlanData> loadToday() async => _plan;
+
+  @override
+  Future<DailyPlanData> load(DateTime date) async => _plan;
+
+  @override
+  Future<List<PlanCalendarDay>> loadCalendar({
+    required DateTime from,
+    required DateTime to,
+  }) async => const [];
 }
 
 final class _FakePlayerAdapter implements PlayerAdapter {

@@ -40,6 +40,33 @@ paths:
                 $ref: "#/components/schemas/PreferencesResponse"
       security:
       - bearerAuth: []
+  /api/v1/plans:
+    get:
+      tags:
+      - battle-order-calendar-controller
+      operationId: calendar
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CalendarView"
+      security:
+      - bearerAuth: []
   /api/v1/plans/{date}:
     get:
       tags:
@@ -974,6 +1001,48 @@ components:
           format: int32
         immutable:
           type: boolean
+        courseId:
+          type: string
+        courseName:
+          type: string
+        quizRequired:
+          type: boolean
+        debtId:
+          type: string
+    CalendarView:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/DayView"
+    DayView:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        status:
+          type: string
+        completed:
+          type: boolean
+        hasDebt:
+          type: boolean
+        itemCount:
+          type: integer
+          format: int32
+        completedItemCount:
+          type: integer
+          format: int32
+        plannedSeconds:
+          type: integer
+          format: int64
     PlanView:
       type: object
       properties:

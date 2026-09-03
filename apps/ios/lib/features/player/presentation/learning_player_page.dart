@@ -11,6 +11,7 @@ import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
 import 'package:shangan_ios/features/player/data/watch_repository.dart';
 import 'package:shangan_ios/features/player/domain/learning_player_state.dart';
 import 'package:shangan_ios/features/player/presentation/alive_check_dialog.dart';
+import 'package:shangan_ios/features/companion/presentation/companion_fullscreen.dart';
 import 'package:shangan_ios/features/player/presentation/learning_player_controller.dart';
 import 'package:video_player/video_player.dart';
 
@@ -20,12 +21,14 @@ final class LearningPlayerPage extends ConsumerStatefulWidget {
     required this.lessonId,
     required this.title,
     this.planItemId,
+    this.preview = false,
     super.key,
   });
 
   final String lessonId;
   final String? planItemId;
   final String title;
+  final bool preview;
 
   @override
   ConsumerState<LearningPlayerPage> createState() => _LearningPlayerPageState();
@@ -110,8 +113,11 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
     await _controller.initialize(
       lessonId: widget.lessonId,
       planItemId: widget.planItemId,
+      preview: widget.preview,
       duration: Duration(milliseconds: lesson.durationMs),
-      trustedPosition: Duration(milliseconds: lesson.maxVerifiedPositionMs),
+      trustedPosition: widget.preview
+          ? Duration.zero
+          : Duration(milliseconds: lesson.maxVerifiedPositionMs),
     );
   }
 
@@ -164,6 +170,8 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
         _fullscreen = true;
         _controlsVisible = true;
       });
+      // 通知全局学习伙伴贴边，避免挡住画面。
+      videoFullscreenListenable.value = true;
       _scheduleControlsHide();
     }
   }
@@ -175,6 +183,7 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
         _fullscreen = false;
         _controlsVisible = true;
       });
+      videoFullscreenListenable.value = false;
     }
   }
 
@@ -208,6 +217,9 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
     _controller.removeListener(_onControllerChanged);
     unawaited(_controller.close());
     if (_fullscreen) unawaited(_restorePortraitUi());
+    if (videoFullscreenListenable.value) {
+      videoFullscreenListenable.value = false;
+    }
     super.dispose();
   }
 
@@ -263,77 +275,91 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
               children: [
                 AspectRatio(aspectRatio: 16 / 9, child: stage),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                ShanganEyebrow(
-                                  state.reviewMode ? '复习快捷入口' : '课程视频',
+                      ShanganSurface(
+                        borderColor: ShanganColors.blue,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ShanganEyebrow(
+                              state.reviewMode ? '复习快捷入口' : '课程详情',
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              widget.title,
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 10),
+                            ShanganWatchProgress(
+                              progressPercent: watchedPercent,
+                              completed: watchedDone,
+                              durationSeconds: state.duration.inSeconds,
+                            ),
+                            if (state.reviewMode) ...[
+                              const SizedBox(height: 12),
+                              const ShanganNotice(
+                                title: '本次播放仅记为复习审计',
+                                message: '可以自由拖动，不计入学习进度、完成率或欠债。',
+                                tone: ShanganTagTone.success,
+                                boxed: true,
+                              ),
+                            ] else ...[
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Divider(
+                                  height: 1,
+                                  color: ShanganColors.rule,
                                 ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  widget.title,
-                                  style: Theme.of(context).textTheme.titleLarge,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      ShanganWatchProgress(
-                        progressPercent: watchedPercent,
-                        completed: watchedDone,
-                      ),
-                      const SizedBox(height: 16),
-                      if (state.reviewMode)
-                        const ShanganNotice(
-                          title: '本次播放仅记为复习审计',
-                          message: '可以自由拖动，不计入学习进度、完成率或欠债。',
-                          tone: ShanganTagTone.success,
-                        )
-                      else
-                        ShanganMetricGrid(
-                          metrics: [
-                            (
-                              value: _clock(state.position),
-                              label: '当前播放',
-                              tone: ShanganTagTone.info,
-                            ),
-                            (
-                              value: _clock(state.maxVerifiedPosition),
-                              label: '可信最大位置',
-                              tone: ShanganTagTone.success,
-                            ),
-                            (
-                              value: watchedDone ? '已看完' : '$watchedPercent%',
-                              label: '已观看比例',
-                              tone: watchedDone
-                                  ? ShanganTagTone.success
-                                  : watchedPercent > 0
-                                  ? ShanganTagTone.info
-                                  : ShanganTagTone.neutral,
-                            ),
-                            (
-                              value: _clock(state.duration),
-                              label: '总时长',
-                              tone: ShanganTagTone.risk,
-                            ),
+                              ),
+                              ShanganMetricGrid(
+                                embedded: true,
+                                metrics: [
+                                  (
+                                    value: _clock(state.position),
+                                    label: '当前播放',
+                                    tone: ShanganTagTone.info,
+                                  ),
+                                  (
+                                    value: _clock(state.maxVerifiedPosition),
+                                    label: '可信最大位置',
+                                    tone: ShanganTagTone.success,
+                                  ),
+                                  (
+                                    value: watchedDone
+                                        ? '已看完'
+                                        : '$watchedPercent%',
+                                    label: '已观看比例',
+                                    tone: watchedDone
+                                        ? ShanganTagTone.success
+                                        : watchedPercent > 0
+                                        ? ShanganTagTone.info
+                                        : ShanganTagTone.neutral,
+                                  ),
+                                  (
+                                    value: shanganDuration(
+                                      state.duration.inSeconds,
+                                    ),
+                                    label: '总时长',
+                                    tone: ShanganTagTone.risk,
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
+                      ),
                       if (state.completed && !state.reviewMode) ...[
-                        const SizedBox(height: 18),
-                        const ShanganNotice(
-                          title: '已达到可信观看完成阈值',
-                          message: '若本课配置了题目，提交完整答卷后计划任务才会完成。',
-                          tone: ShanganTagTone.success,
+                        const SizedBox(height: 16),
+                        const ShanganSurface(
+                          borderColor: ShanganColors.green,
+                          child: ShanganNotice(
+                            title: '已达到可信观看完成阈值',
+                            message: '若本课配置了题目，提交完整答卷后计划任务才会完成。',
+                            tone: ShanganTagTone.success,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         FilledButton.icon(
@@ -382,16 +408,17 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
           return const SizedBox.shrink();
         }
         return Padding(
-          padding: const EdgeInsets.only(top: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Divider(color: ShanganColors.ink, thickness: 2),
-              const SizedBox(height: 16),
-              const ShanganEyebrow('AI 识别摘要'),
-              const SizedBox(height: 8),
-              ShanganSurface(child: ShanganMarkdown(data: summary)),
-            ],
+          padding: const EdgeInsets.only(top: 16),
+          child: ShanganSurface(
+            borderColor: ShanganColors.blue,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const ShanganEyebrow('AI 识别摘要'),
+                const SizedBox(height: 8),
+                ShanganMarkdown(data: summary),
+              ],
+            ),
           ),
         );
       },
