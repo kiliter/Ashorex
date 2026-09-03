@@ -5,6 +5,15 @@ import 'package:shangan_ios/features/player/data/watch_repository.dart';
 import 'package:shangan_ios/features/player/domain/learning_player_state.dart';
 import 'package:video_player/video_player.dart';
 
+/// iOS 使用 AVPlayerLayer，避免 Impeller 把默认纹理合成成绿屏（模拟器尤其明显）。
+VideoViewType shanganVideoViewType([TargetPlatform? platform]) {
+  final target = platform ?? defaultTargetPlatform;
+  if (target == TargetPlatform.iOS) {
+    return VideoViewType.platformView;
+  }
+  return VideoViewType.textureView;
+}
+
 /// 对 Flutter 官方 video_player 的薄适配，业务控制器不依赖插件静态 API。
 final class VideoPlayerAdapter implements PlayerAdapter {
   final StreamController<Duration> _positions =
@@ -27,6 +36,7 @@ final class VideoPlayerAdapter implements PlayerAdapter {
     final controller = VideoPlayerController.networkUrl(
       uri,
       httpHeaders: headers,
+      viewType: shanganVideoViewType(),
     );
     _controller = controller;
     try {
@@ -91,6 +101,7 @@ final class LearningPlayerController extends ChangeNotifier {
   Future<void>? _sessionStartFuture;
   String? _lessonId;
   String? _planItemId;
+  bool _preview = false;
   int _sequence = 0;
   Future<void>? _heartbeatOperation;
   bool _stopped = false;
@@ -99,11 +110,13 @@ final class LearningPlayerController extends ChangeNotifier {
   Future<void> initialize({
     required String lessonId,
     String? planItemId,
+    bool preview = false,
     Duration duration = Duration.zero,
     Duration trustedPosition = Duration.zero,
   }) async {
     _lessonId = lessonId;
-    _planItemId = planItemId;
+    _planItemId = preview ? null : planItemId;
+    _preview = preview;
     _positionSubscription = _player.positionStream.listen((position) {
       _setState(_state.copyWith(position: position));
     });
@@ -159,17 +172,19 @@ final class LearningPlayerController extends ChangeNotifier {
           duration: Duration(milliseconds: session.durationMs),
           position: initialPosition,
           maxVerifiedPosition: trusted,
-          reviewMode: session.review,
+          reviewMode: session.review || _preview,
           initialized: true,
           preparingPlayback: false,
           playbackStartError: false,
           status: 'ACTIVE',
         ),
       );
-      _heartbeatTimer = Timer.periodic(
-        Duration(seconds: session.heartbeatIntervalSeconds),
-        (_) => unawaited(sendHeartbeat()),
-      );
+      if (!_preview) {
+        _heartbeatTimer = Timer.periodic(
+          Duration(seconds: session.heartbeatIntervalSeconds),
+          (_) => unawaited(sendHeartbeat()),
+        );
+      }
     } catch (_) {
       _setState(
         _state.copyWith(
@@ -230,7 +245,7 @@ final class LearningPlayerController extends ChangeNotifier {
   Future<void> setForeground(bool foreground) async {
     if (!foreground) await pause();
     _setState(_state.copyWith(isForeground: foreground));
-    await sendHeartbeat();
+    if (!_preview) await sendHeartbeat();
   }
 
   /// 客户端拖动也做第一层限制；最终可信位置仍由服务端心跳裁决。
@@ -264,7 +279,9 @@ final class LearningPlayerController extends ChangeNotifier {
 
   Future<void> sendHeartbeat() {
     final sessionId = _state.sessionId;
-    if (sessionId == null || _closed || _stopped) return Future<void>.value();
+    if (_preview || sessionId == null || _closed || _stopped) {
+      return Future<void>.value();
+    }
     final pending = _heartbeatOperation;
     if (pending != null) return pending;
     late final Future<void> operation;

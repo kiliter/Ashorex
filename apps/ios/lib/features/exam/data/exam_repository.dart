@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shangan_ios/core/api/api_client.dart';
 
-/// 用户唯一活动考试目标。
+/// 用户的一场考试目标。
 final class ExamGoal {
   const ExamGoal({
     required this.id,
@@ -54,7 +54,13 @@ final class ExamGoalDraft {
 abstract interface class ExamRepository {
   Future<ExamGoal?> loadGoal();
 
+  Future<List<ExamGoal>> listGoals();
+
+  Future<ExamGoal> loadGoalById(String goalId);
+
   Future<ExamGoal> saveGoal(ExamGoalDraft draft);
+
+  Future<ExamGoal> updateGoal(String goalId, ExamGoalDraft draft);
 }
 
 /// 考试页面只通过上岸服务端读写目标，不在客户端计算业务真相。
@@ -70,18 +76,36 @@ final class RemoteExamRepository implements ExamRepository {
   }
 
   @override
+  Future<List<ExamGoal>> listGoals() async {
+    return (await _api.getJsonList(
+      '/api/v1/exam-goals',
+    )).map(ExamGoal.fromJson).toList();
+  }
+
+  @override
+  Future<ExamGoal> loadGoalById(String goalId) async =>
+      ExamGoal.fromJson(await _api.getJson('/api/v1/exam-goals/$goalId'));
+
+  Map<String, dynamic> _draftJson(ExamGoalDraft draft) => {
+    'name': draft.name,
+    'examDate': _date(draft.examDate),
+    'targetCompletionDate': _date(draft.targetCompletionDate),
+    'reviewBufferDays': draft.reviewBufferDays,
+    'courseIds': draft.courseIds,
+  };
+
+  @override
   Future<ExamGoal> saveGoal(ExamGoalDraft draft) async {
-    final json = await _api.putJson(
-      '/api/v1/exam-goal',
-      data: {
-        'name': draft.name,
-        'examDate': _date(draft.examDate),
-        'targetCompletionDate': _date(draft.targetCompletionDate),
-        'reviewBufferDays': draft.reviewBufferDays,
-        'courseIds': draft.courseIds,
-      },
+    return ExamGoal.fromJson(
+      await _api.putJson('/api/v1/exam-goal', data: _draftJson(draft)),
     );
-    return ExamGoal.fromJson(json);
+  }
+
+  @override
+  Future<ExamGoal> updateGoal(String goalId, ExamGoalDraft draft) async {
+    return ExamGoal.fromJson(
+      await _api.putJson('/api/v1/exam-goals/$goalId', data: _draftJson(draft)),
+    );
   }
 
   String _date(DateTime value) =>

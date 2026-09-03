@@ -15,7 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 管理用户唯一考试目标，并编排课程范围内的只读进度计算。 */
+/** 管理用户考试目标，并编排课程范围内的只读进度计算。 */
 @Service
 public class ExamGoalService {
 
@@ -46,11 +46,67 @@ public class ExamGoalService {
     return goals.findByUserId(userId);
   }
 
-  /** 校验并保存目标；同一用户重复设置时更新原目标，不创建第二个活动目标。 */
+  @Transactional(readOnly = true)
+  public List<ExamGoal> listGoals(String userId) {
+    return goals.listByUserId(userId);
+  }
+
+  @Transactional(readOnly = true)
+  public Optional<ExamGoal> findGoal(String userId, String goalId) {
+    return goals.findById(userId, goalId);
+  }
+
+  /** 新建考试目标；不再覆盖该用户已有的其它考试。 */
   @Transactional
   public ExamGoal saveGoal(
       String userId,
       String timezone,
+      String name,
+      LocalDate examDate,
+      LocalDate targetCompletionDate,
+      int reviewBufferDays,
+      List<String> requestedCourseIds) {
+    return persist(
+        userId,
+        timezone,
+        ids.nextId(),
+        name,
+        examDate,
+        targetCompletionDate,
+        reviewBufferDays,
+        requestedCourseIds);
+  }
+
+  /** 更新当前用户拥有的指定考试目标。 */
+  @Transactional
+  public ExamGoal updateGoal(
+      String userId,
+      String goalId,
+      String timezone,
+      String name,
+      LocalDate examDate,
+      LocalDate targetCompletionDate,
+      int reviewBufferDays,
+      List<String> requestedCourseIds) {
+    goals
+        .findById(userId, goalId)
+        .orElseThrow(
+            () -> new BusinessException(HttpStatus.NOT_FOUND, "EXAM_GOAL_NOT_FOUND", "考试目标不存在"));
+    return persist(
+        userId,
+        timezone,
+        goalId,
+        name,
+        examDate,
+        targetCompletionDate,
+        reviewBufferDays,
+        requestedCourseIds);
+  }
+
+  private ExamGoal persist(
+      String userId,
+      String timezone,
+      String goalId,
       String name,
       LocalDate examDate,
       LocalDate targetCompletionDate,
@@ -67,7 +123,6 @@ public class ExamGoalService {
       }
     }
     ZoneId.of(timezone);
-    String goalId = goals.findByUserId(userId).map(ExamGoal::id).orElseGet(ids::nextId);
     ExamGoal goal =
         new ExamGoal(
             goalId,
@@ -84,9 +139,13 @@ public class ExamGoalService {
 
   @Transactional(readOnly = true)
   public ExamProgressCalculator.Progress progress(String userId) {
+    return progress(userId, null);
+  }
+
+  @Transactional(readOnly = true)
+  public ExamProgressCalculator.Progress progress(String userId, String goalId) {
     ExamGoal goal =
-        goals
-            .findByUserId(userId)
+        (goalId == null ? goals.findByUserId(userId) : goals.findById(userId, goalId))
             .orElseThrow(
                 () ->
                     new BusinessException(HttpStatus.NOT_FOUND, "EXAM_GOAL_NOT_FOUND", "尚未设置考试目标"));

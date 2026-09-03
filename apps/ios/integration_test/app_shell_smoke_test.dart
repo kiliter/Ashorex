@@ -75,6 +75,7 @@ final class _DashboardRepository implements DashboardRepository {
     openDebtSeconds: 0,
     studyTodaySeconds: 0,
     answerAccuracy: 0,
+    exams: const [],
   );
 }
 

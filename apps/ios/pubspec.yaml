@@ -32,3 +32,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/pets/maoxian-tuantuan/spritesheet.webp
+    - assets/pets/maoxian-tuantuan/pet.json

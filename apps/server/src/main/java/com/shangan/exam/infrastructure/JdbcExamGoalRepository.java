@@ -11,7 +11,7 @@ import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** 使用 SQLite 保存用户唯一考试目标及其参与进度计算的课程。 */
+/** 使用 SQLite 保存用户考试目标及其参与进度计算的课程。 */
 @Repository
 public class JdbcExamGoalRepository implements ExamGoalRepository {
 
@@ -23,42 +23,74 @@ public class JdbcExamGoalRepository implements ExamGoalRepository {
 
   @Override
   public Optional<ExamGoal> findByUserId(String userId) {
-    return jdbc.sql("select * from exam_goals where user_id = :userId")
+    List<ExamGoal> goals = listByUserId(userId);
+    return goals.isEmpty() ? Optional.empty() : Optional.of(goals.getFirst());
+  }
+
+  @Override
+  public List<ExamGoal> listByUserId(String userId) {
+    return jdbc.sql("select * from exam_goals where user_id = :userId order by exam_date, id")
         .param("userId", userId)
+        .query((rs, row) -> mapGoal(rs))
+        .list();
+  }
+
+  @Override
+  public Optional<ExamGoal> findById(String userId, String goalId) {
+    return jdbc.sql("select * from exam_goals where user_id = :userId and id = :id")
+        .params(Map.of("userId", userId, "id", goalId))
         .query((rs, row) -> mapGoal(rs))
         .optional();
   }
 
   @Override
   public void save(ExamGoal goal, Instant now) {
-    jdbc.sql(
-            """
-            insert into exam_goals (
-              id, user_id, name, exam_date, target_completion_date,
-              review_buffer_days, timezone, created_at, updated_at
-            ) values (
-              :id, :userId, :name, :examDate, :targetDate,
-              :bufferDays, :timezone, :now, :now
-            )
-            on conflict(user_id) do update set
-              name = excluded.name,
-              exam_date = excluded.exam_date,
-              target_completion_date = excluded.target_completion_date,
-              review_buffer_days = excluded.review_buffer_days,
-              timezone = excluded.timezone,
-              updated_at = excluded.updated_at
-            """)
-        .params(
-            Map.of(
-                "id", goal.id(),
-                "userId", goal.userId(),
-                "name", goal.name(),
-                "examDate", goal.examDate().toString(),
-                "targetDate", goal.targetCompletionDate().toString(),
-                "bufferDays", goal.reviewBufferDays(),
-                "timezone", goal.timezone(),
-                "now", now.toEpochMilli()))
-        .update();
+    int updated =
+        jdbc.sql(
+                """
+                update exam_goals set
+                  name = :name,
+                  exam_date = :examDate,
+                  target_completion_date = :targetDate,
+                  review_buffer_days = :bufferDays,
+                  timezone = :timezone,
+                  updated_at = :now
+                where id = :id and user_id = :userId
+                """)
+            .params(
+                Map.of(
+                    "id", goal.id(),
+                    "userId", goal.userId(),
+                    "name", goal.name(),
+                    "examDate", goal.examDate().toString(),
+                    "targetDate", goal.targetCompletionDate().toString(),
+                    "bufferDays", goal.reviewBufferDays(),
+                    "timezone", goal.timezone(),
+                    "now", now.toEpochMilli()))
+            .update();
+    if (updated == 0) {
+      jdbc.sql(
+              """
+              insert into exam_goals (
+                id, user_id, name, exam_date, target_completion_date,
+                review_buffer_days, timezone, created_at, updated_at
+              ) values (
+                :id, :userId, :name, :examDate, :targetDate,
+                :bufferDays, :timezone, :now, :now
+              )
+              """)
+          .params(
+              Map.of(
+                  "id", goal.id(),
+                  "userId", goal.userId(),
+                  "name", goal.name(),
+                  "examDate", goal.examDate().toString(),
+                  "targetDate", goal.targetCompletionDate().toString(),
+                  "bufferDays", goal.reviewBufferDays(),
+                  "timezone", goal.timezone(),
+                  "now", now.toEpochMilli()))
+          .update();
+    }
     jdbc.sql("delete from exam_goal_courses where exam_goal_id = :goalId")
         .param("goalId", goal.id())
         .update();

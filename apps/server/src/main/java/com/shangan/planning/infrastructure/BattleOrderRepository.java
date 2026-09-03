@@ -9,6 +9,9 @@ import java.util.Optional;
 public interface BattleOrderRepository {
   Optional<PlanRow> findPlan(String userId, LocalDate date);
 
+  /** 按闭区间返回已有作战单的日期摘要，供学习日历绘制完成和欠债标记。 */
+  List<PlanDayRow> listPlanDays(String userId, LocalDate from, LocalDate to);
+
   List<ItemRow> findItems(String planId);
 
   void insertPlan(String id, String userId, LocalDate date, Instant now);
@@ -28,6 +31,13 @@ public interface BattleOrderRepository {
 
   record PlanRow(String id, String userId, LocalDate date, String lifecycleStatus, long version) {}
 
+  record PlanDayRow(
+      LocalDate date,
+      String lifecycleStatus,
+      int itemCount,
+      int completedItemCount,
+      long plannedSeconds) {}
+
   record ItemRow(
       String id,
       String planId,
@@ -40,7 +50,11 @@ public interface BattleOrderRepository {
       long completedSeconds,
       String status,
       int sortOrder,
-      boolean immutable) {}
+      boolean immutable,
+      String courseId,
+      String courseName,
+      boolean quizRequired,
+      String debtId) {}
 
   record ItemDraft(
       String id,

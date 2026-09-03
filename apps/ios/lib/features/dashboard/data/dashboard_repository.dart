@@ -42,11 +42,27 @@ final class ProgressPressure {
   }
 }
 
+/// 首页一张考试卡片对应的目标与进度。
+final class ExamOverview {
+  const ExamOverview({required this.exam, required this.progress});
+
+  final ExamGoal exam;
+  final ProgressPressure progress;
+
+  factory ExamOverview.fromJson(Map<String, dynamic> json) => ExamOverview(
+    exam: ExamGoal.fromJson(Map<String, dynamic>.from(json['exam'] as Map)),
+    progress: ProgressPressure.fromJson(
+      Map<String, dynamic>.from(json['progressPressure'] as Map),
+    ),
+  );
+}
+
 /// 首页一次请求所需的服务端聚合数据。
 final class DashboardData {
   const DashboardData({
     required this.exam,
     required this.progressPressure,
+    required this.exams,
     required this.todayPlanStatus,
     required this.openDebtSeconds,
     required this.studyTodaySeconds,
@@ -55,6 +71,7 @@ final class DashboardData {
 
   final ExamGoal? exam;
   final ProgressPressure? progressPressure;
+  final List<ExamOverview> exams;
   final String todayPlanStatus;
   final int openDebtSeconds;
   final int studyTodaySeconds;
@@ -63,13 +80,30 @@ final class DashboardData {
   factory DashboardData.fromJson(Map<String, dynamic> json) {
     final examJson = json['exam'];
     final pressureJson = json['progressPressure'];
+    final exam = examJson is Map
+        ? ExamGoal.fromJson(Map<String, dynamic>.from(examJson))
+        : null;
+    final progressPressure = pressureJson is Map
+        ? ProgressPressure.fromJson(Map<String, dynamic>.from(pressureJson))
+        : null;
+    final examsJson = json['exams'];
+    final exams = <ExamOverview>[];
+    if (examsJson is List) {
+      for (final item in examsJson) {
+        if (item is Map) {
+          exams.add(ExamOverview.fromJson(Map<String, dynamic>.from(item)));
+        }
+      }
+    } else if (exam != null && progressPressure != null) {
+      exams.add(ExamOverview(exam: exam, progress: progressPressure));
+    }
+    exams.sort(
+      (left, right) => left.exam.examDate.compareTo(right.exam.examDate),
+    );
     return DashboardData(
-      exam: examJson is Map
-          ? ExamGoal.fromJson(Map<String, dynamic>.from(examJson))
-          : null,
-      progressPressure: pressureJson is Map
-          ? ProgressPressure.fromJson(Map<String, dynamic>.from(pressureJson))
-          : null,
+      exam: exam,
+      progressPressure: progressPressure,
+      exams: exams,
       todayPlanStatus:
           (json['todayPlan'] as Map?)?['status'] as String? ?? 'NONE',
       openDebtSeconds: (json['openDebtSeconds'] as num).toInt(),

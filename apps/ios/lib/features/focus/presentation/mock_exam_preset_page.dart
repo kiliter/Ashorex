@@ -53,77 +53,91 @@ final class _MockExamPresetPageState extends ConsumerState<MockExamPresetPage> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 108),
             children: [
-              const ShanganEyebrow('作战单可选项'),
-              const SizedBox(height: 7),
-              Text(
-                '预先定义考试名称和时长',
-                style: Theme.of(context).textTheme.headlineMedium,
+              ShanganSurface(
+                borderColor: ShanganColors.blue,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const ShanganEyebrow('作战单可选项'),
+                    const SizedBox(height: 8),
+                    Text(
+                      '预先定义考试名称和时长',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '开始考试后由服务端记录截止时间；到时或提前交卷后，上传至少一张试卷照片才算完成。',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                '开始考试后由服务端记录截止时间；到时或提前交卷后，上传至少一张试卷照片才算完成。',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 20),
-              const Divider(color: ShanganColors.ink, thickness: 2),
               if (presets.isEmpty)
                 const Padding(
-                  padding: EdgeInsets.only(top: 18),
-                  child: ShanganNotice(
-                    title: '还没有考试预置',
-                    message: '例如“行测模拟卷 · 120 分钟”或“申论模拟卷 · 180 分钟”。',
+                  padding: EdgeInsets.only(top: 16),
+                  child: ShanganSurface(
+                    borderColor: ShanganColors.blue,
+                    child: ShanganNotice(
+                      title: '还没有考试预置',
+                      message: '例如“行测模拟卷 · 120 分钟”或“申论模拟卷 · 180 分钟”。',
+                    ),
                   ),
                 ),
               ...presets.indexed.map((entry) {
                 final preset = entry.$2;
-                return Container(
-                  constraints: const BoxConstraints(minHeight: 78),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: ShanganColors.rule),
+                return Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: ShanganSurface(
+                    borderColor: ShanganColors.blue,
+                    padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: ShanganColors.blueSoft,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${entry.$1 + 1}'.padLeft(2, '0'),
+                            style: shanganNumberStyle(
+                              context,
+                              fontSize: 13,
+                            ).copyWith(color: ShanganColors.blue),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                preset.name,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                shanganDuration(preset.durationSeconds),
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: '编辑',
+                          onPressed: () => _editPreset(preset),
+                          icon: const Icon(Icons.edit_outlined),
+                        ),
+                        IconButton(
+                          tooltip: '删除',
+                          onPressed: () => _deletePreset(preset),
+                          icon: const Icon(Icons.delete_outline),
+                          color: ShanganColors.red,
+                        ),
+                      ],
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 34,
-                        child: Text(
-                          '${entry.$1 + 1}'.padLeft(2, '0'),
-                          style: shanganNumberStyle(
-                            context,
-                            fontSize: 11,
-                          ).copyWith(color: ShanganColors.mutedInk),
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              preset.name,
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              shanganDuration(preset.durationSeconds),
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: '编辑',
-                        onPressed: () => _editPreset(preset),
-                        icon: const Icon(Icons.edit_outlined),
-                      ),
-                      IconButton(
-                        tooltip: '删除',
-                        onPressed: () => _deletePreset(preset),
-                        icon: const Icon(Icons.delete_outline),
-                        color: ShanganColors.red,
-                      ),
-                    ],
                   ),
                 );
               }),

@@ -1,11 +1,24 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shangan_ios/features/player/data/watch_repository.dart';
 import 'package:shangan_ios/features/player/domain/learning_player_state.dart';
 import 'package:shangan_ios/features/player/presentation/learning_player_controller.dart';
+import 'package:video_player/video_player.dart';
 
 void main() {
+  test('iOS 播放使用平台图层避免模拟器绿屏', () {
+    expect(
+      shanganVideoViewType(TargetPlatform.iOS),
+      VideoViewType.platformView,
+    );
+    expect(
+      shanganVideoViewType(TargetPlatform.android),
+      VideoViewType.textureView,
+    );
+  });
+
   test('可信观看进度提供百分比并按服务端阈值显示已看完', () {
     const inProgress = LearningPlayerState(
       duration: Duration(seconds: 1000),

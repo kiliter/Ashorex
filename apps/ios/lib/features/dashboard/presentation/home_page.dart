@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/dashboard/data/dashboard_repository.dart';
+import 'package:shangan_ios/features/planning/data/plan_repository.dart';
+import 'package:shangan_ios/features/planning/presentation/battle_order_widgets.dart';
 
 /// 首页展示学习压力，并通过右滑或显式按钮打开独立小工具菜单。
 final class HomePage extends ConsumerStatefulWidget {
@@ -15,6 +17,15 @@ final class HomePage extends ConsumerStatefulWidget {
 
 final class _HomePageState extends ConsumerState<HomePage> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
+  int _examIndex = 0;
+  late Future<_HomeSnapshot> _home;
+
+  @override
+  void initState() {
+    super.initState();
+    // 考试 Tab 切换只改本地下标，不重新拉取首页快照。
+    _home = _load();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,8 +49,8 @@ final class _HomePageState extends ConsumerState<HomePage> {
         onHorizontalDragEnd: (details) {
           if ((details.primaryVelocity ?? 0) > 280) _openWidgets();
         },
-        child: FutureBuilder<DashboardData>(
-          future: ref.read(dashboardRepositoryProvider).load(),
+        child: FutureBuilder<_HomeSnapshot>(
+          future: _home,
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
               return const ShanganLoading('正在核对今日学习数据');
@@ -47,15 +58,21 @@ final class _HomePageState extends ConsumerState<HomePage> {
             if (snapshot.hasError || !snapshot.hasData) {
               return const Center(child: Text('首页加载失败，请稍后重试'));
             }
-            final dashboard = snapshot.data!;
-            if (dashboard.exam == null) {
+            final dashboard = snapshot.data!.dashboard;
+            final plan = mergeOpenDebts(
+              snapshot.data!.plan,
+              snapshot.data!.debts,
+            );
+            if (dashboard.exams.isEmpty) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (context.mounted) context.push('/exam-goal');
               });
               return const Center(child: Text('请先设置考试目标'));
             }
-            final exam = dashboard.exam!;
-            final pressure = dashboard.progressPressure!;
+            final examIndex = _examIndex.clamp(0, dashboard.exams.length - 1);
+            final overview = dashboard.exams[examIndex];
+            final exam = overview.exam;
+            final pressure = overview.progress;
             final atRisk = pressure.riskStatus == 'AT_RISK';
             final lessonProgress = pressure.totalLessons == 0
                 ? 0.0
@@ -63,21 +80,37 @@ final class _HomePageState extends ConsumerState<HomePage> {
             return ListView(
               padding: shanganPagePadding,
               children: [
-                _BattleOrderHomeCard(status: dashboard.todayPlanStatus),
-                const SizedBox(height: 22),
                 ShanganSurface(
-                  borderColor: ShanganColors.red,
-                  backgroundColor: ShanganColors.redSoft,
+                  borderColor: ShanganColors.blue,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      SizedBox(
+                        height: 36,
+                        child: ListView.separated(
+                          key: const Key('examTabs'),
+                          scrollDirection: Axis.horizontal,
+                          itemCount: dashboard.exams.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: _ExamTabChip(
+                                key: Key(
+                                  'examTab-${dashboard.exams[index].exam.id}',
+                                ),
+                                name: dashboard.exams[index].exam.name,
+                                selected: index == examIndex,
+                                onTap: () => setState(() => _examIndex = index),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const Divider(height: 16, color: ShanganColors.rule),
                       Row(
                         children: [
-                          const ShanganEyebrow(
-                            '今日追赶中',
-                            color: ShanganColors.red,
-                          ),
-                          const Spacer(),
+                          Expanded(child: ShanganEyebrow(exam.name)),
                           ShanganStatusTag(
                             atRisk ? '进度有风险' : '风险可控',
                             tone: atRisk
@@ -86,10 +119,10 @@ final class _HomePageState extends ConsumerState<HomePage> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       Text(
-                        atRisk ? '今天的缺口，不留给明天' : '保持节奏，把今天结清',
-                        style: Theme.of(context).textTheme.headlineSmall,
+                        '距离考试 ${pressure.daysUntilExam} 天',
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -97,40 +130,6 @@ final class _HomePageState extends ConsumerState<HomePage> {
                         '${pressure.actualDailyPace.toStringAsFixed(1)} 课时，'
                         '目标要求每天 ${pressure.requiredDailyPace.toStringAsFixed(1)} 课时。',
                         style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 14),
-                      ShanganProgress(
-                        value: pressure.requiredDailyPace <= 0
-                            ? 1
-                            : (pressure.actualDailyPace /
-                                      pressure.requiredDailyPace)
-                                  .clamp(0, 1),
-                        color: atRisk ? ShanganColors.red : ShanganColors.green,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 22),
-                ShanganSurface(
-                  borderColor: ShanganColors.blue,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(child: ShanganEyebrow(exam.name)),
-                          ShanganStatusTag(
-                            atRisk ? '追赶' : '正常',
-                            tone: atRisk
-                                ? ShanganTagTone.warning
-                                : ShanganTagTone.success,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '距离考试 ${pressure.daysUntilExam} 天',
-                        style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -165,6 +164,8 @@ final class _HomePageState extends ConsumerState<HomePage> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 22),
+                _BattleOrderHomeCard(plan: plan),
                 const SizedBox(height: 22),
                 DecoratedBox(
                   decoration: const BoxDecoration(
@@ -243,51 +244,121 @@ final class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  Future<_HomeSnapshot> _load() async {
+    final dashboard = await ref.read(dashboardRepositoryProvider).load();
+    final plans = ref.read(planRepositoryProvider);
+    final plan = await plans.loadToday();
+    final debts = await plans.loadDebts();
+    return (dashboard: dashboard, plan: plan, debts: debts);
+  }
+
   void _openWidgets() => _scaffoldKey.currentState?.openEndDrawer();
 }
 
-/// 今日作战单是首页首要动作，始终置于压力和考试信息之前。
-final class _BattleOrderHomeCard extends StatelessWidget {
-  const _BattleOrderHomeCard({required this.status});
+typedef _HomeSnapshot = ({
+  DashboardData dashboard,
+  DailyPlanData plan,
+  List<LearningDebtData> debts,
+});
 
-  final String status;
+/// 考试切换芯片：每个考试都有描边和右下错开的灰卡，做出小纸片立体感。
+final class _ExamTabChip extends StatelessWidget {
+  const _ExamTabChip({
+    required this.name,
+    required this.selected,
+    required this.onTap,
+    super.key,
+  });
+
+  final String name;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => ShanganSurface(
-    dashed: true,
-    borderColor: ShanganColors.ochre,
-    backgroundColor: ShanganColors.ochreSoft,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Expanded(child: ShanganEyebrow('今日作战单')),
-            ShanganStatusTag(
-              _planStatusLabel(status),
-              tone: status == 'ACTIVE'
-                  ? ShanganTagTone.warning
-                  : ShanganTagTone.neutral,
+  Widget build(BuildContext context) {
+    const radius = BorderRadius.all(Radius.circular(10));
+    const shift = Offset(2, 2);
+    final border = selected ? ShanganColors.blue : ShanganColors.rule;
+    return Padding(
+      padding: EdgeInsets.only(right: shift.dx, bottom: shift.dy),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Transform.translate(
+                offset: shift,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFC5CDD8),
+                    borderRadius: radius,
+                  ),
+                ),
+              ),
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text('今天先做什么', style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 8),
-        Text(
-          status == 'NONE'
-              ? '集中选择今天要完成的课时或模拟考试。'
-              : '当天可继续添加、删除未开始的项目；已经开始的记录会保留。',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(height: 16),
-        FilledButton(
-          onPressed: () => context.push('/plan'),
-          child: Text(status == 'NONE' ? '制定今日作战单' : '修改作战单'),
-        ),
-      ],
-    ),
-  );
+          ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: radius,
+              child: Ink(
+                decoration: BoxDecoration(
+                  color: ShanganColors.surface,
+                  borderRadius: radius,
+                  border: Border.all(color: border, width: 1.5),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x33263B60),
+                      offset: Offset(0, 1),
+                      blurRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
+                  ),
+                  child: Text(
+                    name,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: selected
+                          ? ShanganColors.blue
+                          : ShanganColors.mutedInk,
+                      height: 1.1,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 首页作战单展示当天任务列表；编辑入口仍进入编排区。
+final class _BattleOrderHomeCard extends StatelessWidget {
+  const _BattleOrderHomeCard({required this.plan});
+
+  final DailyPlanData plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final resume = firstInProgressItem(plan.items);
+    return BattleOrderDayPanel(
+      plan: plan,
+      grouped: true,
+      readOnly: false,
+      showDebtMarks: false,
+      inProgressOnly: true,
+      eyebrow: '今日作战单',
+      continueLabel: resume == null ? null : '继续${resume.title}',
+      onEdit: () => context.push('/plan'),
+    );
+  }
 }
 
 /// 首页小工具独立于作战单，专注计时不会参与每日任务编排。
@@ -352,13 +423,3 @@ final class _HomeWidgetsDrawer extends StatelessWidget {
     ),
   );
 }
-
-String _planStatusLabel(String status) => switch (status) {
-  'DRAFT' => '草稿',
-  'ACTIVE' => '执行中',
-  'LOCKED' => '执行中',
-  'COMPLETED' => '已完成',
-  'ABANDONED' => '已结算',
-  'CLOSED_WITH_DEBT' => '欠债结算',
-  _ => '未创建',
-};

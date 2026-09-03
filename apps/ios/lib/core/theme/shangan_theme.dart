@@ -12,6 +12,9 @@ abstract final class ShanganColors {
   static const rule = Color(0xFF9AAAC1);
   static const red = Color(0xFFC84235);
   static const blue = Color(0xFF2C68B7);
+
+  /// 课程名专用：比主色略深的钴蓝，统一、收敛，仍是蓝色。
+  static const course = Color(0xFF1F5EC8);
   static const green = Color(0xFF2D7957);
   static const ochre = Color(0xFF80672C);
 
