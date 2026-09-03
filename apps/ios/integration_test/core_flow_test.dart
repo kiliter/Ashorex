@@ -129,7 +129,7 @@ final class _FakeExamRepository implements ExamRepository {
   Future<ExamGoal?> loadGoal() async => goal;
 
   @override
-  Future<List<ExamGoal>> listGoals() async => [if (goal != null) goal!];
+  Future<List<ExamGoal>> listGoals() async => [?goal];
 
   @override
   Future<ExamGoal> loadGoalById(String goalId) async => goal!;
