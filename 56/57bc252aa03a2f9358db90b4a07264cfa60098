@@ -1,0 +1,14 @@
+apps/ios/integration_test/core_flow_test.dart
+  h_b1099757fa8f7e 132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "5657bc252aa03a2f9358db90b4a07264cfa60098",
+  "prompts": {},
+  "humans": {
+    "h_b1099757fa8f7e": {
+      "author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
