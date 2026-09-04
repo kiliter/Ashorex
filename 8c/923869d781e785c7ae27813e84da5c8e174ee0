@@ -1,0 +1,60 @@
+apps/ios/integration_test/core_flow_test.dart
+  h_b1099757fa8f7e 154-160
+apps/ios/lib/features/dashboard/presentation/home_page.dart
+  h_b1099757fa8f7e 29-34,43-58,109-114,322-351
+apps/ios/lib/features/exam/data/exam_repository.dart
+  h_b1099757fa8f7e 64-66,114-117
+apps/ios/lib/features/exam/presentation/exam_goal_page.dart
+  h_b1099757fa8f7e 229-230
+apps/ios/lib/features/exam/presentation/exam_settings_page.dart
+  h_b1099757fa8f7e 4,7,10-11,15-72,77-80,85,115-140
+apps/ios/test/features/exam/exam_goal_page_test.dart
+  h_b1099757fa8f7e 4,52-193,224-228
+apps/ios/test/features/exam/exam_settings_page_test.dart
+  h_b1099757fa8f7e 1-123
+apps/server/src/main/java/com/shangan/admin/UserAdminController.java
+  h_b1099757fa8f7e 3,5,14,16,21,23,25,49-64
+apps/server/src/main/java/com/shangan/exam/api/ExamController.java
+  h_b1099757fa8f7e 18,91-96
+apps/server/src/main/java/com/shangan/exam/application/ExamGoalService.java
+  h_b1099757fa8f7e 106-118
+apps/server/src/main/java/com/shangan/exam/infrastructure/ExamGoalRepository.java
+  h_b1099757fa8f7e 18-24
+apps/server/src/main/java/com/shangan/exam/infrastructure/JdbcExamGoalRepository.java
+  h_b1099757fa8f7e 106-120
+apps/server/src/main/java/com/shangan/identity/application/UserAttachmentCleaner.java
+  h_b1099757fa8f7e 1-14
+apps/server/src/main/java/com/shangan/identity/application/UserDeletionService.java
+  h_b1099757fa8f7e 1-89
+apps/server/src/main/java/com/shangan/identity/infrastructure/JdbcUserDeletionRepository.java
+  h_b1099757fa8f7e 1-43
+apps/server/src/main/java/com/shangan/identity/infrastructure/SafeUserAttachmentCleaner.java
+  h_b1099757fa8f7e 1-36
+apps/server/src/main/java/com/shangan/identity/infrastructure/UserDeletionRepository.java
+  h_b1099757fa8f7e 1-18
+apps/server/src/main/resources/templates/admin/users.html
+  h_b1099757fa8f7e 53,57-60,79-85
+apps/server/src/test/java/com/shangan/exam/ExamGoalServiceTest.java
+  h_b1099757fa8f7e 1-239
+apps/server/src/test/java/com/shangan/identity/UserDeletionServiceTest.java
+  h_b1099757fa8f7e 1-238
+docs/adr/0022-exam-goal-deletion-and-first-run-guide.md
+  h_b1099757fa8f7e 1-39
+docs/adr/0023-admin-user-hard-deletion.md
+  h_b1099757fa8f7e 1-51
+docs/api/openapi.yaml
+  h_b1099757fa8f7e 176-190
+docs/specs/2026-08-27-shangan-v1-design.md
+  h_b1099757fa8f7e 99,162-170,1348-1358
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "8c923869d781e785c7ae27813e84da5c8e174ee0",
+  "prompts": {},
+  "humans": {
+    "h_b1099757fa8f7e": {
+      "author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
