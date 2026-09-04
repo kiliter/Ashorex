@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/features/dashboard/data/dashboard_repository.dart';
 import 'package:shangan_ios/features/dashboard/presentation/home_page.dart';
 import 'package:shangan_ios/features/exam/data/exam_repository.dart';
@@ -95,7 +96,109 @@ void main() {
     expect(find.byKey(const Key('focusDuration-3600')), findsOneWidget);
     expect(find.byKey(const Key('focusDuration-7200')), findsOneWidget);
     expect(find.text('自定义'), findsOneWidget);
-    expect(find.byKey(const Key('focusCustomDurationDial')), findsOneWidget);
+    expect(find.byKey(const Key('focusCustomDurationSlider')), findsOneWidget);
+  });
+
+  testWidgets('没有考试目标时只自动引导一次，保存返回后展示考试而不再跳转', (tester) async {
+    final dashboard = _GuidedDashboardRepository();
+    var guideBuilds = 0;
+    final router = GoRouter(
+      initialLocation: '/home',
+      routes: [
+        GoRoute(path: '/home', builder: (context, state) => const HomePage()),
+        GoRoute(
+          path: '/exam-goal',
+          builder: (context, state) {
+            guideBuilds += 1;
+            return Scaffold(
+              body: Center(
+                child: TextButton(
+                  key: const Key('fakeSaveExamGoal'),
+                  onPressed: () {
+                    dashboard.hasExams = true;
+                    context.pop();
+                  },
+                  child: const Text('保存并进入首页'),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          dashboardRepositoryProvider.overrideWithValue(dashboard),
+          planRepositoryProvider.overrideWithValue(_PlanRepository()),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(guideBuilds, 1);
+
+    await tester.tap(find.byKey(const Key('fakeSaveExamGoal')));
+    await tester.pumpAndSettle();
+
+    expect(guideBuilds, 1);
+    expect(find.text('距离考试 63 天'), findsOneWidget);
+    expect(find.text('请先设置考试目标'), findsNothing);
+  });
+
+  testWidgets('引导返回后仍没有考试目标时不再自动跳转，改为手动入口', (tester) async {
+    final dashboard = _GuidedDashboardRepository();
+    var guideBuilds = 0;
+    final router = GoRouter(
+      initialLocation: '/home',
+      routes: [
+        GoRoute(path: '/home', builder: (context, state) => const HomePage()),
+        GoRoute(
+          path: '/exam-goal',
+          builder: (context, state) {
+            guideBuilds += 1;
+            return Scaffold(
+              body: Center(
+                child: TextButton(
+                  key: const Key('leaveExamGoal'),
+                  onPressed: () => context.pop(),
+                  child: const Text('直接返回'),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          dashboardRepositoryProvider.overrideWithValue(dashboard),
+          planRepositoryProvider.overrideWithValue(_PlanRepository()),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(guideBuilds, 1);
+
+    await tester.tap(find.byKey(const Key('leaveExamGoal')));
+    await tester.pumpAndSettle();
+
+    // 不再自动跳转，避免首页与引导页之间反复弹栈把用户困住。
+    expect(guideBuilds, 1);
+    expect(find.text('请先设置考试目标'), findsOneWidget);
+    expect(find.byKey(const Key('setupExamGoal')), findsOneWidget);
+
+    dashboard.hasExams = true;
+    await tester.tap(find.byKey(const Key('setupExamGoal')));
+    await tester.pumpAndSettle();
+    expect(guideBuilds, 2);
+
+    await tester.tap(find.byKey(const Key('leaveExamGoal')));
+    await tester.pumpAndSettle();
+    expect(find.text('距离考试 63 天'), findsOneWidget);
   });
 }
 
@@ -176,6 +279,30 @@ final class _DashboardRepository implements DashboardRepository {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 首次引导场景：保存前没有任何考试目标，保存后返回完整考试列表。
+final class _GuidedDashboardRepository implements DashboardRepository {
+  bool hasExams = false;
+  int loadCount = 0;
+
+  @override
+  Future<DashboardData> load() async {
+    loadCount += 1;
+    final full = await _DashboardRepository().load();
+    if (hasExams) {
+      return full;
+    }
+    return DashboardData(
+      exam: null,
+      progressPressure: null,
+      exams: const [],
+      todayPlanStatus: full.todayPlanStatus,
+      openDebtSeconds: full.openDebtSeconds,
+      studyTodaySeconds: full.studyTodaySeconds,
+      answerAccuracy: full.answerAccuracy,
     );
   }
 }

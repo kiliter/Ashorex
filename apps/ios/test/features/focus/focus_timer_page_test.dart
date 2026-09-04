@@ -69,7 +69,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('focusCustomDurationDial')), findsOneWidget);
+    expect(find.byKey(const Key('focusCustomDurationSlider')), findsOneWidget);
     await tester.ensureVisible(
       find.byKey(const Key('startCustomFocusDuration')),
     );
