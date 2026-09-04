@@ -1,0 +1,16 @@
+apps/ios/pubspec.yaml
+  h_b1099757fa8f7e 4
+apps/server/pom.xml
+  h_b1099757fa8f7e 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "54d4b899b722126b52204385c235f92bc6c97cbd",
+  "prompts": {},
+  "humans": {
+    "h_b1099757fa8f7e": {
+      "author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
