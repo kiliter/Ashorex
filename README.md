@@ -162,6 +162,8 @@ make verify
 
 ### Docker Compose
 
+#### 本地构建
+
 ```bash
 cp .env.example .env
 # 编辑 .env，并通过安全方式填入 JWT、播放票据、管理员及外部服务配置。
@@ -171,7 +173,114 @@ make server-test
 docker compose --env-file .env -f infra/compose.yml up --build -d
 ```
 
-生产环境必须启用 HTTPS，并把 SQLite 数据卷放在宿主机本地磁盘；同一数据库只能由一个服务实例使用。备份和恢复步骤见[运行手册](docs/runbooks/backup-restore.md)。
+#### 使用 GitHub 发布镜像部署
+
+生产部署直接拉取 `ghcr.io/kiliter/ashorex-server:latest`，不需要在服务器上安装 Java、Maven 或构建 JAR。开始前需要准备：
+
+- Docker Engine 和 Docker Compose Plugin。
+- 一台使用本地磁盘保存 Docker 数据的服务器；SQLite 不得位于 NAS、NFS 等网络文件系统。
+- 已有的 HTTPS 反向代理，以及指向部署服务器的域名。
+
+推荐使用统一脚本完成部署和维护：
+
+```bash
+# 打开中文交互菜单，根据提示选择部署、更新或卸载。
+./infra/scripts/deploy.sh
+```
+
+交互菜单如下：
+
+```text
+========== 上岸 Docker 管理 ==========
+1. 首次部署 / 重新部署
+2. 更新 GitHub 最新镜像
+3. 卸载服务（保留 SQLite 和备份）
+4. 彻底卸载（永久删除全部数据）
+0. 退出
+```
+
+需要用于自动化时，也可以直接传入子命令：
+
+```bash
+# 首次部署：自动生成 .env.deploy、两条安全密钥和管理员密码。
+./infra/scripts/deploy.sh deploy
+
+# 拉取 GitHub 最新镜像并更新，保留全部数据。
+./infra/scripts/deploy.sh update
+
+# 卸载容器和镜像，默认保留 SQLite 与备份数据卷。
+./infra/scripts/deploy.sh uninstall
+
+# 永久删除容器、镜像、SQLite 和备份数据卷，需要输入 DELETE 二次确认。
+./infra/scripts/deploy.sh uninstall --purge-data
+```
+
+首次部署完成后，脚本会输出随机生成的 `admin` 初始密码。部署配置同时保存在权限为 `600` 的 `.env.deploy` 中；该文件已被 Git 忽略。普通卸载不会删除该文件和数据卷。
+
+以下是不用脚本时的手工部署步骤。
+
+1. 创建部署环境文件：
+
+   ```bash
+   cp infra/deploy.env.example .env.deploy
+   chmod 600 .env.deploy
+   openssl rand -hex 32
+   openssl rand -hex 32
+   ```
+
+   将两次生成的不同随机值和管理员密码写入 `.env.deploy`：
+
+   ```dotenv
+   JWT_SECRET=<第一条随机值>
+   PLAYBACK_TICKET_SECRET=<第二条随机值>
+   ADMIN_BOOTSTRAP_PASSWORD=<初始管理员密码>
+   ```
+
+   `.env.deploy` 已被 Git 忽略，不得把真实密钥提交到仓库。若 GHCR 包不是公开包，还需要先使用有 `read:packages` 权限的 GitHub Token 执行 `docker login ghcr.io`。
+
+2. 拉取镜像并启动：
+
+   ```bash
+   docker compose --env-file .env.deploy -f infra/compose.deploy.yml pull
+   docker compose --env-file .env.deploy -f infra/compose.deploy.yml up -d
+   docker compose --env-file .env.deploy -f infra/compose.deploy.yml ps
+   ```
+
+3. 检查健康状态和启动日志：
+
+   ```bash
+   curl --fail http://127.0.0.1:18080/actuator/health
+   docker compose --env-file .env.deploy -f infra/compose.deploy.yml logs --tail=200 server
+   ```
+
+   健康接口应返回 `UP`，日志中不应出现数据库迁移或配置错误。
+
+4. 配置现有反向代理：
+
+   - 上游地址使用 `http://部署服务器IP:18080`。
+   - 对外必须启用 HTTPS，并转发 `Host`、`X-Forwarded-For` 和 `X-Forwarded-Proto`。
+   - 保留客户端的 `Range`、`If-Range` 请求头以及上游的 `Content-Range`、`Accept-Ranges` 响应头。
+   - 视频响应使用流式转发，不要完整缓冲，并设置足够长的读取超时。
+   - 服务端监听 `0.0.0.0:18080`；使用防火墙或安全组限制公网直接访问该端口。
+
+5. 首次配置：
+
+   使用用户名 `admin` 和 `.env.deploy` 中的初始密码登录 `https://你的域名/admin`，然后在管理后台配置 Emby、ASR、LLM 和 OpenRouter。Emby 位于 Docker 宿主机时可填写 `http://host.docker.internal:8096`；不要填写容器自身的 `localhost`。
+
+6. 更新 GitHub 镜像：
+
+   ```bash
+   docker compose --env-file .env.deploy -f infra/compose.deploy.yml pull
+   docker compose --env-file .env.deploy -f infra/compose.deploy.yml up -d --remove-orphans
+   ```
+
+停止服务可执行以下命令；不要附加 `-v`，否则会删除 SQLite 和备份数据卷：
+
+```bash
+docker compose --env-file .env.deploy -f infra/compose.deploy.yml down
+```
+
+生产部署使用 Docker 本地卷 `study-data` 和 `study-backup`。同一 SQLite 数据卷只能由一个服务实例使用，备份和恢复步骤见[运行手册](docs/runbooks/backup-restore.md)。
 
 ## GitHub Actions 构建产物
 
