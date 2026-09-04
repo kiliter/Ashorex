@@ -1,0 +1,94 @@
+apps/ios/lib/app/application_bootstrap.dart
+  h_b1099757fa8f7e 10,225-227
+apps/ios/lib/app/router.dart
+  h_b1099757fa8f7e 92-94
+apps/ios/lib/core/device/screen_wake_lock.dart
+  h_b1099757fa8f7e 1-35
+apps/ios/lib/core/widgets/shangan_ui.dart
+  h_b1099757fa8f7e 1174-1179,1187-1200
+apps/ios/lib/features/dashboard/presentation/app_shell.dart
+  h_b1099757fa8f7e 22-23,33-38,50,57-60,63-66,68-79,103
+apps/ios/lib/features/dashboard/presentation/home_page.dart
+  h_b1099757fa8f7e 7,11-15,34-47,66,276-288,375,383,386,389,399-401,439-440
+apps/ios/lib/features/focus/data/mock_exam_repository.dart
+  h_b1099757fa8f7e 100,166-171
+apps/ios/lib/features/focus/presentation/focus_duration_sheet.dart
+  h_b1099757fa8f7e 1-232
+apps/ios/lib/features/focus/presentation/focus_timer_page.dart
+  h_b1099757fa8f7e 5,9-10,13,17,26,34,40-44,49,58,64-68,71,75-82,87-117,121,149-151,153-155,158-265,281-297,382-389
+apps/ios/lib/features/focus/presentation/mock_exam_page.dart
+  h_b1099757fa8f7e 5,8,11-12,14-16,35,42-45,50,59-61,67-72,75,79-86,123,126-134,147,151-160,167-247,251-278,280-284,348-352,381-387,452-486
+apps/ios/lib/features/focus/presentation/time_up_alert.dart
+  h_b1099757fa8f7e 1-81
+apps/ios/lib/features/planning/data/plan_repository.dart
+  h_b1099757fa8f7e 3,23-24,43-48,65-66,88,160-161,171-172,183-186,213
+apps/ios/lib/features/planning/presentation/battle_order_widgets.dart
+  h_b1099757fa8f7e 24,32-33,50,138-140,186,199-203,231,238,251-254,341,344-348,350,400-411,424-427,430,546-557,570-583,603-628,641,646-651,657-663,665-674,684-756,758-760,764-774,778-783,814,826-827
+apps/ios/lib/features/planning/presentation/plan_page.dart
+  h_b1099757fa8f7e 26,66,72,227,235,237,367-374,386,393,486,497,513-520,667,669,671-674,775-779,783,787-790,823-824,830,832,841,843,846-852,855,862-1006,1009-1017,1019-1050,1052-1059,1063-1106,1109,1123-1153
+apps/ios/lib/features/planning/presentation/study_calendar_page.dart
+  h_b1099757fa8f7e 27-28,42,45,50-51,61-97,101,144,155-159,630,640,655,657-660,662-663,666-674,685,687,689,698,701-708
+apps/ios/lib/features/reporting/presentation/daily_report_page.dart
+  h_b1099757fa8f7e 8-12,26,32-33,35,40-58
+apps/ios/pubspec.lock
+  h_b1099757fa8f7e 124-131,322-329,503-518,575-582,892-907,972-979
+apps/ios/pubspec.yaml
+  h_b1099757fa8f7e 24
+apps/ios/test/features/dashboard/home_page_test.dart
+  h_b1099757fa8f7e 34-35,37-44,46,72-99
+apps/ios/test/features/focus/focus_timer_page_test.dart
+  h_b1099757fa8f7e 4,38-128,133-134,142,160-164
+apps/ios/test/features/focus/mock_exam_page_test.dart
+  h_b1099757fa8f7e 1-204
+apps/ios/test/features/focus/mock_exam_preset_page_test.dart
+  h_b1099757fa8f7e 85-89
+apps/ios/test/features/focus/time_up_alert_test.dart
+  h_b1099757fa8f7e 1-27
+apps/ios/test/features/planning/battle_order_widgets_test.dart
+  h_b1099757fa8f7e 59-105,133,135-136,140,142,148-162,164-165,169,171,178,181,191-200,202-435
+apps/ios/test/features/planning/plan_page_test.dart
+  h_b1099757fa8f7e 57-58,62-63,85,110,113,121-122,161-281,288,308,352,439-443
+apps/ios/test/features/planning/study_calendar_page_test.dart
+  h_b1099757fa8f7e 4,18-20,88-159,167,172-174,179-180,184,194-196,213-214,250-274,315-316,318
+apps/server/src/main/java/com/shangan/focus/api/MockExamController.java
+  h_b1099757fa8f7e 46-50
+apps/server/src/main/java/com/shangan/focus/application/MockExamService.java
+  h_b1099757fa8f7e 78-89
+apps/server/src/main/java/com/shangan/focus/infrastructure/JdbcMockExamRepository.java
+  h_b1099757fa8f7e 92-107
+apps/server/src/main/java/com/shangan/focus/infrastructure/MockExamRepository.java
+  h_b1099757fa8f7e 19-21
+apps/server/src/main/java/com/shangan/planning/application/BattleOrderService.java
+  h_b1099757fa8f7e 76-78,350-351,368-369
+apps/server/src/main/java/com/shangan/planning/infrastructure/BattleOrderRepository.java
+  h_b1099757fa8f7e 57-58
+apps/server/src/main/java/com/shangan/planning/infrastructure/JdbcBattleOrderRepository.java
+  h_b1099757fa8f7e 74,77,82,221-222
+apps/server/src/test/java/com/shangan/focus/MockExamServiceTest.java
+  h_b1099757fa8f7e 1-174
+apps/server/src/test/java/com/shangan/planning/BattleOrderServiceTest.java
+  h_b1099757fa8f7e 30-31,35,37,46-47,86,94
+docs/adr/0013-canonical-battle-order-and-default-exams.md
+  h_b1099757fa8f7e 12
+docs/api/openapi.yaml
+  h_b1099757fa8f7e 277-296,1032-1033
+docs/plans/2026-08-27-shangan-v1-implementation-plan.md
+  h_b1099757fa8f7e 2188,2263
+docs/runbooks/v1-physical-device-acceptance.md
+  h_b1099757fa8f7e 38
+docs/specs/2026-08-27-shangan-v1-design.md
+  h_b1099757fa8f7e 193,351-354,367-368,370-371,1217,2007,2011
+docs/traceability/2026-08-27-shangan-v1-traceability.md
+  h_b1099757fa8f7e 13,39,41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "4ee813577dfb5635bc80731e71dbb407a43273d1",
+  "prompts": {},
+  "humans": {
+    "h_b1099757fa8f7e": {
+      "author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
