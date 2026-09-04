@@ -13,7 +13,7 @@
 
   <groupId>com.shangan</groupId>
   <artifactId>shangan-server</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
   <name>上岸服务端</name>
   <description>上岸 V1 模块化单体服务端</description>
 
