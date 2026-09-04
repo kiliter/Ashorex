@@ -103,6 +103,19 @@ public class ExamGoalService {
         requestedCourseIds);
   }
 
+  /**
+   * 删除用户自己的考试目标。
+   *
+   * <p>考试目标只描述目标日期与参与进度计算的课程范围，因此删除仅清除目标本身和课程绑定；可信观看进度、作战单、欠债、答题记录都不属于考试目标，不受影响。
+   * 允许删除最后一个考试目标，此时客户端回到首次设置引导。
+   */
+  @Transactional
+  public void deleteGoal(String userId, String goalId) {
+    if (!goals.delete(userId, goalId)) {
+      throw new BusinessException(HttpStatus.NOT_FOUND, "EXAM_GOAL_NOT_FOUND", "考试目标不存在");
+    }
+  }
+
   private ExamGoal persist(
       String userId,
       String timezone,

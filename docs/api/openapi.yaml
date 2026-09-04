@@ -173,6 +173,21 @@ paths:
                 $ref: "#/components/schemas/ExamGoalResponse"
       security:
       - bearerAuth: []
+    delete:
+      tags:
+      - exam-controller
+      operationId: delete_1
+      parameters:
+      - name: goalId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - bearerAuth: []
   /api/v1/exam-goal:
     get:
       tags:

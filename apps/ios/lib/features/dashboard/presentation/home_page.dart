@@ -26,12 +26,34 @@ final class _HomePageState extends ConsumerState<HomePage> {
   int _examIndex = 0;
   late Future<_HomeSnapshot> _home;
 
+  /// 引导页正在栈上，禁止再次压入，避免同一时刻叠加多个考试目标页。
+  bool _guidingExamGoal = false;
+
+  /// 本次首页会话已自动引导过一次；返回后即使仍无考试目标也只保留手动入口。
+  bool _examGoalGuideRequested = false;
+
   @override
   void initState() {
     super.initState();
     // 考试 Tab 切换只改本地下标，不重新拉取首页快照。
     _home = _load();
     homeRefreshListenable.addListener(_reloadToday);
+  }
+
+  /// 打开考试目标设置页，返回后重新读取首页快照。
+  ///
+  /// 引导页保存后以 pop 返回，这里必须主动重拉，否则首页仍持有空考试列表并再次跳转，
+  /// 用户会被困在考试目标页无法回到首页。
+  Future<void> _guideExamGoalSetup() async {
+    if (!mounted || _guidingExamGoal) return;
+    _guidingExamGoal = true;
+    _examGoalGuideRequested = true;
+    try {
+      await context.push('/exam-goal');
+    } finally {
+      _guidingExamGoal = false;
+      if (mounted) _reloadToday();
+    }
   }
 
   void _reloadToday() {
@@ -84,10 +106,12 @@ final class _HomePageState extends ConsumerState<HomePage> {
               snapshot.data!.debts,
             );
             if (dashboard.exams.isEmpty) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (context.mounted) context.push('/exam-goal');
-              });
-              return const Center(child: Text('请先设置考试目标'));
+              if (!_examGoalGuideRequested) {
+                WidgetsBinding.instance.addPostFrameCallback(
+                  (_) => _guideExamGoalSetup(),
+                );
+              }
+              return _ExamGoalEmptyState(onSetup: _guideExamGoalSetup);
             }
             final examIndex = _examIndex.clamp(0, dashboard.exams.length - 1);
             final overview = dashboard.exams[examIndex];
@@ -295,6 +319,36 @@ typedef _HomeSnapshot = ({
 });
 
 /// 考试切换芯片：每个考试都有描边和右下错开的灰卡，做出小纸片立体感。
+/// 首页没有任何考试目标时的空态；自动引导只发生一次，之后保留显式入口。
+final class _ExamGoalEmptyState extends StatelessWidget {
+  const _ExamGoalEmptyState({required this.onSetup});
+
+  final Future<void> Function() onSetup;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: shanganPagePadding,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const ShanganNotice(
+            title: '请先设置考试目标',
+            message: '设置考试日期和参与进度计算的课程后，首页才能计算学习压力。',
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            key: const Key('setupExamGoal'),
+            onPressed: onSetup,
+            child: const Text('设置考试目标'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 final class _ExamTabChip extends StatelessWidget {
   const _ExamTabChip({
     required this.name,

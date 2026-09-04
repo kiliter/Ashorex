@@ -103,6 +103,21 @@ public class JdbcExamGoalRepository implements ExamGoalRepository {
     }
   }
 
+  @Override
+  public boolean delete(String userId, String goalId) {
+    // 先确认归属，避免删除他人考试目标；课程绑定显式清理，不依赖外键级联是否开启。
+    if (findById(userId, goalId).isEmpty()) {
+      return false;
+    }
+    jdbc.sql("delete from exam_goal_courses where exam_goal_id = :goalId")
+        .param("goalId", goalId)
+        .update();
+    return jdbc.sql("delete from exam_goals where id = :id and user_id = :userId")
+            .params(Map.of("id", goalId, "userId", userId))
+            .update()
+        > 0;
+  }
+
   private ExamGoal mapGoal(ResultSet rs) throws SQLException {
     String goalId = rs.getString("id");
     List<String> courseIds =

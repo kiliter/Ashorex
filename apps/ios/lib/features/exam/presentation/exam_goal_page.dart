@@ -226,7 +226,8 @@ final class _ExamGoalPageState extends ConsumerState<ExamGoalPage> {
         await repository.saveGoal(draft);
       }
       if (!mounted) return;
-      if (widget.allowBack) {
+      if (context.canPop()) {
+        // 首次引导页由首页压栈打开，必须 pop 返回，首页才会收到 didPopNext 并重新读取考试列表。
         context.pop();
       } else {
         context.go('/home');

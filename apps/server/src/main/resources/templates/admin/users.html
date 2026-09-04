@@ -50,9 +50,13 @@
               <div>
                 <p class="page-eyebrow">ACCOUNT DIRECTORY</p>
                 <h2 id="user-list-title">现有用户</h2>
-                <p>管理员账号不能在此页面停用。</p>
+                <p>管理员账号不能在此页面停用或删除。删除用户会一并清除该用户的全部学习记录，不可恢复。</p>
               </div>
               <span class="status-pill" th:text="|${#lists.size(users)} 个账号|">账号数量</span>
+            </div>
+            <div class="panel-body" th:if="${userActionSuccess != null or userActionError != null}">
+              <div class="alert" th:if="${userActionSuccess != null}" th:text="${userActionSuccess}"></div>
+              <div class="alert alert--danger" th:if="${userActionError != null}" th:text="${userActionError}"></div>
             </div>
             <div class="table-scroll">
               <table>
@@ -71,6 +75,13 @@
                       <form class="inline-form" th:if="${user.role != 'ADMIN'}" method="post" th:action="@{/admin/users/{id}/enabled(id=${user.id})}">
                         <input type="hidden" name="enabled" th:value="${!user.enabled}" />
                         <button class="button--small" th:classappend="${user.enabled ? 'button--danger' : 'button--secondary'}" type="submit" th:text="${user.enabled ? '禁用账号' : '重新启用'}"></button>
+                      </form>
+                      <!-- 删除不可恢复：必须手工输入用户名，再经浏览器确认才会提交。 -->
+                      <form class="inline-form" th:if="${user.role != 'ADMIN'}" method="post"
+                            th:action="@{/admin/users/{id}/delete(id=${user.id})}"
+                            th:attr="onsubmit=|return confirm('将永久删除用户 ${user.username} 及其全部学习记录，且无法恢复。确定继续吗？')|">
+                        <input name="confirmUsername" th:placeholder="|输入 ${user.username} 确认|" required maxlength="64" autocomplete="off" />
+                        <button class="button--small button--danger" type="submit">删除用户</button>
                       </form>
                       <span class="status-pill" th:if="${user.role == 'ADMIN'}">受保护</span>
                     </td>

@@ -151,6 +151,13 @@ final class _FakeExamRepository implements ExamRepository {
   @override
   Future<ExamGoal> updateGoal(String goalId, ExamGoalDraft draft) async =>
       saveGoal(draft);
+
+  @override
+  Future<void> deleteGoal(String goalId) async {
+    if (goal?.id == goalId) {
+      goal = null;
+    }
+  }
 }
 
 final class _FakePlanRepository implements PlanRepository {

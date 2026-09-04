@@ -61,6 +61,9 @@ abstract interface class ExamRepository {
   Future<ExamGoal> saveGoal(ExamGoalDraft draft);
 
   Future<ExamGoal> updateGoal(String goalId, ExamGoalDraft draft);
+
+  /// 删除一场考试目标；服务端只清除目标与课程绑定，不影响学习记录。
+  Future<void> deleteGoal(String goalId);
 }
 
 /// 考试页面只通过上岸服务端读写目标，不在客户端计算业务真相。
@@ -107,6 +110,10 @@ final class RemoteExamRepository implements ExamRepository {
       await _api.putJson('/api/v1/exam-goals/$goalId', data: _draftJson(draft)),
     );
   }
+
+  @override
+  Future<void> deleteGoal(String goalId) =>
+      _api.deleteEmpty('/api/v1/exam-goals/$goalId');
 
   String _date(DateTime value) =>
       '${value.year.toString().padLeft(4, '0')}-'

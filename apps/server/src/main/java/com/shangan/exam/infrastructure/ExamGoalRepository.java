@@ -15,4 +15,11 @@ public interface ExamGoalRepository {
   Optional<ExamGoal> findById(String userId, String goalId);
 
   void save(ExamGoal goal, Instant now);
+
+  /**
+   * 删除属于该用户的考试目标及其课程绑定。
+   *
+   * @return 目标存在且归属该用户时返回 true；否则返回 false 由应用服务转换为业务错误
+   */
+  boolean delete(String userId, String goalId);
 }
