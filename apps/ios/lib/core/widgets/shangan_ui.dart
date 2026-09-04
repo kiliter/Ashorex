@@ -1171,11 +1171,31 @@ bool shanganSameDay(DateTime left, DateTime right) {
       left.day == right.day;
 }
 
+/// 取设备本地的当天日期，去掉时分秒，供作战单和日报判断“今天”。
+DateTime shanganDeviceToday([DateTime? now]) {
+  final value = now ?? DateTime.now();
+  return DateTime(value.year, value.month, value.day);
+}
+
 /// 作战单路径使用的本地日期。
 String shanganDateKey(DateTime date) {
   return '${date.year.toString().padLeft(4, '0')}-'
       '${date.month.toString().padLeft(2, '0')}-'
       '${date.day.toString().padLeft(2, '0')}';
+}
+
+/// 把服务端 `date` 字段解析成本地年月日，避免 UTC 午夜被折到前一天。
+DateTime shanganParseDate(String value) {
+  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(value);
+  if (match != null) {
+    return DateTime(
+      int.parse(match.group(1)!),
+      int.parse(match.group(2)!),
+      int.parse(match.group(3)!),
+    );
+  }
+  final parsed = DateTime.parse(value);
+  return DateTime(parsed.year, parsed.month, parsed.day);
 }
 
 final class _TrustScalePainter extends CustomPainter {

@@ -2,15 +2,19 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shangan_ios/core/device/screen_wake_lock.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/focus/data/focus_repository.dart';
+import 'package:shangan_ios/features/focus/presentation/focus_duration_sheet.dart';
+import 'package:shangan_ios/features/focus/presentation/time_up_alert.dart';
 
 /// 服务端计时的专注页；本地时钟只用于平滑展示，恢复前台时会重新同步服务端。
+/// 进行中返回须二次确认，确认后立即结束计时并离开。
 final class FocusTimerPage extends ConsumerStatefulWidget {
   const FocusTimerPage({
     required this.title,
-    required this.plannedSeconds,
+    this.plannedSeconds,
     this.planItemId,
     this.mediaItemId,
     super.key,
@@ -19,7 +23,7 @@ final class FocusTimerPage extends ConsumerStatefulWidget {
   final String? planItemId;
   final String? mediaItemId;
   final String title;
-  final int plannedSeconds;
+  final int? plannedSeconds;
 
   @override
   ConsumerState<FocusTimerPage> createState() => _FocusTimerPageState();
@@ -27,15 +31,22 @@ final class FocusTimerPage extends ConsumerStatefulWidget {
 
 final class _FocusTimerPageState extends ConsumerState<FocusTimerPage>
     with WidgetsBindingObserver {
+  late final ScreenWakeLock _wakeLock;
   FocusSessionData? _session;
   DateTime? _receivedAtUtc;
   Object? _error;
   Timer? _ticker;
   bool _busy = false;
+  bool _awaitingDuration = false;
+  bool _leftForeground = false;
+  bool _showingResumeWarning = false;
+  bool _confirmingLeave = false;
+  bool _timeUpAlertShown = false;
 
   @override
   void initState() {
     super.initState();
+    _wakeLock = ref.read(screenWakeLockProvider);
     WidgetsBinding.instance.addObserver(this);
     _initialize();
   }
@@ -44,33 +55,71 @@ final class _FocusTimerPageState extends ConsumerState<FocusTimerPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();
+    unawaited(_wakeLock.disable());
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      if (_session?.status == 'RUNNING') _leftForeground = true;
+      return;
+    }
     if (state == AppLifecycleState.resumed) {
       _synchronizeActive();
+      _maybeWarnStayOnPage();
     }
   }
+
+  /// 计时仍在进行时拦截返回，确认后停表再离开。
+  bool get _needsLeaveConfirm {
+    final status = _session?.status;
+    return status == 'RUNNING' || status == 'PAUSED';
+  }
+
+  bool get _keepScreenOn => _needsLeaveConfirm;
 
   Future<void> _initialize() async {
     try {
       final repository = ref.read(focusRepositoryProvider);
       final active = await repository.loadActive();
-      final session =
-          active ??
-          await repository.start(
+      if (active != null) {
+        if (widget.planItemId != null &&
+            active.planItemId != widget.planItemId) {
+          throw StateError('已有其他专注任务正在进行，请先处理当前会话');
+        }
+        _accept(active);
+        return;
+      }
+      final planned = widget.plannedSeconds;
+      if (planned == null || planned <= 0) {
+        if (mounted) setState(() => _awaitingDuration = true);
+        return;
+      }
+      await _startWithDuration(planned);
+    } catch (error) {
+      if (mounted) setState(() => _error = error);
+    }
+  }
+
+  /// 按所选预设创建服务端会话，之后倒计时只展示服务端累计值。
+  Future<void> _startWithDuration(int plannedSeconds) async {
+    if (mounted) {
+      setState(() {
+        _awaitingDuration = false;
+        _error = null;
+      });
+    }
+    try {
+      final session = await ref
+          .read(focusRepositoryProvider)
+          .start(
             planItemId: widget.planItemId,
             mediaItemId: widget.mediaItemId,
             focusType: 'POMODORO',
-            plannedSeconds: widget.plannedSeconds,
+            plannedSeconds: plannedSeconds,
           );
-      if (active != null &&
-          widget.planItemId != null &&
-          active.planItemId != widget.planItemId) {
-        throw StateError('已有其他专注任务正在进行，请先处理当前会话');
-      }
       _accept(session);
     } catch (error) {
       if (mounted) setState(() => _error = error);
@@ -97,10 +146,123 @@ final class _FocusTimerPageState extends ConsumerState<FocusTimerPage>
     });
     _ticker?.cancel();
     if (session.status == 'RUNNING') {
+      final remaining = (session.plannedSeconds - _displaySeconds(session))
+          .clamp(0, session.plannedSeconds);
+      if (remaining > 0) _timeUpAlertShown = false;
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (mounted) setState(() {});
+        if (!mounted) return;
+        setState(() {});
+        _maybeAlertTimeUp();
       });
     }
+    _syncWakeLock();
+  }
+
+  /// 计划时长走完只弹一次到时闹钟，新开或重开会话会清标志。
+  void _maybeAlertTimeUp() {
+    final session = _session;
+    if (session == null || session.status != 'RUNNING' || _timeUpAlertShown) {
+      return;
+    }
+    final remaining = (session.plannedSeconds - _displaySeconds(session)).clamp(
+      0,
+      session.plannedSeconds,
+    );
+    if (remaining > 0) return;
+    _timeUpAlertShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(showTimeUpAlert(context, message: '专注时间已到，可以结束并结算。'));
+    });
+  }
+
+  void _syncWakeLock() {
+    if (_keepScreenOn) {
+      unawaited(_wakeLock.enable());
+    } else {
+      unawaited(_wakeLock.disable());
+    }
+  }
+
+  /// 从后台回来时提醒：计时未暂停，但离开会打断专注。
+  void _maybeWarnStayOnPage() {
+    if (!_leftForeground ||
+        _showingResumeWarning ||
+        _session?.status != 'RUNNING' ||
+        !mounted) {
+      return;
+    }
+    _leftForeground = false;
+    _showingResumeWarning = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          key: const Key('focusStayOnPageDialog'),
+          title: const Text('请留在专注页'),
+          content: const Text(
+            '切到其他 App 会打断专注，系统也可能回收进程。'
+            '计时以服务端为准，不会因为离开而暂停或作废。',
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('继续专注'),
+            ),
+          ],
+        ),
+      );
+      if (mounted) _showingResumeWarning = false;
+    });
+  }
+
+  /// 返回时二次确认：取消继续计时，确认则结束会话并离开。
+  Future<void> _confirmStopAndLeave() async {
+    if (_confirmingLeave || !mounted) return;
+    _confirmingLeave = true;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        key: const Key('focusLeaveConfirmDialog'),
+        title: const Text('结束计时并返回？'),
+        content: const Text('确认后立即停止本次专注计时并离开此页。点错了请选继续专注。'),
+        actions: [
+          TextButton(
+            key: const Key('stayFocus'),
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('继续专注'),
+          ),
+          FilledButton(
+            key: const Key('confirmLeaveFocus'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('结束并返回'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      final session = _session;
+      if (session != null && _needsLeaveConfirm) {
+        setState(() => _busy = true);
+        try {
+          await ref.read(focusRepositoryProvider).finish(session.id);
+        } catch (error) {
+          if (mounted) {
+            setState(() {
+              _busy = false;
+              _error = error;
+            });
+            _confirmingLeave = false;
+            return;
+          }
+        }
+      }
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+    if (mounted) _confirmingLeave = false;
   }
 
   int _displaySeconds(FocusSessionData session) {
@@ -116,14 +278,23 @@ final class _FocusTimerPageState extends ConsumerState<FocusTimerPage>
   @override
   Widget build(BuildContext context) {
     final session = _session;
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
-      body: SafeArea(
-        child: _error != null
-            ? _ErrorState(message: _error.toString(), retry: _initialize)
-            : session == null
-            ? const ShanganLoading('正在同步专注会话')
-            : _buildSession(context, session),
+    return PopScope(
+      key: const Key('focusPopScope'),
+      canPop: !_needsLeaveConfirm,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(_confirmStopAndLeave());
+      },
+      child: Scaffold(
+        appBar: AppBar(title: Text(widget.title)),
+        body: SafeArea(
+          child: _error != null
+              ? _ErrorState(message: _error.toString(), retry: _initialize)
+              : _awaitingDuration
+              ? FocusDurationPicker(onSelected: _startWithDuration)
+              : session == null
+              ? const ShanganLoading('正在同步专注会话')
+              : _buildSession(context, session),
+        ),
       ),
     );
   }
@@ -207,6 +378,14 @@ final class _FocusTimerPageState extends ConsumerState<FocusTimerPage>
             key: const Key('cancelFocus'),
             onPressed: _busy ? null : () => _change('cancel'),
             child: const Text('取消本次专注'),
+          ),
+          const SizedBox(height: 18),
+          const ShanganNotice(
+            title: '请勿切换到后台',
+            message:
+                '请尽量留在本页。离开会打断专注，系统也可能把 App 回收；'
+                '重新打开后计时仍按服务端继续，不会作废。返回上一页会先确认，确认后立即停止计时。',
+            tone: ShanganTagTone.warning,
           ),
         ],
       ],

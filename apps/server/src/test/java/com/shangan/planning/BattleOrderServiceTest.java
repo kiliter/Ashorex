@@ -27,12 +27,14 @@ class BattleOrderServiceTest {
     FakeRepository orders = new FakeRepository();
     orders.addPlan("plan-1", LocalDate.of(2026, 9, 1), "COMPLETED", 2, 2);
     orders.addPlan("plan-2", LocalDate.of(2026, 9, 2), "CLOSED_WITH_DEBT", 3, 1);
+    orders.addPlan("plan-3", LocalDate.of(2026, 9, 3), "ABANDONED", 1, 0);
+    orders.addPlan("plan-4", LocalDate.of(2026, 9, 4), "DRAFT", 2, 0);
     BattleOrderService service = service(orders);
 
     BattleOrderService.CalendarView view =
-        service.calendar("user-1", LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 3));
+        service.calendar("user-1", LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 4));
 
-    assertThat(view.days()).hasSize(2);
+    assertThat(view.days()).hasSize(4);
     assertThat(view.days().get(0).date()).isEqualTo(LocalDate.of(2026, 9, 1));
     assertThat(view.days().get(0).completed()).isTrue();
     assertThat(view.days().get(0).hasDebt()).isFalse();
@@ -41,6 +43,8 @@ class BattleOrderServiceTest {
     assertThat(view.days().get(1).hasDebt()).isTrue();
     assertThat(view.days().get(1).itemCount()).isEqualTo(3);
     assertThat(view.days().get(1).completedItemCount()).isEqualTo(1);
+    assertThat(view.days().get(2).hasDebt()).isTrue();
+    assertThat(view.days().get(3).hasDebt()).isFalse();
   }
 
   @Test
@@ -79,6 +83,7 @@ class BattleOrderServiceTest {
                 "course-1",
                 "判断推理",
                 true,
+                null,
                 null)));
     BattleOrderService.PlanView view = service(orders).get("user-1", LocalDate.of(2026, 9, 3));
 
@@ -86,6 +91,7 @@ class BattleOrderServiceTest {
     assertThat(view.items().getFirst().courseId()).isEqualTo("course-1");
     assertThat(view.items().getFirst().courseName()).isEqualTo("判断推理");
     assertThat(view.items().getFirst().quizRequired()).isTrue();
+    assertThat(view.items().getFirst().mockExamSessionStatus()).isNull();
   }
 
   @Test

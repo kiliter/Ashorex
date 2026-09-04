@@ -97,6 +97,7 @@ abstract interface class MockExamRepository {
   Future<MockExamSessionData> start(String planItemId);
   Future<MockExamSessionData> load(String sessionId);
   Future<MockExamSessionData> submitEarly(String sessionId);
+  Future<MockExamSessionData> retake(String sessionId);
   Future<MockExamSessionData> upload(
     String sessionId,
     String filename,
@@ -160,6 +161,12 @@ final class RemoteMockExamRepository implements MockExamRepository {
   Future<MockExamSessionData> submitEarly(String sessionId) async =>
       MockExamSessionData.fromSessionJson(
         await _api.postJson('/api/v1/mock-exams/$sessionId/submit-early'),
+      );
+
+  @override
+  Future<MockExamSessionData> retake(String sessionId) async =>
+      MockExamSessionData.fromSessionJson(
+        await _api.postJson('/api/v1/mock-exams/$sessionId/retake'),
       );
 
   @override

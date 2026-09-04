@@ -89,9 +89,9 @@ GoRouter createRouter(AuthController authController) {
           planItemId: state.uri.queryParameters['planItemId'],
           mediaItemId: state.uri.queryParameters['mediaItemId'],
           title: state.uri.queryParameters['title'] ?? '专注学习',
-          plannedSeconds:
-              int.tryParse(state.uri.queryParameters['plannedSeconds'] ?? '') ??
-              25 * 60,
+          plannedSeconds: int.tryParse(
+            state.uri.queryParameters['plannedSeconds'] ?? '',
+          ),
         ),
       ),
       GoRoute(

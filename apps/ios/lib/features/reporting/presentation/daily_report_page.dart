@@ -5,6 +5,11 @@ import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/reporting/data/report_repository.dart';
 
+/// 切回数据 Tab 或 App 回到前台时递增，驱动日报滚到设备当天。
+final dailyReportRefreshListenable = ValueNotifier<int>(0);
+
+void bumpDailyReportRefresh() => dailyReportRefreshListenable.value++;
+
 /// 数据 Tab 的日报首页，同时承载固定模板生成的晚间审判。
 final class DailyReportPage extends ConsumerStatefulWidget {
   const DailyReportPage({this.initialDate, this.showAppBar = false, super.key});
@@ -18,17 +23,38 @@ final class DailyReportPage extends ConsumerStatefulWidget {
 
 final class _DailyReportPageState extends ConsumerState<DailyReportPage> {
   late DateTime _date;
+  late DateTime _pinnedToday;
   late Future<DailyReportData> _report;
 
   @override
   void initState() {
     super.initState();
-    final now = widget.initialDate ?? DateTime.now();
-    _date = DateTime(now.year, now.month, now.day);
+    _pinnedToday = shanganDeviceToday(widget.initialDate);
+    _date = _pinnedToday;
     _load();
+    dailyReportRefreshListenable.addListener(_syncTodayIfPinned);
   }
 
   void _load() => _report = ref.read(reportRepositoryProvider).loadDaily(_date);
+
+  /// 若用户正在看“今天”，跨日后自动滚到新的当天；已选历史日保持不动。
+  void _syncTodayIfPinned() {
+    if (!mounted || widget.initialDate != null) return;
+    final now = shanganDeviceToday();
+    setState(() {
+      if (shanganSameDay(_date, _pinnedToday)) {
+        _date = now;
+      }
+      _pinnedToday = now;
+      _load();
+    });
+  }
+
+  @override
+  void dispose() {
+    dailyReportRefreshListenable.removeListener(_syncTodayIfPinned);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

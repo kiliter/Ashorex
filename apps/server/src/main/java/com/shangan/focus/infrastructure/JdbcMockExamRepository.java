@@ -90,6 +90,22 @@ public class JdbcMockExamRepository implements MockExamRepository {
   }
 
   @Override
+  public void retake(String userId, String sessionId, Instant startedAt, Instant deadlineAt) {
+    jdbc.sql(
+            """
+            update mock_exam_sessions
+            set status='RUNNING',started_at=:started,deadline_at=:deadline,
+                submitted_at=null,completed_at=null,updated_at=:started
+            where id=:id and user_id=:userId and status in ('AWAITING_UPLOAD','COMPLETED')
+            """)
+        .param("started", startedAt.toEpochMilli())
+        .param("deadline", deadlineAt.toEpochMilli())
+        .param("id", sessionId)
+        .param("userId", userId)
+        .update();
+  }
+
+  @Override
   public int countAttachments(String userId, String sessionId) {
     return jdbc.sql(
             "select count(*) from mock_exam_attachments where user_id=:userId and session_id=:id")

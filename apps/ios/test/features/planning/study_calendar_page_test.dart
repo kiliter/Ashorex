@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/features/planning/data/plan_repository.dart';
 import 'package:shangan_ios/features/planning/presentation/study_calendar_page.dart';
 
@@ -14,6 +15,9 @@ void main() {
     expect(find.byKey(const Key('calendarToday')), findsOneWidget);
     expect(find.text('9 月 2 日作战单'), findsNothing);
     expect(find.text('今日作战单'), findsOneWidget);
+    expect(find.text('学习欠债'), findsOneWidget);
+    expect(find.textContaining('课程 1'), findsOneWidget);
+    expect(find.textContaining('课程 2'), findsNothing);
     expect(find.text('判断推理强化'), findsOneWidget);
     expect(find.text('数量关系'), findsOneWidget);
     expect(
@@ -81,6 +85,78 @@ void main() {
     await tester.pumpAndSettle();
     expect(plans.loadCount, greaterThan(firstLoads));
   });
+
+  testWidgets('欠债日在日期数字旁标红点，完成日标绿点，无欠债历史日不标红', (tester) async {
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await _expandCalendar(tester);
+
+    expect(_dotColor(tester, '2026-09-01'), ShanganColors.green);
+    expect(_dotColor(tester, '2026-09-02'), ShanganColors.red);
+    expect(find.byKey(const Key('calendar-dot-2026-09-03')), findsNothing);
+  });
+
+  testWidgets('没有欠债的历史作战单即使有课时也不标红点', (tester) async {
+    final plans = _PlanRepository(
+      calendarDays: [
+        PlanCalendarDay(
+          date: DateTime(2026, 9, 1),
+          status: 'DRAFT',
+          completed: false,
+          hasDebt: false,
+          itemCount: 2,
+          completedItemCount: 0,
+        ),
+      ],
+    );
+    await tester.pumpWidget(_app(plans: plans));
+    await tester.pumpAndSettle();
+    await _expandCalendar(tester);
+
+    expect(find.byKey(const Key('calendar-dot-2026-09-01')), findsNothing);
+  });
+
+  testWidgets('历史欠债日只把课程名标红，不把今日欠债清单并进去', (tester) async {
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await _expandCalendar(tester);
+    await tester.tap(find.byKey(const Key('calendar-day-2026-09-02')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('9 月 2 日作战单'), findsOneWidget);
+    expect(find.text('学习欠债'), findsNothing);
+    expect(find.text('判断推理强化'), findsNothing);
+    expect(find.text('言语理解'), findsOneWidget);
+    expect(find.text('行测'), findsOneWidget);
+    final title = tester.widget<Text>(find.text('行测'));
+    expect(title.style?.color, ShanganColors.red);
+    expect(find.textContaining('欠债'), findsWidgets);
+  });
+
+  testWidgets('跨日不关闭 App 时学习页会切到新的今天', (tester) async {
+    final today = ValueNotifier(DateTime(2026, 9, 3));
+    await tester.pumpWidget(
+      ValueListenableBuilder<DateTime>(
+        valueListenable: today,
+        builder: (_, value, _) => _app(today: value),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('今日作战单'), findsOneWidget);
+
+    today.value = DateTime(2026, 9, 4);
+    await tester.pumpAndSettle();
+
+    expect(find.text('今日作战单'), findsOneWidget);
+    expect(find.text('9 月 3 日作战单'), findsNothing);
+  });
+}
+
+Color? _dotColor(WidgetTester tester, String date) {
+  final widget = tester.widget<Container>(
+    find.byKey(Key('calendar-dot-$date')),
+  );
+  return (widget.decoration as BoxDecoration?)?.color;
 }
 
 Future<void> _expandCalendar(WidgetTester tester) async {
@@ -88,19 +164,24 @@ Future<void> _expandCalendar(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Widget _app({_PlanRepository? plans}) {
+Widget _app({_PlanRepository? plans, DateTime? today}) {
   return ProviderScope(
     overrides: [
       planRepositoryProvider.overrideWithValue(plans ?? _PlanRepository()),
     ],
-    child: MaterialApp(home: StudyCalendarPage(today: DateTime(2026, 9, 3))),
+    child: MaterialApp(
+      home: StudyCalendarPage(today: today ?? DateTime(2026, 9, 3)),
+    ),
   );
 }
 
 final class _PlanRepository implements PlanRepository {
+  _PlanRepository({this.calendarDays});
+
   DateTime? lastFrom;
   DateTime? lastTo;
   int loadCount = 0;
+  final List<PlanCalendarDay>? calendarDays;
 
   @override
   Future<List<PlanCalendarDay>> loadCalendar({
@@ -110,7 +191,9 @@ final class _PlanRepository implements PlanRepository {
     lastFrom = DateTime(from.year, from.month, from.day);
     lastTo = DateTime(to.year, to.month, to.day);
     loadCount += 1;
-    return [
+    final days =
+        calendarDays ??
+        [
           PlanCalendarDay(
             date: DateTime(2026, 9, 1),
             status: 'COMPLETED',
@@ -127,7 +210,8 @@ final class _PlanRepository implements PlanRepository {
             itemCount: 1,
             completedItemCount: 0,
           ),
-        ]
+        ];
+    return days
         .where((day) => !day.date.isBefore(from) && !day.date.isAfter(to))
         .toList();
   }
@@ -155,6 +239,31 @@ final class _PlanRepository implements PlanRepository {
             plannedSeconds: 600,
             completedSeconds: 600,
             status: 'COMPLETED',
+            sortOrder: 0,
+            immutable: true,
+            courseId: 'course-1',
+            courseName: '行测',
+          ),
+        ],
+      );
+    }
+    if (date.day == 2) {
+      return DailyPlanData(
+        id: 'plan-2',
+        date: date,
+        status: 'CLOSED_WITH_DEBT',
+        version: 1,
+        items: const [
+          PlanItemData(
+            id: 'debt-item-1',
+            itemType: 'VIDEO',
+            title: '言语理解',
+            mediaItemId: 'lesson-2',
+            mockExamPresetId: null,
+            mockExamName: null,
+            plannedSeconds: 900,
+            completedSeconds: 120,
+            status: 'PENDING',
             sortOrder: 0,
             immutable: true,
             courseId: 'course-1',
@@ -203,7 +312,10 @@ final class _PlanRepository implements PlanRepository {
       debtType: 'VIDEO_WATCH',
       title: '判断推理强化',
       remainingSeconds: 800,
+      originalSeconds: 800,
+      baselineCompletedSeconds: 1000,
       status: 'OPEN',
+      mediaItemId: 'lesson-debt',
     ),
   ];
 }

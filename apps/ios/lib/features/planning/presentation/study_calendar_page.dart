@@ -24,7 +24,8 @@ final class StudyCalendarPage extends ConsumerStatefulWidget {
   ConsumerState<StudyCalendarPage> createState() => _StudyCalendarPageState();
 }
 
-final class _StudyCalendarPageState extends ConsumerState<StudyCalendarPage> {
+final class _StudyCalendarPageState extends ConsumerState<StudyCalendarPage>
+    with WidgetsBindingObserver {
   late DateTime _today;
   late DateTime _visibleMonth;
   late DateTime _selected;
@@ -38,13 +39,15 @@ final class _StudyCalendarPageState extends ConsumerState<StudyCalendarPage> {
   @override
   void initState() {
     super.initState();
-    final now = widget.today ?? DateTime.now();
-    _today = DateTime(now.year, now.month, now.day);
+    _today = _deviceToday();
     _visibleMonth = DateTime(_today.year, _today.month);
     _selected = _today;
+    WidgetsBinding.instance.addObserver(this);
     studyCalendarRefreshListenable.addListener(_handleExternalRefresh);
     unawaited(_initialLoad());
   }
+
+  DateTime _deviceToday() => shanganDeviceToday(widget.today);
 
   Future<void> _initialLoad() async {
     setState(() {
@@ -55,10 +58,47 @@ final class _StudyCalendarPageState extends ConsumerState<StudyCalendarPage> {
     if (mounted) setState(() => _loading = false);
   }
 
-  void _handleExternalRefresh() => unawaited(_reloadSelectedPlan());
+  void _handleExternalRefresh() => unawaited(_refreshForCurrentDay());
+
+  /// 跨日后仍停留在前台时，把“今天”滚到设备当前日期再拉作战单。
+  bool _rollTodayIfNeeded() {
+    final now = _deviceToday();
+    if (shanganSameDay(now, _today)) return false;
+    final viewingToday = shanganSameDay(_selected, _today);
+    _today = now;
+    if (viewingToday) {
+      _selected = _today;
+      _visibleMonth = DateTime(_today.year, _today.month);
+    }
+    return true;
+  }
+
+  Future<void> _refreshForCurrentDay() async {
+    final rolled = _rollTodayIfNeeded();
+    if (!mounted) return;
+    if (rolled) setState(() {});
+    // 返回首页/学习后同时刷新月历标记和当日作战单，避免考试完成后仍显示未完成。
+    await Future.wait([_reloadMonth(), _reloadSelectedPlan()]);
+  }
+
+  @override
+  void didUpdateWidget(StudyCalendarPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.today != widget.today) {
+      unawaited(_refreshForCurrentDay());
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_refreshForCurrentDay());
+    }
+  }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     studyCalendarRefreshListenable.removeListener(_handleExternalRefresh);
     super.dispose();
   }
@@ -101,6 +141,7 @@ final class _StudyCalendarPageState extends ConsumerState<StudyCalendarPage> {
   }
 
   void _goToday() {
+    _rollTodayIfNeeded();
     setState(() {
       _selected = _today;
       _visibleMonth = DateTime(_today.year, _today.month);
@@ -111,6 +152,11 @@ final class _StudyCalendarPageState extends ConsumerState<StudyCalendarPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!shanganSameDay(_deviceToday(), _today)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_refreshForCurrentDay());
+      });
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('学习')),
       body: _loading && _days.isEmpty
@@ -581,7 +627,7 @@ final class _CalendarMonth extends StatelessWidget {
   ) {
     final dayNumber = slot - leading + 1;
     if (dayNumber < 1 || dayNumber > daysInMonth) {
-      return const SizedBox(height: 44);
+      return const SizedBox(height: 52);
     }
     final date = DateTime(month.year, month.month, dayNumber);
     final mark = marks[shanganDateKey(date)];
@@ -591,7 +637,7 @@ final class _CalendarMonth extends StatelessWidget {
       key: Key('calendar-day-${shanganDateKey(date)}'),
       onTap: () => onSelect(date),
       child: SizedBox(
-        height: 44,
+        height: 52,
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: isSelected ? ShanganColors.blueSoft : Colors.transparent,
@@ -604,31 +650,28 @@ final class _CalendarMonth extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                '$dayNumber',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _DayDot(mark: mark, isPast: date.isBefore(today)),
-                  if (mark != null && mark.itemCount > 0) ...[
-                    const SizedBox(width: 2),
-                    Flexible(
-                      child: Text(
-                        '${mark.itemCount}节${_formatHours(mark.plannedSeconds)}',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(fontSize: 8, height: 1),
-                        maxLines: 1,
-                        overflow: TextOverflow.clip,
-                      ),
+                  Text(
+                    '$dayNumber',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
+                  ),
+                  _DayDot(date: date, mark: mark, isPast: date.isBefore(today)),
                 ],
               ),
+              if (mark != null && mark.itemCount > 0)
+                Text(
+                  '${mark.itemCount}节${_formatHours(mark.plannedSeconds)}',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontSize: 8, height: 1),
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                ),
             ],
           ),
         ),
@@ -639,10 +682,11 @@ final class _CalendarMonth extends StatelessWidget {
 
 String _formatHours(int seconds) => shanganDuration(seconds);
 
-/// 绿点表示当日作战完成，红点表示历史欠债或未完成。
+/// 绿点表示当日作战完成，红点只标已结算欠债；没有学习记录的日期不打点。
 final class _DayDot extends StatelessWidget {
-  const _DayDot({required this.mark, required this.isPast});
+  const _DayDot({required this.date, required this.mark, required this.isPast});
 
+  final DateTime date;
   final PlanCalendarDay? mark;
   final bool isPast;
 
@@ -651,16 +695,17 @@ final class _DayDot extends StatelessWidget {
     Color? color;
     if (mark?.completed == true) {
       color = ShanganColors.green;
-    } else if (mark != null &&
-        (mark!.hasDebt || (isPast && mark!.itemCount > 0))) {
+    } else if (mark?.hasDebt == true && isPast) {
       color = ShanganColors.red;
     }
-    return Container(
-      width: 5,
-      height: 5,
-      decoration: BoxDecoration(
-        color: color ?? Colors.transparent,
-        shape: BoxShape.circle,
+    if (color == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(left: 2),
+      child: Container(
+        key: Key('calendar-dot-${shanganDateKey(date)}'),
+        width: 6,
+        height: 6,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
     );
   }

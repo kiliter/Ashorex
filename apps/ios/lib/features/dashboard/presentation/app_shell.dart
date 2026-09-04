@@ -19,7 +19,8 @@ final class AppShell extends ConsumerStatefulWidget {
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-final class _AppShellState extends ConsumerState<AppShell> with RouteAware {
+final class _AppShellState extends ConsumerState<AppShell>
+    with RouteAware, WidgetsBindingObserver {
   int _selectedIndex = 0;
 
   static const _pages = <Widget>[
@@ -28,6 +29,12 @@ final class _AppShellState extends ConsumerState<AppShell> with RouteAware {
     DailyReportPage(),
     _ProfileTab(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   @override
   void didChangeDependencies() {
@@ -40,18 +47,36 @@ final class _AppShellState extends ConsumerState<AppShell> with RouteAware {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     shanganRouteObserver.unsubscribe(this);
     super.dispose();
   }
 
   @override
   void didPopNext() {
-    _refreshStudyTab();
+    // 作战单同时出现在首页和学习 Tab，返回后两边都要重拉，避免考试状态只更新当前页。
+    bumpHomeRefresh();
+    bumpStudyCalendarRefresh();
+    bumpDailyReportRefresh();
   }
 
-  void _refreshStudyTab() {
-    if (_selectedIndex == 1) {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      bumpHomeRefresh();
       bumpStudyCalendarRefresh();
+      bumpDailyReportRefresh();
+    }
+  }
+
+  void _refreshTab(int index) {
+    switch (index) {
+      case 0:
+        bumpHomeRefresh();
+      case 1:
+        bumpStudyCalendarRefresh();
+      case 2:
+        bumpDailyReportRefresh();
     }
   }
 
@@ -75,6 +100,7 @@ final class _AppShellState extends ConsumerState<AppShell> with RouteAware {
             selectedIndex: _selectedIndex,
             onDestinationSelected: (index) {
               setState(() => _selectedIndex = index);
+              _refreshTab(index);
             },
             destinations: const [
               NavigationDestination(

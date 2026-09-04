@@ -75,6 +75,18 @@ public class MockExamService {
     return view(refresh(userId, requireSession(userId, sessionId)));
   }
 
+  /** 交卷或完成后按预置快照时长重新开考，作战单完成状态保持不变。 */
+  @Transactional
+  public SessionView retake(String userId, String sessionId) {
+    var session = refresh(userId, requireSession(userId, sessionId));
+    if (!List.of("AWAITING_UPLOAD", "COMPLETED").contains(session.status())) {
+      throw illegal("当前模拟考试不能重考");
+    }
+    Instant startedAt = clock.instant();
+    exams.retake(userId, sessionId, startedAt, startedAt.plusSeconds(session.durationSeconds()));
+    return view(requireSession(userId, sessionId));
+  }
+
   @Transactional
   public SessionView submitEarly(String userId, String sessionId) {
     var session = refresh(userId, requireSession(userId, sessionId));

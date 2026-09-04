@@ -31,11 +31,19 @@ void main() {
     );
     expect(find.text('4 项任务，含 1 项欠债'), findsOneWidget);
     expect(find.text('判断推理 12'), findsOneWidget);
+    expect(find.text('偿还 09/02 判断推理欠债'), findsOneWidget);
+    expect(find.text('资料分析 07 速算'), findsOneWidget);
     expect(find.text('言语理解 01'), findsNothing);
-    expect(find.text('资料分析 07 速算'), findsNothing);
-    expect(find.text('偿还 09/02 判断推理欠债'), findsNothing);
+    expect(
+      tester.getTopLeft(find.text('偿还 09/02 判断推理欠债')).dy,
+      lessThan(tester.getTopLeft(find.text('判断推理 12')).dy),
+    );
+    expect(
+      tester.getTopLeft(find.text('判断推理 12')).dy,
+      lessThan(tester.getTopLeft(find.text('资料分析 07 速算')).dy),
+    );
     expect(find.textContaining('进行中'), findsOneWidget);
-    expect(find.textContaining('继续判断推理 12'), findsOneWidget);
+    expect(find.textContaining('继续偿还 09/02 判断推理欠债'), findsOneWidget);
   });
 
   testWidgets('切换考试只更新倒计时卡片，不整页重新加载', (tester) async {
@@ -60,6 +68,34 @@ void main() {
     expect(dashboard.loadCount, 1);
     expect(find.text('距离考试 120 天'), findsOneWidget);
     expect(find.text('今日作战单'), findsOneWidget);
+  });
+
+  testWidgets('小工具点击专注计时后弹出 15/30/60/120 分钟预设', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          dashboardRepositoryProvider.overrideWithValue(_DashboardRepository()),
+          planRepositoryProvider.overrideWithValue(_PlanRepository()),
+        ],
+        child: const MaterialApp(home: HomePage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('homeWidgetsButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('开始专注'), findsOneWidget);
+    expect(find.text('开始 25 分钟专注'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('startFocusWidget')));
+    await tester.pumpAndSettle();
+    expect(find.text('选择专注时长'), findsOneWidget);
+    expect(find.byKey(const Key('focusDuration-900')), findsOneWidget);
+    expect(find.byKey(const Key('focusDuration-1800')), findsOneWidget);
+    expect(find.byKey(const Key('focusDuration-3600')), findsOneWidget);
+    expect(find.byKey(const Key('focusDuration-7200')), findsOneWidget);
+    expect(find.text('自定义'), findsOneWidget);
+    expect(find.byKey(const Key('focusCustomDurationDial')), findsOneWidget);
   });
 }
 

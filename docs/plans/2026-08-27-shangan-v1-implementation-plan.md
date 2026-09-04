@@ -2185,6 +2185,7 @@ git commit -m "feat(ai): generate lesson contents and quiz drafts"
 - `GET/POST/PUT/DELETE /api/v1/mock-exam-presets[/{id}]`
 - `POST /api/v1/mock-exams/{planItemId}/start`
 - `POST /api/v1/mock-exams/{sessionId}/submit-early`
+- `POST /api/v1/mock-exams/{sessionId}/retake`
 - `POST /api/v1/mock-exams/{sessionId}/attachments`
 - 模拟考试会话和附件鉴权读取接口
 
@@ -2259,7 +2260,7 @@ git commit -m "feat(planning): replace locked plans with battle orders"
 
 - [ ] **步骤 5：实现首页小工具、我的菜单和模拟考试 UI**
 
-首页右滑或点击“小工具”打开专注入口。“模拟考试预置”作为“我的”页面独立菜单管理考试名称与时长，不放在学习偏好页；作战单选择项再次点击可取消，课时严格按视频固有顺序显示且不提供手动调序；模拟考试页面按服务端截止时间显示，支持提前交卷和最多 9 张试卷照片上传。所有用户的学习偏好使用 `1%～50%` 滑杆设置验活进度间隔，默认 `50%`，并可独立关闭验活。
+首页右滑或点击“小工具”打开专注入口；点击后可选择 15 分钟、30 分钟、1 小时、2 小时预设，或在圆形选择器上滑动自定义 1–720 分钟，选定后再开始倒计时。专注与模拟考试到时弹出闹钟震动动画和铃声；进行中返回须二次确认，确认后立即停止计时并离开。模拟考试结束后可重考并重新开始倒计时。切后台后仍以服务端时间继续。“模拟考试预置”作为“我的”页面独立菜单管理考试名称与时长；已加入今日作战单的选择项在选择器中不可再点；模拟考试页面按服务端截止时间显示，支持提前交卷和最多 9 张试卷照片上传。所有用户的学习偏好使用 `1%～50%` 滑杆设置验活进度间隔，默认 `50%`，并可独立关闭验活。
 
 - [ ] **步骤 6：实现启动容错和报表日期选择**
 

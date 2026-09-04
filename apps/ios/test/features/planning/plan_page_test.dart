@@ -54,9 +54,13 @@ void main() {
 
     expect(find.byKey(const Key('battleOrderLessonSearch')), findsOneWidget);
     expect(find.text('判断推理强化'), findsNothing);
+    expect(find.byKey(const Key('battleOrderCourse-course-1')), findsOneWidget);
+    expect(find.byKey(const Key('battleOrderLesson-lesson-1')), findsNothing);
     expect(find.text('2 个课时 · 已观看 2 个'), findsOneWidget);
     await tester.tap(find.text('公务员考试'));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('battleOrderLesson-lesson-1')), findsOneWidget);
+    expect(find.text('课时'), findsWidgets);
     expect(find.text('已看完'), findsOneWidget);
     expect(find.text('已观看 35%'), findsOneWidget);
     await tester.enterText(
@@ -78,7 +82,7 @@ void main() {
     expect(find.text('2.0h'), findsOneWidget);
   });
 
-  testWidgets('已选择课时可再次点击取消且课时按视频顺序保存', (tester) async {
+  testWidgets('本次新选课时可再点取消，课时按视频顺序保存', (tester) async {
     final plans = _PlanRepository(initialItems: const []);
     await tester.pumpWidget(
       ProviderScope(
@@ -103,8 +107,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(pickerText('资料分析'));
     await tester.pumpAndSettle();
+    expect(find.text('已选'), findsNWidgets(2));
     await tester.tap(pickerText('判断推理强化'));
     await tester.pumpAndSettle();
+    expect(find.text('已选'), findsOneWidget);
     await tester.tap(pickerText('判断推理强化'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('完成'));
@@ -112,6 +118,8 @@ void main() {
 
     expect(find.byTooltip('上移'), findsNothing);
     expect(find.byTooltip('下移'), findsNothing);
+    expect(find.text('判断推理强化'), findsOneWidget);
+    expect(find.text('资料分析'), findsOneWidget);
     await tester.tap(find.byKey(const Key('saveBattleOrder')));
     await tester.pumpAndSettle();
     expect(plans.savedItems.map((item) => item.mediaItemId), [
@@ -150,12 +158,134 @@ void main() {
     expect(find.text('作战单已保存为第 5 版'), findsOneWidget);
     expect(find.byType(SnackBar), findsOneWidget);
   });
+
+  test('同一课时再次加入不会产生重复项', () {
+    const draft = BattleOrderDraft(
+      existingItemId: null,
+      itemType: 'VIDEO',
+      title: '资料分析',
+      mediaItemId: 'lesson-1',
+      mockExamPresetId: null,
+      plannedSeconds: 600,
+      immutable: false,
+      catalogOrder: 0,
+    );
+    final once = toggleBattleOrderDraft(const [], draft, true);
+    final twice = toggleBattleOrderDraft(once, draft, true);
+    expect(once, hasLength(1));
+    expect(twice, hasLength(1));
+    expect(twice.single.mediaItemId, 'lesson-1');
+  });
+
+  testWidgets('已在作战单中的课时显示已加入', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          planRepositoryProvider.overrideWithValue(_PlanRepository()),
+          catalogRepositoryProvider.overrideWithValue(_CatalogRepository()),
+          mockExamRepositoryProvider.overrideWithValue(_MockExamRepository()),
+        ],
+        child: const MaterialApp(home: PlanPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openBattleOrderPicker')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('公务员考试'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('已加入'), findsOneWidget);
+    expect(find.text('资料分析'), findsWidgets);
+    await tester.tap(find.text('资料分析').last);
+    await tester.pumpAndSettle();
+    expect(find.text('已加入'), findsOneWidget);
+  });
+
+  testWidgets('历史欠债课时能识别出来，且不等于今日已加入', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          planRepositoryProvider.overrideWithValue(
+            _PlanRepository(
+              openDebts: const [
+                LearningDebtData(
+                  id: 'debt-1',
+                  debtType: 'VIDEO_WATCH',
+                  title: '判断推理强化',
+                  remainingSeconds: 800,
+                  originalSeconds: 800,
+                  baselineCompletedSeconds: 1000,
+                  status: 'OPEN',
+                  mediaItemId: 'lesson-2',
+                ),
+              ],
+            ),
+          ),
+          catalogRepositoryProvider.overrideWithValue(_CatalogRepository()),
+          mockExamRepositoryProvider.overrideWithValue(_MockExamRepository()),
+        ],
+        child: const MaterialApp(home: PlanPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openBattleOrderPicker')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('公务员考试'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('已加入'), findsOneWidget);
+    expect(find.text('历史欠债'), findsOneWidget);
+    expect(find.text('判断推理强化'), findsOneWidget);
+    await tester.tap(find.text('判断推理强化'));
+    await tester.pumpAndSettle();
+    expect(find.text('历史欠债'), findsOneWidget);
+    expect(find.text('已加入'), findsOneWidget);
+  });
+
+  testWidgets('已学完课时可以再次加入作为复习', (tester) async {
+    final plans = _PlanRepository(initialItems: const []);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          planRepositoryProvider.overrideWithValue(plans),
+          catalogRepositoryProvider.overrideWithValue(_CatalogRepository()),
+          mockExamRepositoryProvider.overrideWithValue(_MockExamRepository()),
+        ],
+        child: const MaterialApp(home: PlanPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openBattleOrderPicker')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('公务员考试'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('已学完'), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.text('资料分析'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('已选'), findsOneWidget);
+    await tester.tap(find.byTooltip('完成'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('saveBattleOrder')));
+    await tester.pumpAndSettle();
+    expect(plans.savedItems.single.itemType, 'REVIEW_SHORTCUT');
+    expect(plans.savedItems.single.mediaItemId, 'lesson-1');
+  });
 }
 
 /// 测试仓库记录页面提交的版本号和完整项目快照。
 final class _PlanRepository implements PlanRepository {
   _PlanRepository({
     this.deferSave = false,
+    this.openDebts = const [],
     this.initialItems = const [
       PlanItemData(
         id: 'item-1',
@@ -175,6 +305,7 @@ final class _PlanRepository implements PlanRepository {
 
   final bool deferSave;
   final List<PlanItemData> initialItems;
+  final List<LearningDebtData> openDebts;
   final Completer<void> _saveGate = Completer<void>();
   int? savedExpectedVersion;
   int saveCallCount = 0;
@@ -218,7 +349,7 @@ final class _PlanRepository implements PlanRepository {
   }
 
   @override
-  Future<List<LearningDebtData>> loadDebts() async => const [];
+  Future<List<LearningDebtData>> loadDebts() async => openDebts;
 }
 
 final class _CatalogRepository implements CatalogRepository {
@@ -302,6 +433,11 @@ final class _MockExamRepository implements MockExamRepository {
 
   @override
   Future<MockExamSessionData> submitEarly(String sessionId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<MockExamSessionData> retake(String sessionId) {
     throw UnimplementedError();
   }
 

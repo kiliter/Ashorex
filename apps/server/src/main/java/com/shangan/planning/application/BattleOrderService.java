@@ -73,7 +73,9 @@ public class BattleOrderService {
                         row.date(),
                         row.lifecycleStatus(),
                         "COMPLETED".equals(row.lifecycleStatus()),
-                        "CLOSED_WITH_DEBT".equals(row.lifecycleStatus()),
+                        // 开摆与欠债结算都已写入欠债账本，日历只给这两类历史日打红点。
+                        "CLOSED_WITH_DEBT".equals(row.lifecycleStatus())
+                            || "ABANDONED".equals(row.lifecycleStatus()),
                         row.itemCount(),
                         row.completedItemCount(),
                         row.plannedSeconds()))
@@ -345,7 +347,8 @@ public class BattleOrderService {
       String courseId,
       String courseName,
       boolean quizRequired,
-      String debtId) {
+      String debtId,
+      String mockExamSessionStatus) {
     static ItemView from(BattleOrderRepository.ItemRow item) {
       return new ItemView(
           item.id(),
@@ -362,7 +365,8 @@ public class BattleOrderService {
           item.courseId(),
           item.courseName(),
           item.quizRequired(),
-          item.debtId());
+          item.debtId(),
+          item.mockExamSessionStatus());
     }
   }
 

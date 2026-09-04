@@ -43,6 +43,11 @@ public class MockExamController {
     return mockExams.submitEarly(user.userId(), sessionId);
   }
 
+  @PostMapping("/{sessionId}/retake")
+  MockExamService.SessionView retake(CurrentUser user, @PathVariable String sessionId) {
+    return mockExams.retake(user.userId(), sessionId);
+  }
+
   @PostMapping(path = "/{sessionId}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   MockExamService.SessionWithAttachments addAttachment(
       @Parameter(hidden = true) CurrentUser user,

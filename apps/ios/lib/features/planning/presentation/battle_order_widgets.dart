@@ -21,7 +21,7 @@ final class BattleOrderDayPanel extends StatelessWidget {
     this.onEdit,
     this.continueLabel,
     this.onOpenItem,
-    this.inProgressOnly = false,
+    this.resumeQueue = false,
   });
 
   final DailyPlanData plan;
@@ -29,8 +29,8 @@ final class BattleOrderDayPanel extends StatelessWidget {
   final bool readOnly;
   final bool showDebtMarks;
 
-  /// 首页只列出进行中的任务，方便一键继续；学习 Tab 仍看整天。
-  final bool inProgressOnly;
+  /// 首页接续队列：列出未完成欠债和今日任务，按最近学习排在前面。
+  final bool resumeQueue;
   final String? eyebrow;
   final VoidCallback? onEdit;
   final String? continueLabel;
@@ -47,9 +47,7 @@ final class BattleOrderDayPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = plan.items;
-    final listItems = inProgressOnly
-        ? items.where(_isInProgressWork).toList()
-        : items;
+    final listItems = resumeQueue ? homeResumeItems(items) : items;
     final debtCount = items.where(_isDebtItem).length;
     final progress = battleOrderProgress(items);
     final headline = items.isEmpty
@@ -137,7 +135,9 @@ final class BattleOrderDayPanel extends StatelessWidget {
                 child: FilledButton(
                   key: const Key('continueBattleOrder'),
                   onPressed: () {
-                    final item = firstActionableItem(items);
+                    final item = resumeQueue
+                        ? firstResumableItem(items)
+                        : firstActionableItem(items);
                     if (item != null) {
                       _open(context, item);
                     } else {
@@ -183,6 +183,7 @@ final class BattleOrderGroupedList extends StatelessWidget {
   Widget build(BuildContext context) {
     final groups = groupBattleOrderItems(items);
     var index = 0;
+    var courseNo = 0;
     return Column(
       children: [
         for (final entry in groups.indexed)
@@ -191,12 +192,15 @@ final class BattleOrderGroupedList extends StatelessWidget {
             child: BattleOrderCourseGroup(
               key: Key('course-group-${entry.$2.key}'),
               title: entry.$2.title,
-              accentIndex: entry.$1,
               kindLabel: entry.$2.key == 'debt'
                   ? '欠债'
                   : entry.$2.key == 'mock-exam'
                   ? '模拟考试'
-                  : '课程 ${entry.$1 + 1}',
+                  : '课程 ${++courseNo}',
+              // 历史日把未完成课程名标红，进度行仍列出欠债；今日欠债组本身已是红色。
+              debtAccent:
+                  entry.$2.key == 'debt' ||
+                  (showDebtMarks && entry.$2.items.any(_isUnfinishedWork)),
               itemCount: entry.$2.items.length,
               children: [
                 for (final item in entry.$2.items)
@@ -224,14 +228,14 @@ final class BattleOrderCourseGroup extends StatefulWidget {
     super.key,
     this.kindLabel = '课程',
     this.itemCount,
-    this.accentIndex = 0,
+    this.debtAccent = false,
     this.initiallyExpanded = true,
   });
 
   final String title;
   final String kindLabel;
   final int? itemCount;
-  final int accentIndex;
+  final bool debtAccent;
   final List<Widget> children;
   final bool initiallyExpanded;
 
@@ -244,7 +248,10 @@ final class _BattleOrderCourseGroupState extends State<BattleOrderCourseGroup> {
 
   @override
   Widget build(BuildContext context) {
-    final accent = _courseTitleColor(widget.kindLabel, widget.accentIndex);
+    final accent = _courseTitleColor(
+      kindLabel: widget.kindLabel,
+      debtAccent: widget.debtAccent,
+    );
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.transparent,
@@ -331,12 +338,16 @@ final class BattleOrderItemTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = battleOrderItemStatus(item);
-    final canPlay = item.id.isNotEmpty && !item.id.startsWith('debt:');
+    final canPlay = battleOrderItemPlayable(item);
     final showSummary =
         item.mediaItemId != null &&
-        (item.itemType == 'VIDEO' || item.itemType == 'REVIEW_SHORTCUT');
+        (item.itemType == 'VIDEO' ||
+            item.itemType == 'REVIEW_SHORTCUT' ||
+            (item.itemType == 'DEBT_REPAYMENT' &&
+                item.sourceDebtType != 'QUIZ' &&
+                item.sourceDebtType != 'FOCUS'));
     return Container(
-      constraints: const BoxConstraints(minHeight: 64),
+      constraints: const BoxConstraints(minHeight: 84),
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: ShanganColors.rule)),
@@ -386,6 +397,18 @@ final class BattleOrderItemTile extends ConsumerWidget {
                     ],
                   ),
                 ),
+                if (_showsWatchProgress(item)) ...[
+                  const SizedBox(height: 6),
+                  ShanganProgress(
+                    value: item.plannedSeconds <= 0
+                        ? 0
+                        : (item.completedSeconds / item.plannedSeconds).clamp(
+                            0,
+                            1,
+                          ),
+                    style: ShanganProgressStyle.track,
+                  ),
+                ],
               ],
             ),
           ),
@@ -398,10 +421,13 @@ final class BattleOrderItemTile extends ConsumerWidget {
             ),
           IconButton(
             key: Key('battleOrderPlay-${item.id}'),
-            tooltip: item.itemType == 'MOCK_EXAM' ? '开始考试' : '播放',
+            tooltip:
+                item.itemType == 'MOCK_EXAM' || item.sourceDebtType == 'QUIZ'
+                ? '开始答题'
+                : '播放',
             onPressed: canPlay ? onOpen : null,
             icon: Icon(
-              item.itemType == 'MOCK_EXAM'
+              item.itemType == 'MOCK_EXAM' || item.sourceDebtType == 'QUIZ'
                   ? Icons.assignment_outlined
                   : Icons.play_arrow_rounded,
             ),
@@ -517,6 +543,18 @@ double battleOrderProgress(List<PlanItemData> items) {
 }
 
 ({String label, ShanganTagTone tone}) battleOrderItemStatus(PlanItemData item) {
+  if (item.itemType == 'MOCK_EXAM') {
+    return switch (item.mockExamSessionStatus) {
+      'RUNNING' => (label: '考试中', tone: ShanganTagTone.info),
+      'AWAITING_UPLOAD' => (label: '待传试卷', tone: ShanganTagTone.warning),
+      'COMPLETED' => (label: '已完成', tone: ShanganTagTone.success),
+      'CANCELLED' => (label: '已取消', tone: ShanganTagTone.warning),
+      _ =>
+        item.status == 'COMPLETED'
+            ? (label: '已完成', tone: ShanganTagTone.success)
+            : (label: '待开始', tone: ShanganTagTone.warning),
+    };
+  }
   if (item.status == 'COMPLETED') {
     return (label: '已完成', tone: ShanganTagTone.success);
   }
@@ -529,7 +567,20 @@ double battleOrderProgress(List<PlanItemData> items) {
 String battleOrderItemSubtitle(PlanItemData item) {
   switch (item.itemType) {
     case 'DEBT_REPAYMENT':
-      return '剩余 ${shanganClock(item.plannedSeconds - item.completedSeconds)}';
+      final remaining = (item.plannedSeconds - item.completedSeconds).clamp(
+        0,
+        item.plannedSeconds,
+      );
+      if (item.sourceDebtType == 'QUIZ') {
+        return '课后题 · 剩余 ${shanganDuration(remaining)}';
+      }
+      if (item.sourceDebtType == 'FOCUS') {
+        return '专注 · 剩余 ${shanganDuration(remaining)}';
+      }
+      final percent = item.plannedSeconds <= 0
+          ? 0
+          : (item.completedSeconds * 100 ~/ item.plannedSeconds).clamp(0, 100);
+      return '视频 ${shanganDuration(item.plannedSeconds)} · 已观看 $percent% · 剩余 ${shanganDuration(remaining)}';
     case 'MOCK_EXAM':
       return '模拟考试 ${shanganDuration(item.plannedSeconds)}';
     case 'REVIEW_SHORTCUT':
@@ -549,6 +600,32 @@ PlanItemData? firstInProgressItem(List<PlanItemData> items) {
   return _firstWhere(_isInProgressWork, items);
 }
 
+/// 首页接续按钮对准展示列表第一项可播课时，欠债视频不会被跳过。
+PlanItemData? firstResumableItem(List<PlanItemData> items) {
+  for (final item in homeResumeItems(items)) {
+    if (battleOrderItemPlayable(item)) return item;
+  }
+  return null;
+}
+
+/// 首页接续队列：未完成欠债排在今日任务前面，按钮和列表第一项保持一致。
+List<PlanItemData> homeResumeItems(List<PlanItemData> items) {
+  final unfinished = items.where(_isUnfinishedWork).toList();
+  unfinished.sort((left, right) {
+    final leftDebt = _isDebtItem(left);
+    final rightDebt = _isDebtItem(right);
+    if (leftDebt != rightDebt) return leftDebt ? -1 : 1;
+    final leftProgress = _isInProgressWork(left);
+    final rightProgress = _isInProgressWork(right);
+    if (leftProgress != rightProgress) return leftProgress ? -1 : 1;
+    if (leftProgress && rightProgress) {
+      return right.completedSeconds.compareTo(left.completedSeconds);
+    }
+    return left.sortOrder.compareTo(right.sortOrder);
+  });
+  return unfinished;
+}
+
 PlanItemData? _firstWhere(
   bool Function(PlanItemData) match,
   List<PlanItemData> items,
@@ -561,39 +638,40 @@ PlanItemData? _firstWhere(
 
 /// 把未入单的开放欠债插到今日任务前面，首页和学习页共用同一张表。
 DailyPlanData mergeOpenDebts(DailyPlanData plan, List<LearningDebtData> debts) {
+  final debtById = {for (final debt in debts) debt.id: debt};
   final claimed = {
     for (final item in plan.items)
       if (item.debtId != null) item.debtId!,
+  };
+  final studyMediaIds = {
+    for (final item in plan.items)
+      if (item.mediaItemId != null &&
+          (item.itemType == 'VIDEO' || item.itemType == 'DEBT_REPAYMENT'))
+        item.mediaItemId!,
   };
   final extras = <PlanItemData>[];
   var order = -debts.length;
   for (final debt in debts) {
     if (debt.status == 'PAID' || debt.status == 'WAIVED') continue;
     if (claimed.contains(debt.id)) continue;
-    extras.add(
-      PlanItemData(
-        id: 'debt:${debt.id}',
-        itemType: 'DEBT_REPAYMENT',
-        title: debt.title,
-        mediaItemId: debt.mediaItemId,
-        mockExamPresetId: null,
-        mockExamName: null,
-        plannedSeconds: debt.remainingSeconds,
-        completedSeconds: 0,
-        status: 'PENDING',
-        sortOrder: order++,
-        immutable: true,
-        debtId: debt.id,
-      ),
-    );
+    // 今日已有同一课时的学习/还债任务时，视频欠债不再单独占一行。复习入口不吞掉答题欠债。
+    if (debt.debtType == 'VIDEO_WATCH' &&
+        debt.mediaItemId != null &&
+        studyMediaIds.contains(debt.mediaItemId)) {
+      continue;
+    }
+    extras.add(_planItemFromOpenDebt(debt, order++));
   }
-  final rest = [...plan.items]
-    ..sort((left, right) {
-      final leftDebt = left.itemType == 'DEBT_REPAYMENT' ? 0 : 1;
-      final rightDebt = right.itemType == 'DEBT_REPAYMENT' ? 0 : 1;
-      if (leftDebt != rightDebt) return leftDebt.compareTo(rightDebt);
-      return left.sortOrder.compareTo(right.sortOrder);
-    });
+  final rest =
+      [
+        for (final item in plan.items)
+          _withDebtProgress(item, debtById[item.debtId]),
+      ]..sort((left, right) {
+        final leftDebt = left.itemType == 'DEBT_REPAYMENT' ? 0 : 1;
+        final rightDebt = right.itemType == 'DEBT_REPAYMENT' ? 0 : 1;
+        if (leftDebt != rightDebt) return leftDebt.compareTo(rightDebt);
+        return left.sortOrder.compareTo(right.sortOrder);
+      });
   return DailyPlanData(
     id: plan.id,
     date: plan.date,
@@ -603,26 +681,104 @@ DailyPlanData mergeOpenDebts(DailyPlanData plan, List<LearningDebtData> debts) {
   );
 }
 
-void openBattleOrderItem(BuildContext context, PlanItemData item) {
-  // 尚未加入今日作战单的欠债只展示，避免拿合成 ID 去开播放会话。
-  if (item.id.startsWith('debt:')) return;
+/// 欠债账本里 original 是开债时剩余量，必须加上 baseline 才是整集已学进度。
+({int planned, int completed}) debtDisplayProgress(LearningDebtData debt) {
+  final remaining = math.max(0, debt.remainingSeconds);
+  final originalRemaining = debt.originalSeconds > 0
+      ? debt.originalSeconds
+      : remaining;
+  final baseline = math.max(0, debt.baselineCompletedSeconds);
+  final repaid = (originalRemaining - remaining).clamp(0, originalRemaining);
+  return (planned: baseline + originalRemaining, completed: baseline + repaid);
+}
+
+/// 未入单欠债用课时可信进度续播；合成 ID 不能当作 planItemId 提交。
+PlanItemData _planItemFromOpenDebt(LearningDebtData debt, int sortOrder) {
+  final progress = debtDisplayProgress(debt);
+  return PlanItemData(
+    id: 'debt:${debt.id}',
+    itemType: 'DEBT_REPAYMENT',
+    title: debt.title,
+    mediaItemId: debt.mediaItemId,
+    mockExamPresetId: null,
+    mockExamName: null,
+    plannedSeconds: progress.planned,
+    completedSeconds: progress.completed,
+    status: 'PENDING',
+    sortOrder: sortOrder,
+    immutable: true,
+    debtId: debt.id,
+    sourceDebtType: debt.debtType,
+  );
+}
+
+/// 已入单的还债任务也用欠债账本回显整集进度，避免只看到当天增量。
+PlanItemData _withDebtProgress(PlanItemData item, LearningDebtData? debt) {
+  if (item.itemType != 'DEBT_REPAYMENT' || debt == null) return item;
+  final progress = debtDisplayProgress(debt);
+  return PlanItemData(
+    id: item.id,
+    itemType: item.itemType,
+    title: item.title,
+    mediaItemId: item.mediaItemId ?? debt.mediaItemId,
+    mockExamPresetId: item.mockExamPresetId,
+    mockExamName: item.mockExamName,
+    plannedSeconds: progress.planned,
+    completedSeconds: progress.completed,
+    status: item.status,
+    sortOrder: item.sortOrder,
+    immutable: item.immutable,
+    courseId: item.courseId,
+    courseName: item.courseName,
+    quizRequired: item.quizRequired,
+    debtId: item.debtId,
+    sourceDebtType: debt.debtType,
+    mockExamSessionStatus: item.mockExamSessionStatus,
+  );
+}
+
+bool _showsWatchProgress(PlanItemData item) {
+  if (item.itemType == 'VIDEO') return true;
+  return item.itemType == 'DEBT_REPAYMENT' &&
+      item.sourceDebtType != 'QUIZ' &&
+      item.sourceDebtType != 'FOCUS';
+}
+
+/// 视频欠债、今日课时和模拟考试都可以从首页直接打开。
+bool battleOrderItemPlayable(PlanItemData item) {
+  if (item.itemType == 'MOCK_EXAM') return true;
+  if (item.sourceDebtType == 'FOCUS') return false;
+  return item.mediaItemId != null && item.mediaItemId!.isNotEmpty;
+}
+
+/// 合成欠债 ID 不能传给观看会话；直接按课时续播，服务端会按同一视频对账还债。
+Uri? battleOrderPlaybackUri(PlanItemData item) {
+  if (!battleOrderItemPlayable(item)) return null;
   if (item.itemType == 'MOCK_EXAM') {
-    context.push(
-      Uri(
-        path: '/mock-exam',
-        queryParameters: {'planItemId': item.id, 'title': item.title},
-      ).toString(),
+    return Uri(
+      path: '/mock-exam',
+      queryParameters: {'planItemId': item.id, 'title': item.title},
     );
-    return;
   }
   final mediaItemId = item.mediaItemId;
-  if (mediaItemId == null) return;
-  context.push(
-    Uri(
-      path: '/player/$mediaItemId',
-      queryParameters: {'planItemId': item.id, 'title': item.title},
-    ).toString(),
+  if (mediaItemId == null) return null;
+  if (item.sourceDebtType == 'QUIZ') {
+    return Uri(path: '/quiz/$mediaItemId');
+  }
+  final planItemId = item.id.startsWith('debt:') ? null : item.id;
+  return Uri(
+    path: '/player/$mediaItemId',
+    queryParameters: {
+      'title': item.title,
+      if (planItemId != null && planItemId.isNotEmpty) 'planItemId': planItemId,
+    },
   );
+}
+
+void openBattleOrderItem(BuildContext context, PlanItemData item) {
+  final uri = battleOrderPlaybackUri(item);
+  if (uri == null) return;
+  context.push(uri.toString());
 }
 
 bool battleOrderEditable(String status) =>
@@ -655,7 +811,7 @@ bool _isInProgressWork(PlanItemData item) =>
 
 /// 作战单卡片内固定露出的课时条数，超出后在卡片内滚动。
 const battleOrderVisibleItemCount = 3;
-const _battleOrderItemExtent = 80.0;
+const _battleOrderItemExtent = 100.0;
 const _battleOrderGroupHeaderExtent = 64.0;
 
 /// 课程名用高饱和色区分分组；课时标题保持原色。
@@ -667,8 +823,8 @@ Color _statusTextColor(ShanganTagTone tone) => switch (tone) {
   ShanganTagTone.neutral => ShanganColors.mutedInk,
 };
 
-Color _courseTitleColor(String kindLabel, int _) {
-  if (kindLabel == '欠债') return ShanganColors.red;
+Color _courseTitleColor({required String kindLabel, required bool debtAccent}) {
+  if (debtAccent || kindLabel == '欠债') return ShanganColors.red;
   return ShanganColors.course;
 }
 

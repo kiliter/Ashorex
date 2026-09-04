@@ -83,6 +83,11 @@ final class _MockExamRepository implements MockExamRepository {
   }
 
   @override
+  Future<MockExamSessionData> retake(String sessionId) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<MockExamPresetData> updatePreset(
     MockExamPresetData preset,
     String name,

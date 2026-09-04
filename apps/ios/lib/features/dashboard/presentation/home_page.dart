@@ -4,8 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/dashboard/data/dashboard_repository.dart';
+import 'package:shangan_ios/features/focus/presentation/focus_duration_sheet.dart';
 import 'package:shangan_ios/features/planning/data/plan_repository.dart';
 import 'package:shangan_ios/features/planning/presentation/battle_order_widgets.dart';
+
+/// 切回首页或 App 回到前台时递增，驱动重新读取今日作战单。
+final homeRefreshListenable = ValueNotifier<int>(0);
+
+void bumpHomeRefresh() => homeRefreshListenable.value++;
 
 /// 首页展示学习压力，并通过右滑或显式按钮打开独立小工具菜单。
 final class HomePage extends ConsumerStatefulWidget {
@@ -25,6 +31,20 @@ final class _HomePageState extends ConsumerState<HomePage> {
     super.initState();
     // 考试 Tab 切换只改本地下标，不重新拉取首页快照。
     _home = _load();
+    homeRefreshListenable.addListener(_reloadToday);
+  }
+
+  void _reloadToday() {
+    if (!mounted) return;
+    setState(() {
+      _home = _load();
+    });
+  }
+
+  @override
+  void dispose() {
+    homeRefreshListenable.removeListener(_reloadToday);
+    super.dispose();
   }
 
   @override
@@ -43,7 +63,7 @@ final class _HomePageState extends ConsumerState<HomePage> {
           const SizedBox(width: 8),
         ],
       ),
-      endDrawer: const _HomeWidgetsDrawer(),
+      endDrawer: _HomeWidgetsDrawer(onStartFocus: _startFocus),
       body: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onHorizontalDragEnd: (details) {
@@ -253,6 +273,19 @@ final class _HomePageState extends ConsumerState<HomePage> {
   }
 
   void _openWidgets() => _scaffoldKey.currentState?.openEndDrawer();
+
+  /// 先弹出时长预设，选定后再进入专注页开始服务端倒计时。
+  Future<void> _startFocus() async {
+    final seconds = await showFocusDurationSheet(context);
+    if (seconds == null || !mounted) return;
+    _scaffoldKey.currentState?.closeEndDrawer();
+    context.push(
+      Uri(
+        path: '/focus',
+        queryParameters: {'title': '专注计时', 'plannedSeconds': '$seconds'},
+      ).toString(),
+    );
+  }
 }
 
 typedef _HomeSnapshot = ({
@@ -339,7 +372,7 @@ final class _ExamTabChip extends StatelessWidget {
   }
 }
 
-/// 首页作战单展示当天任务列表；编辑入口仍进入编排区。
+/// 首页作战单是接续入口：未完成欠债排在今日任务之前，继续按钮播列表第一项。
 final class _BattleOrderHomeCard extends StatelessWidget {
   const _BattleOrderHomeCard({required this.plan});
 
@@ -347,13 +380,13 @@ final class _BattleOrderHomeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resume = firstInProgressItem(plan.items);
+    final resume = firstResumableItem(plan.items);
     return BattleOrderDayPanel(
       plan: plan,
-      grouped: true,
+      grouped: false,
       readOnly: false,
       showDebtMarks: false,
-      inProgressOnly: true,
+      resumeQueue: true,
       eyebrow: '今日作战单',
       continueLabel: resume == null ? null : '继续${resume.title}',
       onEdit: () => context.push('/plan'),
@@ -363,7 +396,9 @@ final class _BattleOrderHomeCard extends StatelessWidget {
 
 /// 首页小工具独立于作战单，专注计时不会参与每日任务编排。
 final class _HomeWidgetsDrawer extends StatelessWidget {
-  const _HomeWidgetsDrawer();
+  const _HomeWidgetsDrawer({required this.onStartFocus});
+
+  final VoidCallback onStartFocus;
 
   @override
   Widget build(BuildContext context) => Drawer(
@@ -401,19 +436,8 @@ final class _HomeWidgetsDrawer extends StatelessWidget {
                 const SizedBox(height: 16),
                 FilledButton(
                   key: const Key('startFocusWidget'),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    context.push(
-                      Uri(
-                        path: '/focus',
-                        queryParameters: const {
-                          'title': '专注计时',
-                          'plannedSeconds': '1500',
-                        },
-                      ).toString(),
-                    );
-                  },
-                  child: const Text('开始 25 分钟专注'),
+                  onPressed: onStartFocus,
+                  child: const Text('开始专注'),
                 ),
               ],
             ),

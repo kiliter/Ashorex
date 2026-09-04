@@ -54,7 +54,8 @@ public interface BattleOrderRepository {
       String courseId,
       String courseName,
       boolean quizRequired,
-      String debtId) {}
+      String debtId,
+      String mockExamSessionStatus) {}
 
   record ItemDraft(
       String id,

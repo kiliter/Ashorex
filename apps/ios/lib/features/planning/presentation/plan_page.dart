@@ -23,6 +23,7 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
   DailyPlanData? _plan;
   List<BattleOrderDraft> _drafts = const [];
   Map<String, PlanItemData> _savedItems = const {};
+  List<LearningDebtData> _openDebts = const [];
   Object? _loadError;
   bool _loading = true;
   bool _saving = false;
@@ -62,11 +63,13 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
       final plan = widget.date == null
           ? await repository.loadToday()
           : await repository.load(widget.date!);
+      final debts = await repository.loadDebts();
       if (!mounted) return;
       setState(() {
         _plan = plan;
         _drafts = plan.items.map(BattleOrderDraft.fromSaved).toList();
         _savedItems = {for (final item in plan.items) item.id: item};
+        _openDebts = debts;
         _dirty = false;
         _loading = false;
       });
@@ -221,6 +224,7 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
         groups.last.indexes.add(entry.$1);
       }
     }
+    var courseNo = 0;
     return [
       for (final entry in groups.indexed)
         Padding(
@@ -228,12 +232,9 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
           child: BattleOrderCourseGroup(
             key: Key('draft-group-${entry.$2.key}'),
             title: entry.$2.title,
-            accentIndex: entry.$1,
-            kindLabel: entry.$2.key == 'debt'
-                ? '欠债'
-                : entry.$2.key == 'mock-exam'
+            kindLabel: entry.$2.key == 'mock-exam'
                 ? '模拟考试'
-                : '课程 ${entry.$1 + 1}',
+                : '课程 ${++courseNo}',
             itemCount: entry.$2.indexes.length,
             children: [
               for (final index in entry.$2.indexes)
@@ -363,6 +364,14 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
         .map((item) => item.mockExamPresetId)
         .whereType<String>()
         .toSet();
+    final historicalDebtMediaIds = {
+      for (final debt in _openDebts)
+        if (debt.mediaItemId != null &&
+            debt.status != 'PAID' &&
+            debt.status != 'WAIVED' &&
+            !mediaIds.contains(debt.mediaItemId))
+          debt.mediaItemId!,
+    };
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -374,29 +383,14 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
         selectedPresetIds: presetIds,
         immutableMediaIds: immutableMediaIds,
         immutablePresetIds: immutablePresetIds,
+        historicalDebtMediaIds: historicalDebtMediaIds,
         onOpenExamSettings: () {
           Navigator.pop(sheetContext);
           if (mounted) context.push('/mock-exam-presets');
         },
         onToggle: (draft, selected) {
           setState(() {
-            final next = [..._drafts];
-            if (selected) {
-              next.add(draft);
-            } else if (draft.mediaItemId != null) {
-              next.removeWhere(
-                (item) =>
-                    !item.immutable && item.mediaItemId == draft.mediaItemId,
-              );
-            } else {
-              next.removeWhere(
-                (item) =>
-                    !item.immutable &&
-                    item.mockExamPresetId == draft.mockExamPresetId,
-              );
-            }
-            next.sort(_compareDrafts);
-            _drafts = next;
+            _drafts = toggleBattleOrderDraft(_drafts, draft, selected);
             _dirty = true;
           });
         },
@@ -489,6 +483,7 @@ final class _BattleOrderPickerSheet extends StatefulWidget {
     required this.selectedPresetIds,
     required this.immutableMediaIds,
     required this.immutablePresetIds,
+    required this.historicalDebtMediaIds,
     required this.onOpenExamSettings,
     required this.onToggle,
   });
@@ -499,6 +494,7 @@ final class _BattleOrderPickerSheet extends StatefulWidget {
   final Set<String> selectedPresetIds;
   final Set<String> immutableMediaIds;
   final Set<String> immutablePresetIds;
+  final Set<String> historicalDebtMediaIds;
   final VoidCallback onOpenExamSettings;
   final void Function(BattleOrderDraft draft, bool selected) onToggle;
 
@@ -514,6 +510,14 @@ final class _BattleOrderPickerSheetState
       .listPresets();
   late final Set<String> _selectedMediaIds = {...widget.selectedMediaIds};
   late final Set<String> _selectedPresetIds = {...widget.selectedPresetIds};
+  late final Set<String> _lockedMediaIds = {
+    ...widget.selectedMediaIds,
+    ...widget.immutableMediaIds,
+  };
+  late final Set<String> _lockedPresetIds = {
+    ...widget.selectedPresetIds,
+    ...widget.immutablePresetIds,
+  };
   late final Map<String, int> _lessonOrders = <String, int>{};
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
@@ -660,8 +664,14 @@ final class _BattleOrderPickerSheetState
                     // 默认保持课程折叠；只有用户主动搜索时展开命中的课程。
                     initiallyExpanded: query.isNotEmpty,
                     selectedMediaIds: _selectedMediaIds,
+                    lockedMediaIds: _lockedMediaIds,
                     immutableMediaIds: widget.immutableMediaIds,
+                    historicalDebtMediaIds: widget.historicalDebtMediaIds,
                     onToggle: (lesson, selected) {
+                      if (_lockedMediaIds.contains(lesson.id)) return;
+                      if (selected && _selectedMediaIds.contains(lesson.id)) {
+                        return;
+                      }
                       setState(() {
                         if (selected) {
                           _selectedMediaIds.add(lesson.id);
@@ -762,14 +772,22 @@ final class _BattleOrderPickerSheetState
                     subtitle: Text(shanganDuration(preset.durationSeconds)),
                     trailing: selected
                         ? ShanganStatusTag(
-                            immutable ? '已开始' : '已加入',
+                            immutable
+                                ? '已开始'
+                                : _lockedPresetIds.contains(preset.id)
+                                ? '已加入'
+                                : '已选',
                             tone: ShanganTagTone.success,
                           )
                         : const Icon(Icons.add_circle_outline),
-                    onTap: immutable
+                    onTap: _lockedPresetIds.contains(preset.id)
                         ? null
                         : () {
                             final nextSelected = !selected;
+                            if (nextSelected &&
+                                _selectedPresetIds.contains(preset.id)) {
+                              return;
+                            }
                             setState(() {
                               if (nextSelected) {
                                 _selectedPresetIds.add(preset.id);
@@ -802,14 +820,16 @@ final class _BattleOrderPickerSheetState
   }
 }
 
-/// 课程默认折叠；展开后以统一进度组件明确区分未观看、已观看和已看完课时。
-final class _CourseLessonsTile extends StatelessWidget {
+/// 课程是可折叠分组，课时是组内条目，避免和课程行长得一样。
+final class _CourseLessonsTile extends StatefulWidget {
   const _CourseLessonsTile({
     required this.course,
     required this.lessons,
     required this.initiallyExpanded,
     required this.selectedMediaIds,
+    required this.lockedMediaIds,
     required this.immutableMediaIds,
+    required this.historicalDebtMediaIds,
     required this.onToggle,
     super.key,
   });
@@ -818,59 +838,275 @@ final class _CourseLessonsTile extends StatelessWidget {
   final List<LessonSummary> lessons;
   final bool initiallyExpanded;
   final Set<String> selectedMediaIds;
+  final Set<String> lockedMediaIds;
   final Set<String> immutableMediaIds;
+  final Set<String> historicalDebtMediaIds;
   final void Function(LessonSummary lesson, bool selected) onToggle;
 
   @override
+  State<_CourseLessonsTile> createState() => _CourseLessonsTileState();
+}
+
+final class _CourseLessonsTileState extends State<_CourseLessonsTile> {
+  late bool _expanded = widget.initiallyExpanded;
+
+  @override
   Widget build(BuildContext context) {
-    final watchedCount = lessons
+    final watchedCount = widget.lessons
         .where(
           (lesson) =>
               lesson.learningStatus != 'NOT_STARTED' ||
               lesson.progressPercent > 0,
         )
         .length;
-    return ExpansionTile(
-      initiallyExpanded: initiallyExpanded,
-      title: Text(course.name),
-      subtitle: Text('${lessons.length} 个课时 · 已观看 $watchedCount 个'),
-      children: lessons.map((lesson) {
-        final selected = selectedMediaIds.contains(lesson.id);
-        final immutable = immutableMediaIds.contains(lesson.id);
-        return ListTile(
-          contentPadding: const EdgeInsets.only(left: 24, right: 8),
-          title: Text(lesson.title),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: 5),
-            child: Column(
+    final selectedCount = widget.lessons
+        .where((lesson) => widget.selectedMediaIds.contains(lesson.id))
+        .length;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: ShanganColors.surface,
+          border: Border.all(color: ShanganColors.rule, width: 1.5),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Material(
+              color: ShanganColors.blueSoft,
+              borderRadius: _expanded
+                  ? const BorderRadius.vertical(top: Radius.circular(12.5))
+                  : BorderRadius.circular(12.5),
+              child: InkWell(
+                key: Key('battleOrderCourse-${widget.course.id}'),
+                onTap: () => setState(() => _expanded = !_expanded),
+                borderRadius: _expanded
+                    ? const BorderRadius.vertical(top: Radius.circular(12.5))
+                    : BorderRadius.circular(12.5),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 56),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: ShanganColors.course,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ShanganEyebrow(
+                                selectedCount > 0
+                                    ? '课程 · 已选 $selectedCount 个课时'
+                                    : '课程',
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                widget.course.name,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      color: ShanganColors.course,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${widget.lessons.length} 个课时 · 已观看 $watchedCount 个',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          _expanded ? Icons.expand_less : Icons.expand_more,
+                          color: ShanganColors.mutedInk,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (_expanded)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                child: Column(
+                  children: [
+                    for (final entry in widget.lessons.indexed)
+                      _PickerLessonRow(
+                        index: entry.$1,
+                        lesson: entry.$2,
+                        selected: widget.selectedMediaIds.contains(entry.$2.id),
+                        locked: widget.lockedMediaIds.contains(entry.$2.id),
+                        immutable: widget.immutableMediaIds.contains(
+                          entry.$2.id,
+                        ),
+                        historicallyPlanned: widget.historicalDebtMediaIds
+                            .contains(entry.$2.id),
+                        onToggle: widget.onToggle,
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 课时行缩进、编号并带进度，和上方课程头明显分层。
+final class _PickerLessonRow extends StatelessWidget {
+  const _PickerLessonRow({
+    required this.index,
+    required this.lesson,
+    required this.selected,
+    required this.locked,
+    required this.immutable,
+    required this.historicallyPlanned,
+    required this.onToggle,
+  });
+
+  final int index;
+  final LessonSummary lesson;
+  final bool selected;
+  final bool locked;
+  final bool immutable;
+  final bool historicallyPlanned;
+  final void Function(LessonSummary lesson, bool selected) onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Material(
+        color: selected ? ShanganColors.greenSoft : ShanganColors.inkSoft,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          key: Key('battleOrderLesson-${lesson.id}'),
+          onTap:
+              _pickerLessonLocked(
+                locked: locked,
+                historicallyPlanned: historicallyPlanned,
+                lesson: lesson,
+              )
+              ? null
+              : () => onToggle(lesson, !selected),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 6, 10),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ShanganWatchProgress(
-                  progressPercent: lesson.progressPercent,
-                  completed: lesson.learningStatus == 'COMPLETED',
-                  durationSeconds: (lesson.durationMs / 1000).ceil(),
-                ),
-                if (lesson.learningStatus == 'COMPLETED') ...[
-                  const SizedBox(height: 5),
-                  Text(
-                    '加入后作为复习快捷入口',
-                    style: Theme.of(context).textTheme.bodySmall,
+                SizedBox(
+                  width: 28,
+                  child: Text(
+                    '${index + 1}'.padLeft(2, '0'),
+                    style: shanganNumberStyle(
+                      context,
+                      fontSize: 12,
+                    ).copyWith(color: ShanganColors.mutedInk),
                   ),
-                ],
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '课时',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: ShanganColors.mutedInk,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        lesson.title,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      ShanganWatchProgress(
+                        progressPercent: lesson.progressPercent,
+                        completed: lesson.learningStatus == 'COMPLETED',
+                        durationSeconds: (lesson.durationMs / 1000).ceil(),
+                      ),
+                      if (lesson.learningStatus == 'COMPLETED') ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '加入后作为复习快捷入口',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                _pickerLessonTrailing(
+                  selected: selected,
+                  locked: locked,
+                  immutable: immutable,
+                  historicallyPlanned: historicallyPlanned,
+                  lesson: lesson,
+                ),
               ],
             ),
           ),
-          trailing: selected
-              ? Icon(
-                  immutable ? Icons.lock_outline : Icons.check,
-                  color: ShanganColors.green,
-                )
-              : const Icon(Icons.add_circle_outline),
-          onTap: immutable ? null : () => onToggle(lesson, !selected),
-        );
-      }).toList(),
+        ),
+      ),
     );
   }
+}
+
+/// 打开选择器时已在今日单中的课不能再点；本次新选的课可再点取消。
+bool _pickerLessonLocked({
+  required bool locked,
+  required bool historicallyPlanned,
+  required LessonSummary lesson,
+}) {
+  if (locked) return true;
+  if (historicallyPlanned && lesson.learningStatus != 'COMPLETED') return true;
+  return false;
+}
+
+Widget _pickerLessonTrailing({
+  required bool selected,
+  required bool locked,
+  required bool immutable,
+  required bool historicallyPlanned,
+  required LessonSummary lesson,
+}) {
+  if (selected) {
+    return ShanganStatusTag(
+      immutable
+          ? '已开始'
+          : locked
+          ? '已加入'
+          : '已选',
+      tone: ShanganTagTone.success,
+    );
+  }
+  if (historicallyPlanned && lesson.learningStatus != 'COMPLETED') {
+    return const ShanganStatusTag('历史欠债', tone: ShanganTagTone.risk);
+  }
+  if (lesson.learningStatus == 'COMPLETED') {
+    return const Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ShanganStatusTag('已学完', tone: ShanganTagTone.success),
+        Icon(Icons.add_circle_outline, color: ShanganColors.blue),
+      ],
+    );
+  }
+  return const Icon(Icons.add_circle_outline, color: ShanganColors.blue);
 }
 
 /// 作战单的观看完成判断复用服务端阈值，避免 98% 已完成却仍显示“学习中”。
@@ -883,6 +1119,37 @@ bool _planWatchCompleted(PlanItemData item) {
 /// 忽略大小写和空白做本地模糊匹配，中文、英文和编号课时都可直接搜索。
 String _normalizeSearch(String value) =>
     value.toLowerCase().replaceAll(RegExp(r'\s+'), '');
+
+/// 同一课时或同一考试预置只能加入一次；已在今日作战单中的项目不再从选择器取消。
+List<BattleOrderDraft> toggleBattleOrderDraft(
+  List<BattleOrderDraft> drafts,
+  BattleOrderDraft draft,
+  bool selected,
+) {
+  final next = [...drafts];
+  if (selected) {
+    if (draft.mediaItemId != null &&
+        next.any((item) => item.mediaItemId == draft.mediaItemId)) {
+      return drafts;
+    }
+    if (draft.mockExamPresetId != null &&
+        next.any((item) => item.mockExamPresetId == draft.mockExamPresetId)) {
+      return drafts;
+    }
+    next.add(draft);
+  } else if (draft.mediaItemId != null) {
+    next.removeWhere(
+      (item) => !item.immutable && item.mediaItemId == draft.mediaItemId,
+    );
+  } else {
+    next.removeWhere(
+      (item) =>
+          !item.immutable && item.mockExamPresetId == draft.mockExamPresetId,
+    );
+  }
+  next.sort(_compareDrafts);
+  return next;
+}
 
 /// 客户端即时展示也遵循目录固有顺序；服务端保存时会再次权威排序。
 int _compareDrafts(BattleOrderDraft left, BattleOrderDraft right) {

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shangan_ios/core/api/api_client.dart';
+import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 
 /// 服务端返回的作战单项目；不可修改标志是服务端状态机的直接投影。
 final class PlanItemData {
@@ -19,6 +20,8 @@ final class PlanItemData {
     this.courseName,
     this.quizRequired = false,
     this.debtId,
+    this.sourceDebtType,
+    this.mockExamSessionStatus,
   });
 
   final String id;
@@ -37,6 +40,12 @@ final class PlanItemData {
   final bool quizRequired;
   final String? debtId;
 
+  /// 开放欠债的原始类型，仅合并进作战单展示时使用，不参与保存快照。
+  final String? sourceDebtType;
+
+  /// 模拟考试会话状态；未开考时为空。
+  final String? mockExamSessionStatus;
+
   factory PlanItemData.fromJson(Map<String, dynamic> json) => PlanItemData(
     id: json['id'] as String,
     itemType: json['itemType'] as String,
@@ -53,6 +62,8 @@ final class PlanItemData {
     courseName: json['courseName'] as String?,
     quizRequired: json['quizRequired'] as bool? ?? false,
     debtId: json['debtId'] as String?,
+    sourceDebtType: json['sourceDebtType'] as String?,
+    mockExamSessionStatus: json['mockExamSessionStatus'] as String?,
   );
 }
 
@@ -74,7 +85,7 @@ final class DailyPlanData {
 
   factory DailyPlanData.fromJson(Map<String, dynamic> json) => DailyPlanData(
     id: json['id'] as String?,
-    date: DateTime.parse(json['date'] as String),
+    date: shanganParseDate(json['date'] as String),
     status: json['status'] as String,
     version: (json['version'] as num?)?.toInt() ?? 0,
     items: (json['items'] as List<dynamic>? ?? const [])
@@ -146,6 +157,8 @@ final class LearningDebtData {
     required this.status,
     this.mediaItemId,
     this.openedOn,
+    this.originalSeconds = 0,
+    this.baselineCompletedSeconds = 0,
   });
 
   final String id;
@@ -155,6 +168,8 @@ final class LearningDebtData {
   final String status;
   final String? mediaItemId;
   final DateTime? openedOn;
+  final int originalSeconds;
+  final int baselineCompletedSeconds;
 
   factory LearningDebtData.fromJson(Map<String, dynamic> json) {
     final opened = json['openedOn'] as String?;
@@ -165,7 +180,10 @@ final class LearningDebtData {
       remainingSeconds: (json['remainingSeconds'] as num).toInt(),
       status: json['status'] as String,
       mediaItemId: json['mediaItemId'] as String?,
-      openedOn: opened == null ? null : DateTime.tryParse(opened),
+      openedOn: opened == null ? null : shanganParseDate(opened),
+      originalSeconds: (json['originalSeconds'] as num?)?.toInt() ?? 0,
+      baselineCompletedSeconds:
+          (json['baselineCompletedSeconds'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -192,7 +210,7 @@ final class PlanCalendarDay {
 
   factory PlanCalendarDay.fromJson(Map<String, dynamic> json) =>
       PlanCalendarDay(
-        date: DateTime.parse(json['date'] as String),
+        date: shanganParseDate(json['date'] as String),
         status: json['status'] as String,
         completed: json['completed'] as bool? ?? false,
         hasDebt: json['hasDebt'] as bool? ?? false,

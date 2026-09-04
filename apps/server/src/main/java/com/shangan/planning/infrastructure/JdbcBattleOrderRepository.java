@@ -71,13 +71,15 @@ public class JdbcBattleOrderRepository implements BattleOrderRepository {
             select i.*,
               m.course_id as course_id,
               c.name as course_name,
+              s.status as mock_exam_session_status,
               case when i.status <> 'PENDING' or i.completed_seconds > 0
                 or exists(select 1 from watch_sessions w where w.plan_item_id=i.id)
-                or exists(select 1 from mock_exam_sessions m where m.plan_item_id=i.id)
+                or exists(select 1 from mock_exam_sessions mx where mx.plan_item_id=i.id)
               then 1 else 0 end as immutable_item
             from daily_plan_items i
             left join media_items m on m.id=i.media_item_id
             left join courses c on c.id=m.course_id
+            left join mock_exam_sessions s on s.plan_item_id=i.id
             where i.plan_id=:planId
             order by i.sort_order,i.id
             """)
@@ -216,6 +218,7 @@ public class JdbcBattleOrderRepository implements BattleOrderRepository {
         rs.getString("course_id"),
         rs.getString("course_name"),
         rs.getInt("quiz_required") == 1,
-        rs.getString("debt_id"));
+        rs.getString("debt_id"),
+        rs.getString("mock_exam_session_status"));
   }
 }

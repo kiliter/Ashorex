@@ -2,12 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shangan_ios/core/device/screen_wake_lock.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_ui.dart';
+import 'package:shangan_ios/features/dashboard/presentation/home_page.dart';
 import 'package:shangan_ios/features/focus/data/exam_photo_picker.dart';
 import 'package:shangan_ios/features/focus/data/mock_exam_repository.dart';
+import 'package:shangan_ios/features/focus/presentation/time_up_alert.dart';
+import 'package:shangan_ios/features/planning/presentation/study_calendar_page.dart';
 
-/// 模拟考试页以服务端 deadlineAt 为唯一截止依据，后台停留不会暂停倒计时。
+/// 模拟考试页以服务端 deadlineAt 为唯一截止依据。
+///
+/// 进行中返回须二次确认，确认后立即停止倒计时并离开；保持屏幕常亮。
 final class MockExamPage extends ConsumerStatefulWidget {
   const MockExamPage({
     required this.planItemId,
@@ -26,16 +32,22 @@ final class _MockExamPageState extends ConsumerState<MockExamPage>
     with WidgetsBindingObserver {
   static const _photoPicker = ExamPhotoPicker();
 
+  late final ScreenWakeLock _wakeLock;
   MockExamSessionData? _session;
   Duration _serverOffset = Duration.zero;
   Timer? _ticker;
   Object? _error;
   bool _busy = false;
   bool _refreshingExpiry = false;
+  bool _leftForeground = false;
+  bool _showingResumeWarning = false;
+  bool _confirmingLeave = false;
+  bool _timeUpAlertShown = false;
 
   @override
   void initState() {
     super.initState();
+    _wakeLock = ref.read(screenWakeLockProvider);
     WidgetsBinding.instance.addObserver(this);
     _start();
   }
@@ -44,14 +56,32 @@ final class _MockExamPageState extends ConsumerState<MockExamPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();
+    unawaited(_wakeLock.disable());
+    bumpHomeRefresh();
+    bumpStudyCalendarRefresh();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      // 无法禁止系统 Home；仅记录离开，回到前台后再提醒留在考试页。
+      if (_session?.status == 'RUNNING') _leftForeground = true;
+      return;
+    }
     if (state == AppLifecycleState.resumed && _session != null) {
       _reloadSession();
+      _maybeWarnStayOnPage();
     }
+  }
+
+  /// 倒计时仍在跑时拦截返回，弹出确认；确认后停表再离开。
+  bool get _needsLeaveConfirm => _session?.status == 'RUNNING';
+
+  bool get _keepScreenOn {
+    final status = _session?.status;
+    return status == 'RUNNING' || status == 'AWAITING_UPLOAD';
   }
 
   Future<void> _start() async {
@@ -90,7 +120,17 @@ final class _MockExamPageState extends ConsumerState<MockExamPage>
     });
     _ticker?.cancel();
     if (session.status == 'RUNNING') {
+      if (_remaining(session) > Duration.zero) _timeUpAlertShown = false;
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+    }
+    _syncWakeLock();
+  }
+
+  void _syncWakeLock() {
+    if (_keepScreenOn) {
+      unawaited(_wakeLock.enable());
+    } else {
+      unawaited(_wakeLock.disable());
     }
   }
 
@@ -104,7 +144,18 @@ final class _MockExamPageState extends ConsumerState<MockExamPage>
         !_refreshingExpiry) {
       _refreshingExpiry = true;
       _reloadSession();
+      _showTimeUpIfNeeded();
     }
+  }
+
+  /// 自然到时只弹一次，重考后会清标志。
+  void _showTimeUpIfNeeded() {
+    if (_timeUpAlertShown || !mounted) return;
+    _timeUpAlertShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(showTimeUpAlert(context, message: '考试时间已到，请交卷并上传试卷照片。'));
+    });
   }
 
   Duration _remaining(MockExamSessionData session) {
@@ -113,36 +164,124 @@ final class _MockExamPageState extends ConsumerState<MockExamPage>
     return remaining.isNegative ? Duration.zero : remaining;
   }
 
+  /// 从后台回到考试页时提醒：计时未暂停，但离开会打断专注。
+  void _maybeWarnStayOnPage() {
+    if (!_leftForeground ||
+        _showingResumeWarning ||
+        _session?.status != 'RUNNING' ||
+        !mounted) {
+      return;
+    }
+    _leftForeground = false;
+    _showingResumeWarning = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          key: const Key('mockExamStayOnPageDialog'),
+          title: const Text('请留在考试页'),
+          content: const Text(
+            '切到其他 App 会打断考试专注，系统也可能回收进程。'
+            '倒计时以服务端截止时间为准，不会因为离开而暂停或作废，请立即回到本页继续作答。',
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('继续考试'),
+            ),
+          ],
+        ),
+      );
+      if (mounted) _showingResumeWarning = false;
+    });
+  }
+
+  /// 返回时二次确认：取消继续考试，确认则提前交卷停表并离开。
+  Future<void> _confirmStopAndLeave() async {
+    if (_confirmingLeave || !mounted) return;
+    _confirmingLeave = true;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        key: const Key('mockExamLeaveConfirmDialog'),
+        title: const Text('结束计时并返回？'),
+        content: const Text('确认后立即停止本次考试倒计时并离开此页。点错了请选继续考试。'),
+        actions: [
+          TextButton(
+            key: const Key('stayMockExam'),
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('继续考试'),
+          ),
+          FilledButton(
+            key: const Key('confirmLeaveMockExam'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('结束并返回'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      final session = _session;
+      if (session != null && session.status == 'RUNNING') {
+        setState(() => _busy = true);
+        try {
+          await ref.read(mockExamRepositoryProvider).submitEarly(session.id);
+        } catch (error) {
+          if (mounted) {
+            setState(() {
+              _busy = false;
+              _error = error;
+            });
+            _confirmingLeave = false;
+            return;
+          }
+        }
+      }
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+    if (mounted) _confirmingLeave = false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = _session;
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
-      body: _error != null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const ShanganNotice(
-                      title: '模拟考试同步失败',
-                      message: '倒计时和完成状态以服务端为准，请重新连接后继续。',
-                      tone: ShanganTagTone.warning,
-                    ),
-                    const SizedBox(height: 18),
-                    OutlinedButton.icon(
-                      onPressed: session == null ? _start : _reloadSession,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('重新连接'),
-                    ),
-                  ],
+    return PopScope(
+      key: const Key('mockExamPopScope'),
+      canPop: !_needsLeaveConfirm,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(_confirmStopAndLeave());
+      },
+      child: Scaffold(
+        appBar: AppBar(title: Text(widget.title)),
+        body: _error != null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const ShanganNotice(
+                        title: '模拟考试同步失败',
+                        message: '倒计时和完成状态以服务端为准，请重新连接后继续。',
+                        tone: ShanganTagTone.warning,
+                      ),
+                      const SizedBox(height: 18),
+                      OutlinedButton.icon(
+                        onPressed: session == null ? _start : _reloadSession,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('重新连接'),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            )
-          : session == null
-          ? const ShanganLoading('正在创建模拟考试会话')
-          : _buildSession(context, session),
+              )
+            : session == null
+            ? const ShanganLoading('正在创建模拟考试会话')
+            : _buildSession(context, session),
+      ),
     );
   }
 
@@ -206,8 +345,11 @@ final class _MockExamPageState extends ConsumerState<MockExamPage>
         const SizedBox(height: 20),
         if (session.status == 'RUNNING') ...[
           const ShanganNotice(
-            title: '计时不会因切到后台而暂停',
-            message: '完成答题后可以提前交卷；交卷后必须上传至少一张试卷照片。',
+            title: '请勿切换到后台',
+            message:
+                '请一直留在本页作答。离开会打断考试专注，系统也可能把 App 回收；'
+                '重新打开后倒计时仍按服务端截止时间继续，不会作废。完成答题后可以提前交卷。',
+            tone: ShanganTagTone.warning,
           ),
           const SizedBox(height: 18),
           OutlinedButton.icon(
@@ -235,6 +377,13 @@ final class _MockExamPageState extends ConsumerState<MockExamPage>
             label: Text(
               _busy ? '正在上传' : '上传试卷照片（${session.attachments.length}/9）',
             ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            key: const Key('retakeMockExam'),
+            onPressed: _busy ? null : _retake,
+            icon: const Icon(Icons.replay),
+            label: const Text('重考'),
           ),
         ],
         if (session.attachments.isNotEmpty) ...[
@@ -294,6 +443,41 @@ final class _MockExamPageState extends ConsumerState<MockExamPage>
       final next = await ref
           .read(mockExamRepositoryProvider)
           .submitEarly(session.id);
+      _accept(next);
+    } catch (error) {
+      if (mounted) setState(() => _error = error);
+    }
+  }
+
+  /// 重考前二次确认，确认后按快照时长重新开始服务端倒计时。
+  Future<void> _retake() async {
+    final session = _session;
+    if (session == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('确认重考？'),
+        content: const Text('将按原考试时长重新开始倒计时。已上传的试卷照片会保留。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            key: const Key('confirmRetakeMockExam'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('开始重考'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _busy = true);
+    try {
+      final next = await ref
+          .read(mockExamRepositoryProvider)
+          .retake(session.id);
+      _timeUpAlertShown = false;
       _accept(next);
     } catch (error) {
       if (mounted) setState(() => _error = error);

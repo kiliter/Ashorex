@@ -16,6 +16,9 @@ public interface MockExamRepository {
 
   void markAwaitingUpload(String userId, String sessionId, Instant submittedAt);
 
+  /** 在原会话上按快照时长重开倒计时，不删除已有试卷照片。 */
+  void retake(String userId, String sessionId, Instant startedAt, Instant deadlineAt);
+
   int countAttachments(String userId, String sessionId);
 
   void insertAttachment(AttachmentRow attachment);
