@@ -1,0 +1,52 @@
+# 上岸 V1 生产部署：直接使用 GitHub Container Registry 发布镜像。
+# 本文件不包含反向代理；服务监听宿主机所有网卡，由既有 HTTPS 反向代理转发。
+name: shangan
+
+services:
+  server:
+    image: ghcr.io/kiliter/ashorex-server:latest
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    environment:
+      SERVER_PORT: "18080"
+      DATA_DIR: /data
+      MOCK_EXAM_ATTACHMENTS_DIR: /data/mock-exams
+      SESSION_COOKIE_SECURE: "true"
+      JWT_SECRET: ${JWT_SECRET:?请配置至少 32 字节的 JWT_SECRET}
+      PLAYBACK_TICKET_SECRET: ${PLAYBACK_TICKET_SECRET:?请配置至少 32 字节的 PLAYBACK_TICKET_SECRET}
+      ADMIN_BOOTSTRAP_USERNAME: admin
+      ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:?请配置初始管理员密码}
+    volumes:
+      # Docker 本地卷位于宿主机本地磁盘，避免 SQLite 落到 NAS/NFS。
+      - study-data:/data
+      - study-backup:/backup
+    ports:
+      # 允许宿主机外部的反向代理访问；请通过防火墙或安全组限制公网直连。
+      - "0.0.0.0:18080:18080"
+    extra_hosts:
+      # Emby 运行在 Linux Docker 宿主机时，可使用 http://host.docker.internal:8096 访问。
+      - "host.docker.internal:host-gateway"
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - --fail
+        - --silent
+        - http://127.0.0.1:18080/actuator/health
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "5"
+
+volumes:
+  study-data:
+  study-backup:
