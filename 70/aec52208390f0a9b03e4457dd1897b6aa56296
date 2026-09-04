@@ -1,0 +1,20 @@
+apps/ios/lib/features/focus/presentation/focus_duration_sheet.dart
+  h_b1099757fa8f7e 16-25,44,75,92,96,98,118-123,133,136-138,140,142-145,149-178,180-181,183-206,212-214,219-237,241-291
+apps/ios/test/features/dashboard/home_page_test.dart
+  h_b1099757fa8f7e 4,99-201,286-309
+apps/ios/test/features/focus/focus_duration_sheet_test.dart
+  h_b1099757fa8f7e 1-167
+apps/ios/test/features/focus/focus_timer_page_test.dart
+  h_b1099757fa8f7e 72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "70aec52208390f0a9b03e4457dd1897b6aa56296",
+  "prompts": {},
+  "humans": {
+    "h_b1099757fa8f7e": {
+      "author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
