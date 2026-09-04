@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shangan_ios/core/api/api_exception.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/focus/data/mock_exam_repository.dart';
@@ -308,11 +309,11 @@ final class _MockExamPresetEditorSheetState
         );
       }
       if (mounted) Navigator.pop(context, true);
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _errorMessage = '保存失败，请检查服务连接后重试';
+        _errorMessage = shanganErrorMessage(error, '保存失败，请检查服务连接后重试');
       });
     }
   }

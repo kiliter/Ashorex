@@ -56,6 +56,9 @@ logging:
 app:
   # 模拟考试试卷与 SQLite 同处本地数据卷，并由备份脚本成套归档。
   mock-exam-attachments-dir: ${MOCK_EXAM_ATTACHMENTS_DIR:${DATA_DIR:./data}/mock-exams}
+  debt:
+    # QUIZ 欠债的计划压力估值；开摆预览与日终生成读取同一个值。
+    quiz-estimate-seconds: ${QUIZ_DEBT_ESTIMATE_SECONDS:600}
   emby:
     base-url: ${EMBY_BASE_URL:}
     api-key: ${EMBY_API_KEY:}

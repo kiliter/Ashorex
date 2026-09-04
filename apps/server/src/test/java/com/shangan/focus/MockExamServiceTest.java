@@ -25,7 +25,8 @@ class MockExamServiceTest {
   void retakeRestartsDeadlineFromSnapshotDuration() {
     FakeRepository exams = new FakeRepository();
     exams.put(
-        session("AWAITING_UPLOAD", NOW.minusSeconds(120), NOW.minusSeconds(60), NOW.minusSeconds(60)));
+        session(
+            "AWAITING_UPLOAD", NOW.minusSeconds(120), NOW.minusSeconds(60), NOW.minusSeconds(60)));
     MockExamService service = service(exams);
 
     MockExamService.SessionView view = service.retake("user-1", "exam-1");

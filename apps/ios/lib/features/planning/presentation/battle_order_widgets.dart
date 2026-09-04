@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shangan_ios/core/api/api_exception.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_markdown.dart';
 import 'package:shangan_ios/core/widgets/shangan_ui.dart';
@@ -480,11 +481,11 @@ Future<void> showBattleOrderSummary(
         ),
       ),
     );
-  } catch (_) {
+  } catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('该课时尚无学习内容')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(shanganErrorMessage(error, '摘要加载失败，请检查网络后重试'))),
+    );
   }
 }
 

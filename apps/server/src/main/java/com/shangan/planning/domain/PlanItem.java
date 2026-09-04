@@ -2,7 +2,7 @@ package com.shangan.planning.domain;
 
 import java.time.Instant;
 
-/** 每日计划任务快照，VIDEO 完成需要观看与必答题两个组成部分。 */
+/** 每日计划任务快照；任务完成判定由 PlanningRepository 的单一 SQL 规则负责。 */
 public record PlanItem(
     String id,
     String planId,
@@ -17,14 +17,4 @@ public record PlanItem(
     boolean quizCompleted,
     String status,
     int sortOrder,
-    Instant completedAt) {
-
-  public boolean complete() {
-    return switch (itemType) {
-      case "VIDEO" -> watchCompleted && (!quizRequired || quizCompleted);
-      case "FOCUS", "QUIZ", "MOCK_EXAM", "DEBT_REPAYMENT" -> completedSeconds >= plannedSeconds;
-      case "REVIEW_SHORTCUT" -> false;
-      default -> false;
-    };
-  }
-}
+    Instant completedAt) {}

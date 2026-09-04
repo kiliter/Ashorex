@@ -19,6 +19,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class LangChain4jContentLanguageModel implements ContentLanguageModel {
 
+  private static final org.slf4j.Logger log =
+      org.slf4j.LoggerFactory.getLogger(LangChain4jContentLanguageModel.class);
+
   /** 每次任务阶段从不可变配置快照创建模型，后台新配置不会改变正在执行的请求。 */
   @Override
   public GenerationResult generate(
@@ -70,6 +73,8 @@ public class LangChain4jContentLanguageModel implements ContentLanguageModel {
     } catch (BusinessException exception) {
       throw exception;
     } catch (Exception exception) {
+      // 错误消息只给管理员稳定文案，真实原因必须落到服务日志，否则任务失败无从排查。
+      log.warn("LLM 内容生成调用失败：model={}", configuration.model(), exception);
       throw failed();
     }
   }

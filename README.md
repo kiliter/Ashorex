@@ -16,7 +16,7 @@
 </div>
 
 > [!IMPORTANT]
-> 上岸当前处于 V1 开发与真机验收阶段，面向自托管和小规模使用场景。它不是在线教育平台，也不提供课程售卖、社交或 AI Chat。
+> 上岸当前处于 V1.x.x 开发与真机验收阶段，面向自托管和小规模使用场景。V1 不提供课程售卖、社交或学习端 AI Chat；V2/V3 方向已记录在路线图中，但尚不是实现任务。
 
 ## 产品预览
 
@@ -199,6 +199,8 @@ Ashorex/
 │   ├── specs/      # 冻结的产品与技术设计规范
 │   ├── plans/      # 实施计划
 │   ├── traceability/ # 需求—实现—验收追踪矩阵
+│   ├── roadmap/    # 未来版本方向与进入开发前的门禁，不是实施计划
+│   ├── prototypes/ # 仓库内产品原型快照，不依赖个人电脑绝对路径
 │   ├── adr/        # 架构决策记录
 │   ├── api/        # OpenAPI 合同
 │   └── runbooks/   # 备份恢复与真机验收手册
@@ -216,9 +218,20 @@ Ashorex/
 2. [V1 产品与技术设计规范](docs/specs/2026-08-27-shangan-v1-design.md)
 3. [V1 实施计划](docs/plans/2026-08-27-shangan-v1-implementation-plan.md)
 4. [需求—实现—验收追踪矩阵](docs/traceability/2026-08-27-shangan-v1-traceability.md)
-5. 与改动相关的 [ADR](docs/adr/)
+5. [版本路线图](docs/roadmap/2026-09-04-shangan-version-roadmap.md)
+6. 与改动相关的 [ADR](docs/adr/)
 
-API 变更必须同步更新 [OpenAPI 合同](docs/api/openapi.yaml)。从 Task 4 起，改动完成前必须通过窄范围测试与 `make verify`。
+版本路线图只用于理解 V2/V3 方向，不能代替冻结 Spec 或授权实现。API 变更必须同步更新 [OpenAPI 合同](docs/api/openapi.yaml)。本地只运行本次新增或修改对应的窄测试；全量 `make verify` 由 GitHub CI 执行。
+
+## 版本路线图
+
+| 版本线 | 方向 | 当前状态 |
+|---|---|---|
+| V1.x.x | 固定现有需求和主逻辑，只做已批准实现、Bug 修复与 UI 调整 | 当前活动开发线 |
+| V2.x.x | 面向学习者的 AI 助教、基于「毛线团团」的学习伙伴升级，以及 Server酱日报/周报投递 | 方向已确认，未形成实施授权 |
+| V3.x.x | 全 App 优化、多实例/多集群、外观个性化、课程仅音频播放、画中画，以及 PDF 资料阅读闭环 | 方向已确认，未形成实施授权 |
+
+进入 V2 或 V3 编码前，必须先完成并人工批准该版本的 Spec、ADR、Implementation Plan 和 Traceability。完整说明见[版本路线图](docs/roadmap/2026-09-04-shangan-version-roadmap.md)。
 
 ## V1 边界
 

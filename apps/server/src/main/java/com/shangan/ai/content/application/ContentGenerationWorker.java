@@ -123,8 +123,15 @@ public class ContentGenerationWorker {
         case GENERATE_QUIZ -> generateQuiz(job, runtime, executionStarted);
       }
     } catch (BusinessException exception) {
+      LOGGER.warn(
+          "内容任务失败：jobId={} jobType={} errorCode={}",
+          job.id(),
+          job.type(),
+          exception.errorCode(),
+          exception);
       fail(job, exception.errorCode(), exception.getMessage(), executionStarted);
     } catch (Exception exception) {
+      LOGGER.error("内容任务异常终止：jobId={} jobType={}", job.id(), job.type(), exception);
       fail(job, "CONTENT_JOB_FAILED", "任务执行失败，请查看服务日志", executionStarted);
     }
   }

@@ -19,6 +19,9 @@ import tools.jackson.databind.ObjectMapper;
 @Component
 public class EmbyAudioClient {
 
+  private static final org.slf4j.Logger log =
+      org.slf4j.LoggerFactory.getLogger(EmbyAudioClient.class);
+
   private final ObjectMapper json;
   private final Path tempDirectory;
 
@@ -89,6 +92,9 @@ public class EmbyAudioClient {
       throw exception;
     } catch (Exception exception) {
       deleteQuietly(target);
+      // 稳定错误码不携带原因；Emby 日志只保留异常类型，不输出主机、路径或完整异常内容。
+      log.warn(
+          "Emby 课时音频获取失败：embyItemId={} cause={}", embyItemId, exception.getClass().getSimpleName());
       throw unavailable();
     }
   }

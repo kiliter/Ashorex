@@ -9,7 +9,7 @@
 - 新增或修改的项目文档必须使用中文，专业术语、协议名、类名和 API 名称可以保留原语言。
 - 禁止使用多智能体、子代理或并行代理完成本项目任务。
 - 不得把聊天记录当作需求来源；聊天中的新要求必须先与冻结文档核对。
-- 不实现当前 Task 和 V1 文档之外的“顺手优化”、未来能力或宽泛脚手架。
+- 不实现当前活动版本 Task 和冻结文档之外的“顺手优化”、未来能力或宽泛脚手架；路线图不是实施授权。
 
 ## 项目目标
 
@@ -19,10 +19,9 @@ V1 目标不是建设在线教育平台，而是完成以下闭环：
 
 ```text
 考试目标
-→ 每日计划
-→ 锁定
-→ Emby 视频学习 / 答题 / 专注计时
-→ 开摆或日终
+→ 今日作战单
+→ Emby 视频学习 / 答题 / 模拟考试 / 专注计时
+→ 日终自动结算
 → 学习欠债
 → 日报、周报和晚间审判
 ```
@@ -36,9 +35,19 @@ V1 目标不是建设在线教育平台，而是完成以下闭环：
 1. `docs/specs/2026-08-27-shangan-v1-design.md`
 2. `docs/plans/2026-08-27-shangan-v1-implementation-plan.md`
 3. `docs/traceability/2026-08-27-shangan-v1-traceability.md`
-4. 与当前 Task 相关的 ADR。
+4. `docs/roadmap/2026-09-04-shangan-version-roadmap.md`
+5. 与当前 Task 相关的 ADR。
 
 聊天记录不是需求来源。文档未包含的功能不进入 V1。
+
+## 版本路线图与实施门禁
+
+- 当前活动开发线默认为 V1.x.x。V1.x.x 固定现有需求和核心业务逻辑，只允许完成已批准 Task、修复 Bug，以及不改变业务语义的 UI 调整。
+- V2.x.x 的方向是面向学习者的 AI 助教、学习伙伴升级和由服务端执行的日报/周报外部投递；V3.x.x 的方向是全 App 体验、服务端性能、多实例/多集群部署、外观个性化、课程仅音频播放、画中画和 PDF 资料阅读闭环。
+- V2/V3 方向只记录在版本路线图中。路线图、原型、聊天和“未来可能需要”都不能直接触发代码、接口、迁移、依赖、资产或基础设施修改。
+- 开始 V2 或 V3 前，必须分别完成并人工批准该版本的 Spec、相关 ADR、Implementation Plan 和 Traceability；编码代理只能执行获批计划中的当前 Task。
+- V2 立绘必须在 V1「毛线团团」现有素材、动作模型和悬浮交互基础上增量修改，不得在 V1 提前另建宠物或 AI 入口。
+- V3 多实例/多集群目标会触发 SQLite、本地文件、Session 和内容任务协调方案的重新设计；在 V3 ADR 获批前不得为此提前引入 PostgreSQL、Redis、Kafka、Kubernetes、微服务或双数据库兼容。
 
 ## 决策优先级
 
@@ -245,14 +254,14 @@ Do not create broad scaffolding for later Tasks. A Task must deliver working beh
 ### Daily Plan
 
 ```text
-DRAFT → LOCKED → COMPLETED
-                 ↘ ABANDONED
-                 ↘ CLOSED_WITH_DEBT
+DRAFT → ACTIVE(LOCKED) → COMPLETED
+                         ↘ CLOSED_WITH_DEBT
+（ABANDONED 仅为 V1.3 之前的历史终态，只读兼容）
 ```
 
-- Only DRAFT is editable.
+- 作战单只能通过带版本号的整单快照保存；未开始项目可改可删，已开始、待上传或已完成项目不可改不可删。
 - A video plan item is complete only after trusted watch completion and, when `quiz_required=true`, quiz completion.
-- Abandonment is final in V1.
+- 按 ADR-0011 与设计规范第 243 节，客户端不提供手动开摆；终态只由日终结算产生。
 - Closing and debt generation are idempotent.
 
 ### Debt
@@ -314,13 +323,12 @@ Illegal transitions return stable business error codes.
 - 父节点 404/无权限必须返回稳定错误并保留最后一次可用快照；只有父节点有效且完整结果确实为空时才可标记全部课时不可用。
 - Item ID 变化只能更新原 `media_items` 行，不能替换本地 ID，因此可信进度、计划、欠债、题目、全文、摘要和内容任务必须继续关联原课时。
 
-## 计划、开摆与欠债规则
+## 计划、欠债与日终规则
 
-- Locked plans cannot be edited.
-- Open-palm abandonment closes the plan immediately.
-- Abandonment and normal day-end use the same debt calculation service.
+- 已激活作战单只能整单快照替换，不提供逐项写接口。
+- 日终结算是唯一的欠债生成入口，不存在客户端手动开摆。
 - `VIDEO_WATCH` debt uses remaining trusted duration and stores the baseline trusted position.
-- `QUIZ` debt is created only when a required quiz remains incomplete; its estimated seconds are display/planning metadata, while passing the quiz settles the debt.
+- `QUIZ` 欠债只在必答题未完成时生成；估算秒数是配置项 `QUIZ_DEBT_ESTIMATE_SECONDS`，提交完整答卷即结清。
 - `FOCUS` debt uses planned minus completed seconds.
 - A `DEBT_REPAYMENT` task never creates another debt.
 - Debt generation is idempotent with one row per `(source_plan_item_id, debt_type)`.
@@ -418,7 +426,6 @@ Update `docs/api/openapi.yaml` with API changes. Contract drift must fail CI.
 - Minimum tap target 44pt.
 - Important state must not rely on color alone.
 - iPhone、iPad 和 Android 共享业务体验，平台差异仅放在布局和系统适配层。
-- The abandon button must show exact added debt before confirmation.
 - Alive check modal cannot be dismissed by tapping outside.
 - Do not add unsolicited gamification or AI features.
 

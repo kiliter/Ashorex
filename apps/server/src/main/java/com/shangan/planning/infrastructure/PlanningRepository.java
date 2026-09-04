@@ -19,27 +19,7 @@ public interface PlanningRepository {
 
   boolean isActiveBattleOrder(String planId);
 
-  void insertPlan(DailyPlan plan, Instant now);
-
-  void insertItem(PlanItem item, Instant now);
-
-  void updateItemDefinition(
-      String itemId, String title, long plannedSeconds, int sortOrder, Instant now);
-
-  void deleteItem(String itemId);
-
-  void snapshotQuizRequired(String itemId, boolean required, Instant now);
-
   void updatePlanState(DailyPlan plan, Instant now);
-
-  void insertAbandonment(
-      String id,
-      String planId,
-      String userId,
-      String reasonCode,
-      String reasonText,
-      long remainingSeconds,
-      Instant now);
 
   List<DuePlan> findLockedPlans();
 
@@ -49,8 +29,6 @@ public interface PlanningRepository {
       String userId, String itemId, long absolute, boolean watchCompleted, Instant now);
 
   ProgressUpdate markQuizCompleted(String userId, String itemId, Instant now);
-
-  void markItemCompletedIfSatisfied(String itemId, Instant now);
 
   record DuePlan(
       String planId, String userId, LocalDate planDate, String timezone, String dayEndLocalTime) {}

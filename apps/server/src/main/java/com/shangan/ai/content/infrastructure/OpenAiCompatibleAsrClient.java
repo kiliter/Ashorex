@@ -22,6 +22,8 @@ import tools.jackson.databind.ObjectMapper;
 @Component
 public class OpenAiCompatibleAsrClient {
 
+  private static final org.slf4j.Logger log =
+      org.slf4j.LoggerFactory.getLogger(OpenAiCompatibleAsrClient.class);
   private static final String ASR_TEXT_MARKER = "<asr_text>";
   private static final Pattern REPEATED_ASR_SEGMENT_PREFIX =
       Pattern.compile("(?i)(?:language\\s+[^<\\r\\n]*?)?<asr_text>\\s*");
@@ -87,6 +89,8 @@ public class OpenAiCompatibleAsrClient {
     } catch (BusinessException exception) {
       throw exception;
     } catch (Exception exception) {
+      // 错误消息只给管理员稳定文案，真实原因必须落到服务日志，否则任务失败无从排查。
+      log.warn("ASR 转写调用失败", exception);
       throw failed();
     }
   }

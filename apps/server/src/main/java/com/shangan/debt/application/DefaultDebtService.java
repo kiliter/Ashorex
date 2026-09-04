@@ -9,20 +9,33 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** 按未满足任务组成部分生成幂等欠债并记录精确还债增量。 */
 @Service
 public class DefaultDebtService implements DebtService {
-  private static final long QUIZ_ESTIMATE_SECONDS = 600;
 
   private final DebtRepository debts;
   private final IdGenerator ids;
+  private final long quizEstimateSeconds;
 
-  public DefaultDebtService(DebtRepository debts, IdGenerator ids) {
+  public DefaultDebtService(
+      DebtRepository debts,
+      IdGenerator ids,
+      @Value("${app.debt.quiz-estimate-seconds:600}") long quizEstimateSeconds) {
+    if (quizEstimateSeconds <= 0) {
+      throw new IllegalStateException("QUIZ_DEBT_ESTIMATE_SECONDS 必须为正整数");
+    }
     this.debts = debts;
     this.ids = ids;
+    this.quizEstimateSeconds = quizEstimateSeconds;
+  }
+
+  /** 当前生效的 QUIZ 欠债计划压力估值，来自 QUIZ_DEBT_ESTIMATE_SECONDS。 */
+  public long quizEstimateSeconds() {
+    return quizEstimateSeconds;
   }
 
   @Override
@@ -37,7 +50,7 @@ public class DefaultDebtService implements DebtService {
             userId, openedOn, reason, item, "VIDEO_WATCH", remaining, item.completedSeconds(), now);
       }
       if (item.itemType().equals("VIDEO") && item.quizRequired() && !item.quizCompleted()) {
-        insert(userId, openedOn, reason, item, "QUIZ", QUIZ_ESTIMATE_SECONDS, 0, now);
+        insert(userId, openedOn, reason, item, "QUIZ", quizEstimateSeconds, 0, now);
       }
       if (item.itemType().equals("FOCUS") && remaining > 0) {
         insert(userId, openedOn, reason, item, "FOCUS", remaining, 0, now);

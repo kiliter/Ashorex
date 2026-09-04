@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>上岸 V2 · AI 助教与动漫立绘</title>
+  <style>
+    /* 令牌继承 V1「白纸荧光笔」系统，未新增任何颜色。 */
+    :root {
+      --bg: oklch(0.985 0.004 250);
+      --surface: oklch(0.995 0.003 250);
+      --fg: oklch(0.27 0.065 258);
+      --muted: oklch(0.46 0.055 255);
+      --border: oklch(0.66 0.06 250);
+      --accent: oklch(0.53 0.20 28);
+      --info: oklch(0.50 0.16 250);
+      --success: oklch(0.48 0.14 155);
+      --warning: oklch(0.46 0.12 75);
+      --font-display: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      --font-body: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      --font-mono: "SF Mono", ui-monospace, Menlo, monospace;
+      --accent-soft: color-mix(in oklch, var(--accent) 11%, var(--surface));
+      --info-soft: color-mix(in oklch, var(--info) 11%, var(--surface));
+      --success-soft: color-mix(in oklch, var(--success) 11%, var(--surface));
+      --warning-soft: color-mix(in oklch, var(--warning) 12%, var(--surface));
+      --fg-soft: color-mix(in oklch, var(--fg) 7%, var(--surface));
+      --shadow: color-mix(in oklch, var(--fg) 16%, transparent);
+    }
+    *,*::before,*::after{box-sizing:border-box}
+    html{background:var(--bg);-webkit-text-size-adjust:100%}
+    body{margin:0;color:var(--fg);background:var(--bg);font-family:var(--font-body);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
+    button,input,textarea,select{font:inherit;color:inherit}button{cursor:pointer}
+    h1,h2,h3{margin:0;font-family:var(--font-display);text-wrap:balance}p{margin:0;text-wrap:pretty}
+    svg{display:block}
+    .num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    :focus-visible{outline:3px solid color-mix(in oklch,var(--info) 62%,transparent);outline-offset:2px}
+
+    /* 交付舞台 */
+    .studio{min-height:100vh;display:grid;grid-template-columns:280px minmax(393px,1fr);gap:32px;padding:24px;align-items:start}
+    .delivery{position:sticky;top:24px;height:calc(100vh - 48px);display:flex;flex-direction:column;border:2px solid var(--fg);border-radius:22px;background:var(--surface);box-shadow:6px 6px 0 var(--info-soft);overflow:hidden}
+    .delivery-head{padding:22px 20px 16px;border-bottom:1px solid var(--border)}
+    .delivery-brand{font-size:20px;font-weight:600}.delivery-sub{color:var(--muted);font-size:12px;margin-top:4px}
+    .delivery-tabs{display:flex;padding:8px;border-bottom:1px solid var(--border);gap:4px}
+    .delivery-tabs button{flex:1;min-height:44px;border:0;border-radius:9px;background:transparent;font-size:12px;font-weight:550;color:var(--muted)}
+    .delivery-tabs button:hover{background:var(--info-soft);color:var(--info)}
+    .delivery-tabs button[aria-selected="true"]{background:var(--info-soft);box-shadow:inset 0 0 0 1px var(--info);color:var(--info)}
+    .delivery-body{padding:8px;overflow:auto;flex:1}.delivery-panel{display:none}.delivery-panel.active{display:block}
+    .screen-link{display:flex;width:100%;align-items:center;gap:10px;min-height:44px;padding:8px 10px;border:0;border-radius:10px;background:transparent;text-align:left;color:var(--muted);transition:transform .16s ease,background .16s ease}
+    .screen-link:hover{background:var(--info-soft);color:var(--info);transform:translateX(3px)}
+    .screen-link.active{background:var(--info);color:var(--surface)}
+    .screen-no{width:22px;font:11px var(--font-mono);opacity:.75}.screen-name{font-size:13px;font-weight:550}
+    .spec-block{padding:12px;border-bottom:1px solid var(--border)}.spec-block h3{font-size:13px;margin-bottom:6px}.spec-block p,.flow-line{font-size:12px;color:var(--muted);line-height:1.55}
+    .flow-line{padding:10px 12px;border-bottom:1px solid var(--border)}
+    .stage{min-height:calc(100vh - 48px);display:grid;place-items:start center;padding:8px 0 32px}
+    .device{width:393px;height:852px;border:2px solid var(--fg);border-radius:50px;background:var(--surface);box-shadow:9px 9px 0 var(--info-soft),0 22px 56px color-mix(in oklch,var(--fg) 18%,transparent);overflow:hidden;position:relative}
+    .island{position:absolute;z-index:50;left:50%;top:12px;transform:translateX(-50%);width:118px;height:34px;border-radius:20px;background:var(--fg)}
+    .app{height:100%;position:relative;background:var(--bg);overflow:hidden}
+    .statusbar{height:54px;padding:16px 28px 0;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;position:relative;z-index:10}
+    .statusbar svg,.nav-side svg{width:18px;height:18px;flex:0 0 auto}
+    .screen{height:calc(100% - 54px);display:flex;flex-direction:column;animation:screenIn .22s cubic-bezier(.2,.8,.2,1)}
+    .navbar{min-height:52px;padding:0 12px;display:grid;grid-template-columns:64px 1fr 64px;align-items:center;border-bottom:2px solid var(--border);background:color-mix(in oklch,var(--surface) 92%,transparent);backdrop-filter:blur(18px);z-index:6}
+    .navbar h1{font-size:17px;font-weight:600;text-align:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px}
+    .nav-side{min-width:44px;min-height:44px;border:0;border-radius:10px;background:transparent;color:var(--fg);display:flex;align-items:center;gap:4px;padding:0 4px;font-size:13px}
+    .nav-side:hover{background:var(--info-soft);color:var(--info)}.nav-side:active{transform:translateY(1px)}
+    .nav-side.right{justify-content:flex-end;color:var(--muted)}.nav-side.right:hover{color:var(--info)}
+    .nav-side:disabled{opacity:.4}
+    .content{flex:1;overflow:auto;padding:20px 20px 112px;scrollbar-width:none}.content::-webkit-scrollbar{display:none}
+    .content.no-tabs{padding-bottom:36px}
+    #thread{padding-bottom:198px}
+    /* 助教会话页底部有常驻输入条，内容区需要额外留白，避免最后一条回答被压住。 */
+    .content[data-od-id^="tutor-"]{padding-bottom:208px}
+    .state-icon svg{width:22px;height:22px}
+    .section{padding:21px 0;border-top:1px solid var(--border)}.section:first-child{padding-top:2px;border-top:0}
+    .eyebrow{font:600 11px var(--font-mono);letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+    .title-xl{font-size:30px;line-height:1.32;font-weight:650}.title-lg{font-size:23px;line-height:1.34;font-weight:650}.title-md{font-size:18px;line-height:1.35;font-weight:650}
+    .lead{color:var(--muted);font-size:14px;line-height:1.7;margin-top:8px}.caption{color:var(--muted);font-size:12px}.fine{font-size:11px;color:var(--muted)}
+    .row{display:flex;align-items:center;gap:12px}.between{display:flex;align-items:center;justify-content:space-between;gap:12px}.stack{display:flex;flex-direction:column;gap:12px}
+    .surface{background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:17px}
+    .flat-list{border-top:2px solid var(--fg)}
+    .list-row{width:100%;min-height:62px;padding:12px 0;display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;border:0;border-bottom:1.5px solid var(--border);background:transparent;text-align:left;transition:transform .16s ease,background .16s ease}
+    .list-row:hover{background:var(--info-soft);transform:translateX(3px)}
+    .list-index{font:12px var(--font-mono);color:var(--muted)}
+    .list-main strong{font-size:14px;display:block}.list-main span{font-size:12px;color:var(--muted);display:block;margin-top:3px}
+    .chev{font-size:18px;color:var(--muted)}
+    .btn{position:relative;isolation:isolate;overflow:hidden;width:100%;min-height:50px;border-radius:15px;border:1.5px solid transparent;padding:0 16px;font-weight:600;transition:transform .16s cubic-bezier(.2,.8,.2,1),box-shadow .16s ease,background .16s ease,border-color .16s ease}
+    .btn::before{content:"";position:absolute;z-index:1;top:-55%;bottom:-55%;left:-36%;width:24%;pointer-events:none;background:linear-gradient(90deg,transparent,color-mix(in oklch,var(--surface) 58%,transparent),transparent);transform:skewX(-18deg);transition:left .46s cubic-bezier(.2,.8,.2,1)}
+    .btn:hover::before{left:116%}.btn:disabled::before{display:none}
+    .btn-primary{background:var(--fg);color:var(--surface);border-color:var(--fg);box-shadow:0 4px 0 var(--info),0 11px 22px var(--info-soft)}
+    .btn-primary:hover{background:color-mix(in oklch,var(--fg) 92%,var(--info));color:var(--surface);transform:translateY(-3px);box-shadow:0 6px 0 var(--info),0 16px 28px color-mix(in oklch,var(--info) 18%,transparent)}
+    .btn-primary:active{transform:translateY(3px) scale(.985);box-shadow:0 1px 0 var(--info)}
+    .btn-secondary{background:var(--surface);border:1.5px solid var(--fg);color:var(--fg);box-shadow:3px 3px 0 var(--warning-soft)}
+    .btn-secondary:hover{background:var(--info-soft);border-color:var(--info);color:var(--fg);transform:translateY(-2px);box-shadow:5px 5px 0 var(--info-soft)}
+    .btn-secondary:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--info-soft)}
+    .btn:disabled{opacity:.42;cursor:not-allowed;box-shadow:none;transform:none}
+    .icon-btn{min-width:44px;min-height:44px;border:1.5px solid var(--info);border-radius:12px;background:var(--surface);color:var(--info);display:grid;place-items:center;box-shadow:3px 3px 0 var(--info-soft);transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .18s ease,background .18s ease}
+    .icon-btn:hover{background:var(--info-soft);color:var(--info);transform:translateY(-2px);box-shadow:5px 5px 0 var(--info-soft)}
+    .icon-btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--info-soft)}
+    .icon-btn svg{width:20px;height:20px}
+    .field{display:flex;flex-direction:column;gap:7px}.field label{font-size:12px;color:var(--muted);font-weight:650}
+    .input,.select{width:100%;min-height:48px;border:1.5px solid var(--border);border-radius:12px;background:var(--surface);padding:12px 14px}
+    .input:focus,.select:focus{border-color:var(--info);outline:3px solid var(--info-soft)}
+    .helper{font-size:11px;color:var(--muted)}
+    .tag{display:inline-flex;align-items:center;gap:5px;min-height:24px;padding:3px 8px;border:1px solid var(--border);border-radius:999px;font-size:11px;font-weight:650;color:var(--muted);background:color-mix(in oklch,var(--surface) 74%,transparent);white-space:nowrap}
+    .tag::before{content:"";width:6px;height:6px;border:1px solid currentColor;border-radius:50%}
+    .tag.risk{border-color:color-mix(in oklch,var(--accent) 38%,var(--border));color:var(--accent);background:var(--accent-soft)}
+    .tag.done{border-color:color-mix(in oklch,var(--success) 34%,var(--border));color:var(--success);background:var(--success-soft)}.tag.done::before{border-radius:2px;background:currentColor}
+    .tag.locked{border-color:color-mix(in oklch,var(--warning) 34%,var(--border));color:var(--warning);background:var(--warning-soft)}.tag.locked::before{border-radius:1px;background:currentColor}
+    .tag.info{border-color:color-mix(in oklch,var(--info) 34%,var(--border));color:var(--info);background:var(--info-soft)}
+    .metric-grid{display:grid;grid-template-columns:repeat(2,1fr);border:1.5px solid var(--info);border-radius:17px;background:var(--surface);overflow:hidden}
+    .metric{padding:15px 14px;border-bottom:1px solid var(--border)}
+    .metric:nth-child(even){padding-left:15px;border-left:1px solid var(--border)}
+    .metric:nth-last-child(-n+2){border-bottom:0}
+    .metric-value{font:700 22px var(--font-mono);letter-spacing:-.04em;color:var(--info)}
+    .metric-label{font-size:11px;color:var(--muted);margin-top:3px}
+    .trust-wrap{margin-top:14px}.trust-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+    .trust-head strong{font-size:12px}.trust-head span{font:11px var(--font-mono);color:var(--muted)}
+    .trust-track{height:24px;position:relative;border-top:2px solid var(--info);background:repeating-linear-gradient(90deg,transparent 0,transparent 19px,var(--border) 20px,var(--border) 21px)}
+    .trust-fill,.play-fill,.blocked-fill{position:absolute;left:0;top:-2px;height:6px}
+    .trust-fill{background:var(--info)}
+    .play-fill{top:7px;height:3px;background:var(--muted)}
+    .blocked-fill{top:7px;height:3px;background:repeating-linear-gradient(90deg,var(--border) 0,var(--border) 4px,transparent 4px,transparent 7px)}
+    .trust-node{position:absolute;top:-6px;width:2px;height:15px;background:var(--fg)}.trust-node.current{height:20px;top:-3px}
+    .trust-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:10px;color:var(--muted);margin-top:2px}
+    .legend-mark{display:inline-flex;align-items:center;gap:4px}.legend-mark::before{content:"";width:12px;height:3px;background:var(--info)}
+    .legend-mark.play::before{background:var(--muted)}.legend-mark.block::before{background:var(--border)}
+    .progress{height:9px;border:1px solid var(--info);border-radius:99px;background:var(--surface);overflow:hidden}
+    .progress span{display:block;height:100%;border-radius:inherit;background:repeating-linear-gradient(135deg,var(--info) 0,var(--info) 8px,color-mix(in oklch,var(--info) 78%,var(--surface)) 8px,color-mix(in oklch,var(--info) 78%,var(--surface)) 13px);animation:progressCharge .7s cubic-bezier(.2,.8,.2,1)}
+    .notice{border-left:3px solid var(--info);border-bottom:1px dashed var(--border);padding:10px 0 10px 12px}
+    .notice strong{font-size:13px}.notice p{font-size:12px;color:var(--muted);margin-top:4px}
+    .empty{text-align:center;padding:8px 14px}
+    .state-icon{width:52px;height:52px;border:1.5px solid var(--info);border-radius:50%;display:grid;place-items:center;color:var(--info);margin:0 auto 12px}
+    .segmented{display:grid;grid-template-columns:repeat(2,1fr);gap:3px;padding:3px;border:1.5px solid var(--info);background:var(--info-soft);border-radius:10px}
+    .segmented button{min-height:44px;border:0;border-radius:8px;background:transparent;font-size:12px;font-weight:550;color:var(--muted)}
+    .segmented button:hover{background:color-mix(in oklch,var(--surface) 72%,var(--info-soft));color:var(--fg)}
+    .segmented button.active{background:var(--surface);color:var(--fg);box-shadow:0 1px 4px var(--shadow)}
+    .setting-row{min-height:54px;width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;border:0;border-bottom:1.5px solid var(--border);background:transparent;text-align:left;transition:transform .16s ease,background .16s ease}
+    .setting-row:hover{background:var(--info-soft);transform:translateX(3px)}
+    .setting-row span:first-child{font-size:14px;font-weight:550}.setting-row span:last-child{font-size:12px;color:var(--muted)}
+    .switch{position:relative;flex:0 0 auto;width:50px;height:30px;border:1.5px solid var(--border);border-radius:99px;background:var(--surface);transition:background .18s ease,border-color .18s ease}
+    .switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:transform .18s cubic-bezier(.2,.8,.2,1),background .18s ease}
+    .switch[aria-checked="true"]{background:var(--info-soft);border-color:var(--info)}
+    .switch[aria-checked="true"]::after{transform:translateX(20px);background:var(--info)}
+    .switch:hover{border-color:var(--info)}
+    .level-option{padding:12px 0;border-bottom:1.5px solid var(--border);display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start}
+    .level-option input{width:18px;height:18px;margin-top:4px;accent-color:var(--info)}
+    .level-option strong{font-size:14px}.level-option p{font-size:11px;color:var(--muted);margin-top:3px}
+
+    /* 五 Tab 底部导航 */
+    .tabs{position:absolute;z-index:20;left:10px;right:10px;bottom:8px;height:76px;padding:7px 6px 15px;display:grid;grid-template-columns:repeat(5,1fr);border:1.5px solid var(--info);border-radius:23px;background:color-mix(in oklch,var(--surface) 91%,transparent);box-shadow:4px 4px 0 var(--info-soft),0 10px 30px color-mix(in oklch,var(--fg) 12%,transparent);backdrop-filter:blur(18px);animation:dockRise .38s cubic-bezier(.16,1,.3,1)}
+    .tab{min-height:52px;border:1px solid transparent;border-radius:15px;background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;transition:transform .16s ease,background .16s ease,color .16s ease}
+    .tab:hover{background:var(--info-soft);color:var(--info)}.tab:active{transform:translateY(1px)}
+    .tab svg{width:21px;height:21px}
+    .tab.active{border-color:var(--info);background:var(--info-soft);color:var(--info);font-weight:600;transform:translateY(-2px);animation:tabPop .32s cubic-bezier(.2,1.35,.45,1)}
+    .tab.active svg{stroke-width:2.2}
+
+    /* 助教会话 */
+    .chat{display:flex;flex-direction:column;gap:18px}
+    .msg-user{align-self:flex-end;max-width:84%;padding:11px 14px;border:1.5px solid var(--fg);border-radius:16px 16px 4px 16px;background:var(--fg);color:var(--surface);font-size:14px}
+    .msg-ai{align-self:stretch}
+    .ai-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+    .ai-mark{width:26px;height:26px;flex:0 0 auto;border:1.5px solid var(--info);border-radius:9px;background:var(--info-soft);color:var(--info);display:grid;place-items:center}
+    .ai-mark svg{width:15px;height:15px}
+    .ai-name{font-size:12px;font-weight:650}.ai-kind{font:10px var(--font-mono);color:var(--muted)}
+    .ai-body{border-left:2px solid var(--info);padding-left:13px}
+    .ai-body p{font-size:14px;line-height:1.72}
+    .ai-body p+p{margin-top:9px}
+    .ai-body strong{font-weight:680}
+    .plan-item{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:11px 0;border-bottom:1.5px solid var(--border)}
+    .plan-no{width:26px;height:26px;border:1.5px solid var(--info);border-radius:9px;background:var(--info-soft);color:var(--info);display:grid;place-items:center;font:600 10px var(--font-mono)}
+    .plan-item strong{font-size:14px;display:block}.plan-item .plan-meta{font-size:11px;color:var(--muted);margin-top:3px;display:block}
+    .cite{margin-top:12px;border:1.5px dashed var(--info);border-radius:12px;background:var(--info-soft);padding:11px 12px}
+    .cite-title{font:600 10px var(--font-mono);letter-spacing:.06em;color:var(--info);text-transform:uppercase}
+    .cite-row{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;border:0;border-top:1px dashed color-mix(in oklch,var(--info) 40%,transparent);background:transparent;text-align:left;font-size:12px;color:var(--fg);transition:transform .16s ease,color .16s ease}
+    .cite-row:first-of-type{border-top:0}
+    .cite-row:hover{color:var(--info);transform:translateX(3px)}
+    .cite-row span:first-child{flex:1;min-width:0}
+    .cite-row span:last-child{font:11px var(--font-mono);color:var(--muted);flex:0 0 auto}
+    .cite-row:hover span:last-child{color:var(--info)}
+    .link-list{margin-top:12px;border-top:1.5px solid var(--fg)}
+    .link-row{width:100%;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;min-height:52px;padding:10px 0;border:0;border-bottom:1.5px solid var(--border);background:transparent;text-align:left;transition:transform .16s ease,background .16s ease}
+    .link-row:hover{background:var(--info-soft);transform:translateX(3px)}
+    .link-row strong{font-size:13px;font-weight:600;display:block}
+    .link-row .link-src{font:11px var(--font-mono);color:var(--muted);display:block;margin-top:3px}
+    .link-row:hover .link-src{color:var(--info)}
+    .video-card{width:100%;display:grid;grid-template-columns:112px 1fr;gap:12px;align-items:stretch;margin-top:12px;padding:0;border:1.5px solid var(--border);border-radius:14px;background:var(--surface);overflow:hidden;text-align:left;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+    .video-card:hover{border-color:var(--info);transform:translateY(-2px);box-shadow:4px 4px 0 var(--info-soft)}
+    .video-card:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--info-soft)}
+    .video-thumb{position:relative;background:var(--fg);color:var(--surface);display:grid;place-items:center;min-height:74px}
+    .video-thumb .thumb-scale{position:absolute;left:8px;right:8px;bottom:8px;height:3px;background:color-mix(in oklch,var(--surface) 40%,transparent)}
+    .video-thumb .thumb-scale i{display:block;height:100%;background:var(--surface)}
+    .video-thumb svg{width:22px;height:22px}
+    .video-meta{padding:11px 12px 11px 0}
+    .video-meta strong{font-size:13px;font-weight:650;display:block;line-height:1.45}
+    .video-meta .caption{margin-top:5px;display:block}
+    .why{margin-top:10px;font-size:12px;color:var(--muted);border-top:1px dashed var(--border);padding-top:9px}
+    .cap-list{border-top:2px solid var(--fg)}
+    .cap-row{width:100%;display:grid;grid-template-columns:30px 1fr auto;gap:11px;align-items:center;min-height:64px;padding:12px 0;border:0;border-bottom:1.5px solid var(--border);background:transparent;text-align:left;transition:transform .16s ease,background .16s ease}
+    .cap-row:hover{background:var(--info-soft);transform:translateX(3px)}
+    .cap-no{font:12px var(--font-mono);color:var(--muted)}
+    .cap-row strong{font-size:14px;display:block}.cap-row span.cap-eg{font-size:12px;color:var(--muted);display:block;margin-top:3px}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{min-height:44px;padding:0 13px;border:1.5px solid var(--border);border-radius:12px;background:var(--surface);font-size:12px;font-weight:550;color:var(--fg);transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease}
+    .chip:hover{border-color:var(--info);background:var(--info-soft);color:var(--fg);transform:translateY(-2px);box-shadow:3px 3px 0 var(--info-soft)}
+    .chip:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--info-soft)}
+    .chip.ctx{border-style:dashed;border-color:var(--info);color:var(--info);background:var(--info-soft)}
+    .composer{position:absolute;z-index:22;left:10px;right:10px;bottom:96px;padding:9px;border:1.5px solid var(--info);border-radius:19px;background:color-mix(in oklch,var(--surface) 96%,transparent);box-shadow:0 8px 24px var(--shadow);backdrop-filter:blur(18px)}
+    .composer-ctx{display:flex;align-items:center;gap:7px;padding:0 4px 8px;font:10px var(--font-mono);color:var(--info)}
+    .composer-ctx::before{content:"";width:7px;height:7px;border:1.5px solid var(--info);border-radius:2px}
+    .composer-line{display:grid;grid-template-columns:1fr 46px;gap:8px;align-items:end}
+    .composer textarea{width:100%;min-height:46px;max-height:78px;padding:12px 14px;border:1.5px solid var(--border);border-radius:13px;background:var(--surface);resize:none;font-size:14px;line-height:1.4}
+    .composer textarea:focus{border-color:var(--info);outline:3px solid var(--info-soft)}
+    .send{min-width:46px;min-height:46px;border:1.5px solid var(--fg);border-radius:13px;background:var(--fg);color:var(--surface);display:grid;place-items:center;transition:transform .16s ease,background .16s ease}
+    .send:hover{background:color-mix(in oklch,var(--fg) 90%,var(--info));color:var(--surface);transform:translateY(-2px)}
+    .send:active{transform:translateY(1px)}
+    .send svg{width:20px;height:20px}
+    .typing{display:inline-flex;gap:4px;align-items:center}
+    .typing i{width:5px;height:5px;border-radius:50%;background:var(--info);animation:blink 1s ease-in-out infinite}
+    .typing i:nth-child(2){animation-delay:.16s}.typing i:nth-child(3){animation-delay:.32s}
+
+    /* 能力卡片：直接躺在会话记录里，点一下就把写好的提示词发出去 */
+    .cap-cards{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+    .cap-card{display:flex;flex-direction:column;gap:8px;min-height:126px;padding:11px 12px;border:1.5px solid var(--border);border-radius:14px;background:var(--surface);text-align:left;color:inherit;transition:transform .16s,border-color .16s,box-shadow .16s}
+    .cap-card:hover{border-color:var(--info);box-shadow:3px 3px 0 var(--info-soft);transform:translate(-1px,-1px)}
+    .cap-card:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--info-soft)}
+    .cap-card.wide{grid-column:1 / -1;min-height:0;flex-direction:row;align-items:center;gap:11px}
+    .cc-head{display:flex;align-items:center;gap:7px;min-width:0}
+    .cc-ico{width:26px;height:26px;flex:0 0 auto;border:1.5px solid var(--info);border-radius:9px;background:var(--info-soft);color:var(--info);display:grid;place-items:center}
+    .cc-ico svg{width:15px;height:15px}
+    .cc-name{font-size:13px;font-weight:650;line-height:1.35}
+    .cc-prompt{flex:1;font-size:12px;line-height:1.6;color:var(--muted)}
+    .cap-card:hover .cc-prompt{color:var(--fg)}
+    .cc-go{font:10px var(--font-mono);letter-spacing:.05em;color:var(--info);display:flex;align-items:center;gap:4px}
+    .cap-card.wide .cc-go{flex:0 0 auto}
+    .cap-card.wide .cc-prompt{margin-top:3px}
+
+    /* 会话管理抽屉 */
+    .drawer{position:absolute;z-index:78;left:0;top:54px;bottom:0;width:310px;display:flex;flex-direction:column;background:var(--surface);border-right:1.5px solid var(--fg);box-shadow:16px 0 44px var(--shadow);animation:drawerIn .22s cubic-bezier(.22,1,.36,1)}
+    .drawer-head{padding:14px 14px 12px;border-bottom:1.5px solid var(--fg)}
+    .drawer-title{font-size:18px;font-weight:650;font-family:var(--font-display)}
+    .drawer-sub{font:10px var(--font-mono);color:var(--muted);margin-top:3px}
+    .icon-btn{min-width:44px;min-height:44px;border:1.5px solid var(--fg);border-radius:12px;background:var(--surface);color:var(--fg);display:grid;place-items:center;flex:0 0 auto}
+    .icon-btn:hover{background:var(--fg);color:var(--surface)}
+    .icon-btn:active{transform:translateY(1px)}
+    .icon-btn svg{width:19px;height:19px}
+    .search-box{margin-top:12px;display:flex;align-items:center;gap:8px;padding:0 11px;min-height:44px;border:1.5px solid var(--border);border-radius:12px;background:var(--bg)}
+    .search-box:focus-within{border-color:var(--info);box-shadow:0 0 0 3px var(--info-soft)}
+    .search-box svg{width:15px;height:15px;color:var(--muted);flex:0 0 auto}
+    .search-box input{flex:1;min-width:0;min-height:42px;border:0;background:transparent;font-size:13px}
+    .search-box input::placeholder{color:var(--muted)}
+    .search-box input:focus{outline:0}
+    .session-list{flex:1;overflow:auto;padding:4px 8px 20px;scrollbar-width:none}
+    .session-list::-webkit-scrollbar{display:none}
+    .session-group{font:10px var(--font-mono);letter-spacing:.09em;color:var(--muted);padding:13px 6px 5px}
+    .session-item{border:1.5px solid transparent;border-radius:14px;margin-bottom:2px}
+    .session-item.current{border-color:var(--info);background:var(--info-soft)}
+    .session-row{display:grid;grid-template-columns:1fr 44px;align-items:center;gap:2px;padding-right:5px}
+    .session-open{width:100%;min-width:0;min-height:60px;padding:9px 4px 9px 10px;border:0;border-radius:12px;background:transparent;text-align:left;color:inherit;display:block}
+    .session-open:hover{background:var(--info-soft)}
+    .session-item.current .session-open:hover{background:color-mix(in oklch,var(--info) 16%,var(--surface))}
+    .session-name{font-size:13px;font-weight:600;line-height:1.45;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .session-meta{font:10px var(--font-mono);color:var(--muted);display:block;margin-top:4px}
+    .session-open:hover .session-meta{color:var(--info)}
+    .session-more{min-width:44px;min-height:44px;border:0;border-radius:11px;background:transparent;color:var(--muted);display:grid;place-items:center}
+    .session-more:hover{background:var(--surface);color:var(--info);box-shadow:inset 0 0 0 1.5px var(--info)}
+    .session-more svg{width:17px;height:17px}
+    .row-actions{display:flex;gap:6px;padding:0 10px 10px}
+    .mini{min-height:44px;padding:0 13px;border:1.5px solid var(--border);border-radius:11px;background:var(--surface);font-size:12px;font-weight:600;color:var(--fg)}
+    .mini:hover{border-color:var(--info);background:var(--info-soft);color:var(--info)}
+    .mini:active{transform:translateY(1px)}
+    .mini.danger{border-color:var(--accent);color:var(--accent)}
+    .mini.danger:hover{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+    .rename-line{display:grid;grid-template-columns:1fr auto;gap:6px;padding:0 10px 10px}
+    .rename-line input{min-width:0;min-height:44px;padding:0 11px;border:1.5px solid var(--info);border-radius:11px;background:var(--surface);font-size:13px}
+    .rename-line input:focus{outline:3px solid var(--info-soft);outline-offset:0}
+    .confirm-line{padding:0 10px 10px}
+    .confirm-line p{font-size:12px;color:var(--accent);margin-bottom:8px}
+    .drawer-foot{padding:11px 14px 18px;border-top:1.5px solid var(--border)}
+    .sess-empty{padding:22px 10px;text-align:center;font-size:12px;color:var(--muted)}
+
+    /* 动漫立绘立牌 */
+    .standee{position:absolute;z-index:30;bottom:96px;width:84px;padding:0;border:0;background:transparent;text-align:left;transition:transform .2s cubic-bezier(.2,.8,.2,1)}
+    .standee.side-right{right:14px}.standee.side-left{left:14px}
+    .standee:hover{transform:translateY(-4px)}
+    .standee:active{transform:translateY(2px) scale(.98)}
+    .standee-art{position:relative;aspect-ratio:3/4;border:1.5px solid var(--info);border-radius:14px 14px 6px 6px;background:var(--info-soft);overflow:hidden;box-shadow:3px 3px 0 var(--info-soft),0 10px 22px color-mix(in oklch,var(--fg) 14%,transparent)}
+    .standee-art img{width:100%;height:100%;object-fit:cover;display:block}
+    .standee-slot{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:6px;text-align:center;background:repeating-linear-gradient(135deg,transparent 0,transparent 7px,color-mix(in oklch,var(--info) 13%,transparent) 7px,color-mix(in oklch,var(--info) 13%,transparent) 8px)}
+    .standee-slot svg{width:26px;height:26px;color:var(--info)}
+    .standee-slot span{font:9px var(--font-mono);color:var(--info);line-height:1.3}
+    .standee-plate{margin:5px auto 0;width:88%;min-height:22px;display:flex;align-items:center;justify-content:center;gap:5px;border:1.5px solid var(--fg);border-radius:6px;background:var(--surface);font-size:10px;font-weight:650}
+    .standee-plate::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--success)}
+    .standee-hint{margin-top:5px;font:9px var(--font-mono);color:var(--muted);text-align:center}
+    .standee.dragging{transition:none;opacity:.9}
+    .pet-console{position:absolute;z-index:74;left:0;right:0;bottom:0;padding:12px 16px 22px;border-top:2px solid var(--info);border-radius:24px 24px 0 0;background:var(--surface);box-shadow:0 -8px 0 var(--info-soft),0 -22px 46px var(--shadow);animation:sheetBounce .3s cubic-bezier(.16,1,.3,1);max-height:74%;overflow:auto}
+    .grabber{width:38px;height:5px;border-radius:99px;background:var(--border);margin:0 auto 16px}
+    .pet-top{display:grid;grid-template-columns:78px 1fr;gap:13px;align-items:start}
+    .pet-bust{position:relative;aspect-ratio:3/4;border:1.5px solid var(--info);border-radius:13px;background:var(--info-soft);overflow:hidden}
+    .pet-bust img{width:100%;height:100%;object-fit:cover;display:block}
+    .pet-say{border:1.5px solid var(--border);border-radius:13px 13px 13px 4px;background:var(--surface);padding:11px 13px}
+    .pet-say strong{font-size:13px}.pet-say p{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.6}
+    .pet-answer{margin-top:14px;border-top:1.5px solid var(--fg);padding-top:13px}
+    .overlay{position:absolute;inset:0;z-index:70;background:color-mix(in oklch,var(--fg) 42%,transparent);animation:fadeIn .16s ease}
+    .overlay.under-status{top:54px}
+    .toast{position:absolute;z-index:90;left:50%;bottom:200px;transform:translateX(-50%);background:var(--fg);color:var(--surface);padding:10px 14px;border-radius:10px;font-size:12px;box-shadow:0 8px 22px var(--shadow);max-width:80%;text-align:center;animation:toastBounce .34s cubic-bezier(.16,1,.3,1)}
+
+    /* 视频播放页 */
+    .video-box{aspect-ratio:16/9;background:var(--fg);color:var(--surface);position:relative}
+    .video-frame{position:absolute;inset:0;background:color-mix(in oklch,var(--fg) 92%,var(--surface));display:grid;place-items:center}
+    .video-status{position:absolute;left:12px;top:10px;display:flex;align-items:center;gap:5px;font:11px var(--font-mono)}
+    .video-status svg{width:16px;height:16px}
+    .player-btn{min-width:56px;min-height:56px;border:1px solid color-mix(in oklch,var(--surface) 46%,transparent);border-radius:50%;background:color-mix(in oklch,var(--fg) 64%,transparent);color:var(--surface);display:grid;place-items:center}
+    .player-btn:hover{background:color-mix(in oklch,var(--fg) 84%,transparent);color:var(--surface);border-color:var(--surface)}
+    .player-btn:active{transform:translateY(1px)}
+    .player-btn svg{width:24px;height:24px}
+    .video-tools{position:absolute;left:12px;right:12px;bottom:10px;display:flex;align-items:center;justify-content:space-between;font:11px var(--font-mono)}
+
+    @keyframes screenIn{from{opacity:0;transform:translateX(9px)}to{opacity:1;transform:none}}
+    @keyframes fadeIn{from{opacity:0}}
+    @keyframes sheetBounce{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
+    @keyframes toastBounce{from{opacity:0;transform:translate(-50%,14px) scale(.92)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+    @keyframes progressCharge{from{width:0}}
+    @keyframes dockRise{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+    @keyframes tabPop{0%{transform:translateY(4px) scale(.9)}70%{transform:translateY(-3px) scale(1.04)}100%{transform:translateY(-2px) scale(1)}}
+    @keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
+    @keyframes drawerIn{from{opacity:.3;transform:translateX(-28px)}to{opacity:1;transform:none}}
+    @media (max-width:880px){.studio{grid-template-columns:minmax(393px,1fr);padding-inline:16px}.delivery{display:none}}
+    @media (max-width:760px){.studio{display:block;padding:0}.stage{padding:0;display:block}.device{width:100vw;height:100svh;border:0;border-radius:0;box-shadow:none}.island{top:8px}.statusbar{height:50px}.screen{height:calc(100% - 50px)}}
+    @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+  </style>
+</head>
+<body>
+  <main class="studio" data-od-id="prototype-stage">
+    <aside class="delivery" data-od-id="delivery-navigation" aria-label="V2 交付导航">
+      <div class="delivery-head">
+        <div class="delivery-brand">上岸 V2</div>
+        <div class="delivery-sub">AI 助教整页聊天与动漫立绘 · 393 × 852 pt</div>
+      </div>
+      <div class="delivery-tabs" role="tablist">
+        <button aria-selected="true" data-panel="screens">页面</button>
+        <button aria-selected="false" data-panel="flow">流程</button>
+        <button aria-selected="false" data-panel="spec">规范</button>
+      </div>
+      <div class="delivery-body">
+        <div class="delivery-panel active" id="panel-screens"></div>
+        <div class="delivery-panel" id="panel-flow">
+          <div class="flow-line"><strong>助教 Tab（整页聊天）</strong><br>进入即会话 → 记录里的能力卡片点一下预发送提示词 → 结构化回答 → 应用排期／进播放页</div>
+          <div class="flow-line"><strong>左上角 · 会话管理</strong><br>抽屉 → 新建／搜索／切换 → ⋯ 里重命名或删除（删除二次确认）</div>
+          <div class="flow-line"><strong>右上角 · 助教设置</strong><br>回答方式三开关 → 立绘显示与停靠 → 角色与打扰频率 → 清空会话（二次确认）</div>
+          <div class="flow-line"><strong>立绘宠物</strong><br>任意页面立牌 → 点击唤起输入浮层 → 快捷问或自由输入 → 就地回答</div>
+          <div class="flow-line"><strong>本节课问答</strong><br>播放页立牌 → 就整节内容提问 → 回答 + 打开这节课</div>
+          <div class="flow-line"><strong>V2 范围</strong><br>只包含助教与立绘两条主线，原有登录、计划、欠债、日报流程仍在 V1 文件中</div>
+        </div>
+        <div class="delivery-panel" id="panel-spec">
+          <div class="spec-block"><h3>Flutter 组件</h3><p>TutorChatPage、SessionDrawer（新建／搜索／重命名／删除）、CapabilityCardGrid、TutorComposer、TutorAnswerBlock（plan／progress／knowledge／video）、CourseCiteList、WebRefList、VideoRecommendCard、PetStandee、PetConsoleSheet、TutorSettingsPage。</p></div>
+          <div class="spec-block"><h3>会话与提示词</h3><p>会话按更新时间倒序，标题默认取首个提问前 16 字，可改可删；能力卡片与追问 chip 携带完整提示词，点击即写入会话并发送，不留在输入框。</p></div>
+          <div class="spec-block"><h3>立绘素材规范</h3><p>PNG 带透明通道，3:4 竖构图，建议 1024 × 1365 px；角色底边与画布底边对齐，左右各留 6% 安全区；立牌宽 84 pt，浮层半身像宽 78 pt。</p></div>
+          <div class="spec-block"><h3>尺寸</h3><p>水平边距 20 pt；触控区 ≥ 44 pt；输入条圆角 19 pt；浮层圆角 24 pt；立牌距底部导航 20 pt。</p></div>
+          <div class="spec-block"><h3>回答边界</h3><p>课程依据只到课时粒度：命中课程内容时列出对应课时并可直接打开这节课，不定位到秒、不给跳转时间点；课程内不足时才联网，并列出来源域名与标题。原型内所有数据均为示例数据。</p></div>
+        </div>
+      </div>
+    </aside>
+    <section class="stage" data-od-id="iphone-stage">
+      <div class="device" aria-label="iPhone 15 Pro · 上岸 V2 原型">
+        <div class="island" aria-hidden="true"></div>
+        <div class="app" id="app"></div>
+      </div>
+    </section>
+  </main>
+  <script>
+    /* V2 只承载两条主线：AI 助教 Tab 与可点击的动漫立绘。原有登录／计划／欠债流程保留在 V1 文件。 */
+    const STORE="shangan-v2-session";
+    const state={route:"tutor",sid:"s1",drawer:false,rowMenu:"",renaming:"",confirmDel:"",confirmClear:false,q:"",pending:false,stick:false,seq:5,petOpen:false,petCtx:"home",petAnswer:"",side:"right",showStandee:true,standee:"lin",frequency:"key",planApplied:false,playing:true,current:750,toast:"",webSearch:true,citeCourse:true,autoName:true};
+    /* 会话即消息数组；回答块按 kind 渲染，能力卡片和追问都只是「预写好的提示词」。 */
+    state.sessions=[
+      {id:"s1",title:"新会话",grp:"今天",updated:"刚刚",msgs:[{r:"a",k:"welcome"}]},
+      {id:"s2",title:"按 11/29 重排这周计划",grp:"今天",updated:"今天 08:24",msgs:[{r:"u",t:"昨天的判断推理没做完，按 11/29 的考试时间帮我把这周重新排一下"},{r:"a",k:"plan"}]},
+      {id:"s3",title:"今天学了什么 · 还能学完吗",grp:"今天",updated:"今天 07:56",msgs:[{r:"u",t:"我今天学了什么？本周还有哪些没完成？照现在的速度能学完吗"},{r:"a",k:"progress"}]},
+      {id:"s4",title:"加强削弱怎么做",grp:"本周",updated:"09/02 21:10",msgs:[{r:"u",t:"判断推理中的加强削弱怎么做？"},{r:"a",k:"knowledge"}]},
+      {id:"s5",title:"三农看哪个视频",grp:"本周",updated:"09/01 19:38",msgs:[{r:"u",t:"三农应该看哪个视频？"},{r:"a",k:"video"}]}
+    ];
+    const nav_items=[
+      ["tutor","助教 · 新会话（能力卡片）",{sid:"s1"}],
+      ["tutor","助教 · 学习计划助手",{sid:"s2"}],
+      ["tutor","助教 · 学习进度问答",{sid:"s3"}],
+      ["tutor","助教 · 知识问答与搜索",{sid:"s4"}],
+      ["tutor","助教 · 课程视频推荐",{sid:"s5"}],
+      ["tutor","会话管理 · 列表与搜索",{drawer:true}],
+      ["tutor","会话管理 · 重命名会话",{drawer:true,renaming:"s2"}],
+      ["tutor","会话管理 · 删除确认",{drawer:true,rowMenu:"s4",confirmDel:"s4"}],
+      ["settings","助教设置（含立绘）",{}],
+      ["player","视频播放页（从推荐卡进入）",{}],
+      ["home","立绘 · 首页立牌（收起）",{}],
+      ["home","立绘 · 唤起输入浮层",{petOpen:true,petCtx:"home"}],
+      ["player","立绘 · 本节课问答",{petOpen:true,petCtx:"video",petAnswer:"done"}]
+    ];
+    const icon=(n)=>{const p={home:'<path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',book:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M8 4v16"/>',spark:'<path d="M12 3v5m0 8v5M4.5 7.5l3.5 2m8 5 3.5 2m0-9-3.5 2m-8 5-3.5 2"/><circle cx="12" cy="12" r="2.6"/>',chart:'<path d="M4 20V9m6 11V4m6 16v-7m5 7H2"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c.7-4.3 3.4-6.5 8-6.5s7.3 2.2 8 6.5"/>',back:'<path d="m15 5-7 7 7 7"/>',wifi:'<path d="M3 9c5-4 13-4 18 0M6 13c3.5-3 8.5-3 12 0m-8 4c1.2-1 2.8-1 4 0"/>',send:'<path d="M4 12h13M12 6l6 6-6 6"/>',play:'<path d="m9 7 8 5-8 5z"/>',pause:'<path d="M9 7v10m6-10v10"/>',portrait:'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="10" r="2.6"/><path d="M7.5 19c.6-2.4 2.2-3.6 4.5-3.6s3.9 1.2 4.5 3.6"/>',globe:'<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 2.6 14.6 0 17-2.6-2.4-2.6-14.6 0-17"/>',clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',gear:'<path d="M4 7h9M4 12h5M4 17h12"/><circle cx="16.5" cy="7" r="2.4"/><circle cx="12.5" cy="12" r="2.4"/><circle cx="19.5" cy="17" r="2.2"/>',check:'<path d="m5 12 4 4L19 6"/>',list:'<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',panel:'<rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M9.5 4.5v15"/><path d="M12.6 9.5h5.4M12.6 13h3.6"/>',plus:'<path d="M12 5v14M5 12h14"/>',search:'<circle cx="11" cy="11" r="6.4"/><path d="m15.8 15.8 4.2 4.2"/>',dots:'<rect x="10.7" y="4" width="2.6" height="2.6" rx="1.3" fill="currentColor" stroke="none"/><rect x="10.7" y="10.7" width="2.6" height="2.6" rx="1.3" fill="currentColor" stroke="none"/><rect x="10.7" y="17.4" width="2.6" height="2.6" rx="1.3" fill="currentColor" stroke="none"/>'};return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p[n]||p.list}</svg>`};
+    const t=(s)=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+    const CAST={lin:{name:"林见夏",role:"计划型助教",line:"今天的计划我已经排好了，先从判断推理第 12 课开始。"},zhou:{name:"周执",role:"追赶型助教",line:"你落后目标速度 0.4 课时／天，先把昨天欠的补上。"}};
+    const statusbar=()=>`<div class="statusbar"><span class="num">9:41</span><span class="row" style="gap:5px">${icon("wifi")}<span class="num">92%</span></span></div>`;
+    const nav=(title,back,right="",left="")=>`<header class="navbar" data-od-id="ios-navigation-bar">${left||`<button class="nav-side" ${back?'data-action="back"':"disabled"} aria-label="返回">${back?icon("back"):""}</button>`}<h1>${title}</h1>${right||'<span aria-hidden="true"></span>'}</header>`;
+    const tabs=(active)=>`<nav class="tabs" data-od-id="bottom-tab-bar" aria-label="主导航">${[["home","首页","home"],["courses","学习","book"],["tutor","助教","spark"],["data","数据","chart"],["profile","我的","user"]].map(([r,l,i])=>`<button class="tab ${active===r?"active":""}" data-route="${r}" data-od-id="tab-${r}" aria-current="${active===r}">${icon(i)}<span>${l}</span></button>`).join("")}</nav>`;
+    /* 立绘插槽：真实素材放入 <img>，缺素材时保留标注清晰的占位与切图规范。 */
+    const art=(cls)=>`<div class="${cls}"><div class="standee-slot" role="img" aria-label="动漫立绘素材位：3:4 竖构图，PNG 带透明通道">${icon("portrait")}<span>立绘素材位<br>3:4 · 透明 PNG</span></div></div>`;
+    const standee=()=>state.showStandee?`<button class="standee side-${state.side}" data-action="openPet" data-od-id="pet-standee" aria-label="唤起 ${CAST[state.standee].name}，可拖动切换左右">${art("standee-art")}<span class="standee-plate">${CAST[state.standee].name}</span><span class="standee-hint">点按提问 · 拖动换边</span></button>`:"";
+    const shell=(body,{title="",back=true,tab="",right="",left="",pet=false}={})=>statusbar()+`<section class="screen" data-od-id="screen-${state.route}">${title?nav(title,back,right,left):""}${body}${pet?standee():""}${tab?tabs(tab):""}</section>`;
+    const aiHead=(kind)=>`<div class="ai-head"><span class="ai-mark">${icon("spark")}</span><span><span class="ai-name">${CAST[state.standee].name} · AI 助教</span><br><span class="ai-kind">${kind}</span></span></div>`;
+    const userMsg=(x)=>`<div class="msg-user">${x}</div>`;
+    const metric=(v,l)=>`<div class="metric"><div class="metric-value">${v}</div><div class="metric-label">${l}</div></div>`;
+    const composer=(ctx,ph)=>`<div class="composer" data-od-id="tutor-composer"><div class="composer-ctx">${ctx}</div><div class="composer-line"><label class="sr-only" for="ask">向 AI 助教提问</label><textarea id="ask" rows="1" placeholder="${ph}"></textarea><button class="send" data-action="send" aria-label="发送提问">${icon("send")}</button></div></div>`;
+    /* 能力卡片：直接躺在会话记录里，点一下就把写好的提示词发出去。 */
+    const CAPS=[["plan","clock","学习计划助手","昨天的判断推理没做完，按 11/29 的考试时间帮我把这周重新排一下"],["progress","chart","学习进度问答","我今天学了什么？本周还有哪些没完成？照现在的速度能学完吗"],["knowledge","globe","知识问答与搜索","判断推理中的加强削弱怎么做？"],["video","play","课程视频推荐","三农应该看哪个视频？"]];
+    const capCards=()=>`<div class="cap-cards" data-od-id="tutor-capability-cards">${CAPS.map(([k,ic,name,prompt])=>`<button class="cap-card" data-ask="${prompt}" data-od-id="cap-card-${k}"><span class="cc-head"><span class="cc-ico">${icon(ic)}</span><span class="cc-name">${name}</span></span><span class="cc-prompt">“${prompt}”</span><span class="cc-go">点击直接发送 ›</span></button>`).join("")}<button class="cap-card wide" data-action="askInVideo" data-od-id="cap-card-current-video"><span class="cc-ico">${icon("book")}</span><span style="flex:1;min-width:0"><span class="cc-name">本节课问答</span><span class="cc-prompt" style="display:block;margin-top:3px">“总结一下这节课” · 要在播放页问，我按整节内容回答，不定位到具体时间点</span></span><span class="cc-go">去播放页 ›</span></button></div>`;
+    const followups=(id,list)=>`<div class="chips" style="margin-top:14px" data-od-id="followups-${id}">${list.map(q=>`<button class="chip" data-ask="${q}">${q}</button>`).join("")}</div>`;
+
+    const ansWelcome=()=>`<div class="msg-ai" data-od-id="ans-welcome">${aiHead("新会话 · 已接入课程进度与今日计划")}<div class="ai-body"><p>我看得到你的考试目标（2027 国考 · 11/29）、课程进度和今日计划，所以回答会落到具体课时，而不是泛泛而谈。这五件事点一下就能问：</p>${capCards()}<p class="fine" style="margin-top:12px">卡片会把写好的提示词直接发送；也可以在下面自己输入。</p></div></div>`;
+
+    const ansPlan=()=>`<div class="msg-ai" data-od-id="ans-plan">${aiHead("学习计划助手 · 已读取考试目标与欠债")}<div class="ai-body"><p>距离 11/29 还有 <strong class="num">88</strong> 天，课程完成目标 11/08。昨天欠下的 <strong class="num">42</strong> 分钟判断推理已经并入今天，本周其余四天各减 15 分钟给它腾位置。</p><div style="margin-top:13px;border-top:2px solid var(--fg)" data-od-id="plan-rearranged">${[["09/03 今天","判断推理 12 · 加强削弱（含昨日欠债）","视频 38 分 + 课后题 8 题 · 共 66 分钟"],["09/04","判断推理 13 · 削弱型题型对比","视频 34 分 + 专注 20 分钟"],["09/05","常识判断 · 三农专题 01","视频 29 分 + 课后题 6 题"],["09/06","资料分析 07 · 增长率速算","视频 41 分 + 专注 25 分钟"],["09/07","本周错题回看","专注 45 分钟"]].map(([d,x,m],i)=>`<div class="plan-item"><span class="plan-no">${String(i+1).padStart(2,"0")}</span><span><strong>${x}</strong><span class="plan-meta">${d} · ${m}</span></span><span class="tag ${i===0?"risk":""}">${i===0?"含欠债":"新排"}</span></div>`).join("")}</div><div class="between" style="margin-top:13px"><span class="caption">本周合计 <span class="num">4 小时 12 分钟</span></span><span class="tag info">日均 <span class="num">50</span> 分钟</span></div><p style="margin-top:11px">这样排能在 11/08 前学完，但今天必须完成 66 分钟，否则欠债会滚到周末。</p>${state.planApplied?`<div class="notice" style="margin-top:14px"><strong>已写入本周计划草稿</strong><p>今天的 66 分钟已进入今日作战单，锁定后不可再调整。</p></div>`:`<button class="btn btn-primary" style="margin-top:16px" data-action="applyPlan" data-od-id="apply-plan">应用这份排期到本周计划</button>`}${followups("plan",["周末只留 30 分钟，再排一次","本周还有哪些没完成"])}<p class="fine" style="margin-top:10px">不会自动锁定，锁定仍需你在今日计划里确认。</p></div></div>`;
+
+    const ansProgress=()=>`<div class="msg-ai" data-od-id="ans-progress">${aiHead("学习进度问答 · 数据来自学习记录")}<div class="ai-body"><p>今天你学了 <strong>判断推理 12 · 加强削弱</strong>，可信时长 <span class="num">24</span> 分钟，课后题还没做。</p><div class="metric-grid" style="margin-top:13px">${metric("24:00","今日可信时长")}${metric("1/3","今日任务完成")}${metric("2","本周未完成")}${metric("88","距考试天数")}</div><div class="trust-wrap"><div class="trust-head"><strong>本周计划完成度</strong><span>已完成 5 / 7 项</span></div><div class="trust-track"><span class="trust-fill" style="width:52%"></span><span class="play-fill" style="width:71%"></span><span class="blocked-fill" style="left:71%;width:29%"></span><i class="trust-node current" style="left:71%"></i><i class="trust-node" style="left:100%"></i></div><div class="trust-legend"><span class="legend-mark">已验证完成</span><span class="legend-mark play">已开始未结清</span><span class="legend-mark block">尚未开始</span></div></div><p style="margin-top:14px">本周还差两项：<strong>判断推理 12 课后题</strong>（8 题）和 <strong>资料分析 07</strong>（41 分钟）。</p><p><strong>按现在的速度：能学完，但没有缓冲。</strong>近 7 日实际 1.4 课时／天，目标 1.5 课时／天，缺口 0.1；把今天的课后题补上就回到目标线。</p><div class="cite" data-od-id="progress-source"><div class="cite-title">依据</div><button class="cite-row" data-action="jumpPlan"><span>今日计划 · 2026/09/03（已锁定）</span><span>查看 ›</span></button><button class="cite-row" data-action="jumpDebt"><span>学习欠债 · 判断推理 11 剩余 00:42</span><span>查看 ›</span></button></div>${followups("progress",["距离考试还有多久","把落后的重新排进计划"])}<p class="fine" style="margin-top:10px">原型示例数据，用于演示回答结构。</p></div></div>`;
+
+    const ansKnowledge=()=>`<div class="msg-ai" data-od-id="ans-knowledge">${aiHead("知识问答 · 优先课程内容")}<div class="ai-body"><p>先判断题干在论证什么，再判断选项动了论证的哪一环。课程里给的顺序是三步：</p><p><strong>一、拆出论点与论据。</strong>论点是结论句，论据是支撑它的事实，两者之间必然存在一个没说出口的假设。</p><p><strong>二、找那个假设。</strong>加强就是把假设补上或排除他因，削弱就是切断论据与论点的联系、指出他因或举反例。</p><p><strong>三、比强度。</strong>必要条件 &gt; 建立因果 &gt; 举例；只要有一个选项直接作用于论点与论据之间的桥，就不选只谈枝节的。</p><div class="cite" data-od-id="knowledge-course-cite"><div class="cite-title">课程依据</div><button class="cite-row" data-action="jumpLesson"><span>判断推理 12 · 加强削弱三步法</span><span>打开这节 ›</span></button><button class="cite-row" data-action="jumpLesson"><span>判断推理 13 · 削弱型题型对比</span><span>打开这节 ›</span></button></div><p style="margin-top:14px">课程里没讲“搭桥法在多论据题中的取舍”，这部分我联网补了两条：</p><div class="link-list" data-od-id="knowledge-web-refs"><button class="link-row" data-action="openRef"><span><strong>行政职业能力测验考试大纲 · 判断推理说明</strong><span class="link-src">官方考试大纲 · 示例来源</span></span><span class="chev">↗</span></button><button class="link-row" data-action="openRef"><span><strong>论证有效性：必要假设与充分假设的区别</strong><span class="link-src">公开逻辑学讲义 · 示例来源</span></span><span class="chev">↗</span></button></div>${followups("knowledge",["什么是三农","三农应该看哪个视频"])}<p class="fine" style="margin-top:10px">原型未接入真实检索，联网结果以示例来源标注；正式版会显示真实标题与域名。</p></div></div>`;
+
+    const ansSannong=()=>`<div class="msg-ai" data-od-id="ans-sannong">${aiHead("知识问答 · 命中课程内容")}<div class="ai-body"><p>“三农”指<strong>农业、农村、农民</strong>三者构成的一体政策对象：农业是产业维度，农村是空间维度，农民是主体维度。</p><p>考试里几乎不单考定义，考的是<strong>判断某项政策属于哪一维度</strong>，所以课程给了一个口诀：看主体（农民）、看空间（农村）、看产业（农业）。</p><div class="cite" data-od-id="sannong-course-cite"><div class="cite-title">课程依据</div><button class="cite-row" data-action="jumpLesson"><span>常识判断 · 三农专题 01 · 概念与考查方式</span><span>打开这节 ›</span></button></div>${followups("sannong",["三农应该看哪个视频","把三农排进本周计划"])}<p class="fine" style="margin-top:10px">依据只定位到课时，不定位到具体秒；这一问课程内容能完整覆盖，所以没有联网。</p></div></div>`;
+
+    const vcard=(title,meta,why,pct)=>`<button class="video-card" data-route="player" data-od-id="video-rec-${pct}"><span class="video-thumb">${icon("play")}<span class="thumb-scale"><i style="width:${pct}%"></i></span></span><span class="video-meta"><strong>${title}</strong><span class="caption">${meta}</span><span class="why">${why}</span></span></button>`;
+    const ansVideo=()=>`<div class="msg-ai" data-od-id="ans-video">${aiHead("课程视频推荐 · 已匹配课程目录")}<div class="ai-body"><p>“三农”在你的课程里属于常识判断的时政专题，共两节，先看第 01 节；第 02 节讲政策条目，适合考前回看。</p>${vcard("常识判断 · 三农专题 01：概念与考查方式","29 分钟 · 未开始 · 含课后题 6 题","为什么推荐：这节直接给出三农的定义边界和高频设问方式。",0)}${vcard("常识判断 · 三农专题 02：近三年政策要点","34 分钟 · 未开始","放在考前两周回看，记忆保留率更高。",0)}<p style="margin-top:14px">你已经看过的相关内容：</p>${vcard("常识判断 · 时政学习方法","18 分钟 · 已完成 · 可信 100%","可跳过，只在忘了记录方法时回看。",100)}${followups("video",["把三农排进本周计划","什么是三农"])}<p class="fine" style="margin-top:12px">点卡片直接进入播放页，观看时长与可信进度照常计入计划。</p></div></div>`;
+
+    const ansScope=()=>`<div class="msg-ai" data-od-id="ans-scope">${aiHead("原型示例范围")}<div class="ai-body"><p>这条提问超出了原型内置的示例回答，正式版会走真实模型。你可以先点下面任意一张卡片，看这五类能力各自的回答结构：</p>${capCards()}</div></div>`;
+
+    const ANS={welcome:ansWelcome,plan:ansPlan,progress:ansProgress,knowledge:ansKnowledge,sannong:ansSannong,video:ansVideo,scope:ansScope};
+    const curSess=()=>state.sessions.find(s=>s.id===state.sid)||state.sessions[0];
+    const bubble=(m)=>m.r==="u"?userMsg(m.t):(ANS[m.k]?ANS[m.k]():"");
+    const pendingBlock=()=>`<div class="msg-ai" data-od-id="ans-pending">${aiHead("正在读取课程与计划…")}<div class="ai-body"><span class="typing" role="status" aria-label="助教正在生成回答"><i></i><i></i><i></i></span></div></div>`;
+    /* 助教 Tab 就是一整页会话：左上角进会话管理，右上角进设置。 */
+    const tutor=()=>{const s=curSess();return shell(`<div class="content" id="thread" data-od-id="tutor-thread"><div class="chat">${s.msgs.map(bubble).join("")}${state.pending?pendingBlock():""}</div></div>${composer("上下文：2027 国考 · 今日计划（已锁定）","问计划、问进度或问知识…")}`,{title:s.title,back:false,left:`<button class="nav-side" data-action="openDrawer" aria-label="会话管理" data-od-id="open-session-drawer">${icon("panel")}</button>`,right:`<button class="nav-side right" data-route="settings" aria-label="助教设置" data-od-id="open-tutor-settings">${icon("gear")}</button>`,tab:"tutor"})};
+
+    /* 会话管理抽屉：新建、搜索、切换、重命名、删除确认都在同一层完成。 */
+    const sessRow=(s)=>{const asks=s.msgs.filter(m=>m.r==="u").length,on=s.id===state.sid;return `<div class="session-item ${on?"current":""}" data-name="${s.title}" data-od-id="session-${s.id}"><div class="session-row"><button class="session-open" data-sess="${s.id}" aria-current="${on}"><span class="session-name">${s.title}</span><span class="session-meta">${on?"当前会话 · ":""}${asks} 条提问 · ${s.updated}</span></button><button class="session-more" data-more="${s.id}" aria-label="${s.title} 的操作" aria-expanded="${state.rowMenu===s.id}">${icon("dots")}</button></div>${state.renaming===s.id?`<div class="rename-line"><label class="sr-only" for="rn-${s.id}">会话名称</label><input id="rn-${s.id}" value="${s.title}" maxlength="24" autocomplete="off"><button class="mini" data-rename-ok="${s.id}">保存</button></div>`:state.confirmDel===s.id?`<div class="confirm-line"><p>删除后这条会话的记录不再保留。</p><div class="row-actions" style="padding:0"><button class="mini danger" data-del-ok="${s.id}">确认删除</button><button class="mini" data-action="closeRow">取消</button></div></div>`:state.rowMenu===s.id?`<div class="row-actions"><button class="mini" data-rename="${s.id}">重命名</button><button class="mini danger" data-del="${s.id}">删除</button><button class="mini" data-action="closeRow">收起</button></div>`:""}</div>`};
+    const drawer=()=>`<div class="overlay under-status" data-action="closeDrawer" aria-label="关闭会话管理"></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="会话管理" data-od-id="session-drawer"><div class="drawer-head"><div class="between"><div><div class="drawer-title">会话</div><div class="drawer-sub">共 ${state.sessions.length} 个 · 按时间倒序</div></div><button class="icon-btn" data-action="newSession" aria-label="新建会话" data-od-id="new-session">${icon("plus")}</button></div><div class="search-box"><label class="sr-only" for="sess-q">搜索会话</label>${icon("search")}<input id="sess-q" type="search" placeholder="搜索会话标题" autocomplete="off"></div></div><div class="session-list" data-od-id="session-list">${["今天","本周"].map(g=>{const list=state.sessions.filter(s=>s.grp===g);return list.length?`<div class="session-group">${g}</div>`+list.map(sessRow).join(""):""}).join("")}<div class="sess-empty" id="sess-empty" hidden>没有匹配的会话，换个关键词试试。</div></div><div class="drawer-foot"><p class="fine">点标题切换会话，右侧 ⋯ 里重命名或删除。会话为原型示例数据。</p></div></aside>`;
+    /* 宿主页面一：首页。立绘停在底部导航之上，不遮挡主要操作。 */
+    const home=()=>shell(`<div class="content" data-od-id="home-host"><section class="section" data-od-id="exam-countdown"><div class="between"><div><div class="eyebrow">2027 国考 · 11/29</div><h2 class="title-md">距离考试</h2></div><span class="tag">进度正常</span></div><div class="between" style="align-items:flex-end;padding:10px 0 15px;border-bottom:1px solid var(--fg)"><div><span class="num" style="font-size:52px;font-weight:760;letter-spacing:-.06em">88</span><span style="font-size:13px;margin-left:4px">天</span></div><div style="text-align:right" class="caption">课程目标还剩 <span class="num">66</span> 天<br>复习缓冲 <span class="num">22</span> 天</div></div></section><section class="section" data-od-id="home-today"><div class="between"><div><div class="eyebrow">今日作战单 · 已锁定</div><h2 class="title-lg">3 项任务，含 1 项欠债</h2></div><span class="num title-md">33%</span></div><div class="progress" style="margin:14px 0 6px"><span style="width:33%"></span></div><div class="flat-list" style="margin-top:12px">${[["判断推理 12 · 加强削弱","视频 38 分 + 课后题 8 题","进行中"],["偿还 09/02 判断推理欠债","剩余 00:42","待开始"],["资料分析 07 速算","专注 25 分钟","待开始"]].map(([x,m,s],i)=>`<div class="plan-item"><span class="plan-no">${String(i+1).padStart(2,"0")}</span><span><strong>${x}</strong><span class="plan-meta">${m}</span></span><span class="tag ${i===1?"risk":""}">${s}</span></div>`).join("")}</div><button class="btn btn-primary" style="margin-top:16px" data-route="player" data-od-id="home-continue">继续判断推理 12</button></section><section class="section"><div class="notice"><strong>立绘就在右下角</strong><p>点一下问计划、问进度、问知识；按住左右拖动可以换边，避免挡住当前内容。</p></div></section></div>`,{title:"首页",back:false,tab:"home",pet:true});
+
+    /* 宿主页面二：播放页。立绘在此处默认进入“本节课问答”上下文。 */
+    const player=()=>shell(`<div class="video-box" data-od-id="video-player"><div class="video-frame"><span class="video-status">${icon("wifi")} 服务端验证中 · 可信至 ${t(state.current)}</span><button class="player-btn" data-action="togglePlay" aria-label="${state.playing?"暂停":"播放"}" aria-pressed="${state.playing}">${icon(state.playing?"pause":"play")}</button><span class="video-tools"><span>1.0×</span><span class="num">${t(state.current)} / 29:00</span><span>${state.playing?"播放中":"已暂停"}</span></span></div></div><div class="content" data-od-id="player-host"><section class="section"><div class="between"><div><div class="eyebrow">常识判断 · 三农专题</div><h2 class="title-md">01 概念与考查方式</h2></div><span class="tag ${state.playing?"info":"locked"}">${state.playing?"播放中":"已暂停"}</span></div><div class="trust-wrap"><div class="trust-head"><strong>可信进度</strong><span>可信至 ${t(state.current)} / 29:00</span></div><div class="trust-track"><span class="trust-fill" style="width:43%"></span><span class="play-fill" style="width:43%"></span><span class="blocked-fill" style="left:43%;width:57%"></span><i class="trust-node current" style="left:43%"></i><i class="trust-node" style="left:90%"></i></div><div class="trust-legend"><span class="legend-mark">已验证</span><span class="legend-mark play">已播放</span><span class="legend-mark block">尚不可跳转</span></div></div></section><section class="section"><div class="eyebrow">看不懂就直接问</div><h3 class="title-md">立绘按整节课的内容回答</h3><p class="lead">点右下角的立绘提问时，助教默认知道你正在看哪一节，回答基于这一整节的课程内容与讲义；它不追踪你停在第几秒，也不会给出跳转时间点。</p></section></div>`,{title:"三农专题 01",back:true,pet:true});
+
+    /* 立绘输入浮层：结构与助教 Tab 的输入区一致，只是就地回答，不打断当前页面。 */
+    const petAnswerBlock=()=>state.petCtx==="video"?`<div class="pet-answer" data-od-id="pet-answer-video">${aiHead("本节课问答 · 三农专题 01")}<div class="ai-body"><p>这一节讲的是<strong>“三农”的边界</strong>：农业、农村、农民三者是一体的政策对象，考试里通常不单考定义，而是考某项政策属于哪一维度。</p><p>后半节给了判断口诀：<strong>看主体</strong>（农民）、<strong>看空间</strong>（农村）、<strong>看产业</strong>（农业）。</p><p class="fine" style="margin-top:8px">回答基于这一节的完整内容，不定位到具体时间点；想换个问法，点上面的快捷问。</p></div></div>`:`<div class="pet-answer" data-od-id="pet-answer-home">${aiHead("学习进度问答 · 今日")}<div class="ai-body"><p>今天你完成了 1 / 3 项，可信时长 <span class="num">24</span> 分钟；还差<strong>判断推理 12 课后题</strong>和<strong>资料分析 07 专注 25 分钟</strong>。</p><p>欠债 <span class="num">00:42</span> 还没动，建议先做课后题，它只要 8 分钟。</p></div></div>`;
+    const petConsole=()=>{const c=CAST[state.standee],video=state.petCtx==="video";const quick=video?["总结一下这节课","这一节的重点是什么","这个判断口诀怎么用"]:["帮我规划今日任务","本周还有哪些没完成","什么是三农","推荐讲资料分析的课"];return `<div class="overlay" data-action="closePet" aria-label="收起立绘输入面板"></div><section class="pet-console" role="dialog" aria-modal="true" aria-labelledby="pet-title" data-od-id="pet-console"><div class="grabber"></div><div class="pet-top"><div class="pet-bust">${art("standee-slot-wrap")}</div><div class="pet-say"><strong id="pet-title">${c.name} · ${c.role}</strong><p>${video?"我知道你正在看《三农专题 01》，可以就这一整节的内容提问。":c.line}</p></div></div><div class="chips" style="margin-top:14px" data-od-id="pet-quick-asks">${quick.map(q=>`<button class="chip" data-quick="${q}">${q}</button>`).join("")}</div>${state.petAnswer?petAnswerBlock():""}<div style="margin-top:14px" data-od-id="pet-composer"><div class="composer-line"><label class="sr-only" for="pet-ask">向立绘助教提问</label><textarea id="pet-ask" rows="1" placeholder="${video?"就这节课的内容提问…":"问计划、进度或知识…"}" style="min-height:46px;max-height:78px;padding:12px 14px;border:1.5px solid var(--border);border-radius:13px;background:var(--surface);resize:none;font-size:14px;width:100%"></textarea><button class="send" data-action="petSend" aria-label="发送提问">${icon("send")}</button></div></div><div class="between" style="margin-top:14px"><button class="nav-side" data-route="tutor" style="padding:0 8px">打开助教 Tab 看完整会话 ›</button><button class="nav-side right" data-route="settings" style="padding:0 8px">助教设置</button></div></section>`};
+
+    /* 右上角设置：先管回答边界，再管立绘出现的位置与频率，最后是会话数据。 */
+    const setRow=(k,l,d)=>`<div class="setting-row" style="cursor:default"><span>${l}<br><span class="fine">${d}</span></span><button class="switch" role="switch" aria-checked="${state[k]}" aria-label="${l}" data-toggle="${k}"></button></div>`;
+    const settings=()=>shell(`<div class="content no-tabs" data-od-id="tutor-settings"><section class="section"><div class="eyebrow">AI 助教</div><h2 class="title-lg">回答边界，和立绘出现的地方</h2><p class="lead">这些开关只影响助教怎么回答、在哪出现。它始终不会替你标记完成，也不会改动已锁定的计划。</p></section><section class="section"><div class="eyebrow">回答方式</div>${setRow("citeCourse","回答必须给出课程依据","课程内能回答时，列出对应课时，点一下直接打开这节课")}${setRow("webSearch","课程讲不到时联网搜索","补充内容会单独标注来源标题与域名")}${setRow("autoName","新会话按首个提问自动命名","关掉后新建的会话保留“新会话”标题")}</section><section class="section"><div class="eyebrow">立绘宠物</div><div class="setting-row" style="cursor:default"><span>在其他页面显示立绘<br><span class="fine">关掉它，助教 Tab 的能力不受影响</span></span><button class="switch" role="switch" aria-checked="${state.showStandee}" aria-label="在其他页面显示立绘" data-toggle="showStandee"></button></div><div class="setting-row" style="cursor:default"><span>停靠位置<br><span class="fine">也可以直接拖动立牌换边</span></span><span class="segmented" style="width:132px;flex:0 0 auto">${[["left","靠左"],["right","靠右"]].map(([v,l])=>`<button class="${state.side===v?"active":""}" data-side="${v}" aria-pressed="${state.side===v}">${l}</button>`).join("")}</span></div></section><section class="section"><div class="eyebrow">当前立绘</div><div class="cap-list">${[["lin","林见夏","计划型 · 排期与进度先说结论"],["zhou","周执","追赶型 · 优先提醒落后与欠债"]].map(([id,n,d])=>`<button class="cap-row" data-cast="${id}" aria-pressed="${state.standee===id}" data-od-id="cast-${id}"><span class="cap-no">${state.standee===id?"✓":"·"}</span><span><strong>${n}</strong><span class="cap-eg">${d}</span></span><span class="tag ${state.standee===id?"done":""}">${state.standee===id?"使用中":"可切换"}</span></button>`).join("")}<div class="cap-row" style="cursor:not-allowed"><span class="cap-no">·</span><span><strong style="color:var(--muted)">考前限定立绘</strong><span class="cap-eg">连续 14 天完成计划后解锁</span></span><span class="tag locked">未解锁</span></div></div><p class="fine" style="margin-top:12px">立绘素材为 3:4 竖构图透明 PNG，建议 1024 × 1365 px。</p></section><section class="section"><div class="eyebrow">主动说话频率</div>${[["never","从不打扰","只有我点它才出现，永不主动说话"],["key","关键节点","计划锁定、视频达阈值、日终结算时各一次"],["often","经常提醒","每完成一项任务都提醒，冲刺期适用"]].map(([v,l,d])=>`<label class="level-option"><input type="radio" name="freq" value="${v}" ${state.frequency===v?"checked":""}><span><strong>${l}</strong><p>${d}</p></span></label>`).join("")}</section><section class="section"><div class="eyebrow">会话数据</div><div class="between" style="padding-bottom:12px"><span class="caption">当前保留 <span class="num">${state.sessions.length}</span> 个会话</span><span class="tag info">仅本机</span></div>${state.confirmClear?`<div class="confirm-line" style="padding:0"><p>清空后所有会话记录都不再保留，只留一个新会话。</p><div class="row-actions" style="padding:0"><button class="mini danger" data-action="clearAll">确认清空</button><button class="mini" data-action="cancelClear">取消</button></div></div>`:`<button class="btn btn-secondary" data-action="askClear" data-od-id="clear-sessions">清空全部会话</button>`}</section><button class="btn btn-primary" data-action="saveSettings" data-od-id="save-tutor-settings">保存助教设置</button></div>`,{title:"助教设置"});
+
+    const stub=(name)=>shell(`<div class="content" data-od-id="stub-${name}"><section class="section"><div class="eyebrow">V2 范围之外</div><h2 class="title-lg">${name} 仍在 V1 原型</h2><p class="lead">这份 V2 只交付 AI 助教 Tab 和动漫立绘两条主线。${name}、登录、计划锁定、欠债与日报请看 shangan-ios-prototype.html。</p></section><section class="section"><div class="empty"><div class="state-icon">${icon("list")}</div><h3 class="title-md">回到 V2 主线</h3><p class="caption" style="margin:8px auto 16px;max-width:26ch">助教 Tab 承载五类问答，立绘负责在任意页面就地提问。</p></div><button class="btn btn-secondary" data-route="tutor">进入 AI 助教</button></section></div>`,{title:name,back:false,tab:name==="学习"?"courses":name==="数据"?"data":"profile",pet:true});
+    const courses=()=>stub("学习"),data=()=>stub("数据"),profile=()=>stub("我的");
+    const pages={tutor,home,player,settings,courses,data,profile};
+
+    function go(route,extra={}){state.route=route;state.petOpen=!!extra.petOpen;state.drawer=!!extra.drawer;state.rowMenu=extra.rowMenu||"";state.renaming=extra.renaming||"";state.confirmDel=extra.confirmDel||"";state.confirmClear=false;state.pending=false;if(extra.sid)state.sid=extra.sid;if(extra.petCtx)state.petCtx=extra.petCtx;state.petAnswer=extra.petAnswer||"";try{localStorage.setItem(STORE,JSON.stringify({route,sid:state.sid}))}catch(e){}render()}
+    function back(){go("tutor")}
+    function toast(m){state.toast=m;render();window.setTimeout(()=>{state.toast="";render()},1600)}
+    function openPet(){state.petOpen=true;state.petCtx=state.route==="player"?"video":"home";state.petAnswer="";render()}
+    function petAsk(){state.petAnswer="done";render();const box=document.querySelector(".pet-console");if(box)box.scrollTo({top:box.scrollHeight,behavior:"smooth"})}
+
+    /* 会话增删查改：全部发生在抽屉里，删除与清空都要二次确认。 */
+    function closeRow(){state.rowMenu="";state.renaming="";state.confirmDel="";render()}
+    function openDrawer(){state.drawer=true;state.q="";state.rowMenu="";state.renaming="";state.confirmDel="";render()}
+    function closeDrawer(){state.drawer=false;state.q="";state.rowMenu="";state.renaming="";state.confirmDel="";render()}
+    function newSession(){const id="s"+(++state.seq);state.sessions.unshift({id,title:"新会话",grp:"今天",updated:"刚刚",msgs:[{r:"a",k:"welcome"}]});state.sid=id;state.planApplied=false;closeDrawer();toast("已新建会话")}
+    function openSession(id){state.sid=id;closeDrawer()}
+    function renameOk(id){const el=document.getElementById("rn-"+id),v=el?el.value.trim():"";if(!v)return toast("会话名称不能为空");const s=state.sessions.find(x=>x.id===id);if(s)s.title=v.slice(0,24);state.renaming="";state.rowMenu="";render();toast("会话已重命名")}
+    function delSession(id){if(state.sessions.length<=1){closeRow();return toast("至少保留一个会话")}state.sessions=state.sessions.filter(s=>s.id!==id);if(state.sid===id)state.sid=state.sessions[0].id;closeRow();toast("会话已删除")}
+    function filterSessions(q){const v=q.trim().toLowerCase();let hits=0;document.querySelectorAll(".session-item").forEach(el=>{const on=!v||(el.dataset.name||"").toLowerCase().includes(v);el.hidden=!on;if(on)hits++});document.querySelectorAll(".session-group").forEach(h=>{let sib=h.nextElementSibling,any=false;while(sib&&sib.classList.contains("session-item")){if(!sib.hidden)any=true;sib=sib.nextElementSibling}h.hidden=!any});const empty=document.getElementById("sess-empty");if(empty)empty.hidden=hits>0}
+
+    /* 发送：能力卡片、追问 chip 与输入框走同一条路径，回答类型由提问内容决定。 */
+    function classify(v){if(/视频|推荐|看哪|哪个课/.test(v))return "video";if(/计划|排|安排|规划/.test(v))return "plan";if(/进度|完成|多久|学完|学了|落后/.test(v))return "progress";if(/三农/.test(v))return "sannong";if(/加强|削弱|怎么做|什么是|如何|为什么|口诀/.test(v))return "knowledge";return "scope"}
+    function send(text){const v=(text||"").trim();if(!v)return toast("请先输入问题");const s=curSess();s.msgs.push({r:"u",t:v});if(state.autoName&&s.title==="新会话")s.title=v.length>16?v.slice(0,16)+"…":v;s.updated="刚刚";s.grp="今天";state.sessions=[s].concat(state.sessions.filter(x=>x.id!==s.id));state.pending=true;state.stick=true;const f=document.getElementById("ask");if(f)f.value="";render();window.setTimeout(()=>{s.msgs.push({r:"a",k:classify(v)});state.pending=false;state.stick=true;render()},560)}
+
+    /* 长按拖动立牌换边：只判断水平方向，短按仍然是唤起。 */
+    function bindDrag(){const el=document.querySelector(".standee");if(!el)return;let x0=null;el.addEventListener("pointerdown",e=>{x0=e.clientX});el.addEventListener("pointerup",e=>{if(x0===null)return;const dx=e.clientX-x0;x0=null;if(Math.abs(dx)>56){state.side=dx>0?"right":"left";state.petOpen=false;render();toast(`立绘已停靠到${state.side==="right"?"右":"左"}侧`)}});el.addEventListener("pointercancel",()=>{x0=null})}
+    function render(){const app=document.getElementById("app");app.innerHTML=(pages[state.route]||tutor)()+(state.drawer&&state.route==="tutor"?drawer():"")+(state.petOpen?petConsole():"")+(state.toast?`<div class="toast" role="status">${state.toast}</div>`:"");app.querySelectorAll("section:not([data-od-id])").forEach((el,i)=>el.dataset.odId=`${state.route}-section-${i+1}`);document.querySelectorAll(".screen-link").forEach((b,i)=>b.classList.toggle("active",i===state.navIndex));if(state.stick){const th=document.getElementById("thread");if(th)th.scrollTop=th.scrollHeight;state.stick=false}bind();if(state.drawer&&state.q){const q=document.getElementById("sess-q");if(q){q.value=state.q;filterSessions(state.q)}}}
+    const TOGGLE_MSG={showStandee:["其他页面会显示立绘","已关闭其他页面的立绘"],webSearch:["课程讲不到时会联网补充","已关闭联网补充，只答课程内内容"],citeCourse:["回答会附课程依据","已关闭课程依据"],autoName:["新会话会自动命名","新建会话将保留“新会话”标题"]};
+    function bind(){
+      document.querySelectorAll("[data-route]").forEach(el=>el.onclick=()=>{state.navIndex=nav_items.findIndex(item=>item[0]===el.dataset.route&&!item[2].petOpen&&!item[2].drawer);go(el.dataset.route)});
+      document.querySelectorAll("[data-action]").forEach(el=>el.onclick=()=>action(el.dataset.action));
+      document.querySelectorAll("[data-ask]").forEach(el=>el.onclick=()=>send(el.dataset.ask));
+      document.querySelectorAll("[data-quick]").forEach(el=>el.onclick=()=>{petAsk()});
+      document.querySelectorAll("[data-sess]").forEach(el=>el.onclick=()=>openSession(el.dataset.sess));
+      document.querySelectorAll("[data-more]").forEach(el=>el.onclick=()=>{const id=el.dataset.more,open=state.rowMenu===id;state.rowMenu=open?"":id;state.renaming="";state.confirmDel="";render()});
+      document.querySelectorAll("[data-rename]").forEach(el=>el.onclick=()=>{state.renaming=el.dataset.rename;state.confirmDel="";render();const f=document.getElementById("rn-"+state.renaming);if(f){f.focus();f.select()}});
+      document.querySelectorAll("[data-rename-ok]").forEach(el=>el.onclick=()=>renameOk(el.dataset.renameOk));
+      document.querySelectorAll("[data-del]").forEach(el=>el.onclick=()=>{state.confirmDel=el.dataset.del;render()});
+      document.querySelectorAll("[data-del-ok]").forEach(el=>el.onclick=()=>delSession(el.dataset.delOk));
+      document.querySelectorAll("[data-toggle]").forEach(el=>el.onclick=()=>{const k=el.dataset.toggle;state[k]=!state[k];render();const m=TOGGLE_MSG[k];if(m)toast(state[k]?m[0]:m[1])});
+      document.querySelectorAll("[data-side]").forEach(el=>el.onclick=()=>{state.side=el.dataset.side;render()});
+      document.querySelectorAll("[data-cast]").forEach(el=>el.onclick=()=>{state.standee=el.dataset.cast;render();toast(`已切换立绘：${CAST[state.standee].name}`)});
+      document.querySelectorAll('input[name="freq"]').forEach(el=>el.onchange=()=>{state.frequency=el.value});
+      const q=document.getElementById("sess-q");if(q){q.oninput=()=>{state.q=q.value;filterSessions(state.q)}}
+      const ask=document.getElementById("ask");if(ask)ask.onkeydown=(e)=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send(ask.value)}};
+      const rn=document.querySelector(".rename-line input");if(rn)rn.onkeydown=(e)=>{if(e.key==="Enter"){e.preventDefault();renameOk(state.renaming)}};
+      bindDrag();
+    }
+    function action(n){
+      if(n==="back")return back();
+      if(n==="openDrawer")return openDrawer();
+      if(n==="closeDrawer")return closeDrawer();
+      if(n==="closeRow")return closeRow();
+      if(n==="newSession")return newSession();
+      if(n==="send")return send((document.getElementById("ask")||{}).value||"");
+      if(n==="askInVideo")return go("player",{petOpen:true,petCtx:"video",petAnswer:"done"});
+      if(n==="openPet")return openPet();
+      if(n==="closePet"){state.petOpen=false;return render()}
+      if(n==="petSend"){const v=(document.getElementById("pet-ask")||{}).value||"";if(!v.trim())return toast("请先输入问题");return petAsk()}
+      if(n==="applyPlan"){state.planApplied=true;render();return toast("已写入本周计划草稿，锁定仍需你确认")}
+      if(n==="togglePlay"){state.playing=!state.playing;return render()}
+      if(n==="askClear"){state.confirmClear=true;return render()}
+      if(n==="cancelClear"){state.confirmClear=false;return render()}
+      if(n==="clearAll"){const id="s"+(++state.seq);state.sessions=[{id,title:"新会话",grp:"今天",updated:"刚刚",msgs:[{r:"a",k:"welcome"}]}];state.sid=id;state.confirmClear=false;render();return toast("已清空全部会话")}
+      if(n==="saveSettings")return toast("助教设置已保存");
+      if(n==="jumpPlan")return toast("原型示例：跳转到今日计划（V1 文件）");
+      if(n==="jumpDebt")return toast("原型示例：跳转到学习欠债（V1 文件）");
+      if(n==="jumpLesson")return go("player");
+      if(n==="openRef")return toast("原型示例：在应用内浏览器打开参考链接");
+    }
+    document.getElementById("panel-screens").innerHTML=nav_items.map(([r,n],i)=>`<button class="screen-link" data-nav="${i}"><span class="screen-no">${String(i+1).padStart(2,"0")}</span><span class="screen-name">${n}</span></button>`).join("");
+    document.querySelectorAll("[data-nav]").forEach(btn=>btn.onclick=()=>{const i=Number(btn.dataset.nav);state.navIndex=i;go(nav_items[i][0],nav_items[i][2])});
+    document.querySelectorAll(".delivery-tabs button").forEach(btn=>btn.onclick=()=>{document.querySelectorAll(".delivery-tabs button").forEach(b=>b.setAttribute("aria-selected","false"));btn.setAttribute("aria-selected","true");document.querySelectorAll(".delivery-panel").forEach(p=>p.classList.remove("active"));document.getElementById("panel-"+btn.dataset.panel).classList.add("active")});
+    try{const saved=JSON.parse(localStorage.getItem(STORE)||"null");if(saved&&pages[saved.route]){state.route=saved.route;if(saved.sid&&state.sessions.some(s=>s.id===saved.sid))state.sid=saved.sid}}catch(e){}
+    state.navIndex=nav_items.findIndex(item=>item[0]===state.route&&(!item[2].sid||item[2].sid===state.sid));
+    render();
+  </script>
+</body>
+</html>

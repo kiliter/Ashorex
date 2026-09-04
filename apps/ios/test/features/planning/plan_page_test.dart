@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shangan_ios/core/api/api_exception.dart';
 import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
 import 'package:shangan_ios/features/focus/data/mock_exam_repository.dart';
 import 'package:shangan_ios/features/planning/data/plan_repository.dart';
@@ -126,6 +127,48 @@ void main() {
       'lesson-1',
       'lesson-2',
     ]);
+  });
+
+  testWidgets('保存冲突时展示服务端稳定业务提示而不是通用兜底文案', (tester) async {
+    final plans = _PlanRepository(
+      initialItems: const [],
+      saveError: const ApiException(
+        statusCode: 409,
+        errorCode: 'PLAN_VERSION_CONFLICT',
+        message: '作战单已在其他页面修改，请重新加载',
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          planRepositoryProvider.overrideWithValue(plans),
+          catalogRepositoryProvider.overrideWithValue(_CatalogRepository()),
+          mockExamRepositoryProvider.overrideWithValue(_MockExamRepository()),
+        ],
+        child: const MaterialApp(home: PlanPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openBattleOrderPicker')));
+    await tester.pumpAndSettle();
+    final pickerSheet = find.byType(BottomSheet);
+    await tester.tap(
+      find.descendant(of: pickerSheet, matching: find.text('公务员考试')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(of: pickerSheet, matching: find.text('资料分析')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('完成'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('saveBattleOrder')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('作战单已在其他页面修改，请重新加载'), findsOneWidget);
+    expect(find.text('保存失败，请重新加载后再试'), findsNothing);
   });
 
   testWidgets('连续点击保存只提交一次且只展示一个最新提示', (tester) async {
@@ -285,6 +328,7 @@ void main() {
 final class _PlanRepository implements PlanRepository {
   _PlanRepository({
     this.deferSave = false,
+    this.saveError,
     this.openDebts = const [],
     this.initialItems = const [
       PlanItemData(
@@ -304,6 +348,9 @@ final class _PlanRepository implements PlanRepository {
   });
 
   final bool deferSave;
+
+  /// 注入服务端业务错误，验证页面展示稳定 errorCode 对应的文案而非通用兜底提示。
+  final Object? saveError;
   final List<PlanItemData> initialItems;
   final List<LearningDebtData> openDebts;
   final Completer<void> _saveGate = Completer<void>();
@@ -345,6 +392,8 @@ final class _PlanRepository implements PlanRepository {
     savedExpectedVersion = expectedVersion;
     savedItems = List.unmodifiable(items);
     if (deferSave) await _saveGate.future;
+    final error = saveError;
+    if (error != null) throw error;
     return _plan(5);
   }
 

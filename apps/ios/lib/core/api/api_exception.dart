@@ -28,3 +28,16 @@ final class ApiException implements Exception {
   @override
   String toString() => message;
 }
+
+/// 优先展示服务端稳定业务错误文案；网络或解析失败时回退到调用方的场景化提示。
+///
+/// 服务端对版本冲突、项目不可修改、课时重复等场景都返回明确的 errorCode 与 detail，
+/// 页面直接吞掉这些信息会让用户把业务冲突误判成网络故障。
+String shanganErrorMessage(Object error, String fallback) {
+  if (error is ApiException &&
+      error.errorCode != 'NETWORK_ERROR' &&
+      error.message.isNotEmpty) {
+    return error.message;
+  }
+  return fallback;
+}

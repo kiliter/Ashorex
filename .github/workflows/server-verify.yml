@@ -10,11 +10,15 @@ on:
       - "v*"
     paths:
       - "apps/server/**"
+      - "docs/api/openapi.yaml"
+      - "infra/scripts/check-openapi-drift.sh"
       - "Makefile"
       - ".github/workflows/server-verify.yml"
   pull_request:
     paths:
       - "apps/server/**"
+      - "docs/api/openapi.yaml"
+      - "infra/scripts/check-openapi-drift.sh"
       - "Makefile"
       - ".github/workflows/server-verify.yml"
 
@@ -35,6 +39,8 @@ jobs:
           cache: maven
       - name: 执行服务端验证
         run: make server-test
+      - name: 校验 OpenAPI 合同无漂移
+        run: ./infra/scripts/check-openapi-drift.sh
       - name: 构建服务端 Docker 镜像
         run: docker build --file infra/docker/server.Dockerfile --tag ashorex-server:${{ github.sha }} .
       - name: 导出 Docker 镜像

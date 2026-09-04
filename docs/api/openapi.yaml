@@ -40,33 +40,6 @@ paths:
                 $ref: "#/components/schemas/PreferencesResponse"
       security:
       - bearerAuth: []
-  /api/v1/plans:
-    get:
-      tags:
-      - battle-order-calendar-controller
-      operationId: calendar
-      parameters:
-      - name: from
-        in: query
-        required: true
-        schema:
-          type: string
-          format: date
-      - name: to
-        in: query
-        required: true
-        schema:
-          type: string
-          format: date
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/CalendarView"
-      security:
-      - bearerAuth: []
   /api/v1/plans/{date}:
     get:
       tags:
@@ -153,6 +126,51 @@ paths:
       responses:
         "204":
           description: No Content
+      security:
+      - bearerAuth: []
+  /api/v1/exam-goals/{goalId}:
+    get:
+      tags:
+      - exam-controller
+      operationId: goalById
+      parameters:
+      - name: goalId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ExamGoalResponse"
+      security:
+      - bearerAuth: []
+    put:
+      tags:
+      - exam-controller
+      operationId: update_1
+      parameters:
+      - name: goalId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExamGoalRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ExamGoalResponse"
       security:
       - bearerAuth: []
   /api/v1/exam-goal:
@@ -699,6 +717,33 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/StreamingResponseBody"
+  /api/v1/plans:
+    get:
+      tags:
+      - battle-order-calendar-controller
+      operationId: calendar
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CalendarView"
+      security:
+      - bearerAuth: []
   /api/v1/mock-exams/{sessionId}:
     get:
       tags:
@@ -845,6 +890,22 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/Progress"
+      security:
+      - bearerAuth: []
+  /api/v1/exam-goals:
+    get:
+      tags:
+      - exam-controller
+      operationId: goals
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExamGoalResponse"
       security:
       - bearerAuth: []
   /api/v1/debts:
@@ -1031,40 +1092,6 @@ components:
           type: string
         mockExamSessionStatus:
           type: string
-    CalendarView:
-      type: object
-      properties:
-        from:
-          type: string
-          format: date
-        to:
-          type: string
-          format: date
-        days:
-          type: array
-          items:
-            $ref: "#/components/schemas/DayView"
-    DayView:
-      type: object
-      properties:
-        date:
-          type: string
-          format: date
-        status:
-          type: string
-        completed:
-          type: boolean
-        hasDebt:
-          type: boolean
-        itemCount:
-          type: integer
-          format: int32
-        completedItemCount:
-          type: integer
-          format: int32
-        plannedSeconds:
-          type: integer
-          format: int64
     PlanView:
       type: object
       properties:
@@ -1583,6 +1610,40 @@ components:
           type: string
           format: date-time
     StreamingResponseBody: {}
+    CalendarView:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/DayView"
+    DayView:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        status:
+          type: string
+        completed:
+          type: boolean
+        hasDebt:
+          type: boolean
+        itemCount:
+          type: integer
+          format: int32
+        completedItemCount:
+          type: integer
+          format: int32
+        plannedSeconds:
+          type: integer
+          format: int64
     UserResponse:
       type: object
       properties:
@@ -1791,6 +1852,17 @@ components:
           type: number
           format: double
         continueLesson: {}
+        progressPressure:
+          $ref: "#/components/schemas/Progress"
+        exams:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExamCard"
+    ExamCard:
+      type: object
+      properties:
+        exam:
+          $ref: "#/components/schemas/ExamGoalResponse"
         progressPressure:
           $ref: "#/components/schemas/Progress"
     TodayPlan:

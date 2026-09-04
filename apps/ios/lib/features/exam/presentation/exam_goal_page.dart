@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shangan_ios/core/api/api_exception.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
@@ -230,8 +231,10 @@ final class _ExamGoalPageState extends ConsumerState<ExamGoalPage> {
       } else {
         context.go('/home');
       }
-    } catch (_) {
-      if (mounted) setState(() => _message = '考试目标保存失败，请稍后重试');
+    } catch (error) {
+      if (mounted) {
+        setState(() => _message = shanganErrorMessage(error, '考试目标保存失败，请稍后重试'));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }

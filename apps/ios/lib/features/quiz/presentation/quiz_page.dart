@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shangan_ios/core/api/api_exception.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/quiz/data/quiz_repository.dart';
@@ -187,11 +188,13 @@ final class _QuizPageState extends ConsumerState<QuizPage> {
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(builder: (_) => QuizResultPage(result: result)),
       );
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('答卷提交失败，请检查网络后重试。')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(shanganErrorMessage(error, '答卷提交失败，请检查网络后重试。')),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _submitting = false);

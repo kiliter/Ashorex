@@ -67,77 +67,11 @@ public class JdbcPlanningRepository implements PlanningRepository {
   }
 
   @Override
-  public void insertPlan(DailyPlan plan, Instant now) {
-    jdbc.sql(
-            "insert into daily_plans (id, user_id, plan_date, status, created_at, updated_at) "
-                + "values (:id, :userId, :date, 'DRAFT', :now, :now)")
-        .params(
-            Map.of(
-                "id", plan.id(),
-                "userId", plan.userId(),
-                "date", plan.planDate().toString(),
-                "now", now.toEpochMilli()))
-        .update();
-  }
-
-  @Override
-  public void insertItem(PlanItem item, Instant now) {
-    jdbc.sql(
-            """
-            insert into daily_plan_items (
-              id, plan_id, item_type, title, media_item_id, debt_id,
-              planned_seconds, completed_seconds, watch_completed, quiz_required,
-              quiz_completed, status, sort_order, created_at, updated_at
-            ) values (
-              :id, :planId, :type, :title, :mediaId, :debtId,
-              :planned, 0, 0, 0, 0, 'PENDING', :sortOrder, :now, :now
-            )
-            """)
-        .param("id", item.id())
-        .param("planId", item.planId())
-        .param("type", item.itemType())
-        .param("title", item.title())
-        .param("mediaId", item.mediaItemId())
-        .param("debtId", item.debtId())
-        .param("planned", item.plannedSeconds())
-        .param("sortOrder", item.sortOrder())
-        .param("now", now.toEpochMilli())
-        .update();
-  }
-
-  @Override
-  public void updateItemDefinition(
-      String itemId, String title, long plannedSeconds, int sortOrder, Instant now) {
-    jdbc.sql(
-            "update daily_plan_items set title=:title, planned_seconds=:planned, "
-                + "sort_order=:sortOrder, updated_at=:now where id=:id")
-        .params(
-            Map.of(
-                "title", title,
-                "planned", plannedSeconds,
-                "sortOrder", sortOrder,
-                "now", now.toEpochMilli(),
-                "id", itemId))
-        .update();
-  }
-
-  @Override
-  public void deleteItem(String itemId) {
-    jdbc.sql("delete from daily_plan_items where id = :id").param("id", itemId).update();
-  }
-
-  @Override
-  public void snapshotQuizRequired(String itemId, boolean required, Instant now) {
-    jdbc.sql("update daily_plan_items set quiz_required=:required, updated_at=:now where id=:id")
-        .params(Map.of("required", required ? 1 : 0, "now", now.toEpochMilli(), "id", itemId))
-        .update();
-  }
-
-  @Override
   public void updatePlanState(DailyPlan plan, Instant now) {
     jdbc.sql(
             "update daily_plans set status=:status, "
-                + "lifecycle_status=case when :status in ('COMPLETED','CLOSED_WITH_DEBT') "
+                + "lifecycle_status=case when :status in "
+                + "('COMPLETED','CLOSED_WITH_DEBT','ABANDONED') "
                 + "then :status else lifecycle_status end, "
                 + "locked_at=:lockedAt, closed_at=:closedAt, updated_at=:now where id=:id")
         .param("status", plan.status().name())
@@ -145,34 +79,6 @@ public class JdbcPlanningRepository implements PlanningRepository {
         .param("closedAt", epoch(plan.closedAt()))
         .param("now", now.toEpochMilli())
         .param("id", plan.id())
-        .update();
-  }
-
-  @Override
-  public void insertAbandonment(
-      String id,
-      String planId,
-      String userId,
-      String reasonCode,
-      String reasonText,
-      long remainingSeconds,
-      Instant now) {
-    jdbc.sql(
-            """
-            insert into plan_abandonments (
-              id, plan_id, user_id, reason_code, reason_text, remaining_seconds, created_at
-            ) values (:id, :planId, :userId, :code, :text, :remaining, :now)
-            on conflict(plan_id) do nothing
-            """)
-        .params(
-            Map.of(
-                "id", id,
-                "planId", planId,
-                "userId", userId,
-                "code", reasonCode,
-                "text", reasonText,
-                "remaining", remainingSeconds,
-                "now", now.toEpochMilli()))
         .update();
   }
 
@@ -259,8 +165,8 @@ public class JdbcPlanningRepository implements PlanningRepository {
     return new ProgressUpdate(before, after, 0);
   }
 
-  @Override
-  public void markItemCompletedIfSatisfied(String itemId, Instant now) {
+  /** 任务完成判定只在本仓储内部使用，避免应用层出现第二份完成规则。 */
+  private void markItemCompletedIfSatisfied(String itemId, Instant now) {
     jdbc.sql(
             """
             update daily_plan_items set status='COMPLETED', completed_at=:now, updated_at=:now

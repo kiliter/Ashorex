@@ -30,7 +30,8 @@ public class HierarchicalTextProcessor {
         return requireOutput(generator.generate(reducedChunks.getFirst(), true));
       }
       String next = reduce(reducedChunks, generator);
-      if (next.length() >= reduced.length() && depth == MAX_DEPTH) {
+      // 某一层没有缩短就不会再收敛；必须立刻失败，不能继续消耗多轮外部模型调用。
+      if (next.length() >= reduced.length()) {
         throw invalid("分层归并未能在上下文预算内收敛");
       }
       reduced = next;

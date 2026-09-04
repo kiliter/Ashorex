@@ -334,7 +334,7 @@ AI 结果写入独立草稿表，不直接写正式题目。草稿允许管理�
 
 ## 8. 管理后台
 
-视觉和交互严格沿用 `/Users/zhangjialin/Downloads/shangan-admin-prototype.html` 的高密度桌面后台风格，不重新设计另一套视觉语言。
+视觉和交互严格沿用 `docs/prototypes/shangan-admin-prototype.html` 的高密度桌面后台风格，不重新设计另一套视觉语言。
 
 全局导航：
 

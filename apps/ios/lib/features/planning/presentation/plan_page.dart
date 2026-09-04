@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shangan_ios/core/api/api_exception.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_ui.dart';
 import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
@@ -416,7 +417,7 @@ final class _PlanPageState extends ConsumerState<PlanPage> {
       _showSaveMessage('作战单已保存为第 ${saved.version} 版');
     } catch (error) {
       if (!mounted) return;
-      _showSaveMessage('保存失败，请重新加载后再试');
+      _showSaveMessage(shanganErrorMessage(error, '保存失败，请重新加载后再试'));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
