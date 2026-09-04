@@ -1,0 +1,35 @@
+infra/scripts/deploy.sh
+  s_16a5ea3b2841dd::t_91c9a9798492f3 261,266,270
+  s_16a5ea3b2841dd::t_dc91ba67cb7bf4 1-24,26-31,33-186,245,251-260,262-265,267-269,271-289
+  s_16a5ea3b2841dd::t_663b89abfa3deb 25,32,187-244,246-250
+infra/compose.deploy.yml
+  s_16a5ea3b2841dd::t_f56af383111d21 2,25-26
+  s_16a5ea3b2841dd::t_acf689f8cec614 1,7-8,18,21-23,51-52
+  s_16a5ea3b2841dd::t_01e0b9aab74be0 3-6,9-17,19-20,27-50
+  s_16a5ea3b2841dd::t_21ac6c1249de04 24
+infra/deploy.env.example
+  s_16a5ea3b2841dd::t_01e0b9aab74be0 1-5
+  s_16a5ea3b2841dd::t_f56af383111d21 7
+  s_16a5ea3b2841dd::t_acf689f8cec614 6
+README.md
+  s_16a5ea3b2841dd::t_01e0b9aab74be0 165-166,177,279
+  s_16a5ea3b2841dd::t_dc91ba67cb7bf4 184-186,205-221
+  s_16a5ea3b2841dd::t_00f38bc57f0ea9 187-204
+  s_16a5ea3b2841dd::t_7732136e89ea80 176,178-183,222-278,280-283
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "2c981f831dbfbc8414e8aaa15340d641be27d3ab",
+  "prompts": {},
+  "sessions": {
+    "s_16a5ea3b2841dd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06b3e-69a7-7411-a33f-f67509b5ae16",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
