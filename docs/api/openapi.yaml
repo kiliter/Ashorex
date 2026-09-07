@@ -267,6 +267,32 @@ paths:
                 $ref: "#/components/schemas/WatchHeartbeatResponse"
       security:
       - bearerAuth: []
+  /api/v1/watch-sessions/{sessionId}/fast-forward:
+    post:
+      tags:
+      - watch-session-controller
+      operationId: fastForward
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WatchHeartbeatRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WatchSeekResponse"
+      security:
+      - bearerAuth: []
   /api/v1/watch-sessions/{sessionId}/alive-check:
     post:
       tags:
@@ -1240,6 +1266,14 @@ components:
           type: number
           format: double
           minimum: 0
+    WatchSeekResponse:
+      type: object
+      properties:
+        positionMs:
+          type: integer
+          format: int64
+        progress:
+          $ref: "#/components/schemas/WatchHeartbeatResponse"
     SessionView:
       type: object
       properties:

@@ -37,6 +37,15 @@ public class WatchSessionController {
     return watching.heartbeat(user.userId(), sessionId, request);
   }
 
+  /** 快进按钮只能提交当前位置事实；目标位置由服务端固定步长计算。 */
+  @PostMapping("/api/v1/watch-sessions/{sessionId}/fast-forward")
+  WatchSeekResponse fastForward(
+      CurrentUser user,
+      @PathVariable String sessionId,
+      @Valid @RequestBody WatchHeartbeatRequest request) {
+    return watching.fastForward(user.userId(), sessionId, request);
+  }
+
   @PostMapping("/api/v1/watch-sessions/{sessionId}/alive-check")
   WatchHeartbeatResponse confirmAliveCheck(CurrentUser user, @PathVariable String sessionId) {
     return watching.confirmAliveCheck(user.userId(), sessionId);

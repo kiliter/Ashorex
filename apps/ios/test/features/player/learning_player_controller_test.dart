@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shangan_ios/core/device/screen_wake_lock.dart';
 import 'package:shangan_ios/features/player/data/watch_repository.dart';
 import 'package:shangan_ios/features/player/domain/learning_player_state.dart';
 import 'package:shangan_ios/features/player/presentation/learning_player_controller.dart';
@@ -38,13 +39,16 @@ void main() {
   late _FakePlayerAdapter player;
   late _FakeWatchRepository repository;
   late LearningPlayerController controller;
+  late _RecordingWakeLock wakeLock;
 
   setUp(() async {
     player = _FakePlayerAdapter();
     repository = _FakeWatchRepository();
+    wakeLock = _RecordingWakeLock();
     controller = LearningPlayerController(
       repository: repository,
       player: player,
+      wakeLock: wakeLock,
     );
     await controller.initialize(lessonId: 'lesson-1', planItemId: 'item-1');
   });
@@ -67,6 +71,47 @@ void main() {
     expect(player.openCount, 1);
     expect(player.playCount, 1);
     expect(controller.state.sessionId, 'session-1');
+  });
+
+  test('仅播放期间常亮，暂停、后台和退出释放常亮', () async {
+    expect(wakeLock.calls, isEmpty);
+    await controller.play();
+    await Future<void>.delayed(Duration.zero);
+    expect(wakeLock.calls, [true]);
+    await controller.pause();
+    await Future<void>.delayed(Duration.zero);
+    expect(wakeLock.calls, [true, false]);
+    await controller.play();
+    await controller.setForeground(false);
+    await Future<void>.delayed(Duration.zero);
+    expect(wakeLock.calls, [true, false, true, false]);
+    await controller.setForeground(true);
+    await Future<void>.delayed(Duration.zero);
+    expect(wakeLock.calls, [true, false, true, false]);
+    await controller.play();
+    await controller.close();
+    expect(wakeLock.calls, [true, false, true, false, true, false]);
+  });
+
+  test('慢速启用常亮后退出仍按顺序释放，不遗留常亮', () async {
+    wakeLock.enableGate = Completer<void>();
+    await controller.play();
+    await Future<void>.delayed(Duration.zero);
+    final closing = controller.close();
+    wakeLock.enableGate!.complete();
+    await closing;
+    expect(wakeLock.calls, [true, false]);
+  });
+
+  test('播放准备期间进入后台，准备完成后也不播放或启用常亮', () async {
+    player.openGate = Completer<void>();
+    final playing = controller.play();
+    await Future<void>.delayed(Duration.zero);
+    await controller.setForeground(false);
+    player.openGate!.complete();
+    await playing;
+    expect(player.playCount, 0);
+    expect(wakeLock.calls, isEmpty);
   });
 
   test('前台播放会发送包含单调序号和当前位置的心跳', () async {
@@ -122,6 +167,8 @@ void main() {
     expect(player.pauseCount, 1);
     expect(controller.state.networkError, isTrue);
     expect(controller.state.heartbeatFailures, 3);
+    await Future<void>.delayed(Duration.zero);
+    expect(wakeLock.calls, [true, false]);
   });
 
   test('验活触发后暂停，只有用户明确确认才恢复播放', () async {
@@ -139,13 +186,17 @@ void main() {
     expect(player.pauseCount, 1);
     expect(controller.state.aliveCheckRequired, isTrue);
     expect(player.playCount, 1);
+    await Future<void>.delayed(Duration.zero);
+    expect(wakeLock.calls, [true, false]);
 
     await controller.confirmAliveCheck();
     expect(controller.state.aliveCheckRequired, isFalse);
     expect(player.playCount, 2);
+    await Future<void>.delayed(Duration.zero);
+    expect(wakeLock.calls, [true, false, true]);
   });
 
-  test('复习快捷入口从头播放并允许拖动到视频任意位置', () async {
+  test('复习快捷入口从头播放且按钮可回看全片', () async {
     final reviewPlayer = _FakePlayerAdapter();
     final reviewRepository = _FakeWatchRepository(review: true);
     final reviewController = LearningPlayerController(
@@ -163,8 +214,122 @@ void main() {
 
     expect(reviewController.state.reviewMode, isTrue);
     expect(reviewPlayer.lastSeek, const Duration(minutes: 9));
+    // 复习的服务端完成标记表示课时早已通过，不应禁用当前会话的播放与快进按钮。
+    reviewRepository.nextHeartbeat = const WatchHeartbeatData(
+      trustedPositionMs: 600000,
+      verifiedWatchMs: 10000,
+      seekAllowed: true,
+      aliveCheckRequired: false,
+      completed: true,
+      status: 'ACTIVE',
+    );
+    await reviewController.sendHeartbeat();
+    expect(reviewController.state.isPlaying, isTrue);
+    await reviewController.fastForward();
+    expect(reviewPlayer.lastSeek, const Duration(minutes: 9, seconds: 10));
+    expect(reviewRepository.forwardCount, 0);
     await reviewController.close();
     await reviewPlayer.positions.close();
+  });
+
+  test('快进未看内容先请求服务端授权，成功后按返回位置跳转', () async {
+    await controller.play();
+    repository.forwardGate = Completer<void>();
+    final forward = controller.fastForward();
+    await Future<void>.delayed(Duration.zero);
+    expect(player.lastSeek, isNull);
+    expect(repository.lastForward?.sequence, 1);
+    expect(repository.lastForward?.positionMs, 0);
+    repository.forwardGate!.complete();
+    await forward;
+    expect(player.lastSeek, const Duration(seconds: 10));
+    expect(controller.state.maxVerifiedPosition, const Duration(seconds: 10));
+    await controller.sendHeartbeat();
+    expect(repository.lastHeartbeat?.sequence, 2);
+  });
+
+  test('快进达到完成阈值暂停并释放常亮，不能继续请求快进', () async {
+    await controller.play();
+    repository.nextHeartbeat = const WatchHeartbeatData(
+      trustedPositionMs: 600000,
+      verifiedWatchMs: 0,
+      seekAllowed: true,
+      aliveCheckRequired: false,
+      completed: true,
+      status: 'COMPLETED',
+    );
+    await controller.fastForward();
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.state.completed, isTrue);
+    expect(controller.state.isPlaying, isFalse);
+    expect(wakeLock.calls, [true, false]);
+    await controller.fastForward();
+    expect(repository.forwardCount, 1);
+  });
+
+  test('快进跨越验活点后暂停，未确认前不能再次快进', () async {
+    await controller.play();
+    repository.nextHeartbeat = const WatchHeartbeatData(
+      trustedPositionMs: 10000,
+      verifiedWatchMs: 0,
+      seekAllowed: true,
+      aliveCheckRequired: true,
+      completed: false,
+      status: 'PAUSED',
+    );
+    await controller.fastForward();
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.state.aliveCheckRequired, isTrue);
+    expect(controller.state.isPlaying, isFalse);
+    expect(wakeLock.calls, [true, false]);
+    await controller.fastForward();
+    expect(repository.forwardCount, 1);
+  });
+
+  test('视频自然到末尾时释放常亮，不等待下一次心跳', () async {
+    await controller.play();
+    player.positions.add(const Duration(minutes: 10));
+    await Future<void>.delayed(Duration.zero);
+    expect(wakeLock.calls, [true, false]);
+  });
+
+  test('快进与心跳串行，进行中的重复点击不重复提交', () async {
+    await controller.play();
+    repository.heartbeatGate = Completer<void>();
+    final gate = repository.heartbeatGate!;
+    final heartbeat = controller.sendHeartbeat();
+    final first = controller.fastForward();
+    final repeated = controller.fastForward();
+    await Future<void>.delayed(Duration.zero);
+    expect(repository.lastForward, isNull);
+    gate.complete();
+    await Future.wait([heartbeat, first, repeated]);
+    expect(repository.forwardCount, 1);
+    expect(repository.lastForward?.sequence, 2);
+  });
+
+  test('快进失败只由按钮报告，合并的定时心跳不产生未处理异常', () async {
+    await controller.play();
+    repository.forwardGate = Completer<void>();
+    repository.forwardError = StateError('offline');
+    final forwarding = controller.fastForward();
+    final failure = expectLater(forwarding, throwsStateError);
+    final heartbeat = controller.sendHeartbeat();
+    repository.forwardGate!.complete();
+    await failure;
+    await heartbeat;
+    expect(repository.forwardCount, 1);
+    expect(repository.heartbeats, isEmpty);
+  });
+
+  test('快进失败不擅自跳转，并暂停避免响应丢失后继续累计', () async {
+    await controller.play();
+    repository.forwardError = StateError('offline');
+    await expectLater(controller.fastForward(), throwsStateError);
+    expect(player.lastSeek, isNull);
+    expect(controller.state.isPlaying, isFalse);
+    await Future<void>.delayed(Duration.zero);
+    expect(wakeLock.calls, [true, false]);
   });
 
   test('播放器倍速按常用档位循环并同步到底层播放器', () async {
@@ -224,6 +389,7 @@ final class _FakePlayerAdapter implements PlayerAdapter {
   int playCount = 0;
   int pauseCount = 0;
   int openCount = 0;
+  Completer<void>? openGate;
   Duration? lastSeek;
   double? lastPlaybackSpeed;
 
@@ -233,6 +399,7 @@ final class _FakePlayerAdapter implements PlayerAdapter {
   @override
   Future<void> open(Uri uri, {Map<String, String> headers = const {}}) async {
     openCount += 1;
+    await openGate?.future;
   }
 
   @override
@@ -300,6 +467,23 @@ final class _FakeWatchRepository implements WatchRepository {
     return nextHeartbeat;
   }
 
+  WatchHeartbeatCommand? lastForward;
+  int forwardCount = 0;
+  Completer<void>? forwardGate;
+  Object? forwardError;
+
+  @override
+  Future<WatchSeekData> fastForward(
+    String sessionId,
+    WatchHeartbeatCommand command,
+  ) async {
+    lastForward = command;
+    forwardCount++;
+    await forwardGate?.future;
+    if (forwardError case final error?) throw error;
+    return WatchSeekData(positionMs: 10000, progress: nextHeartbeat);
+  }
+
   @override
   Future<WatchHeartbeatData> confirmAliveCheck(String sessionId) async =>
       const WatchHeartbeatData(
@@ -313,4 +497,19 @@ final class _FakeWatchRepository implements WatchRepository {
 
   @override
   Future<void> stop(String sessionId) async {}
+}
+
+/// 记录原生常亮调用，并用可控 Future 复现退出时仍有调用未完成的情况。
+final class _RecordingWakeLock implements ScreenWakeLock {
+  final calls = <bool>[];
+  Completer<void>? enableGate;
+
+  @override
+  Future<void> enable() async {
+    calls.add(true);
+    await enableGate?.future;
+  }
+
+  @override
+  Future<void> disable() async => calls.add(false);
 }

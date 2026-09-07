@@ -6,6 +6,7 @@ import com.shangan.debt.application.DebtService;
 import com.shangan.identity.infrastructure.UserRepository;
 import com.shangan.learning.api.WatchHeartbeatRequest;
 import com.shangan.learning.api.WatchHeartbeatResponse;
+import com.shangan.learning.api.WatchSeekResponse;
 import com.shangan.learning.domain.WatchProgressPolicy;
 import com.shangan.learning.infrastructure.ReviewEventRepository;
 import com.shangan.learning.infrastructure.VideoProgressRepository;
@@ -63,9 +64,32 @@ public class WatchSessionService {
   @Transactional
   public WatchHeartbeatResponse heartbeat(
       String userId, String sessionId, WatchHeartbeatRequest request) {
+    return applyPlayback(userId, sessionId, request, false).progress();
+  }
+
+  /** 固定步长快进与心跳共用事务及序号；客户端不可自行指定跳转终点。 */
+  @Transactional
+  public WatchSeekResponse fastForward(
+      String userId, String sessionId, WatchHeartbeatRequest request) {
+    return applyPlayback(userId, sessionId, request, true);
+  }
+
+  /** 验证点击前的播放事实，再统一保存通过位置、验活、计划与欠债。 */
+  private WatchSeekResponse applyPlayback(
+      String userId, String sessionId, WatchHeartbeatRequest request, boolean forward) {
     Instant now = clock.instant();
     WatchSessionRepository.Session session = requireOwned(userId, sessionId);
+    // 完成快进的响应丢失后重试，也只能返回已有结果，不能再跳 10 秒。
+    if (forward && request.sequence() <= session.lastSequence()) {
+      return new WatchSeekResponse(session.lastReportedPositionMs(), duplicateResponse(session));
+    }
     requireOpen(session);
+    if (forward && session.aliveCheckPending()) {
+      throw new BusinessException(HttpStatus.CONFLICT, "ALIVE_CHECK_REQUIRED", "请先完成验活");
+    }
+    if (forward && !request.foreground()) {
+      throw new BusinessException(HttpStatus.CONFLICT, "SEEK_NOT_ALLOWED", "后台不能快进");
+    }
     failTimedOutAliveCheck(session, now);
     if (!SUPPORTED_PLAYBACK_SPEEDS.contains(request.playbackSpeed())) {
       throw new BusinessException(
@@ -89,6 +113,8 @@ public class WatchSessionService {
                 request.playbackSpeed()),
             now);
 
+    if (forward) decision = policy.fastForward(decision, session.durationMs());
+
     boolean completed = policy.completed(decision.maxVerifiedPositionMs(), session.durationMs());
     boolean pending = session.aliveCheckPending() && !completed;
     String status = completed ? "COMPLETED" : pending ? "PAUSED" : session.status();
@@ -103,18 +129,23 @@ public class WatchSessionService {
     }
     if (!decision.duplicate()) {
       boolean updated = sessions.updateHeartbeat(session.id(), decision, pending, status, now);
-      if (!updated) return duplicateResponse(requireOwned(userId, sessionId));
+      if (!updated) {
+        var current = requireOwned(userId, sessionId);
+        return new WatchSeekResponse(current.lastReportedPositionMs(), duplicateResponse(current));
+      }
       if (requireNewAliveCheck) sessions.insertAliveCheck(ids.nextId(), session.id(), now);
     }
     SyncedProgress synced =
         synchronize(session, decision.maxVerifiedPositionMs(), decision.verifiedWatchMs(), now);
-    return new WatchHeartbeatResponse(
-        decision.trustedPositionMs(),
-        decision.verifiedWatchMs(),
-        decision.seekAllowed(),
-        pending,
-        synced.completed(),
-        status);
+    return new WatchSeekResponse(
+        decision.lastReportedPositionMs(),
+        new WatchHeartbeatResponse(
+            decision.trustedPositionMs(),
+            decision.verifiedWatchMs(),
+            decision.seekAllowed(),
+            pending,
+            synced.completed(),
+            status));
   }
 
   /** 并发相同序号只有先完成者能写入，后到请求读取并返回已保存的聚合值。 */

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shangan_ios/core/device/screen_wake_lock.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_markdown.dart';
 import 'package:shangan_ios/core/widgets/shangan_ui.dart';
@@ -14,6 +15,7 @@ import 'package:shangan_ios/features/player/presentation/alive_check_dialog.dart
 import 'package:shangan_ios/features/companion/presentation/companion_fullscreen.dart';
 import 'package:shangan_ios/features/player/presentation/learning_player_controller.dart';
 import 'package:video_player/video_player.dart';
+import 'package:shangan_ios/features/player/presentation/player_timeline.dart';
 
 /// iOS 学习播放器进入页面时只读课时信息，首次点击播放后才创建可信观看会话。
 final class LearningPlayerPage extends ConsumerStatefulWidget {
@@ -57,6 +59,7 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
     _controller = LearningPlayerController(
       repository: ref.read(watchRepositoryProvider),
       player: _adapter,
+      wakeLock: ref.read(screenWakeLockProvider),
     )..addListener(_onControllerChanged);
     _initialization = _loadLessonMetadata();
     // 摘要和播放会话并行加载；摘要不可用时页面直接隐藏该区域。
@@ -139,6 +142,18 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
         setState(() => _controlsVisible = false);
       }
     });
+  }
+
+  /// 授权失败时明确提示，客户端不能擅自移动到尚未获服务端认可的位置。
+  Future<void> _fastForward() async {
+    try {
+      await _controller.fastForward();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('快进失败，视频已暂停，请检查网络或服务端版本后重试。')),
+      );
+    }
   }
 
   Future<void> _showAliveCheck() async {
@@ -264,6 +279,7 @@ final class _LearningPlayerPageState extends ConsumerState<LearningPlayerPage>
               onBack: _leaveFullscreen,
               onFullscreen: _toggleFullscreen,
               onSeek: _controller.seek,
+              onFastForward: _fastForward,
               onCyclePlaybackSpeed: _controller.cyclePlaybackSpeed,
               onPlayPause: state.isPlaying
                   ? _controller.pause
@@ -438,6 +454,7 @@ final class _PlayerStage extends StatelessWidget {
     required this.onBack,
     required this.onFullscreen,
     required this.onSeek,
+    required this.onFastForward,
     required this.onCyclePlaybackSpeed,
     required this.onPlayPause,
   });
@@ -451,6 +468,7 @@ final class _PlayerStage extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onFullscreen;
   final Future<void> Function(Duration) onSeek;
+  final Future<void> Function() onFastForward;
   final Future<void> Function() onCyclePlaybackSpeed;
   final Future<void> Function() onPlayPause;
 
@@ -616,13 +634,17 @@ final class _PlayerStage extends StatelessWidget {
                                     tooltip: '快进 10 秒',
                                     icon: Icons.forward_10,
                                     size: fullscreen ? 34 : 28,
-                                    onPressed: () {
-                                      onInteraction();
-                                      onSeek(
-                                        state.position +
-                                            const Duration(seconds: 10),
-                                      );
-                                    },
+                                    onPressed:
+                                        state.sessionId == null ||
+                                            state.preparingPlayback ||
+                                            state.aliveCheckRequired ||
+                                            (state.completed &&
+                                                !state.reviewMode)
+                                        ? null
+                                        : () {
+                                            onInteraction();
+                                            onFastForward();
+                                          },
                                   ),
                                 ),
                               ],
@@ -640,12 +662,10 @@ final class _PlayerStage extends StatelessWidget {
                               ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: _OverlayTimeline(
+                                child: PlayerTimeline(
                                   duration: state.duration,
                                   position: state.position,
                                   maximumSeek: maximum,
-                                  onInteraction: onInteraction,
-                                  onSeek: onSeek,
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -666,75 +686,6 @@ final class _PlayerStage extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-final class _OverlayTimeline extends StatefulWidget {
-  const _OverlayTimeline({
-    required this.duration,
-    required this.position,
-    required this.maximumSeek,
-    required this.onInteraction,
-    required this.onSeek,
-  });
-
-  final Duration duration;
-  final Duration position;
-  final Duration maximumSeek;
-  final VoidCallback onInteraction;
-  final Future<void> Function(Duration) onSeek;
-
-  @override
-  State<_OverlayTimeline> createState() => _OverlayTimelineState();
-}
-
-final class _OverlayTimelineState extends State<_OverlayTimeline> {
-  double? _dragValue;
-
-  @override
-  Widget build(BuildContext context) {
-    final durationMs = widget.duration.inMilliseconds.toDouble().clamp(
-      1.0,
-      double.infinity,
-    );
-    final maximumMs = widget.maximumSeek.inMilliseconds.toDouble().clamp(
-      0.0,
-      durationMs,
-    );
-    final value = (_dragValue ?? widget.position.inMilliseconds.toDouble())
-        .clamp(0.0, maximumMs);
-    return Semantics(
-      label: '视频进度',
-      value: '${_clock(widget.position)} / ${_clock(widget.duration)}',
-      child: SizedBox(
-        height: 44,
-        child: SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            activeTrackColor: Colors.white,
-            inactiveTrackColor: Colors.white38,
-            secondaryActiveTrackColor: ShanganColors.blue,
-            thumbColor: Colors.white,
-            overlayColor: Colors.white24,
-            trackHeight: 3,
-          ),
-          child: Slider(
-            value: value,
-            secondaryTrackValue: maximumMs,
-            min: 0,
-            max: durationMs,
-            onChangeStart: (_) => widget.onInteraction(),
-            onChanged: (candidate) {
-              setState(() => _dragValue = candidate.clamp(0.0, maximumMs));
-            },
-            onChangeEnd: (candidate) {
-              final safe = candidate.clamp(0.0, maximumMs).round();
-              setState(() => _dragValue = null);
-              widget.onSeek(Duration(milliseconds: safe));
-            },
-          ),
         ),
       ),
     );
