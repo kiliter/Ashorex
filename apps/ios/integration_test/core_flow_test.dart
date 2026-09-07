@@ -281,6 +281,13 @@ final class _FakeWatchRepository implements WatchRepository {
     status: command.positionMs >= 570000 ? 'COMPLETED' : 'ACTIVE',
   );
 
+  /// 此闭环只验证正常播放；快进交由专门的 Controller 测试覆盖。
+  @override
+  Future<WatchSeekData> fastForward(
+    String sessionId,
+    WatchHeartbeatCommand command,
+  ) async => throw UnimplementedError('此闭环不调用快进');
+
   @override
   Future<WatchHeartbeatData> confirmAliveCheck(String sessionId) async =>
       const WatchHeartbeatData(

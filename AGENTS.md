@@ -298,7 +298,8 @@ Illegal transitions return stable business error codes.
 
 - Emby progress is not study progress.
 - The server owns `maxVerifiedPositionMs`.
-- Forward seek past trusted progress is rejected.
+- 按 ADR-0024，按钮快进每次由服务端授权跳过 10 秒，跳过视为已通过并推进可信最大位置，但不增加实际学习时长；普通心跳仍拒绝未经授权的位置跳跃。
+- 普通学习与复习进度条只读；前台视频播放保持屏幕常亮，暂停、完成、后台与退出时释放。
 - Replay inside trusted progress is allowed.
 - Heartbeat interval is 10 seconds.
 - Duplicate sequence numbers do not double count.

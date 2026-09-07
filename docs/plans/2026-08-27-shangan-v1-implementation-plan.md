@@ -1112,7 +1112,7 @@ git commit -m "feat(learning): verify watch progress and require alive checks"
 
 ### Task 10: iOS Learning Player
 
-> **部分被 Task 22 替代。** 可信心跳、验活和 Seek Guard 继续保留；画面内控制层、横屏全屏、摘要和复习模式由 Task 22 实现。
+> **部分被 Task 22、Task 30 替代。** 可信心跳和验活继续保留；画面内控制层、横屏全屏、摘要和复习模式由 Task 22 实现；固定步长快进授权与只读进度条以 Task 30、ADR-0024 为准。
 
 **Files:**
 - Create: `apps/ios/lib/features/player/domain/learning_player_state.dart`
@@ -1159,7 +1159,7 @@ alive check pass -> resume only after explicit user action
 
 - [ ] **Step 3: Implement seek guard**
 
-The progress bar exposes the entire duration visually but clamps drag target to `maxVerifiedPosition`. It must never call `seek` with a larger value.
+此交互由 Task 30 与 ADR-0024 替代：进度条只读，固定 10 秒按钮快进由服务端授权；普通心跳继续校验真实播放增量。
 
 - [ ] **Step 4: Implement lifecycle and heartbeat**
 
@@ -2843,3 +2843,27 @@ Codex must:
 - [ ] SQLite backup and restore have been人工执行并记录，不纳入自动化测试。
 - [ ] Physical iPhone、iPad 和 Android acceptance is recorded.
 - [ ] `make verify` passes from repository root.
+
+
+### Task 30：按钮快进与播放常亮修复
+
+**状态：** 已批准实施（2026-09-07，维护者确认 ADR-0024 中的快进与计时语义）。
+
+**文件：** `learning` 观看服务、领域策略与 Controller；OpenAPI；Flutter `player` Controller、Repository、进度条与页面；对应纯逻辑和 Widget 测试。
+
+**接口：** 新增 `POST /api/v1/watch-sessions/{sessionId}/fast-forward`，使用心跳事实和共享序号，请求不接受任意跳转目标，响应提供服务端认可的下一播放位置及进度裁决。
+
+- [x] 先写窄测试，覆盖固定 10 秒、末尾截断、真实播放与跳过时长分离、重复序号、越权/终态/待验活拒绝和跨阈值完成及欠债对账。
+- [x] 最小实现服务端快进授权与客户端成功后跳转；心跳与快进串行；复习按钮保留原审计语义。
+- [x] 禁用普通学习和复习进度条定位，保留快退/快进按钮与当前实际播放位置展示。
+- [x] 复用屏幕常亮接口并验证暂停、后台、验活、完成、退出以及异步播放准备的生命周期。
+- [ ] 同步 OpenAPI，运行本次窄测试与 `make format`；全量验证交给 GitHub CI；三类物理设备检查播放常亮、按钮快进和横竖屏。
+- [ ] 单次提交：`fix(player): authorize button fast-forward and keep playback awake`。
+
+
+**本地验证记录（2026-09-07）：**
+
+- `./mvnw -Dtest=WatchProgressPolicyTest,WatchFastForwardServiceTest,WatchFastForwardControllerTest test`：17 项通过，不连接数据库。
+- 播放器 Controller 与进度条 Widget 窄测试覆盖固定快进、重复点击、心跳串行、失败提示与释放常亮；未运行本地全量测试。
+- 独立临时 `DATA_DIR` 下通过 `./run.sh server` 启动，健康端点返回 `UP`；实际导出的 OpenAPI 与提交文件完全一致。现有学习数据库未修改。
+- GitHub CI 全量验证及物理 iPhone、iPad、Android 的熄屏/横竖屏检查仍以实际验收结果为准。

@@ -94,10 +94,30 @@ final class WatchHeartbeatData {
       );
 }
 
+/// 按钮快进返回实际跳转点和服务端裁决，回看时跳转点可以小于通过边界。
+final class WatchSeekData {
+  const WatchSeekData({required this.positionMs, required this.progress});
+  final int positionMs;
+  final WatchHeartbeatData progress;
+
+  factory WatchSeekData.fromJson(Map<String, dynamic> json) => WatchSeekData(
+    positionMs: (json['positionMs'] as num).toInt(),
+    progress: WatchHeartbeatData.fromJson(
+      json['progress'] as Map<String, dynamic>,
+    ),
+  );
+}
+
 abstract interface class WatchRepository {
   Future<WatchSessionData> createSession(String lessonId, {String? planItemId});
 
   Future<WatchHeartbeatData> heartbeat(
+    String sessionId,
+    WatchHeartbeatCommand command,
+  );
+
+  /// 提交点击时的播放事实，服务端只授权固定 10 秒，不能传任意终点。
+  Future<WatchSeekData> fastForward(
     String sessionId,
     WatchHeartbeatCommand command,
   );
@@ -148,6 +168,17 @@ final class RemoteWatchRepository implements WatchRepository {
   ) async => WatchHeartbeatData.fromJson(
     await _api.postJson(
       '/api/v1/watch-sessions/$sessionId/heartbeat',
+      data: command.toJson(),
+    ),
+  );
+
+  @override
+  Future<WatchSeekData> fastForward(
+    String sessionId,
+    WatchHeartbeatCommand command,
+  ) async => WatchSeekData.fromJson(
+    await _api.postJson(
+      '/api/v1/watch-sessions/$sessionId/fast-forward',
       data: command.toJson(),
     ),
   );

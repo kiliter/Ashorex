@@ -90,6 +90,34 @@ class WatchProgressPolicyTest {
     assertThat(policy.completed(1_970_000, 2_000_000)).isTrue();
   }
 
+  /** 授权跳过只增加通过位置，点击前的真实播放仍精确计时。 */
+  @Test
+  void fastForwardAddsTenSecondsWithoutCountingSkippedTime() {
+    var playback =
+        policy.evaluate(state(0, 0, 0, 0, false), heartbeat(1, 10_000, true, true), at(10));
+    var result = policy.fastForward(playback, 100_000);
+    assertThat(result.lastReportedPositionMs()).isEqualTo(20_000);
+    assertThat(result.maxVerifiedPositionMs()).isEqualTo(20_000);
+    assertThat(result.verifiedWatchMs()).isEqualTo(10_000);
+    assertThat(result.lastSequence()).isEqualTo(1);
+  }
+
+  /** 视频末尾截断；重复序号与未经授权的大幅跳跃都不能额外前进。 */
+  @Test
+  void fastForwardCapsEndAndDoesNotAdvanceDuplicateOrRejectedInput() {
+    var end =
+        policy.evaluate(
+            state(95_000, 95_000, 20_000, 1, false), heartbeat(2, 95_000, false, true), at(10));
+    assertThat(policy.fastForward(end, 100_000).lastReportedPositionMs()).isEqualTo(100_000);
+    var duplicate =
+        policy.evaluate(
+            state(10_000, 10_000, 5_000, 1, false), heartbeat(1, 10_000, true, true), at(10));
+    assertThat(policy.fastForward(duplicate, 100_000)).isEqualTo(duplicate);
+    var rejected =
+        policy.evaluate(state(0, 0, 0, 0, false), heartbeat(1, 80_000, true, true), at(10));
+    assertThat(policy.fastForward(rejected, 100_000)).isEqualTo(rejected);
+  }
+
   private WatchProgressPolicy.State state(
       long lastPosition,
       long maxVerifiedPosition,

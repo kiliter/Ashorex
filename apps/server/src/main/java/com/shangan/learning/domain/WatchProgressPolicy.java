@@ -64,6 +64,22 @@ public final class WatchProgressPolicy {
         false);
   }
 
+  /** 按钮授权固定跳过 10 秒；只推进通过位置，不把跳过内容计入真实学习时长。 */
+  public Decision fastForward(Decision playback, long durationMs) {
+    if (playback.duplicate() || !playback.seekAllowed()) return playback;
+    long target = Math.min(Math.max(0, durationMs), playback.lastReportedPositionMs() + 10_000L);
+    long maximum = Math.max(playback.maxVerifiedPositionMs(), target);
+    return new Decision(
+        target,
+        maximum,
+        playback.verifiedWatchMs(),
+        playback.lastSequence(),
+        playback.lastHeartbeatAt(),
+        true,
+        maximum,
+        false);
+  }
+
   /** V1 视频完成阈值：时长减去 30 秒与时长 2% 中较小者。 */
   public boolean completed(long maxVerifiedPositionMs, long durationMs) {
     long tolerance = Math.min(30_000L, Math.round(durationMs * 0.02d));
