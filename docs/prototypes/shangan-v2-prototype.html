@@ -559,7 +559,7 @@ table.wt td b{font-weight:700;}
 <p>人物 <select multiple id="demo-person"><option>全部</option><option>老师甲</option></select></p>
 <p>标签 <select multiple id="demo-tag"><option>全部</option><option>重点</option></select></p>
 <p>每类多选（同类并集）、跨类交集；草稿仅在应用时生效。</p></div><button>取消</button><button onclick="document.getElementById('selected-demo').textContent=['genre','person','tag'].map(x=>Array.from(document.getElementById('demo-'+x).selectedOptions).map(o=>o.value).join('、')).join(' · ')">应用筛选</button></form></dialog>
-<h3>手动催办</h3><p>Web 后台在线与进度页的个人手动催办：自动选择、Server 酱、客户端全屏、个人 Bark 四项统一放在投递渠道单选区；点击渠道只选择，不发送。标题与附加说明位于下方；操作区仅保留立即投递、取消。选择个人 Bark 时明确使用收件用户自己的配置，窄屏渠道换行、明细与表单改为单列。</p><input maxlength="80" placeholder="可选标题，最多 80 字"><textarea maxlength="1000" placeholder="附加说明，最多 1000 字"></textarea>
+<h3>手动催办</h3><p>Web 后台在线与进度页的个人手动催办：自动选择、Server 酱、客户端全屏、个人 Bark 四项统一放在投递渠道单选区；点击渠道只选择，不发送。标题与附加说明位于下方；操作区仅保留立即投递、取消。选择个人 Bark 时明确使用收件用户自己的配置，免打扰时段内发送普通通知、其余时间重要通知，窄屏渠道换行、明细与表单改为单列。</p><input maxlength="80" placeholder="可选标题，最多 80 字"><textarea maxlength="1000" placeholder="附加说明，最多 1000 字"></textarea>
 <h3>我的 Bark 推送</h3><p>仅用于当前账号的个人催办</p>
 <div style="max-width:390px;padding:18px;border:1px solid #ddd;border-radius:18px;background:white">
 <div style="padding:14px;border:1px solid #ddd;border-radius:12px">启用个人 Bark <input type="checkbox" aria-label="启用个人 Bark"><p>启用后替代 Server 酱</p></div>

@@ -73,7 +73,7 @@ const nagChannels = [
 ] as const;
 /** 按所选渠道说明收件范围，不把系统异常通知目的地混入个人催办。 */
 const channelHint = computed(() => {
-  if (nagChannel.value === 'BARK') return '使用该用户在 App 中配置并启用的个人 Bark，发送到该用户的设备。';
+  if (nagChannel.value === 'BARK') return '使用该用户在 App 中配置并启用的个人 Bark；其免打扰时段内发送普通通知，其余时间发送重要通知。';
   if (nagChannel.value === 'SERVERCHAN') return '使用 Server 酱投递本次催办。';
   if (nagChannel.value === 'FULLSCREEN') return '通过客户端全屏催办提醒该用户。';
   return '在线时优先客户端全屏；离线或全屏超时后，个人 Bark 已启用则使用 Bark，否则使用 Server 酱。';
