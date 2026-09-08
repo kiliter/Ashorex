@@ -1,0 +1,21 @@
+apps/ios/test/features/profile/profile_page_test.dart
+  s_ff636111372d7e::t_4de15802706459 38-42
+  s_ff636111372d7e::t_46dcf2674d9bd1 13,31,43-44,48-87
+  s_ff636111372d7e::t_5acef43e23c834 88-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "f2c79e95100df3d03d227a98f281d0b7c4bc0c37",
+  "prompts": {},
+  "sessions": {
+    "s_ff636111372d7e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0815b-9ddd-7440-89c0-6b2d9fe7931d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
