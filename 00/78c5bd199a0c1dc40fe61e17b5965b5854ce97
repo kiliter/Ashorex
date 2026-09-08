@@ -1,0 +1,133 @@
+apps/server/src/test/java/com/shangan/nag/application/NagScannerTest.java
+  s_ff636111372d7e::t_5f6bb40d87fccc 67,72-74,86-87,253-272
+  s_ff636111372d7e::t_2b2041463ff7ea 273,275-315
+  s_ff636111372d7e::t_9b9d704f3109f3 274
+apps/server/src/main/resources/application.yml
+  s_ff636111372d7e::t_21e033b86d2c06 67-69
+docs/specs/2026-09-07-shangan-v2-design.md
+  s_ff636111372d7e::t_ba5472fa20c8ba 583
+apps/server/src/main/java/com/shangan/nag/application/channel/BarkNagChannel.java
+  s_ff636111372d7e::t_21e033b86d2c06 15-19,21-22,57-63,65
+  s_ff636111372d7e::t_e8f578df0cbd68 3-4
+docs/reviews/2026-09-08-v2.1.0-review.md
+  s_ff636111372d7e::t_0f52d1783869ba 1-30
+apps/ios/test/features/catalog/course_filter_panel_test.dart
+  s_ff636111372d7e::t_81ee3e59b78ac5 8-15,34-39,44-49
+  s_ff636111372d7e::t_3a95fa36bfe73b 16-33,40-43
+apps/server/pom.xml
+  s_ff636111372d7e::t_e5ae260cb0b1f7 16
+docs/api/openapi.yaml
+  s_ff636111372d7e::t_e5ae260cb0b1f7 4
+apps/ios/test/features/home/add_todo_flow_test.dart
+  s_ff636111372d7e::t_ef80e7981b240c 31
+  s_ff636111372d7e::t_5c10a3100c8381 13-23,26-30,32-41
+  s_ff636111372d7e::t_120181f576b8b0 24-25
+apps/server/src/main/java/com/shangan/common/integration/BarkEndpointPolicy.java
+  s_ff636111372d7e::t_21e033b86d2c06 1-57
+apps/ios/lib/features/profile/presentation/bark_settings_sheet.dart
+  s_ff636111372d7e::t_e5ae260cb0b1f7 63-64,107,109
+  s_ff636111372d7e::t_3651e81391500f 108
+docs/prototypes/shangan-v2-prototype.html
+  s_ff636111372d7e::t_ac992a4c04d955 549
+apps/admin-web/package.json
+  s_ff636111372d7e::t_e5ae260cb0b1f7 4
+apps/server/src/main/java/com/shangan/nag/application/BarkSettingsService.java
+  s_ff636111372d7e::t_21e033b86d2c06 16-18,20,32
+  s_ff636111372d7e::t_972016eaa232a1 4
+apps/ios/test/features/catalog/library_page_test.dart
+  s_ff636111372d7e::t_adb7b1ebcb503e 1-19,22-42,66-74,77-79,81-89,98-100
+  s_ff636111372d7e::t_a25d93a584bde2 43-53,56-65,75-76,90-93,95
+  s_ff636111372d7e::t_feed744a8386b8 20-21,54-55,80,94,96-97
+apps/server/src/main/java/com/shangan/common/integration/SystemAlertService.java
+  s_ff636111372d7e::t_21e033b86d2c06 19,27,31,48-50
+docs/releases/v2.1.0.md
+  s_ff636111372d7e::t_a8dd3cd86e0fb5 1-27
+apps/ios/pubspec.yaml
+  s_ff636111372d7e::t_e5ae260cb0b1f7 4
+apps/server/src/test/java/com/shangan/nag/application/NagDeliveryServiceTest.java
+  s_ff636111372d7e::t_367f29af503f00 291-345,348,350,353,378,405-407,409,411-415,417-419,421,423-425,428
+  s_ff636111372d7e::t_787a254faf8afd 432-434
+  s_ff636111372d7e::t_5f6bb40d87fccc 40,254-290,426,436
+  s_ff636111372d7e::t_7ceafb2bb25311 346-347,349,351-352,354-377,379-404,408,410,416,420,422,427,429
+apps/server/src/main/java/com/shangan/nag/application/NagDeliveryService.java
+  s_ff636111372d7e::t_ea35b642ffd46e 62,146
+  s_ff636111372d7e::t_787a254faf8afd 29,37-38,44-45,49,63-64,69-72,99-109,113-120,123-124,128
+  s_ff636111372d7e::t_440fed4a1f6f1d 20,121-122,125-127,131
+apps/server/src/main/java/com/shangan/common/integration/BarkPushClient.java
+  s_ff636111372d7e::t_21e033b86d2c06 1-59
+apps/ios/lib/features/home/presentation/home_page.dart
+  s_ff636111372d7e::t_3a95fa36bfe73b 82-99,101-173,175-176,534,536-566
+  s_ff636111372d7e::t_63f0c189d672be 533,535
+  s_ff636111372d7e::t_9da3f2039f31c6 33-52,513-515,531-532
+apps/ios/lib/features/home/presentation/add_todo_sheet.dart
+  s_ff636111372d7e::t_5c10a3100c8381 289-309,312-315,317,319-336,339-347,349-393
+  s_ff636111372d7e::t_83a54d88ca2ef8 310-311,316,318,394-397
+apps/server/src/main/java/com/shangan/archive/domain/CascadePlan.java
+  s_ff636111372d7e::t_fd8364e86f779e 49
+apps/server/src/main/java/com/shangan/nag/application/NagScanner.java
+  s_ff636111372d7e::t_787a254faf8afd 50-51,63-64,75-76,80,108,110-120,158,162,175,184-212,241-251,254-259
+  s_ff636111372d7e::t_7cd0856bdcdbb2 260
+docs/adr/0041-manual-nag-content-and-course-filter-panel.md
+  s_ff636111372d7e::t_ac992a4c04d955 27-33
+apps/ios/lib/features/catalog/presentation/course_filter_panel.dart
+  s_ff636111372d7e::t_a4e461636e1fe0 15-18,51-61,66-67
+  s_ff636111372d7e::t_3a95fa36bfe73b 19-27,62-65,80-85,87-95,97-104,106-133,135-136,138-164,167-179,183-184
+README.md
+  s_ff636111372d7e::t_e5ae260cb0b1f7 324
+apps/ios/lib/features/catalog/presentation/library_page.dart
+  s_ff636111372d7e::t_a25d93a584bde2 83-98,100-103,105-117,119-142,144-150,153-169,171-184,187-189,191
+  s_ff636111372d7e::t_2e5b37ff2bae88 99
+  s_ff636111372d7e::t_adb7b1ebcb503e 30,46-62,64,66-67
+  s_ff636111372d7e::t_b98e4286d911b4 63,65
+  s_ff636111372d7e::t_dc470a5529df63 185-186,190,192-203,205-239,241,243,245-247
+apps/server/src/test/java/com/shangan/archive/domain/CascadePlanTest.java
+  s_ff636111372d7e::t_fd8364e86f779e 50
+docs/adr/0042-bark-nag-push.md
+  s_ff636111372d7e::t_e5ae260cb0b1f7 34-37
+  s_ff636111372d7e::t_ba5472fa20c8ba 38-39
+apps/ios/test/features/home/home_fixed_layout_test.dart
+  s_ff636111372d7e::t_24f95aba7f4daa 1-20,22-30,33-38,42-46,49,52-71
+  s_ff636111372d7e::t_8bb5226c9f9677 21,31-32,39-41,47-48,50-51
+apps/server/src/test/java/com/shangan/nag/api/BarkSettingsControllerTest.java
+  s_ff636111372d7e::t_a8dd3cd86e0fb5 1-36
+apps/server/src/main/java/com/shangan/archive/application/ArchiveService.java
+  s_ff636111372d7e::t_fd8364e86f779e 232
+apps/server/src/main/java/com/shangan/archive/infrastructure/JdbcCascadeRepository.java
+  s_ff636111372d7e::t_fd8364e86f779e 137-140,316-318
+.env.example
+  s_ff636111372d7e::t_1e4916b0cf9cde 28-30
+.env.local.example
+  s_ff636111372d7e::t_ef7ea17ba4055f 104-106
+apps/admin-web/package-lock.json
+  s_ff636111372d7e::t_fcff248c2ea77a 3,9
+apps/server/src/test/java/com/shangan/common/integration/BarkEndpointPolicyTest.java
+  s_ff636111372d7e::t_3cafaa60b4de10 1-41
+apps/server/src/test/java/com/shangan/common/integration/BarkPushClientTest.java
+  s_ff636111372d7e::t_e1287ba7b81748 1-46
+apps/server/src/test/java/com/shangan/common/integration/SystemAlertServiceTest.java
+  s_ff636111372d7e::t_b828eae7046a77 18,27,47-50,54
+apps/server/src/test/java/com/shangan/nag/application/BarkSettingsServiceTest.java
+  s_ff636111372d7e::t_784bb9915dfb0d 17-20,31-34
+apps/server/src/test/java/com/shangan/nag/application/channel/BarkNagChannelTest.java
+  s_ff636111372d7e::t_153a9bf645e03a 61-67
+infra/compose.deploy.yml
+  s_ff636111372d7e::t_90b6b86c2fb888 24-25
+infra/compose.yml
+  s_ff636111372d7e::t_166053209a5a29 20-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "0078c5bd199a0c1dc40fe61e17b5965b5854ce97",
+  "prompts": {},
+  "sessions": {
+    "s_ff636111372d7e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0815b-9ddd-7440-89c0-6b2d9fe7931d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
