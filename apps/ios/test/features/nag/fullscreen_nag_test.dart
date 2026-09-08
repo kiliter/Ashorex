@@ -10,6 +10,37 @@ import '../../support/fake_backend.dart';
 /// 全屏催办是 AGENTS.md 与 ADR-0026 共同点名的强约束页面：
 /// 不可返回、不可点外部关闭、必须选原因并填够字数才能提交。
 void main() {
+  // 横屏和键盘占用高度时，原因与提交入口仍应可滚动到达。
+  testWidgets('横屏弹出键盘后可填写并提交催办', (tester) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    final backend = FakeBackend()..on('POST', '/api/v1/nags/n-1/respond');
+    await _pump(tester, backend, nag: _nag(), pushed: true);
+    expect(tester.takeException(), isNull);
+    await tester.ensureVisible(find.text('突发事情'));
+    await tester.tap(find.text('突发事情'));
+    tester.view.viewInsets = const FakeViewPadding(bottom: 220);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.ensureVisible(find.byType(TextField));
+    await tester.enterText(find.byType(TextField), '家里有急事刚处理完');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('提交原因并继续'));
+    await tester.tap(find.text('提交原因并继续'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(
+      backend
+          .lastRequest('POST', '/api/v1/nags/n-1/respond')
+          .json['reasonText'],
+      '家里有急事刚处理完',
+    );
+    expect(find.byType(FullscreenNagPage), findsNothing);
+  });
+
   testWidgets('心跳与 SSE 同时触发也只展示一个全屏页', (tester) async {
     late BuildContext launchContext;
     await tester.pumpWidget(
