@@ -1,0 +1,114 @@
+apps/ios/test/features/stats/heatmap_test.dart
+  s_ff636111372d7e::t_814b0fd8074e14 14-24,116,129,131,144
+  s_ff636111372d7e::t_68e47c31becd5f 35-36,38-40,42
+  s_ff636111372d7e::t_bc0706089009f0 34
+  s_ff636111372d7e::t_68aeb2df326c00 37,41,130
+docs/traceability/2026-09-07-shangan-v2-traceability.md
+  s_ff636111372d7e::t_9fd5a7581ae287 261-265
+  s_ff636111372d7e::t_2155f11aee9e17 266-267
+apps/server/src/main/java/com/shangan/todo/application/RepaymentTotals.java
+  s_ff636111372d7e::t_f16d73f5315c8a 1-34
+apps/ios/lib/features/home/presentation/todo_row.dart
+  s_ff636111372d7e::t_2155f11aee9e17 159,170,176
+  s_ff636111372d7e::t_51c7f22817caeb 190
+apps/ios/lib/features/stats/presentation/stats_page.dart
+  s_ff636111372d7e::t_2780c2b670a49b 188-189
+  s_ff636111372d7e::t_68e47c31becd5f 134-144,146,148-149
+  s_ff636111372d7e::t_f16d73f5315c8a 153,521,528,534-541,543
+  s_ff636111372d7e::t_86ee2fc99e25f9 145
+  s_ff636111372d7e::t_e452063fbdbd86 147
+  s_ff636111372d7e::t_80950bc313eb04 542
+  s_ff636111372d7e::t_e69149ca9d03c4 544-545
+apps/server/src/main/java/com/shangan/todo/application/TodoViewService.java
+  s_ff636111372d7e::t_f16d73f5315c8a 56-70,313-326
+apps/server/src/main/resources/db/migration/V007__repayment_date_snapshots.sql
+  s_ff636111372d7e::t_f16d73f5315c8a 1-17
+apps/ios/lib/core/models/shangan_models.dart
+  s_ff636111372d7e::t_68e47c31becd5f 404-408,410-424,434-435,444-445,470-473,475,902,922,971,973
+  s_ff636111372d7e::t_ffda13de6bbc4e 409,474,972
+apps/ios/test/features/home/complete_sheet_test.dart
+  s_ff636111372d7e::t_a0a85ca98fe4f1 91,93-94,99
+  s_ff636111372d7e::t_3829547c89b0ea 219
+apps/server/src/test/java/com/shangan/todo/application/TodoCompletionServiceTest.java
+  s_ff636111372d7e::t_a0a85ca98fe4f1 117,130,134,147,151-152,158-161
+apps/ios/lib/features/home/presentation/pending_summary_page.dart
+  s_ff636111372d7e::t_814b0fd8074e14 235
+  s_ff636111372d7e::t_2155f11aee9e17 24
+apps/ios/test/features/home/repayment_test.dart
+  s_ff636111372d7e::t_814b0fd8074e14 1-19,21-31,33-39,41,44-55,57,59-65,67-73
+  s_ff636111372d7e::t_d5d3de377a116e 20,32,40,42-43,56,58,66
+docs/adr/0043-today-repayment-and-stats-dates.md
+  s_ff636111372d7e::t_9fd5a7581ae287 1-6,8-20
+  s_ff636111372d7e::t_95cdfe37a3c6ee 23-26
+  s_ff636111372d7e::t_2155f11aee9e17 7,21-22
+docs/plans/2026-09-07-shangan-v2-implementation-plan.md
+  s_ff636111372d7e::t_9fd5a7581ae287 1186-1190
+  s_ff636111372d7e::t_2155f11aee9e17 1191-1192
+docs/prototypes/shangan-v2-prototype.html
+  s_ff636111372d7e::t_e03081443021f1 2322
+  s_ff636111372d7e::t_2780c2b670a49b 632,747-753,1143,1157,1181,1214,2172,2254-2260,3259
+  s_ff636111372d7e::t_1f5e3d9a6b83ac 410,412-413
+apps/server/src/main/java/com/shangan/todo/infrastructure/JdbcTodoRepository.java
+  s_ff636111372d7e::t_f16d73f5315c8a 641,656-700
+apps/ios/lib/features/home/presentation/course_addition_confirmation.dart
+  s_ff636111372d7e::t_2155f11aee9e17 33
+  s_ff636111372d7e::t_c16aa65bf67e4e 46
+apps/ios/test/features/home/history_day_test.dart
+  s_ff636111372d7e::t_a0a85ca98fe4f1 28,31-32,57,62-65,71,73-74,91
+  s_ff636111372d7e::t_48d8ba812f919d 36-42,44-46,49-52,54
+  s_ff636111372d7e::t_2780c2b670a49b 13
+  s_ff636111372d7e::t_fb70c9e3bc4e40 66-67
+docs/specs/2026-09-07-shangan-v2-design.md
+  s_ff636111372d7e::t_2155f11aee9e17 921-922
+  s_ff636111372d7e::t_9fd5a7581ae287 916-920
+apps/server/src/main/java/com/shangan/todo/application/TodoService.java
+  s_ff636111372d7e::t_2155f11aee9e17 472-476
+  s_ff636111372d7e::t_a0a85ca98fe4f1 226,228-230
+apps/server/src/main/java/com/shangan/todo/infrastructure/TodoRepository.java
+  s_ff636111372d7e::t_f16d73f5315c8a 202-215
+apps/ios/lib/core/widgets/shangan_v2.dart
+  s_ff636111372d7e::t_f16d73f5315c8a 1606-1607
+docs/api/openapi.yaml
+  s_ff636111372d7e::t_68e47c31becd5f 1338-1350,1510
+  s_ff636111372d7e::t_b00e7e0cbaab1f 352,374-375,533,544,711
+apps/ios/lib/features/home/presentation/home_page.dart
+  s_ff636111372d7e::t_814b0fd8074e14 71,396,420
+  s_ff636111372d7e::t_2155f11aee9e17 670,811,855,883
+  s_ff636111372d7e::t_e03081443021f1 760,762,898-899,901,904-905
+  s_ff636111372d7e::t_68e47c31becd5f 733-747,750-756,759,761,763-764,766-767,770-772
+  s_ff636111372d7e::t_01cbbca3c02319 748-749,757-758,765,768-769
+apps/ios/test/features/home/pending_summary_edit_test.dart
+  s_ff636111372d7e::t_2780c2b670a49b 10,13
+  s_ff636111372d7e::t_a0a85ca98fe4f1 17,29,33-34,36
+apps/server/src/main/java/com/shangan/todo/application/TodoCompletionService.java
+  s_ff636111372d7e::t_2155f11aee9e17 18,44,48-50,52,74
+apps/ios/lib/features/home/presentation/complete_sheet.dart
+  s_ff636111372d7e::t_814b0fd8074e14 227
+  s_ff636111372d7e::t_2155f11aee9e17 14,28,36
+  s_ff636111372d7e::t_a0a85ca98fe4f1 105
+  s_ff636111372d7e::t_29ef1b416b36e3 179
+apps/server/src/main/java/com/shangan/stats/application/StatsService.java
+  s_ff636111372d7e::t_f16d73f5315c8a 7,120-124,285-286
+apps/server/src/test/java/com/shangan/todo/application/RepaymentTotalsTest.java
+  s_ff636111372d7e::t_7f393e6cc28f70 1-45
+apps/server/src/test/java/com/shangan/todo/application/TodoRepaymentViewTest.java
+  s_ff636111372d7e::t_3a29df540e156e 1-69
+apps/server/src/test/java/com/shangan/todo/application/TodoServiceTest.java
+  s_ff636111372d7e::t_0df77f0be7adda 297,304,440,452-453,456,546,615
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "4de556b3a7425e69461b55ee8bbe5325a1a9ec87",
+  "prompts": {},
+  "sessions": {
+    "s_ff636111372d7e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0815b-9ddd-7440-89c0-6b2d9fe7931d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
