@@ -30,7 +30,7 @@ Future<List<String>?> confirmCourseAdditions(
                 '可新增 ${items.where((item) => item.status == 'NEW').length} 个课时；当日已有的安排将跳过。',
               ),
               const SizedBox(height: 12),
-              const Text('复用或顺延原待办，目标取两者较高值；保留进度、时长、备注和附件。选择跳过则不添加第二条。'),
+              const Text('复用原待办，历史项保留原日期，目标取两者较高值；保留进度、时长、备注和附件。选择跳过则不添加第二条。'),
               for (final item in items.where(
                 (item) => item.status != 'NEW',
               )) ...[
@@ -43,9 +43,7 @@ Future<List<String>?> confirmCourseAdditions(
                   DropdownButtonFormField<String>(
                     initialValue: selected[item.resourceId],
                     isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: '选择要复用或顺延的原待办',
-                    ),
+                    decoration: const InputDecoration(labelText: '选择要复用的原待办'),
                     items: [
                       const DropdownMenuItem(value: '', child: Text('跳过此课时')),
                       for (final old in item.history)

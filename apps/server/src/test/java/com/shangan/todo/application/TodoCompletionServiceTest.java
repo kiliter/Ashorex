@@ -3,7 +3,6 @@ package com.shangan.todo.application;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -115,7 +114,7 @@ class TodoCompletionServiceTest {
   }
 
   @Test
-  @DisplayName("补记完成必须是历史日期：对今天补记返回 TODO_BACKFILL_NOT_HISTORY")
+  @DisplayName("补记完成必须是历史日期：对今天补记返回 TODO_BACKFILL_REMOVED")
   void 当天不允许补记() {
     Todo todo = TodoFixtures.task().localDate(LocalDate.of(2026, 9, 7)).build();
     stubTodo(todo);
@@ -128,11 +127,11 @@ class TodoCompletionServiceTest {
                     new TodoCompletionService.CompleteCommand("昨天忘记勾了", null, true)))
         .isInstanceOf(BusinessException.class)
         .extracting(exception -> ((BusinessException) exception).errorCode())
-        .isEqualTo("TODO_BACKFILL_NOT_HISTORY");
+        .isEqualTo("TODO_BACKFILL_REMOVED");
   }
 
   @Test
-  @DisplayName("补记完成必须填写备注：备注过短返回 TODO_BACKFILL_NOTE_REQUIRED")
+  @DisplayName("补记完成必须填写备注：备注过短返回 TODO_BACKFILL_REMOVED")
   void 补记必须填备注() {
     Todo todo = TodoFixtures.task().localDate(LocalDate.of(2026, 9, 5)).build();
     stubTodo(todo);
@@ -145,28 +144,21 @@ class TodoCompletionServiceTest {
                     new TodoCompletionService.CompleteCommand("好", null, true)))
         .isInstanceOf(BusinessException.class)
         .extracting(exception -> ((BusinessException) exception).errorCode())
-        .isEqualTo("TODO_BACKFILL_NOTE_REQUIRED");
+        .isEqualTo("TODO_BACKFILL_REMOVED");
   }
 
   @Test
-  @DisplayName("对历史日期补记完成：走 markBackfilled 而不是普通完成，便于统计单列")
-  void 历史日期补记走单独写入() {
+  @DisplayName("历史待办正常完成，保留原日期，不创建补记记录")
+  void 历史日期正常完成() {
     Todo todo = TodoFixtures.task().localDate(LocalDate.of(2026, 9, 5)).build();
     stubTodo(todo);
-
     service.complete(
         TodoFixtures.USER_ID,
         todo.id(),
-        new TodoCompletionService.CompleteCommand("当天做完了但忘记勾选", List.of(NoteTag.NOTED), true));
-
-    verify(todos).updateNote(todo.id(), "当天做完了但忘记勾选", NOW);
-    verify(todos).replaceNoteTags(todo.id(), Set.of(NoteTag.NOTED));
-    verify(todos).markBackfilled(todo.id(), "当天做完了但忘记勾选", NOW, NOW);
-    verify(todos, never()).updateStatus(anyString(), anyString(), any(), any());
-    // 补记不产生任何时长增量，因此不会向课时累计写入观看毫秒。
-    verify(todos, never())
-        .upsertWatchState(
-            anyString(), anyString(), anyLong(), anyInt(), anyLong(), anyInt(), any());
+        new TodoCompletionService.CompleteCommand(null, null, false));
+    verify(todos).updateStatus(todo.id(), "DONE", NOW, NOW);
+    verify(todos, never()).markBackfilled(anyString(), anyString(), any(), any());
+    verify(todos, never()).updateLocalDate(anyString(), any(), anyInt(), any());
   }
 
   @Test
@@ -214,6 +206,5 @@ class TodoCompletionServiceTest {
   private void stubTodo(Todo todo) {
     when(todoService.requireOwned(TodoFixtures.USER_ID, todo.id())).thenReturn(todo);
     when(userTime.requireUser(TodoFixtures.USER_ID)).thenReturn(USER);
-    when(userTime.today(USER)).thenReturn(LocalDate.of(2026, 9, 7));
   }
 }

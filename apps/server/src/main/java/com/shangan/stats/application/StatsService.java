@@ -4,6 +4,7 @@ import com.shangan.catalog.infrastructure.CourseRepository;
 import com.shangan.common.api.BusinessException;
 import com.shangan.identity.application.UserTimeService;
 import com.shangan.identity.domain.User;
+import com.shangan.todo.application.RepaymentTotals;
 import com.shangan.todo.domain.FocusState;
 import com.shangan.todo.domain.NoteTag;
 import com.shangan.todo.domain.Todo;
@@ -116,7 +117,11 @@ public class StatsService {
         hourlyList(hourly),
         rankings(todos.aggregateResourceWatchedMs(user.id(), from, to)),
         noteTagCounts(user.id(), from, to),
-        deletionCounts(user.id(), from, to));
+        deletionCounts(user.id(), from, to),
+        RepaymentTotals.summarize(
+            buckets,
+            todos.findCompletions(user.id(), from, to),
+            instant -> userTime.localDateOf(user, instant)));
   }
 
   private List<HourSlot> hourlyList(Map<Integer, long[]> hourly) {
@@ -277,5 +282,6 @@ public class StatsService {
       List<HourSlot> hours,
       Rankings rankings,
       List<TagCount> noteTags,
-      List<DeletionReasonCount> deletions) {}
+      List<DeletionReasonCount> deletions,
+      RepaymentTotals repayment) {}
 }

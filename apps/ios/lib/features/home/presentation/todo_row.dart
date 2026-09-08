@@ -156,7 +156,7 @@ final class TodoRow extends ConsumerWidget {
     }
   }
 
-  /// 课时已下架时只能补记完成或删除。
+  /// 课时已下架时允许正常标记完成或删除。
   Future<void> _showUnavailable(BuildContext context, WidgetRef ref) async {
     final action = await showModalBottomSheet<String>(
       context: context,
@@ -167,13 +167,13 @@ final class TodoRow extends ConsumerWidget {
             const Padding(
               padding: EdgeInsets.all(18),
               child: Text(
-                '该课时已在 Emby 下架，无法播放。可以补记完成或删除这条待办。',
+                '该课时已在 Emby 下架，无法播放。可以标记完成或删除这条待办。',
                 style: TextStyle(fontSize: 14),
               ),
             ),
             ListTile(
               leading: const Icon(Icons.check),
-              title: const Text('补记完成'),
+              title: const Text('标记完成'),
               onTap: () => Navigator.of(context).pop('complete'),
             ),
             ListTile(
@@ -187,17 +187,7 @@ final class TodoRow extends ConsumerWidget {
     );
     if (!context.mounted) return;
     if (action == 'complete') {
-      final done = await CompleteSheet.show(
-        context,
-        todo: todo,
-        backfill: !todo.localDate.isAtSameMomentAs(
-          DateTime(
-            DateTime.now().year,
-            DateTime.now().month,
-            DateTime.now().day,
-          ),
-        ),
-      );
+      final done = await CompleteSheet.show(context, todo: todo);
       if (done) await onChanged();
     } else if (action == 'delete') {
       final deleted = await DeleteReasonDialog.show(

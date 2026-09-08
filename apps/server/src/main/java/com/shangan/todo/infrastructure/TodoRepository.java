@@ -199,7 +199,20 @@ public interface TodoRepository {
       Instant deletedAt) {}
 
   /** 按本地日期归集的时长聚合结果。 */
-  record DurationBucket(Instant occurredAt, long watchedMs, long focusedMs) {}
+  record DurationBucket(Instant occurredAt, long watchedMs, long focusedMs, LocalDate plannedDate) {
+    /** 兼容没有计划日期的旧调用；未知归属不推测为还债。 */
+    public DurationBucket(Instant occurredAt, long watchedMs, long focusedMs) {
+      this(occurredAt, watchedMs, focusedMs, null);
+    }
+  }
+
+  /** 查询当日历史未完成项和本日完成的历史项；原计划日期不变。 */
+  List<Todo> findRepaymentTodos(String userId, LocalDate date, Instant from, Instant to);
+
+  /** 完成时的原计划日期快照，用于区分实际完成日的还债记录。 */
+  record CompletionBucket(Instant completedAt, LocalDate plannedDate) {}
+
+  List<CompletionBucket> findCompletions(String userId, Instant from, Instant to);
 
   /** 备注标签计数。 */
   record TagCount(NoteTag tag, int count) {}

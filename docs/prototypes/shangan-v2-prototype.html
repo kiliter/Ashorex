@@ -407,10 +407,10 @@ body{
 .rank .rv{font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums;}
 
 .heat{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
-.heat i{aspect-ratio:1;border-radius:5px;background:var(--ink-soft);display:block;}
+.heat i{aspect-ratio:1;border-radius:5px;background:var(--ink-soft);display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:600;}
 .heat i.l2{background:#9DBDE6;}
-.heat i.l3{background:#5A8FD1;}
-.heat i.l4{background:var(--blue);}
+.heat i.l3{background:#5A8FD1;color:white;}
+.heat i.l4{background:var(--blue);color:white;}
 .heat i.miss{background:var(--red-soft);border:1px solid #EFC7C1;}
 
 /* ---------- 我的 Tab ---------- */
@@ -629,7 +629,7 @@ table.wt td b{font-weight:700;}
      ============================================================ -->
 <div class="sect">
 <h2>一、首页 Tab <em>今日 Todo 中心 · GET /api/v1/todos?view=DAY</em></h2>
-<p class="note">去掉旧版「建议加入今天」推荐区。信息密度优先：<b>目标看板一屏展示全部目标</b>（主目标大号倒计时 + 其余目标两列紧凑格，临期目标用红/赭底色标出）+ 今日四项指标 + 分组 Todo 列表（进行中 / 待开始 / 已完成）。每行显示类型徽标、目标进度、实际进度、时长、附件数与备注摘要。首页同时承载<b>日 / 周 / 月三种视图</b>与<b>历史日期</b>浏览：历史未完成可顺延、补记或删除，历史已完成为只读回顾态；任何删除都必须填写说明。</p>
+<p class="note">去掉旧版「建议加入今天」推荐区。信息密度优先：<b>目标看板一屏展示全部目标</b>（主目标大号倒计时 + 其余目标两列紧凑格，临期目标用红/赭底色标出）+ 今日四项指标 + 分组 Todo 列表（进行中 / 待开始 / 已完成）。每行显示类型徽标、目标进度、实际进度、时长、附件数与备注摘要。首页同时承载<b>日 / 周 / 月三种视图</b>与<b>历史日期</b>浏览：历史未完成保留原日期继续执行，新增进度归入今日还债，历史已完成为只读回顾态；任何删除都必须填写说明。</p>
 <div class="grid">
 
   <!-- 1-1 首页默认态 -->
@@ -743,6 +743,13 @@ table.wt td b{font-weight:700;}
               </div>
               <div class="act flat"><svg class="icon s18"><use href="#i-chev"/></svg></div>
             </div>
+          </div>
+          <!-- ADR-0043：今日计划之外的历史执行记录。 -->
+          <div class="sec-title"><h3>今日还债</h3></div>
+          <div class="card" style="padding:13px">
+            <div class="muted">今日完成 1 项 · 观看 15 分 · 专注 10 分</div>
+            <div class="todo"><div class="todo-main"><b>历史课程</b><div class="muted">原计划 2026-09-06</div></div><div class="act">继续</div></div>
+            <div class="todo"><div class="todo-main"><b>历史事项</b><div class="muted">原计划 2026-09-05 · 今日已完成</div></div></div>
           </div>
         </div>
         <div class="fab"><svg class="icon"><use href="#i-plus"/></svg></div>
@@ -1133,7 +1140,7 @@ table.wt td b{font-weight:700;}
   <!-- 1-7 历史日 · 有未完成 -->
   <div class="frame-wrap">
     <p class="frame-cap">1-7 历史某天 · 存在未完成
-      <small>历史日只读浏览 + 三种补救动作：顺延到今天、补记完成（需备注）、直接删除。不会自动生成任何欠债或惩罚项。</small>
+      <small>历史日未完成项直接执行，保留原日期；可按原规则填写原因删除。不会自动生成任何欠债或惩罚项。</small>
     </p>
     <div class="phone">
       <div class="statusbar"><span>9:41</span><div class="notch"></div><span class="sb-r">5G 86%</span></div>
@@ -1147,7 +1154,7 @@ table.wt td b{font-weight:700;}
           <div class="card" style="padding:11px 13px;border-color:#E2D3A8;background:var(--ochre-soft)">
             <div class="row" style="gap:8px;align-items:center">
               <svg class="icon s18" style="color:var(--ochre)"><use href="#i-clock"/></svg>
-              <div style="flex:1;font-size:12.5px;font-weight:700;color:#6E5824">历史日期 · 只能补记或顺延</div>
+              <div style="flex:1;font-size:12.5px;font-weight:700;color:#6E5824">历史日期 · 未完成项可直接继续，计入今日还债</div>
             </div>
           </div>
 
@@ -1171,8 +1178,7 @@ table.wt td b{font-weight:700;}
                 </div>
                 <div class="bar thin mt8"><i style="width:12%"></i></div>
                 <div class="row mt10" style="gap:7px">
-                  <span class="pill" style="font-size:11px;padding:5px 10px"><svg class="icon s14"><use href="#i-cal"/></svg>顺延今天</span>
-                  <span class="pill" style="font-size:11px;padding:5px 10px"><svg class="icon s14"><use href="#i-check"/></svg>补记完成</span>
+                  <span class="pill" style="font-size:11px;padding:5px 10px"><svg class="icon s14"><use href="#i-check"/></svg>标记完成</span>
                   <span class="pill" style="font-size:11px;padding:5px 10px;color:var(--red);border-color:#EFC7C1"><svg class="icon s14"><use href="#i-trash"/></svg>删除</span>
                 </div>
               </div>
@@ -1205,7 +1211,7 @@ table.wt td b{font-weight:700;}
           </div>
 
           <div class="spec mt12">
-            补记完成走 <code>POST /api/v1/todos/{id}/complete?backfill=true</code>，必须带备注；服务端记录 <code>completed_at</code> 与 <code>backfilled=1</code>，统计中单列显示，不混入当日真实时长。
+            历史待办直接正常完成，保留原计划日期；今天新增的学习时长和完成数单列为今日还债，不计入今日计划完成率。
           </div>
         </div>
         <div class="tabbar">
@@ -1293,7 +1299,6 @@ table.wt td b{font-weight:700;}
           </div>
 
           <div class="row mt16" style="gap:10px">
-            <div class="btn ghost sm" style="white-space:nowrap"><svg class="icon s18"><use href="#i-cal"/></svg>全部顺延今天</div>
             <div class="btn ghost sm" style="flex:1;color:var(--red);border-color:var(--red)"><svg class="icon s18"><use href="#i-trash"/></svg>批量清理</div>
           </div>
         </div>
@@ -2164,7 +2169,7 @@ table.wt td b{font-weight:700;}
           </div>
 
           <div class="card mt12" style="padding:13px 14px">
-            <div class="between"><span style="font-size:13px;font-weight:800">今日时段分布</span><span class="muted" style="font-size:11.5px">分钟</span></div>
+            <div class="between"><span style="font-size:13px;font-weight:800">今日时段分布（2026-09-07）</span><span class="muted" style="font-size:11.5px">分钟</span></div>
             <div class="chart">
               <div class="col"><em>0</em><i style="height:4%"></i><span>6</span></div>
               <div class="col"><em>18</em><i style="height:24%"></i><span>8</span></div>
@@ -2246,13 +2251,13 @@ table.wt td b{font-weight:700;}
           <div class="card mt12" style="padding:13px 14px">
             <div class="between"><span style="font-size:13px;font-weight:800">每日时长</span><span class="muted" style="font-size:11.5px">小时</span></div>
             <div class="chart">
-              <div class="col"><em>2.1</em><i style="height:62%"></i><span>一</span></div>
-              <div class="col"><em>1.6</em><i style="height:47%"></i><span>二</span></div>
-              <div class="col"><em>0.4</em><i class="soft" style="height:14%"></i><span>三</span></div>
-              <div class="col"><em>2.8</em><i style="height:82%"></i><span>四</span></div>
-              <div class="col"><em>1.9</em><i style="height:56%"></i><span>五</span></div>
-              <div class="col"><em>3.4</em><i style="height:100%"></i><span>六</span></div>
-              <div class="col"><em>0.2</em><i class="soft" style="height:8%"></i><span>日</span></div>
+              <div class="col"><em>2.1</em><i style="height:62%"></i><span>周一<br>9/7</span></div>
+              <div class="col"><em>1.6</em><i style="height:47%"></i><span>周二<br>9/8</span></div>
+              <div class="col"><em>0.4</em><i class="soft" style="height:14%"></i><span>周三<br>9/9</span></div>
+              <div class="col"><em>2.8</em><i style="height:82%"></i><span>周四<br>9/10</span></div>
+              <div class="col"><em>1.9</em><i style="height:56%"></i><span>周五<br>9/11</span></div>
+              <div class="col"><em>3.4</em><i style="height:100%"></i><span>周六<br>9/12</span></div>
+              <div class="col"><em>0.2</em><i class="soft" style="height:8%"></i><span>周日<br>9/13</span></div>
             </div>
           </div>
 
@@ -2314,11 +2319,7 @@ table.wt td b{font-weight:700;}
           <div class="card mt12" style="padding:13px 14px">
             <div class="between"><span style="font-size:13px;font-weight:800">学习热力</span><span class="muted" style="font-size:11px">一 二 三 四 五 六 日</span></div>
             <div class="heat mt10">
-              <i class="l2"></i><i class="l2"></i><i class="miss"></i><i class="l3"></i><i class="l2"></i><i class="l4"></i><i></i>
-              <i class="l3"></i><i class="l2"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><i class="l4"></i><i class="l2"></i>
-              <i class="l2"></i><i class="l3"></i><i class="miss"></i><i class="l2"></i><i class="l3"></i><i class="l2"></i><i></i>
-              <i class="l3"></i><i class="l4"></i><i class="l2"></i><i class="l2"></i><i class="l3"></i><i></i><i></i>
-              <i class="l2"></i><i class="l3"></i><i class="l4"></i><i></i><i></i><i></i><i></i>
+              <i style="visibility:hidden"></i><i class="l3">1</i><i class="l4">2</i><i class="miss">3</i><i class="l2">4</i><i class="l3">5</i><i class="l4">6</i><i class="miss">7</i><i class="l2">8</i><i class="l3">9</i><i class="l4">10</i><i class="miss">11</i><i class="l2">12</i><i class="l3">13</i><i class="l4">14</i><i class="miss">15</i><i class="l2">16</i><i class="l3">17</i><i class="l4">18</i><i class="miss">19</i><i class="l2">20</i><i class="l3">21</i><i class="l4">22</i><i class="miss">23</i><i class="l2">24</i><i class="l3">25</i><i class="l4">26</i><i class="miss">27</i><i class="l2">28</i><i class="l3">29</i><i class="l4">30</i><i style="visibility:hidden"></i><i style="visibility:hidden"></i><i style="visibility:hidden"></i><i style="visibility:hidden"></i>
             </div>
             <div class="row mt10" style="gap:12px;font-size:10.5px;color:var(--muted);flex-wrap:wrap">
               <span class="row" style="gap:4px"><i style="width:10px;height:10px;border-radius:3px;background:var(--ink-soft);display:block"></i>无记录</span>
@@ -3255,7 +3256,7 @@ table.wt td b{font-weight:700;}
                   <td style="text-align:right"><span class="wbtn sm">通知学员改选</span></td>
                 </tr>
               </table>
-              <div class="muted mt10" style="font-size:11.5px">课时下架后，引用它的 Todo 在 App 内显示「课时已下架」，学员只能补记完成或删除（删除仍需填原因）。</div>
+              <div class="muted mt10" style="font-size:11.5px">课时下架后，引用它的 Todo 在 App 内显示「课时已下架」，学员可标记完成或删除（删除仍需填原因）。</div>
             </div>
           </div>
 

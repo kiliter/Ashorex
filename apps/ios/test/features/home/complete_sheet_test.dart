@@ -88,22 +88,15 @@ void main() {
     expect(_saveButton(tester).onPressed, isNotNull);
   });
 
-  testWidgets('补记完成时备注必填', (tester) async {
+  testWidgets('历史事项正常完成不再要求补记备注', (tester) async {
     final backend = FakeBackend()..on('POST', '/api/v1/todos/t-1/complete');
-    await _pump(tester, backend, todo: todoItem(id: 't-1'), backfill: true);
-
-    expect(find.textContaining('补记完成'), findsOneWidget);
-    expect(_saveButton(tester).onPressed, isNull);
-
-    await tester.enterText(find.byType(TextField), '晚上补看完了');
-    await tester.pump();
+    await _pump(tester, backend, todo: todoItem(id: 't-1'));
+    expect(find.textContaining('补记完成'), findsNothing);
     expect(_saveButton(tester).onPressed, isNotNull);
-
     await tester.tap(find.text('保存并完成'));
     await tester.pumpAndSettle();
     final request = backend.lastRequest('POST', '/api/v1/todos/t-1/complete');
-    expect(request.json['backfill'], isTrue);
-    expect(request.json['note'], '晚上补看完了');
+    expect(request.json['backfill'], isFalse);
   });
 
   testWidgets('一键标签会追加到备注并写入提交载荷', (tester) async {
@@ -202,7 +195,6 @@ Future<void> _pump(
   WidgetTester tester,
   FakeBackend backend, {
   required TodoItem todo,
-  bool backfill = false,
   FakeAttachmentPicker? picker,
   List<Map<String, Object?>> attachments = const [],
 }) async {
@@ -224,9 +216,7 @@ Future<void> _pump(
       ],
       child: MaterialApp(
         home: Scaffold(
-          body: SingleChildScrollView(
-            child: CompleteSheet(todo: todo, backfill: backfill),
-          ),
+          body: SingleChildScrollView(child: CompleteSheet(todo: todo)),
         ),
       ),
     ),

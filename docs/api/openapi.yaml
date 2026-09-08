@@ -349,7 +349,7 @@ paths:
     post:
       tags: [todos]
       summary: 预览课时重复与历史未完成项
-      description: 依据 ADR-0038，今日同目标跳过；不同目标明确确认后复用，目标取较高值；历史未完成只在明确确认后顺延，取消预览不写入。实际复用或顺延前重新校验课时可用性，下架课时返回 RESOURCE_UNAVAILABLE；同目标纯跳过保持幂等。
+      description: 依据 ADR-0038，今日同目标跳过；不同目标明确确认后复用，目标取较高值；历史未完成明确确认后复用，保留原计划日期并在今日还债执行，取消预览不写入。实际复用或顺延前重新校验课时可用性，下架课时返回 RESOURCE_UNAVAILABLE；同目标纯跳过保持幂等。
       requestBody:
         required: true
         content:
@@ -371,8 +371,8 @@ paths:
   /api/v1/todos/course-additions:
     post:
       tags: [todos]
-      summary: 确认添加课时与顺延原待办
-      description: 依据 ADR-0038，今日同目标跳过；不同目标明确确认后复用，目标取较高值；历史未完成只在明确确认后顺延，取消预览不写入。实际复用或顺延前重新校验课时可用性，下架课时返回 RESOURCE_UNAVAILABLE；同目标纯跳过保持幂等。
+      summary: 确认添加课时与复用原待办
+      description: 依据 ADR-0038，今日同目标跳过；不同目标明确确认后复用，目标取较高值；历史未完成明确确认后复用，保留原计划日期并在今日还债执行，取消预览不写入。实际复用或顺延前重新校验课时可用性，下架课时返回 RESOURCE_UNAVAILABLE；同目标纯跳过保持幂等。
       requestBody:
         required: true
         content:
@@ -530,7 +530,7 @@ paths:
       summary: 完成或补记完成
       description: |
         要求凭证但没有附件时返回 `TODO_EVIDENCE_REQUIRED`。
-        `backfill=true` 只允许用于历史日期且 `note` 必填。
+        历史项使用正常完成入口；旧参数 `backfill=true` 返回 TODO_BACKFILL_REMOVED。
       requestBody:
         content:
           application/json:
@@ -541,7 +541,7 @@ paths:
                 noteTags:
                   type: array
                   items: { $ref: '#/components/schemas/NoteTag' }
-                backfill: { type: boolean, default: false }
+                backfill: { type: boolean, default: false, deprecated: true, description: 旧补记入口已取消，传 true 会被拒绝。 }
       responses:
         '200':
           description: 成功
@@ -708,7 +708,7 @@ paths:
     post:
       tags: [todos]
       summary: 顺延到指定日期（保留进度与附件，不计入删除统计）
-      description: 下架或归档课时只能补记完成或删除，顺延返回 RESOURCE_UNAVAILABLE。
+      description: 历史待办不允许改期，返回 TODO_HISTORY_DEFER_REMOVED；非历史下架课时顺延返回 RESOURCE_UNAVAILABLE。
       requestBody:
         required: true
         content:
@@ -1335,6 +1335,19 @@ components:
           items: { $ref: '#/components/schemas/TodoView' }
         totals: { $ref: '#/components/schemas/DayTotals' }
         deletionCount: { type: integer }
+        repaymentTodos:
+          type: array
+          description: 今日返回历史未完成及本日完成的历史待办，历史日期返回空数组。
+          items: { $ref: '#/components/schemas/TodoView' }
+        repayment: { $ref: '#/components/schemas/RepaymentTotals' }
+
+    RepaymentTotals:
+      type: object
+      description: 按账号时区统计实际发生窗口内的历史任务增量，不计入今日计划完成率。
+      properties:
+        done: { type: integer }
+        watchedMs: { type: integer, format: int64 }
+        focusedMs: { type: integer, format: int64 }
 
     DaySummary:
       type: object
@@ -1494,6 +1507,7 @@ components:
         range: { type: string, enum: [DAY, WEEK, MONTH] }
         start: { type: string, format: date }
         end: { type: string, format: date }
+        repayment: { $ref: '#/components/schemas/RepaymentTotals' }
         totalTodos: { type: integer }
         doneTodos: { type: integer }
         backfilledTodos:
