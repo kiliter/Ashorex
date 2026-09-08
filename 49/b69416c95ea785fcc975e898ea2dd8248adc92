@@ -1,0 +1,35 @@
+docs/specs/2026-09-07-shangan-v2-design.md
+  s_ff636111372d7e::t_b088e96b6a158d 912-915
+apps/server/src/test/java/com/shangan/nag/application/channel/BarkNagChannelTest.java
+  s_ff636111372d7e::t_b088e96b6a158d 16-36,65,82-119,122-126,132
+docs/traceability/2026-09-07-shangan-v2-traceability.md
+  s_ff636111372d7e::t_b088e96b6a158d 257-260
+docs/plans/2026-09-07-shangan-v2-implementation-plan.md
+  s_ff636111372d7e::t_b088e96b6a158d 1182-1185
+docs/adr/0042-bark-nag-push.md
+  s_ff636111372d7e::t_b088e96b6a158d 56-59
+apps/admin-web/src/pages/PresencePage.vue
+  s_ff636111372d7e::t_d2b4189cd07c0e 76
+apps/server/src/main/java/com/shangan/common/integration/BarkPushClient.java
+  s_ff636111372d7e::t_83cf7ee470b8a0 16-26,53
+apps/server/src/main/java/com/shangan/nag/application/channel/BarkNagChannel.java
+  s_ff636111372d7e::t_6bf5f859a33e08 5,7,10,20-21,24-28,32-33,69-74,80-81
+docs/prototypes/shangan-v2-prototype.html
+  s_ff636111372d7e::t_ffd1c46748941a 562
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "49b69416c95ea785fcc975e898ea2dd8248adc92",
+  "prompts": {},
+  "sessions": {
+    "s_ff636111372d7e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0815b-9ddd-7440-89c0-6b2d9fe7931d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
