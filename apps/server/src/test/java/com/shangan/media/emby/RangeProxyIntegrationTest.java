@@ -1,7 +1,9 @@
 package com.shangan.media.emby;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.shangan.common.api.BusinessException;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -48,5 +50,43 @@ class RangeProxyIntegrationTest {
           .isEqualTo("partial".getBytes(StandardCharsets.UTF_8));
     }
     assertThat(range.get()).isEqualTo("bytes=100-199");
+  }
+
+  /** Emby 失败正文不得经过播放器代理泄露；416 保留媒体范围协商所需响应头。 */
+  @Test
+  void rejectsUpstreamErrorsAndRemovesRangeErrorBody() throws Exception {
+    server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+    server.createContext(
+        "/error",
+        exchange -> {
+          byte[] body = "internal media path and credential".getBytes(StandardCharsets.UTF_8);
+          exchange.sendResponseHeaders(500, body.length);
+          exchange.getResponseBody().write(body);
+          exchange.close();
+        });
+    server.createContext(
+        "/range",
+        exchange -> {
+          byte[] body = "internal media path".getBytes(StandardCharsets.UTF_8);
+          exchange.getResponseHeaders().set("Content-Range", "bytes */1000");
+          exchange.getResponseHeaders().set("Content-Type", "text/plain");
+          exchange.sendResponseHeaders(416, body.length);
+          exchange.getResponseBody().write(body);
+          exchange.close();
+        });
+    server.start();
+    EmbyStreamProxy proxy =
+        new EmbyStreamProxy(
+            new EmbyProperties(
+                "http://127.0.0.1:" + server.getAddress().getPort(), "secret", "user-1"));
+    assertThatThrownBy(() -> proxy.open("/error", null, null))
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("媒体流暂时不可用");
+    try (var response = proxy.open("/range", "bytes=2000-", null)) {
+      assertThat(response.statusCode()).isEqualTo(416);
+      assertThat(response.headers().getFirst("Content-Range")).isEqualTo("bytes */1000");
+      assertThat(response.headers().getContentLength()).isZero();
+      assertThat(response.body().readAllBytes()).isEmpty();
+    }
   }
 }

@@ -18,9 +18,9 @@ spring:
       initialize-schema: never
   servlet:
     multipart:
-      # 课程内容压缩包上限为 50 MiB，请求额外预留少量 multipart 边界开销。
-      max-file-size: 50MB
-      max-request-size: 51MB
+      # Todo 附件单文件上限 10 MiB，请求额外预留少量 multipart 边界开销。
+      max-file-size: 10MB
+      max-request-size: 11MB
 
 management:
   endpoints:
@@ -29,12 +29,15 @@ management:
         include: health,info
 
 springdoc:
-  # 冻结合同只描述 iOS 业务 API，管理后台由 Thymeleaf 页面和 MVC 测试覆盖。
+  # 冻结合同只描述移动端业务 API，管理后台由 Thymeleaf 页面和 MVC 测试覆盖。
   paths-to-match: /api/v1/**
 
 server:
   # 本地开发统一使用 18080，部署环境仍可通过 SERVER_PORT 覆盖。
   port: ${SERVER_PORT:18080}
+  # 默认只监听回环地址；需要真机或局域网访问时由 SERVER_ADDRESS 显式放开。
+  # 容器部署必须设为 0.0.0.0，并通过防火墙或安全组限制公网直连该端口。
+  address: ${SERVER_ADDRESS:127.0.0.1}
   servlet:
     session:
       # 管理后台 Session 在七天无访问后失效；重启服务不会主动清除。
@@ -54,40 +57,24 @@ logging:
     level: "%5p [requestId:%X{requestId:-}]"
 
 app:
-  # 模拟考试试卷与 SQLite 同处本地数据卷，并由备份脚本成套归档。
-  mock-exam-attachments-dir: ${MOCK_EXAM_ATTACHMENTS_DIR:${DATA_DIR:./data}/mock-exams}
-  debt:
-    # QUIZ 欠债的计划压力估值；开摆预览与日终生成读取同一个值。
-    quiz-estimate-seconds: ${QUIZ_DEBT_ESTIMATE_SECONDS:600}
+  # Todo 附件与 SQLite 同处本地数据卷，并由备份脚本成套归档。
+  attachments-dir: ${ATTACHMENTS_DIR:${DATA_DIR:./data}/attachments}
   emby:
     base-url: ${EMBY_BASE_URL:}
     api-key: ${EMBY_API_KEY:}
     user-id: ${EMBY_USER_ID:}
-  asr:
-    base-url: ${ASR_BASE_URL:}
-    api-key: ${ASR_API_KEY:}
-    model: ${ASR_MODEL:mlx-community/Qwen3-ASR-1.7B-8bit}
-    language: ${ASR_LANGUAGE:Chinese}
-    chunk-duration-seconds: ${ASR_CHUNK_DURATION_SECONDS:30}
-    timeout-seconds: ${ASR_TIMEOUT_SECONDS:1800}
-  llm:
-    base-url: ${LLM_BASE_URL:}
-    api-key: ${LLM_API_KEY:}
-    model: ${LLM_MODEL:}
-    context-length: ${LLM_CONTEXT_LENGTH:131072}
-    max-completion-tokens: ${LLM_MAX_COMPLETION_TOKENS:8192}
-    reasoning-effort: ${LLM_REASONING_EFFORT:}
-    timeout-seconds: ${LLM_TIMEOUT_SECONDS:300}
-  openrouter:
-    api-key: ${OPENROUTER_API_KEY:}
-  content-auto-fill:
-    enabled: ${CONTENT_AUTO_FILL_ENABLED:false}
-    interval-minutes: ${CONTENT_AUTO_FILL_INTERVAL_MINUTES:15}
-  content:
-    # 内容任务仍由全局 Worker 串行消费，两个外部调用线程池每 30 秒打印一次存活状态。
-    worker-delay-ms: 1000
-    worker-heartbeat-initial-delay-ms: 5000
-    worker-heartbeat-ms: 30000
+    timeout-seconds: ${EMBY_TIMEOUT_SECONDS:10}
+  serverchan:
+    # 推送基址固定为官方地址；提取为配置项只为让协议测试指向本地假服务。
+    base-url: ${SERVERCHAN_BASE_URL:https://sctapi.ftqq.com}
+    send-key: ${SERVERCHAN_SEND_KEY:}
+    timeout-seconds: ${SERVERCHAN_TIMEOUT_SECONDS:8}
+    nag-enabled: ${SERVERCHAN_NAG_ENABLED:true}
+    daily-digest-enabled: ${SERVERCHAN_DAILY_DIGEST_ENABLED:false}
+  features:
+    # 材料（PDF）资源按 ADR-0030 预留，V2 默认关闭。
+    document-resources: ${FEATURE_DOCUMENT_RESOURCES:false}
+    max-document-size-mb: ${FEATURE_MAX_DOCUMENT_SIZE_MB:200}
   security:
     jwt-secret: ${JWT_SECRET:}
     bootstrap-admin-username: ${ADMIN_BOOTSTRAP_USERNAME:}

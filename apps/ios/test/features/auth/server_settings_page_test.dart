@@ -1,3 +1,5 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +14,10 @@ import 'package:shangan_ios/features/auth/presentation/login_page.dart';
 import 'package:shangan_ios/features/auth/presentation/server_settings_page.dart';
 
 void main() {
+  setUp(() {
+    FlutterSecureStorage.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({});
+  });
   testWidgets('登录页展示当前服务器并可进入服务器设置', (tester) async {
     final dependencies = await _dependencies();
 
@@ -73,6 +79,10 @@ void main() {
       'https://new.example.com',
     );
     expect(dependencies.tokens.clearCalls, 1);
+    expect(await ServerHistoryStore().read(), [
+      'https://new.example.com',
+      'http://127.0.0.1:18080',
+    ]);
   });
 }
 

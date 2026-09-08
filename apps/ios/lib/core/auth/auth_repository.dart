@@ -8,23 +8,40 @@ final class UserProfile {
     required this.id,
     required this.username,
     required this.displayName,
-    required this.role,
+    required this.roles,
     required this.timezone,
+    this.supervisorMode = false,
+    this.learnerCount = 0,
   });
 
   final String id;
   final String username;
   final String displayName;
-  final String role;
+
+  /// 账号可同时具备 LEARNER 与 SUPERVISOR。
+  final List<String> roles;
   final String timezone;
 
+  /// 是否绑定了学员，决定「我的」页是否出现督学端入口。
+  final bool supervisorMode;
+  final int learnerCount;
+
+  bool get isSupervisor => supervisorMode || roles.contains('SUPERVISOR');
+
   factory UserProfile.fromJson(Map<String, dynamic> json) {
+    final rawRoles = json['roles'];
+    final roles = <String>[
+      if (rawRoles is List) ...rawRoles.map((role) => role.toString()),
+      if (rawRoles == null && json['role'] != null) json['role'].toString(),
+    ];
     return UserProfile(
       id: json['id'] as String,
       username: json['username'] as String,
-      displayName: json['displayName'] as String,
-      role: json['role'] as String,
-      timezone: json['timezone'] as String,
+      displayName: json['displayName'] as String? ?? json['username'] as String,
+      roles: roles.isEmpty ? const ['LEARNER'] : roles,
+      timezone: json['timezone'] as String? ?? 'Asia/Shanghai',
+      supervisorMode: json['supervisorMode'] as bool? ?? false,
+      learnerCount: (json['learnerCount'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -34,6 +51,8 @@ final class AuthException implements Exception {
   const AuthException._(this.message);
 
   const AuthException.unauthorized() : this._('登录状态已失效，请重新登录');
+
+  const AuthException.roleUnavailable() : this._('账号不具备所选身份，请重新选择');
 
   final String message;
 

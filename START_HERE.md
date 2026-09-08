@@ -2,20 +2,20 @@
 
 ## 当前状态
 
-本仓库已经进入 V1.x.x 开发与维护阶段，不是等待从 Task 1 开始的空仓库交接包。
+本仓库已经进入 V2.0.0 开发阶段。V2 是一次产品模型重构：以「Todo 中心 + 真人督学」取代 V1 的可信播放、学习欠债与答题体系。
 
-当前活动开发线默认为 V1.x.x。V1.x.x 固定现有需求与核心业务逻辑，只完成已经批准的 V1 Task、Bug 修复和不改变业务语义的 UI 调整。V2/V3 仅有方向性路线图，尚未获得实施授权。
+当前活动开发线为 V2.0.0，实施计划为 `docs/plans/2026-09-07-shangan-v2-implementation-plan.md` 中的 T01 ~ T36。V1 的需求文档与已被取代的 ADR 已删除，如需查阅请从 `v1-final` 标签的 Git 历史获取。
 
 ## 必读顺序
 
 修改代码前必须依次完整阅读：
 
 1. `AGENTS.md`
-2. `docs/specs/2026-08-27-shangan-v1-design.md`
-3. `docs/plans/2026-08-27-shangan-v1-implementation-plan.md`
-4. `docs/traceability/2026-08-27-shangan-v1-traceability.md`
-5. `docs/roadmap/2026-09-04-shangan-version-roadmap.md`
-6. 与当前 Task 相关的 ADR
+2. `docs/specs/2026-09-07-shangan-v2-design.md`
+3. `docs/plans/2026-09-07-shangan-v2-implementation-plan.md`
+4. `docs/traceability/2026-09-07-shangan-v2-traceability.md`
+5. `docs/prototypes/shangan-v2-prototype.html`（唯一 UI 事实来源）
+6. 与当前 Task 相关的 ADR（V2 为 ADR-0025 ~ ADR-0032）
 
 发生冲突、文档状态不一致或聊天要求超出当前冻结范围时，停止实现并向维护者说明具体冲突。不得自行选择一份更方便实现的旧文档。
 
@@ -46,7 +46,7 @@ Version Roadmap
 - V2.x.x：规划面向学习者的 AI 助教，在 V1「毛线团团」基础上升级学习伙伴交互，并由服务端向 Server酱投递用户配置的日报/周报。
 - V3.x.x：规划全 App 体验优化、服务端性能与多实例/多集群部署、主题和背景等外观个性化、课程仅音频播放、画中画，以及后台上传 PDF 并加入作战单的资料阅读闭环。
 
-完整边界见 `docs/roadmap/2026-09-04-shangan-version-roadmap.md`。
+完整边界见 `docs/specs/2026-09-07-shangan-v2-design.md` 第 2.1 节。
 
 ## 执行要求
 

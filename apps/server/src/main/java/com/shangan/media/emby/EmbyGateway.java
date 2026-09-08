@@ -32,5 +32,22 @@ public interface EmbyGateway {
                     "Emby 媒体来源不存在或当前用户无权访问"));
   }
 
+  /**
+   * 读取来源的完整元数据（流派、标签、人物、年份、简介）。
+   *
+   * <p>默认实现只回填名称，便于纯逻辑测试的 Fake 保持简单；生产适配器会覆盖。
+   */
+  default EmbyDtos.SourceMetadata getSourceMetadata(String itemId) {
+    EmbyDtos.MediaSource source = getSource(itemId);
+    return new EmbyDtos.SourceMetadata(
+        source.id(), source.name(), "", null, List.of(), List.of(), List.of());
+  }
+
+  /** 读取小尺寸封面，生产实现限制响应大小与图片类型。 */
+  default EmbyDtos.Cover readCover(String itemId) {
+    throw new com.shangan.common.api.BusinessException(
+        org.springframework.http.HttpStatus.NOT_FOUND, "EMBY_COVER_NOT_FOUND", "暂无封面");
+  }
+
   List<EmbyDtos.MediaItem> listChildren(String parentItemId);
 }

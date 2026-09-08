@@ -6,7 +6,7 @@ DATA_DIR="${DATA_DIR:-/data}"
 BACKUP_DIR="${BACKUP_DIR:-/backup}"
 STAMP="${STAMP:-$(date -u +%Y%m%d-%H%M%S)}"
 DATABASE="${DATA_DIR}/study.db"
-ATTACHMENTS_DIR="${DATA_DIR}/mock-exams"
+ATTACHMENTS_DIR="${DATA_DIR}/attachments"
 DAILY_BACKUP="${BACKUP_DIR}/study-${STAMP}.db"
 
 if [[ ! -f "${DATABASE}" ]]; then
@@ -30,8 +30,14 @@ create_backup() {
     echo "备份失败：完整性校验未返回 ok。" >&2
     exit 1
   fi
+  # 外键自检在备份快照上进行，不占用在线业务连接，也不打印业务数据。
+  if [[ -n "$(sqlite3 "${target}" "PRAGMA foreign_key_check;")" ]]; then
+    echo "备份失败：快照存在孤儿外键引用。" >&2
+    exit 1
+  fi
+  echo "备份孤儿自检通过：外键引用完整。"
   # 附件文件先于数据库事务提交落盘；数据库快照完成后再归档，可避免备份引用缺失文件。
-  tar -C "${DATA_DIR}" -czf "${attachment_archive}" mock-exams
+  tar -C "${DATA_DIR}" -czf "${attachment_archive}" attachments
   (
     cd "${BACKUP_DIR}"
     sha256sum "$(basename "${attachment_archive}")" \

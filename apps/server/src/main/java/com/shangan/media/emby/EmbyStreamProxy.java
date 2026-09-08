@@ -40,7 +40,8 @@ public class EmbyStreamProxy {
     try {
       HttpRequest.Builder request =
           HttpRequest.newBuilder(target)
-              .timeout(Duration.ofSeconds(30))
+              // 超时跟随后台当前配置，避免保存后仍使用硬编码的等待时长。
+              .timeout(Duration.ofSeconds(configuration.timeoutSeconds()))
               .header("X-Emby-Token", configuration.apiKey())
               .GET();
       if (range != null && !range.isBlank()) request.header("Range", range);
@@ -50,6 +51,15 @@ public class EmbyStreamProxy {
       HttpHeaders headers = new HttpHeaders();
       for (String name : SAFE_RESPONSE_HEADERS) {
         response.headers().firstValue(name).ifPresent(value -> headers.set(name, value));
+      }
+      // 上游错误正文可能含内部路径或凭据，不把它作为视频流返回客户端。
+      if (response.statusCode() < 200 || response.statusCode() >= 300) {
+        response.body().close();
+        if (response.statusCode() != 416) throw unavailable();
+        // 越界 Range 仍保留协议状态和总长度提示，但清空上游错误正文。
+        headers.remove(HttpHeaders.CONTENT_TYPE);
+        headers.setContentLength(0);
+        return new ProxyResponse(416, headers, InputStream.nullInputStream(), target);
       }
       return new ProxyResponse(response.statusCode(), headers, response.body(), target);
     } catch (Exception exception) {

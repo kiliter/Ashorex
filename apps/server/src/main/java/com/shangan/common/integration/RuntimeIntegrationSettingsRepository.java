@@ -2,9 +2,12 @@ package com.shangan.common.integration;
 
 import java.util.Optional;
 
-/** 运行时外部服务配置的单行持久化边界。 */
+/** 运行时集成配置的持久化边界；配置固定单行。 */
 public interface RuntimeIntegrationSettingsRepository {
+
+  /** 读取当前配置行；首次启动时为空。 */
   Optional<RuntimeIntegrationSettings> find();
 
-  void replace(RuntimeIntegrationSettings settings);
+  /** 整行覆盖写入当前配置。 */
+  void replace(RuntimeIntegrationSettings value);
 }

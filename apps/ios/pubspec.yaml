@@ -1,7 +1,7 @@
 name: shangan_ios
 description: "上岸 iPhone、iPad 与 Android 学习监督客户端。"
 publish_to: "none"
-version: 1.2.0+1
+version: 2.0.0+1
 
 environment:
   # GitHub 干净环境中的 Flutter 3.44.7 stable 自带 Dart 3.12.2，三端统一使用这一稳定基线。
@@ -22,6 +22,11 @@ dependencies:
   shared_preferences: ^2.5.5
   video_player: 2.14.0
   wakelock_plus: 1.7.0
+  image_picker: 1.2.3
+  file_picker: 12.2.0
+  media_kit: 1.2.6
+  media_kit_video: 2.0.1
+  media_kit_libs_video: 1.0.7
 
 dev_dependencies:
   flutter_test:

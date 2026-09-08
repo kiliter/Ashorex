@@ -57,3 +57,20 @@ final class SecureTokenStore implements TokenStore {
     await _storage.delete(key: _refreshTokenKey);
   }
 }
+
+/// 登录身份单独保存，刷新 Token 时不会改变本次会话选择。
+abstract interface class SessionRoleStore {
+  Future<String?> readRole();
+  Future<void> writeRole(String? role);
+}
+
+/// 与登录凭据使用相同的安全存储，退出时清除身份。
+final class SecureSessionRoleStore implements SessionRoleStore {
+  final _storage = const FlutterSecureStorage();
+  @override
+  Future<String?> readRole() => _storage.read(key: 'shangan.session_role');
+  @override
+  Future<void> writeRole(String? role) => role == null
+      ? _storage.delete(key: 'shangan.session_role')
+      : _storage.write(key: 'shangan.session_role', value: role);
+}

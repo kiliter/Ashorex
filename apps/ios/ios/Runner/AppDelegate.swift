@@ -25,6 +25,14 @@ import UIKit
       name: "com.shangan/exam-photo-picker",
       binaryMessenger: registrar.messenger()
     )
+    // 全屏播放器只读取系统电量，不采集设备标识。
+    let deviceChannel = FlutterMethodChannel(name: "com.shangan/device-status", binaryMessenger: registrar.messenger())
+    deviceChannel.setMethodCallHandler { call, result in
+      guard call.method == "battery" else { result(FlutterMethodNotImplemented); return }
+      UIDevice.current.isBatteryMonitoringEnabled = true
+      let level = UIDevice.current.batteryLevel
+      result(level < 0 ? -1 : Int((level * 100).rounded()))
+    }
     channel.setMethodCallHandler { [weak self] call, result in
       guard call.method == "pickImage" else {
         result(FlutterMethodNotImplemented)

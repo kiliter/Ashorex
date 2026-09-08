@@ -1,162 +1,47 @@
 package com.shangan.catalog.api;
 
 import com.shangan.catalog.application.CatalogQueryService;
-import com.shangan.catalog.application.LessonStudyContentImportService;
-import com.shangan.catalog.domain.Course;
-import com.shangan.catalog.domain.LessonStudyContent;
-import com.shangan.catalog.domain.MediaItem;
-import com.shangan.common.api.BusinessException;
+import com.shangan.catalog.application.CatalogQueryService.CatalogFacets;
+import com.shangan.catalog.application.CatalogQueryService.CourseDetail;
+import com.shangan.catalog.application.CatalogQueryService.CourseFilter;
+import com.shangan.catalog.application.CatalogQueryService.CourseSummary;
 import com.shangan.common.auth.CurrentUser;
-import com.shangan.learning.application.VideoProgressQueryService;
-import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.Instant;
 import java.util.List;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** iOS 客户端读取本地课程快照的 API。 */
+/** 学习端课程库只读 API；筛选维度来自 Emby 元数据。 */
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/catalog")
 public class CatalogController {
 
   private final CatalogQueryService catalog;
-  private final LessonStudyContentImportService studyContents;
-  private final VideoProgressQueryService videoProgress;
 
-  public CatalogController(
-      CatalogQueryService catalog,
-      LessonStudyContentImportService studyContents,
-      VideoProgressQueryService videoProgress) {
+  public CatalogController(CatalogQueryService catalog) {
     this.catalog = catalog;
-    this.studyContents = studyContents;
-    this.videoProgress = videoProgress;
+  }
+
+  @GetMapping("/facets")
+  CatalogFacets facets() {
+    return catalog.facets();
   }
 
   @GetMapping("/courses")
-  List<CourseResponse> courses() {
-    return catalog.listEnabledCourses().stream().map(CourseResponse::from).toList();
+  List<CourseSummary> courses(
+      CurrentUser currentUser,
+      @RequestParam(required = false) String genre,
+      @RequestParam(required = false) String tag,
+      @RequestParam(required = false) String person,
+      @RequestParam(required = false) Integer year,
+      @RequestParam(required = false) String q) {
+    return catalog.courses(currentUser.userId(), new CourseFilter(genre, tag, person, year, q));
   }
 
   @GetMapping("/courses/{courseId}")
-  CourseDetailResponse course(CurrentUser user, @PathVariable String courseId) {
-    Course course =
-        catalog
-            .findCourse(courseId)
-            .orElseThrow(
-                () -> new BusinessException(HttpStatus.NOT_FOUND, "COURSE_NOT_FOUND", "课程不存在"));
-    return new CourseDetailResponse(
-        course.id(),
-        course.name(),
-        course.description(),
-        catalog.listEnabledLessons(course.id()).stream()
-            .map(item -> lessonResponse(user.userId(), item))
-            .toList());
-  }
-
-  @GetMapping("/lessons/{lessonId}")
-  LessonResponse lesson(CurrentUser user, @PathVariable String lessonId) {
-    return catalog
-        .findLesson(lessonId)
-        .map(item -> lessonResponse(user.userId(), item))
-        .orElseThrow(
-            () -> new BusinessException(HttpStatus.NOT_FOUND, "LESSON_NOT_FOUND", "课时不存在"));
-  }
-
-  /** 返回一集已经就绪的全文或 Markdown 摘要，不在读取请求中调用外部服务。 */
-  @GetMapping("/lessons/{lessonId}/study-content")
-  LessonStudyContentResponse studyContent(@PathVariable String lessonId) {
-    catalog
-        .findLesson(lessonId)
-        .orElseThrow(
-            () -> new BusinessException(HttpStatus.NOT_FOUND, "LESSON_NOT_FOUND", "课时不存在"));
-    LessonStudyContent content =
-        studyContents
-            .findByLessonId(lessonId)
-            .orElseThrow(
-                () ->
-                    new BusinessException(
-                        HttpStatus.NOT_FOUND, "LESSON_STUDY_CONTENT_NOT_FOUND", "该课时尚无学习内容"));
-    return LessonStudyContentResponse.from(content);
-  }
-
-  record CourseResponse(String id, String name, String description) {
-    static CourseResponse from(Course course) {
-      return new CourseResponse(course.id(), course.name(), course.description());
-    }
-  }
-
-  record CourseDetailResponse(
-      String id, String name, String description, List<LessonResponse> lessons) {}
-
-  record LessonResponse(
-      String id,
-      String courseId,
-      String title,
-      long durationMs,
-      int sortOrder,
-      long maxVerifiedPositionMs,
-      int progressPercent,
-      String learningStatus,
-      boolean summaryAvailable) {}
-
-  /** 列表只返回摘要可用标志；完整 Markdown 在用户点击小眼睛后按需读取。 */
-  private LessonResponse lessonResponse(String userId, MediaItem item) {
-    var progress = videoProgress.find(userId, item.id()).orElse(null);
-    long maximum = progress == null ? 0 : progress.maxVerifiedPositionMs();
-    int percent =
-        item.durationMs() <= 0
-            ? 0
-            : (int) Math.min(100, Math.round(maximum * 100.0 / item.durationMs()));
-    String status =
-        progress != null && progress.completedAt() != null
-            ? "COMPLETED"
-            : maximum > 0 ? "IN_PROGRESS" : "NOT_STARTED";
-    boolean summaryAvailable =
-        studyContents
-            .findByLessonId(item.id())
-            .filter(LessonStudyContent::summaryReady)
-            .isPresent();
-    return new LessonResponse(
-        item.id(),
-        item.courseId(),
-        item.title(),
-        item.durationMs(),
-        item.sortOrder(),
-        maximum,
-        percent,
-        status,
-        summaryAvailable);
-  }
-
-  /** App 读取的课程学习内容直接 DTO。 */
-  record LessonStudyContentResponse(
-      @Schema(requiredMode = Schema.RequiredMode.REQUIRED) String lessonId,
-      @Schema(
-              requiredMode = Schema.RequiredMode.REQUIRED,
-              allowableValues = {"READY", "MISSING"})
-          String transcriptStatus,
-      @Schema(
-              requiredMode = Schema.RequiredMode.REQUIRED,
-              allowableValues = {"READY", "MISSING"})
-          String summaryStatus,
-      @Schema(nullable = true) String fullText,
-      @Schema(nullable = true) String summaryMarkdown,
-      @Schema(nullable = true) Instant transcriptUpdatedAt,
-      @Schema(nullable = true) Instant summaryUpdatedAt,
-      @Schema(requiredMode = Schema.RequiredMode.REQUIRED) Instant updatedAt) {
-    static LessonStudyContentResponse from(LessonStudyContent content) {
-      return new LessonStudyContentResponse(
-          content.mediaItemId(),
-          content.transcriptReady() ? "READY" : "MISSING",
-          content.summaryReady() ? "READY" : "MISSING",
-          content.fullText(),
-          content.summaryMarkdown(),
-          content.transcriptUpdatedAt(),
-          content.summaryUpdatedAt(),
-          content.updatedAt());
-    }
+  CourseDetail course(CurrentUser currentUser, @PathVariable String courseId) {
+    return catalog.course(currentUser.userId(), courseId);
   }
 }

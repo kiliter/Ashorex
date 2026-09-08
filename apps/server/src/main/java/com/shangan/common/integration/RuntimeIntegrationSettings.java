@@ -2,110 +2,86 @@ package com.shangan.common.integration;
 
 import java.util.List;
 
-/** Emby、ASR、LLM 和模型目录的不可变运行时配置快照。 */
+/**
+ * 运行时外部集成配置的不可变快照。
+ *
+ * <p>V2 只保留两个外部依赖：Emby（唯一媒体源）与 Server 酱（催办推送渠道），另含 feature 开关。ASR、LLM、OpenRouter 与内容定时补全已随 AI
+ * 内容生产域一并移除。
+ */
 public record RuntimeIntegrationSettings(
     Emby emby,
     List<EmbyLibrary> embyLibraries,
-    Asr asr,
-    Llm llm,
-    OpenRouter openRouter,
-    AutoFill autoFill,
+    ServerChan serverChan,
+    Features features,
     long updatedAt) {
-
-  public static final String DEFAULT_ASR_MODEL = "mlx-community/Qwen3-ASR-1.7B-8bit";
 
   public RuntimeIntegrationSettings {
     embyLibraries = embyLibraries == null ? List.of() : List.copyOf(embyLibraries);
+    emby = emby == null ? Emby.defaults() : emby;
+    serverChan = serverChan == null ? ServerChan.defaults() : serverChan;
+    features = features == null ? Features.defaults() : features;
   }
 
-  /** 兼容 Task 25 前的完整构造方式；旧调用方默认没有媒体库绑定。 */
-  public RuntimeIntegrationSettings(
-      Emby emby, Asr asr, Llm llm, OpenRouter openRouter, AutoFill autoFill, long updatedAt) {
-    this(emby, List.of(), asr, llm, openRouter, autoFill, updatedAt);
-  }
-
-  /** 兼容只关心 Emby 的既有测试和调用方，其余能力保持未配置且定时补全关闭。 */
+  /** 便于只关心 Emby 的调用方与协议测试构造快照。 */
   public RuntimeIntegrationSettings(Emby emby, long updatedAt) {
-    this(
-        emby,
-        List.of(),
-        Asr.defaults(),
-        Llm.defaults(),
-        new OpenRouter(""),
-        AutoFill.defaults(),
-        updatedAt);
+    this(emby, List.of(), ServerChan.defaults(), Features.defaults(), updatedAt);
   }
 
-  /** Emby 固定源站配置；用户 ID 可为空，但地址和密钥必须同时存在才视为已配置。 */
-  public record Emby(String baseUrl, String apiKey, String userId) {
+  /** 返回全部默认值，用于首次启动或配置行缺失时兜底。 */
+  public static RuntimeIntegrationSettings defaults() {
+    return new RuntimeIntegrationSettings(
+        Emby.defaults(), List.of(), ServerChan.defaults(), Features.defaults(), 0L);
+  }
+
+  /** Emby 固定源站配置；用户 ID 可为空，但地址与密钥必须同时存在才视为已配置。 */
+  public record Emby(String baseUrl, String apiKey, String userId, int timeoutSeconds) {
+
+    public Emby(String baseUrl, String apiKey, String userId) {
+      this(baseUrl, apiKey, userId, 10);
+    }
+
     public boolean configured() {
       return present(baseUrl) && present(apiKey);
     }
+
+    public static Emby defaults() {
+      return new Emby("", "", "", 10);
+    }
   }
 
-  /** 管理员允许课程来源搜索使用的一个顶层媒体库。 */
+  /** 管理员允许作为课程来源的一个顶层媒体库。 */
   public record EmbyLibrary(String id, String name, EmbyLibraryType contentType) {}
 
-  /** 一个媒体库允许提供剧集、电影或两类内容。 */
+  /**
+   * 媒体库可提供的内容类型。
+   *
+   * <p>{@code BOOK} 对应 Emby 书籍库，是材料（DOCUMENT）资源的来源；按 ADR-0030 在 V2 只落枚举值，不参与同步。
+   */
   public enum EmbyLibraryType {
     SERIES,
     MOVIE,
-    MIXED
+    MIXED,
+    BOOK
   }
 
-  /** OpenAI-compatible ASR 配置；本地服务允许不填写 API Key。 */
-  public record Asr(
-      String baseUrl,
-      String apiKey,
-      String model,
-      String language,
-      int chunkDurationSeconds,
-      int timeoutSeconds) {
-    public boolean configured() {
-      return present(baseUrl) && present(model);
-    }
-
-    public static Asr defaults() {
-      return new Asr("", "", DEFAULT_ASR_MODEL, "Chinese", 30, 1800);
-    }
-  }
-
-  /** OpenAI-compatible LLM 配置；上下文参数用于长文本预算而不是猜测模型能力。 */
-  public record Llm(
-      String baseUrl,
-      String apiKey,
-      String model,
-      int contextLength,
-      int maxCompletionTokens,
-      int timeoutSeconds,
-      String reasoningEffort) {
-    /** 兼容既有调用方；未显式配置时不向上游发送 reasoning_effort。 */
-    public Llm(
-        String baseUrl,
-        String apiKey,
-        String model,
-        int contextLength,
-        int maxCompletionTokens,
-        int timeoutSeconds) {
-      this(baseUrl, apiKey, model, contextLength, maxCompletionTokens, timeoutSeconds, "");
-    }
+  /** Server 酱推送配置；催办为唯一启用用途，每日汇总在 V2 不实现。 */
+  public record ServerChan(
+      String sendKey, int timeoutSeconds, boolean nagEnabled, boolean dailyDigestEnabled) {
 
     public boolean configured() {
-      return present(baseUrl) && present(model) && contextLength >= 4096 && maxCompletionTokens > 0;
+      return present(sendKey);
     }
 
-    public static Llm defaults() {
-      return new Llm("", "", "", 131072, 8192, 300, "");
+    public static ServerChan defaults() {
+      return new ServerChan("", 8, true, false);
     }
   }
 
-  /** OpenRouter 仅用于读取公开模型目录，不决定实际推理上游。 */
-  public record OpenRouter(String apiKey) {}
+  /** 功能开关；材料资源在 V2 默认关闭，见 ADR-0030。 */
+  public record Features(boolean documentResources, int maxDocumentSizeMb) {
 
-  /** 缺失内容定时补全配置，默认关闭且不会生成题目。 */
-  public record AutoFill(boolean enabled, int intervalMinutes) {
-    public static AutoFill defaults() {
-      return new AutoFill(false, 15);
+    public static Features defaults() {
+      return new Features(false, 200);
     }
   }
 

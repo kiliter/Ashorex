@@ -30,16 +30,27 @@ final class AuthController extends ChangeNotifier {
   factory AuthController({
     required AuthRepository repository,
     required TokenStore tokenStore,
+    SessionRoleStore? roleStore,
     Duration restoreTimeout = const Duration(seconds: 8),
   }) {
-    return AuthController._(repository, tokenStore, restoreTimeout);
+    return AuthController._(repository, tokenStore, restoreTimeout, roleStore);
   }
 
-  AuthController._(this._repository, this._tokenStore, this._restoreTimeout);
+  AuthController._(
+    this._repository,
+    this._tokenStore,
+    this._restoreTimeout,
+    this._roleStore,
+  );
 
   final AuthRepository _repository;
   final TokenStore _tokenStore;
   final Duration _restoreTimeout;
+  final SessionRoleStore? _roleStore;
+  String _sessionRole = 'LEARNER';
+
+  /// 本次登录固定的身份，页面不能直接修改。
+  bool get isSupervisorSession => _sessionRole == 'SUPERVISOR';
   int _restoreGeneration = 0;
 
   AuthState _state = const AuthState.initializing();
@@ -48,6 +59,7 @@ final class AuthController extends ChangeNotifier {
   Future<void> initialize() async {
     final generation = ++_restoreGeneration;
     final tokens = await _tokenStore.read();
+    _sessionRole = await _roleStore?.readRole() ?? 'LEARNER';
     if (tokens == null) {
       _setState(const AuthState(status: AuthStatus.unauthenticated));
       return;
@@ -55,10 +67,12 @@ final class AuthController extends ChangeNotifier {
     try {
       final user = await _repository.loadCurrentUser().timeout(_restoreTimeout);
       if (generation != _restoreGeneration) return;
+      _validateRole(user);
       _setState(AuthState(status: AuthStatus.authenticated, user: user));
     } on AuthException catch (exception) {
       if (generation != _restoreGeneration) return;
       await _tokenStore.clear();
+      await _roleStore?.writeRole(null);
       _setState(
         AuthState(
           status: AuthStatus.unauthenticated,
@@ -95,10 +109,12 @@ final class AuthController extends ChangeNotifier {
   Future<UserProfile> loadCurrentUser() async {
     try {
       final user = await _repository.loadCurrentUser();
+      _validateRole(user);
       _setState(AuthState(status: AuthStatus.authenticated, user: user));
       return user;
     } on AuthException catch (exception) {
       await _tokenStore.clear();
+      await _roleStore?.writeRole(null);
       _setState(
         AuthState(
           status: AuthStatus.unauthenticated,
@@ -109,12 +125,21 @@ final class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<void> login(String username, String password) async {
+  /// 登录前选定身份，服务端身份快照校验通过后才进入对应页面。
+  Future<void> login(
+    String username,
+    String password, {
+    String role = 'LEARNER',
+  }) async {
+    _sessionRole = role;
     _setState(const AuthState(status: AuthStatus.authenticating));
     try {
       final tokens = await _repository.login(username.trim(), password);
       await _tokenStore.write(tokens);
-      await loadCurrentUser();
+      final user = await _repository.loadCurrentUser();
+      _validateRole(user);
+      await _roleStore?.writeRole(_sessionRole);
+      _setState(AuthState(status: AuthStatus.authenticated, user: user));
     } on ApiException catch (exception) {
       _setState(
         AuthState(
@@ -123,7 +148,15 @@ final class AuthController extends ChangeNotifier {
         ),
       );
       rethrow;
-    } on AuthException {
+    } on AuthException catch (exception) {
+      await _tokenStore.clear();
+      await _roleStore?.writeRole(null);
+      _setState(
+        AuthState(
+          status: AuthStatus.unauthenticated,
+          message: exception.message,
+        ),
+      );
       rethrow;
     }
   }
@@ -142,7 +175,17 @@ final class AuthController extends ChangeNotifier {
   /// Dio 判定登录彻底失效后，清理 Token 并通知 go_router 回登录页。
   Future<void> handleAuthenticationLost() async {
     await _tokenStore.clear();
+    await _roleStore?.writeRole(null);
     _setState(const AuthState(status: AuthStatus.unauthenticated));
+  }
+
+  /// 本地选择不授予权限，身份不匹配时拒绝本次登录。
+  void _validateRole(UserProfile user) {
+    if (isSupervisorSession
+        ? !user.isSupervisor
+        : _sessionRole != 'LEARNER' || !user.roles.contains('LEARNER')) {
+      throw const AuthException.roleUnavailable();
+    }
   }
 
   void _setState(AuthState next) {

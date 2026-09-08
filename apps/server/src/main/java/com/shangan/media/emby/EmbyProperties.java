@@ -32,11 +32,9 @@ public class EmbyProperties {
             new RuntimeIntegrationSettings(
                 new RuntimeIntegrationSettings.Emby(baseUrl, apiKey, userId),
                 libraries,
-                RuntimeIntegrationSettings.Asr.defaults(),
-                RuntimeIntegrationSettings.Llm.defaults(),
-                new RuntimeIntegrationSettings.OpenRouter(""),
-                RuntimeIntegrationSettings.AutoFill.defaults(),
-                0));
+                RuntimeIntegrationSettings.ServerChan.defaults(),
+                RuntimeIntegrationSettings.Features.defaults(),
+                0L));
   }
 
   /** 取得单次 Emby 操作应使用的不可变配置快照。 */

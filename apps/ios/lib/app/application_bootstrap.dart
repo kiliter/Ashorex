@@ -1,3 +1,4 @@
+import 'package:shangan_ios/core/player/progress_queue.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shangan_ios/app/app.dart';
@@ -7,18 +8,11 @@ import 'package:shangan_ios/core/auth/auth_repository.dart';
 import 'package:shangan_ios/core/config/server_configuration.dart';
 import 'package:shangan_ios/core/config/server_configuration_controller.dart';
 import 'package:shangan_ios/core/config/server_configuration_store.dart';
+import 'package:shangan_ios/core/data/shangan_repository.dart';
+import 'package:shangan_ios/core/state/shangan_providers.dart';
+import 'package:shangan_ios/core/device/attachment_picker.dart';
 import 'package:shangan_ios/core/device/screen_wake_lock.dart';
 import 'package:shangan_ios/core/storage/token_store.dart';
-import 'package:shangan_ios/features/catalog/data/catalog_repository.dart';
-import 'package:shangan_ios/features/dashboard/data/dashboard_repository.dart';
-import 'package:shangan_ios/features/exam/data/exam_repository.dart';
-import 'package:shangan_ios/features/focus/data/focus_repository.dart';
-import 'package:shangan_ios/features/focus/data/mock_exam_repository.dart';
-import 'package:shangan_ios/features/planning/data/plan_repository.dart';
-import 'package:shangan_ios/features/player/data/watch_repository.dart';
-import 'package:shangan_ios/features/profile/data/preferences_repository.dart';
-import 'package:shangan_ios/features/quiz/data/quiz_repository.dart';
-import 'package:shangan_ios/features/reporting/data/report_repository.dart';
 
 typedef ConfiguredAppBuilder =
     Widget Function(
@@ -141,16 +135,9 @@ final class _ConfiguredShanganApplicationState
     extends State<_ConfiguredShanganApplication> {
   late final ApiClient _apiClient;
   late final AuthController _authController;
-  late final PreferencesRepository _preferencesRepository;
-  late final CatalogRepository _catalogRepository;
-  late final DashboardRepository _dashboardRepository;
-  late final ExamRepository _examRepository;
-  late final PlanRepository _planRepository;
-  late final WatchRepository _watchRepository;
-  late final QuizRepository _quizRepository;
-  late final FocusRepository _focusRepository;
-  late final MockExamRepository _mockExamRepository;
-  late final ReportRepository _reportRepository;
+  late final ShanganRepository _repository;
+  late final ProgressOutbox _progressOutbox;
+  String? _businessSession;
   late final Future<void> _authenticationInitialization;
 
   @override
@@ -161,33 +148,43 @@ final class _ConfiguredShanganApplicationState
       tokenStore: widget.tokenStore,
     );
     _authController = AuthController(
+      roleStore: SecureSessionRoleStore(),
       repository: RemoteAuthRepository(_apiClient),
       tokenStore: widget.tokenStore,
     );
     _apiClient.onAuthenticationLost = _authController.handleAuthenticationLost;
-    _preferencesRepository = RemotePreferencesRepository(_apiClient);
-    _catalogRepository = RemoteCatalogRepository(_apiClient);
-    _dashboardRepository = RemoteDashboardRepository(_apiClient);
-    _examRepository = RemoteExamRepository(_apiClient);
-    _planRepository = RemotePlanRepository(_apiClient);
-    _quizRepository = RemoteQuizRepository(_apiClient);
-    _focusRepository = RemoteFocusRepository(_apiClient);
-    _mockExamRepository = RemoteMockExamRepository(_apiClient);
-    _reportRepository = RemoteReportRepository(_apiClient);
+    _authController.addListener(_sessionChanged);
+    _repository = ShanganRepository(_apiClient);
+    _progressOutbox = ProgressOutbox(
+      repository: _repository,
+      store: PreferencesProgressStore(),
+      // 退出后不重放，重新登录同一服务器账号时恢复其原队列。
+      currentScope: () {
+        final state = _authController.state;
+        if (state.status != AuthStatus.authenticated) return null;
+        return '${widget.configuration.baseUrl}|${state.user!.id}';
+      },
+    );
     _authenticationInitialization = _initializeAuthenticationAndPlayer();
   }
 
+  /// 业务缓存随身份重建，避免同一服务器换账号后看到上一人的 Todo/设置。
+  void _sessionChanged() {
+    final state = _authController.state;
+    final session = state.status == AuthStatus.authenticated
+        ? '${state.user!.id}|${_authController.isSupervisorSession}'
+        : null;
+    if (session == _businessSession || !mounted) return;
+    setState(() => _businessSession = session);
+  }
+
   Future<void> _initializeAuthenticationAndPlayer() async {
-    _watchRepository = RemoteWatchRepository(
-      api: _apiClient,
-      baseUrl: widget.configuration.baseUrl,
-      deviceId: await loadOrCreatePlayerDeviceId(),
-    );
     await _authController.initialize();
   }
 
   @override
   void dispose() {
+    _authController.removeListener(_sessionChanged);
     _apiClient.close();
     _authController.dispose();
     super.dispose();
@@ -205,25 +202,20 @@ final class _ConfiguredShanganApplicationState
           return const _BootstrapStatusApp();
         }
         return ProviderScope(
+          key: ValueKey(_businessSession),
           overrides: [
             authControllerProvider.overrideWithValue(_authController),
             serverConfigurationControllerProvider.overrideWithValue(
               widget.configurationController,
             ),
-            catalogRepositoryProvider.overrideWithValue(_catalogRepository),
-            dashboardRepositoryProvider.overrideWithValue(_dashboardRepository),
-            examRepositoryProvider.overrideWithValue(_examRepository),
-            planRepositoryProvider.overrideWithValue(_planRepository),
-            watchRepositoryProvider.overrideWithValue(_watchRepository),
-            quizRepositoryProvider.overrideWithValue(_quizRepository),
-            focusRepositoryProvider.overrideWithValue(_focusRepository),
-            mockExamRepositoryProvider.overrideWithValue(_mockExamRepository),
-            reportRepositoryProvider.overrideWithValue(_reportRepository),
-            preferencesRepositoryProvider.overrideWithValue(
-              _preferencesRepository,
-            ),
+            shanganRepositoryProvider.overrideWithValue(_repository),
+            progressOutboxProvider.overrideWithValue(_progressOutbox),
             screenWakeLockProvider.overrideWithValue(
               const WakelockPlusScreenWakeLock(),
+            ),
+            // 附件选择器只有真机 / 模拟器可用，Widget 测试用假实现覆盖。
+            attachmentPickerProvider.overrideWithValue(
+              const PlatformAttachmentPicker(),
             ),
           ],
           child: ShanganApp(authController: _authController),

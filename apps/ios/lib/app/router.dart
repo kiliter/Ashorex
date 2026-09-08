@@ -1,22 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
-import 'package:shangan_ios/features/auth/presentation/login_page.dart';
 import 'package:shangan_ios/features/auth/presentation/connection_recovery_page.dart';
-import 'package:shangan_ios/features/catalog/presentation/course_detail_page.dart';
-import 'package:shangan_ios/features/dashboard/presentation/app_shell.dart';
-import 'package:shangan_ios/features/debt/presentation/debt_page.dart';
-import 'package:shangan_ios/features/exam/presentation/exam_goal_page.dart';
-import 'package:shangan_ios/features/exam/presentation/exam_settings_page.dart';
-import 'package:shangan_ios/features/focus/presentation/focus_timer_page.dart';
-import 'package:shangan_ios/features/focus/presentation/mock_exam_page.dart';
-import 'package:shangan_ios/features/focus/presentation/mock_exam_preset_page.dart';
-import 'package:shangan_ios/features/planning/presentation/plan_page.dart';
-import 'package:shangan_ios/features/player/presentation/learning_player_page.dart';
-import 'package:shangan_ios/features/profile/presentation/settings_page.dart';
-import 'package:shangan_ios/features/quiz/presentation/quiz_page.dart';
-import 'package:shangan_ios/features/reporting/presentation/daily_report_page.dart';
-import 'package:shangan_ios/features/reporting/presentation/weekly_report_page.dart';
+import 'package:shangan_ios/features/auth/presentation/login_page.dart';
+import 'package:shangan_ios/features/catalog/presentation/library_page.dart';
+import 'package:shangan_ios/features/focus/presentation/focus_run_page.dart';
+import 'package:shangan_ios/features/home/presentation/pending_summary_page.dart';
+import 'package:shangan_ios/features/player/presentation/player_page.dart';
+import 'package:shangan_ios/features/profile/presentation/goals_page.dart';
+import 'package:shangan_ios/features/shell/presentation/app_shell.dart';
+import 'package:shangan_ios/features/supervisor/presentation/supervisor_shell.dart';
+
+export 'package:shangan_ios/features/shell/presentation/app_shell.dart'
+    show shanganRouteObserver;
 
 /// 创建受认证状态驱动的根路由，业务页面不自行判断 Token。
 GoRouter createRouter(AuthController authController) {
@@ -40,8 +36,15 @@ GoRouter createRouter(AuthController authController) {
       if (status == AuthStatus.serviceUnavailable) {
         return onConnectionError ? null : '/connection-unavailable';
       }
-      if (onLogin || onLoading || state.matchedLocation == '/') {
-        return '/home';
+      // 会话身份同时约束深链接，不能绕过登录选择进入另一端。
+      final supervisor = authController.isSupervisorSession;
+      final inSupervisor = state.matchedLocation.startsWith('/supervisor');
+      if (onLogin ||
+          onLoading ||
+          onConnectionError ||
+          state.matchedLocation == '/' ||
+          supervisor != inSupervisor) {
+        return supervisor ? '/supervisor' : '/home';
       }
       return null;
     },
@@ -58,49 +61,22 @@ GoRouter createRouter(AuthController authController) {
       ),
       GoRoute(path: '/home', builder: (context, state) => const AppShell()),
       GoRoute(
-        path: '/exam-settings',
-        builder: (context, state) => const ExamSettingsPage(),
+        path: '/todos/pending',
+        builder: (context, state) => const PendingSummaryPage(),
       ),
+      GoRoute(path: '/goals', builder: (context, state) => const GoalsPage()),
       GoRoute(
-        path: '/exam-goal',
-        builder: (context, state) => ExamGoalPage(
-          allowBack: state.uri.queryParameters['edit'] == 'true',
-          goalId: state.uri.queryParameters['id'],
+        path: '/player/:todoId',
+        builder: (context, state) => PlayerPage(
+          todoId: state.pathParameters['todoId']!,
+          localDate: DateTime.tryParse(state.uri.queryParameters['date'] ?? ''),
         ),
       ),
       GoRoute(
-        path: '/plan',
-        builder: (context, state) {
-          final raw = state.uri.queryParameters['date'];
-          return PlanPage(date: raw == null ? null : DateTime.tryParse(raw));
-        },
-      ),
-      GoRoute(path: '/debts', builder: (context, state) => const DebtPage()),
-      GoRoute(
-        path: '/mock-exam',
-        builder: (context, state) => MockExamPage(
-          planItemId: state.uri.queryParameters['planItemId']!,
-          title: state.uri.queryParameters['title'] ?? '模拟考试',
-        ),
-      ),
-      GoRoute(
-        path: '/focus',
-        builder: (context, state) => FocusTimerPage(
-          planItemId: state.uri.queryParameters['planItemId'],
-          mediaItemId: state.uri.queryParameters['mediaItemId'],
-          title: state.uri.queryParameters['title'] ?? '专注学习',
-          plannedSeconds: int.tryParse(
-            state.uri.queryParameters['plannedSeconds'] ?? '',
-          ),
-        ),
-      ),
-      GoRoute(
-        path: '/player/:lessonId',
-        builder: (context, state) => LearningPlayerPage(
-          lessonId: state.pathParameters['lessonId']!,
-          planItemId: state.uri.queryParameters['planItemId'],
-          title: state.uri.queryParameters['title'] ?? '视频学习',
-          preview: state.uri.queryParameters['preview'] == 'true',
+        path: '/focus/:todoId',
+        builder: (context, state) => FocusRunPage(
+          todoId: state.pathParameters['todoId']!,
+          localDate: DateTime.tryParse(state.uri.queryParameters['date'] ?? ''),
         ),
       ),
       GoRoute(
@@ -109,42 +85,14 @@ GoRouter createRouter(AuthController authController) {
             CourseDetailPage(courseId: state.pathParameters['courseId']!),
       ),
       GoRoute(
-        path: '/quiz/:lessonId',
-        builder: (context, state) => QuizPage(
-          lessonId: state.pathParameters['lessonId']!,
-          planItemId: state.uri.queryParameters['planItemId'],
+        path: '/supervisor',
+        builder: (context, state) => const SupervisorShell(),
+      ),
+      GoRoute(
+        path: '/supervisor/:learnerId',
+        builder: (context, state) => SupervisorLearnerPage(
+          learnerId: state.pathParameters['learnerId']!,
         ),
-      ),
-      GoRoute(
-        path: '/settings',
-        builder: (context, state) => const SettingsPage(),
-      ),
-      GoRoute(
-        path: '/mock-exam-presets',
-        builder: (context, state) => const MockExamPresetPage(),
-      ),
-      GoRoute(
-        path: '/reports/daily',
-        builder: (context, state) => DailyReportPage(
-          initialDate: DateTime.tryParse(
-            state.uri.queryParameters['date'] ?? '',
-          ),
-          showAppBar: true,
-        ),
-      ),
-      GoRoute(
-        path: '/reports/weekly',
-        builder: (context, state) {
-          final now = DateTime.now();
-          final defaultMonday = now.subtract(Duration(days: now.weekday - 1));
-          return WeeklyReportPage(
-            initialWeekStart:
-                DateTime.tryParse(
-                  state.uri.queryParameters['weekStart'] ?? '',
-                ) ??
-                defaultMonday,
-          );
-        },
       ),
     ],
   );

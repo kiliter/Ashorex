@@ -1,4 +1,4 @@
-# 上岸 V1 生产部署：直接使用 GitHub Container Registry 发布镜像。
+# 上岸 V2 生产部署：直接使用 GitHub Container Registry 发布镜像。
 # 本文件不包含反向代理；服务监听宿主机所有网卡，由既有 HTTPS 反向代理转发。
 name: shangan
 
@@ -10,13 +10,18 @@ services:
     init: true
     environment:
       SERVER_PORT: "18080"
+      # 容器内必须监听所有网卡，否则端口映射和反向代理都无法访问。
+      SERVER_ADDRESS: "0.0.0.0"
       DATA_DIR: /data
-      MOCK_EXAM_ATTACHMENTS_DIR: /data/mock-exams
+      ATTACHMENTS_DIR: /data/attachments
       SESSION_COOKIE_SECURE: "true"
       JWT_SECRET: ${JWT_SECRET:?请配置至少 32 字节的 JWT_SECRET}
-      PLAYBACK_TICKET_SECRET: ${PLAYBACK_TICKET_SECRET:?请配置至少 32 字节的 PLAYBACK_TICKET_SECRET}
       ADMIN_BOOTSTRAP_USERNAME: admin
       ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:?请配置初始管理员密码}
+      EMBY_BASE_URL: ${EMBY_BASE_URL:-}
+      EMBY_API_KEY: ${EMBY_API_KEY:-}
+      EMBY_USER_ID: ${EMBY_USER_ID:-}
+      SERVERCHAN_SEND_KEY: ${SERVERCHAN_SEND_KEY:-}
     volumes:
       # Docker 本地卷位于宿主机本地磁盘，避免 SQLite 落到 NAS/NFS。
       - study-data:/data

@@ -120,62 +120,6 @@ final class ShanganStatusTag extends StatelessWidget {
 }
 
 /// 所有课时入口共用的观看进度样式，统一状态文字、时长和进度条。
-final class ShanganWatchProgress extends StatelessWidget {
-  const ShanganWatchProgress({
-    required this.progressPercent,
-    required this.completed,
-    super.key,
-    this.durationSeconds,
-    this.meta,
-  });
-
-  final int progressPercent;
-  final bool completed;
-  final int? durationSeconds;
-  final String? meta;
-
-  @override
-  Widget build(BuildContext context) {
-    final percent = (completed ? 100 : progressPercent).clamp(0, 100);
-    final label = completed
-        ? '已看完'
-        : percent > 0
-        ? '已观看 $percent%'
-        : '未观看';
-    final tone = completed
-        ? ShanganTagTone.success
-        : percent > 0
-        ? ShanganTagTone.info
-        : ShanganTagTone.neutral;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 5,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            if (meta != null && meta!.isNotEmpty)
-              Text(meta!, style: Theme.of(context).textTheme.bodySmall),
-            ShanganStatusTag(label, tone: tone),
-            if (durationSeconds != null)
-              Text(
-                shanganDuration(durationSeconds!),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ShanganProgress(
-          value: percent / 100,
-          style: ShanganProgressStyle.track,
-        ),
-      ],
-    );
-  }
-}
-
-/// 纸张表面容器；边框宽度和圆角直接来自原型规范。
 final class ShanganSurface extends StatelessWidget {
   const ShanganSurface({
     required this.child,
@@ -471,233 +415,6 @@ final class ShanganMetricGrid extends StatelessWidget {
 ///
 /// 脉冲由 [Timer] 触发一次有限 [AnimationController.forward]，
 /// 不用 [AnimationController.repeat]，避免 widget 测试 `pumpAndSettle` 挂起。
-final class ShanganIdleMotion {
-  ShanganIdleMotion({
-    required TickerProvider vsync,
-    required VoidCallback onTick,
-    this.fillDuration = const Duration(milliseconds: 800),
-    this.pulseDuration = const Duration(milliseconds: 720),
-    this.idlePeriod = const Duration(seconds: 4),
-  }) : _onTick = onTick,
-       fill = AnimationController(vsync: vsync, duration: fillDuration)
-         ..addListener(onTick),
-       pulse = AnimationController(vsync: vsync, duration: pulseDuration)
-         ..addListener(onTick) {
-    displayed = const AlwaysStoppedAnimation<double>(0);
-  }
-
-  final Duration fillDuration;
-  final Duration pulseDuration;
-  final Duration idlePeriod;
-  final VoidCallback _onTick;
-  final AnimationController fill;
-  final AnimationController pulse;
-  late Animation<double> displayed;
-  Timer? _idle;
-
-  /// 当前展示的 0–1 进度。
-  double get value => displayed.value;
-
-  /// 静止脉冲相位，0 表示完全静止。
-  double get pulseValue => Curves.easeInOut.transform(pulse.value);
-
-  /// 启动入场填充并开始静止计时。
-  void start({required double target, required bool Function() reduceMotion}) {
-    animateTo(target, fromZero: true, reduceMotion: reduceMotion());
-    startIdle(reduceMotion);
-  }
-
-  /// 只启动静止脉冲，用于滚动条这类没有填充目标的控件。
-  void startIdle(bool Function() reduceMotion) {
-    _idle?.cancel();
-    _idle = Timer.periodic(idlePeriod, (_) {
-      if (reduceMotion()) return;
-      pulse.forward(from: 0);
-    });
-  }
-
-  /// 用户刚滚动或拖动后，打断当前脉冲并重新计时。
-  void restartIdle(bool Function() reduceMotion) {
-    if (pulse.isAnimating || pulse.value > 0) {
-      pulse.stop();
-      pulse.reset();
-      _onTick();
-    }
-    startIdle(reduceMotion);
-  }
-
-  /// 把展示值缓动到 [next]；系统「减弱动态效果」时直接跳到终值。
-  void animateTo(
-    double next, {
-    bool fromZero = false,
-    required bool reduceMotion,
-    Duration? duration,
-  }) {
-    final end = next.clamp(0.0, 1.0);
-    if (reduceMotion) {
-      displayed = AlwaysStoppedAnimation(end);
-      _onTick();
-      return;
-    }
-    fill.duration =
-        duration ??
-        (fromZero ? fillDuration : const Duration(milliseconds: 450));
-    displayed = Tween<double>(
-      begin: fromZero ? 0 : displayed.value,
-      end: end,
-    ).animate(CurvedAnimation(parent: fill, curve: Curves.easeOutCubic));
-    fill.forward(from: 0);
-  }
-
-  void dispose() {
-    _idle?.cancel();
-    fill.dispose();
-    pulse.dispose();
-  }
-}
-
-/// 同时显示服务端可信边界、当前播放位置与完成阈值的刻度轨。
-final class ShanganTrustScale extends StatefulWidget {
-  const ShanganTrustScale({
-    required this.label,
-    required this.valueLabel,
-    required this.trustedFraction,
-    required this.positionFraction,
-    required this.thresholdFraction,
-    super.key,
-  });
-
-  final String label;
-  final String valueLabel;
-  final double trustedFraction;
-  final double positionFraction;
-  final double thresholdFraction;
-
-  @override
-  State<ShanganTrustScale> createState() => _ShanganTrustScaleState();
-}
-
-final class _ShanganTrustScaleState extends State<ShanganTrustScale>
-    with TickerProviderStateMixin {
-  late final ShanganIdleMotion _motion;
-
-  @override
-  void initState() {
-    super.initState();
-    _motion = ShanganIdleMotion(
-      vsync: this,
-      onTick: () {
-        if (mounted) setState(() {});
-      },
-      fillDuration: const Duration(milliseconds: 860),
-      idlePeriod: const Duration(seconds: 5),
-    );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      // 入场只把刻度从 0 拉到当前值；之后播放位置更新直接跟新值，避免拖进度条时滞后。
-      _motion.start(target: 1, reduceMotion: _reduceMotion);
-    });
-  }
-
-  @override
-  void dispose() {
-    _motion.dispose();
-    super.dispose();
-  }
-
-  bool _reduceMotion() => !mounted || MediaQuery.disableAnimationsOf(context);
-
-  @override
-  Widget build(BuildContext context) {
-    final appear = _motion.value;
-    return Semantics(
-      label: '${widget.label}，${widget.valueLabel}',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Text(
-                  widget.label,
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              ),
-              Text(
-                widget.valueLabel,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 24,
-            child: CustomPaint(
-              painter: _TrustScalePainter(
-                trustedFraction: widget.trustedFraction.clamp(0, 1) * appear,
-                positionFraction: widget.positionFraction.clamp(0, 1) * appear,
-                thresholdFraction: widget.thresholdFraction.clamp(0, 1),
-                pulse: _motion.pulseValue,
-              ),
-            ),
-          ),
-          const Wrap(
-            spacing: 13,
-            runSpacing: 4,
-            children: [
-              _Legend(label: '已验证', color: ShanganColors.blue),
-              _Legend(label: '已播放', color: ShanganColors.mutedInk),
-              _Legend(label: '尚不可跳转', color: ShanganColors.rule, dashed: true),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _Legend extends StatelessWidget {
-  const _Legend({
-    required this.label,
-    required this.color,
-    this.dashed = false,
-  });
-
-  final String label;
-  final Color color;
-  final bool dashed;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      SizedBox(
-        width: 13,
-        child: Row(
-          children: List.generate(
-            dashed ? 3 : 1,
-            (_) => Expanded(
-              child: Container(
-                height: 3,
-                margin: EdgeInsets.only(right: dashed ? 1 : 0),
-                color: color,
-              ),
-            ),
-          ),
-        ),
-      ),
-      const SizedBox(width: 4),
-      Text(
-        label,
-        style: Theme.of(
-          context,
-        ).textTheme.labelSmall?.copyWith(color: ShanganColors.mutedInk),
-      ),
-    ],
-  );
-}
-
 enum ShanganProgressStyle { highlighter, track }
 
 /// 带荧光笔斜纹的业务进度条；作战单等卡片内用细轨道，避免斜纹太抢。
@@ -941,188 +658,6 @@ final class _ShanganIdleScrollbarState extends State<ShanganIdleScrollbar>
 }
 
 /// 日报/周报完成率：线框包裹圆环与大数字，避免大片留白。
-final class ShanganCompletionHero extends StatefulWidget {
-  const ShanganCompletionHero({
-    required this.percent,
-    required this.caption,
-    super.key,
-  });
-
-  final int percent;
-  final String caption;
-
-  @override
-  State<ShanganCompletionHero> createState() => _ShanganCompletionHeroState();
-}
-
-final class _ShanganCompletionHeroState extends State<ShanganCompletionHero>
-    with TickerProviderStateMixin {
-  late final ShanganIdleMotion _motion;
-
-  @override
-  void initState() {
-    super.initState();
-    _motion = ShanganIdleMotion(
-      vsync: this,
-      onTick: () {
-        if (mounted) setState(() {});
-      },
-      fillDuration: const Duration(milliseconds: 900),
-      pulseDuration: const Duration(milliseconds: 700),
-      idlePeriod: const Duration(seconds: 5),
-    );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _motion.start(target: widget.percent / 100, reduceMotion: _reduceMotion);
-    });
-  }
-
-  @override
-  void didUpdateWidget(ShanganCompletionHero oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.percent != widget.percent) {
-      _motion.animateTo(widget.percent / 100, reduceMotion: _reduceMotion());
-    }
-  }
-
-  @override
-  void dispose() {
-    _motion.dispose();
-    super.dispose();
-  }
-
-  bool _reduceMotion() => !mounted || MediaQuery.disableAnimationsOf(context);
-
-  @override
-  Widget build(BuildContext context) {
-    final shown = (_motion.value * 100).round();
-    final pulse = _motion.pulseValue;
-    final scale = 1 + 0.045 * math.sin(math.pi * pulse);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(color: ShanganColors.rule, width: 1.5),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 16, 12),
-        child: Row(
-          children: [
-            Transform.scale(
-              scale: scale,
-              child: SizedBox(
-                width: 64,
-                height: 64,
-                child: CustomPaint(
-                  painter: _CompletionRingPainter(
-                    value: _motion.value,
-                    pulse: pulse,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Transform.scale(
-                    scale: 1 + 0.03 * math.sin(math.pi * pulse),
-                    alignment: Alignment.bottomLeft,
-                    child: Text(
-                      '$shown',
-                      style: shanganNumberStyle(context, fontSize: 44),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6, left: 4),
-                    child: Text(
-                      '%',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: ShanganColors.blue,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      widget.caption,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-final class _CompletionRingPainter extends CustomPainter {
-  const _CompletionRingPainter({required this.value, this.pulse = 0});
-
-  final double value;
-  final double pulse;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.shortestSide / 2 - 4;
-    final breathe = math.sin(math.pi * pulse);
-    final track = Paint()
-      ..color = const Color(0xFFEAF1FB)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round;
-    canvas.drawCircle(center, radius, track);
-    if (value <= 0) {
-      // 0% 时轨道本身轻轻呼吸，避免圆环完全死掉。
-      if (pulse > 0) {
-        canvas.drawCircle(
-          center,
-          radius,
-          Paint()
-            ..color = ShanganColors.blue.withValues(alpha: 0.18 * breathe)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 6 + breathe
-            ..strokeCap = StrokeCap.round,
-        );
-      }
-      return;
-    }
-    final arc = Paint()
-      ..color = Color.lerp(ShanganColors.blue, Colors.white, 0.12 * breathe)!
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 6 + 1.3 * breathe
-      ..strokeCap = StrokeCap.round;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2,
-      math.pi * 2 * value,
-      false,
-      arc,
-    );
-    if (pulse > 0) {
-      final head = -math.pi / 2 + math.pi * 2 * value;
-      canvas.drawCircle(
-        Offset(
-          center.dx + radius * math.cos(head),
-          center.dy + radius * math.sin(head),
-        ),
-        3.2 + 1.4 * breathe,
-        Paint()..color = Colors.white.withValues(alpha: 0.55 + 0.25 * breathe),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_CompletionRingPainter oldDelegate) =>
-      oldDelegate.value != value || oldDelegate.pulse != pulse;
-}
-
-/// 统一的加载状态，文案明确说明正在发生的操作。
 final class ShanganLoading extends StatelessWidget {
   const ShanganLoading(this.label, {super.key});
 
@@ -1198,74 +733,6 @@ DateTime shanganParseDate(String value) {
   return DateTime(parsed.year, parsed.month, parsed.day);
 }
 
-final class _TrustScalePainter extends CustomPainter {
-  const _TrustScalePainter({
-    required this.trustedFraction,
-    required this.positionFraction,
-    required this.thresholdFraction,
-    this.pulse = 0,
-  });
-
-  final double trustedFraction;
-  final double positionFraction;
-  final double thresholdFraction;
-  final double pulse;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final breathe = math.sin(math.pi * pulse);
-    final rule = Paint()..color = ShanganColors.rule.withValues(alpha: 0.65);
-    for (double x = 0; x <= size.width; x += 20) {
-      canvas.drawRect(Rect.fromLTWH(x, 0, 1, 12), rule);
-    }
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, 2),
-      Paint()..color = ShanganColors.blue,
-    );
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width * trustedFraction, 6),
-      Paint()
-        ..color = Color.lerp(ShanganColors.blue, Colors.white, 0.18 * breathe)!,
-    );
-    canvas.drawRect(
-      Rect.fromLTWH(0, 9, size.width * positionFraction, 3),
-      Paint()..color = ShanganColors.mutedInk,
-    );
-    final blocked = Paint()..color = ShanganColors.rule;
-    for (double x = size.width * positionFraction; x < size.width; x += 8) {
-      canvas.drawRect(Rect.fromLTWH(x, 9, 4, 3), blocked);
-    }
-    // 静止时播放头轻轻左右点头，提示这条轨还能回看。
-    final playheadX = (size.width * positionFraction + 2.4 * breathe).clamp(
-      0.0,
-      size.width - 2,
-    );
-    canvas.drawRect(
-      Rect.fromLTWH(playheadX, 5, 2, 18),
-      Paint()..color = ShanganColors.ink,
-    );
-    if (pulse > 0) {
-      canvas.drawCircle(
-        Offset(playheadX + 1, 8),
-        2.4 + breathe,
-        Paint()..color = ShanganColors.blue.withValues(alpha: 0.28 * breathe),
-      );
-    }
-    canvas.drawRect(
-      Rect.fromLTWH(size.width * thresholdFraction, 0, 2, 15),
-      Paint()..color = ShanganColors.red,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_TrustScalePainter oldDelegate) =>
-      oldDelegate.trustedFraction != trustedFraction ||
-      oldDelegate.positionFraction != positionFraction ||
-      oldDelegate.thresholdFraction != thresholdFraction ||
-      oldDelegate.pulse != pulse;
-}
-
-/// 作战单进度：浅底圆角槽 + 渐变填充，空进度不铺灰块。
 final class _TrackProgressPainter extends CustomPainter {
   const _TrackProgressPainter({
     required this.value,
@@ -1282,34 +749,23 @@ final class _TrackProgressPainter extends CustomPainter {
     final breathe = math.sin(math.pi * pulse);
     final radius = Radius.circular(size.height / 2);
     final track = RRect.fromRectAndRadius(Offset.zero & size, radius);
-    canvas.drawRRect(track, Paint()..color = const Color(0xFFEAF1FB));
+    canvas.drawRRect(track, Paint()..color = ShanganColors.progressTrack);
     canvas.drawRRect(
       track,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1 + 0.5 * breathe
-        ..color = Color.lerp(const Color(0xFFC5D4EA), color, 0.32 * breathe)!,
+        ..color = Color.lerp(
+          ShanganColors.progressOutline,
+          color,
+          0.32 * breathe,
+        )!,
     );
-    if (value <= 0) {
-      // 空进度：左端一颗呼吸光点，提示这条轨还活着。
-      if (pulse > 0) {
-        final seedH = size.height - 3;
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(1.5, 1.5, seedH + 4 * breathe, seedH),
-            Radius.circular(seedH / 2),
-          ),
-          Paint()..color = color.withValues(alpha: 0.16 + 0.28 * breathe),
-        );
-      }
-      return;
-    }
+    // 零进度只显示完整轨道，不用光点或最小填充伪造已完成部分。
+    if (value <= 0) return;
     final inset = 1.5;
     final maxWidth = size.width - inset * 2;
-    final fillWidth = (maxWidth * value).clamp(
-      size.height - inset * 2,
-      maxWidth,
-    );
+    final fillWidth = (maxWidth * value).clamp(0.0, maxWidth);
     final fillRect = Rect.fromLTWH(
       inset,
       inset,
@@ -1361,6 +817,122 @@ final class _TrackProgressPainter extends CustomPainter {
       oldDelegate.pulse != pulse;
 }
 
+final class _DashedRoundedBorderPainter extends CustomPainter {
+  const _DashedRoundedBorderPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(18)),
+      );
+    final metric = path.computeMetrics().first;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    for (double distance = 0; distance < metric.length; distance += 9) {
+      canvas.drawPath(
+        metric.extractPath(distance, math.min(distance + 5, metric.length)),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRoundedBorderPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+final class ShanganIdleMotion {
+  ShanganIdleMotion({
+    required TickerProvider vsync,
+    required VoidCallback onTick,
+    this.fillDuration = const Duration(milliseconds: 800),
+    this.pulseDuration = const Duration(milliseconds: 720),
+    this.idlePeriod = const Duration(seconds: 4),
+  }) : _onTick = onTick,
+       fill = AnimationController(vsync: vsync, duration: fillDuration)
+         ..addListener(onTick),
+       pulse = AnimationController(vsync: vsync, duration: pulseDuration)
+         ..addListener(onTick) {
+    displayed = const AlwaysStoppedAnimation<double>(0);
+  }
+
+  final Duration fillDuration;
+  final Duration pulseDuration;
+  final Duration idlePeriod;
+  final VoidCallback _onTick;
+  final AnimationController fill;
+  final AnimationController pulse;
+  late Animation<double> displayed;
+  Timer? _idle;
+
+  /// 当前展示的 0–1 进度。
+  double get value => displayed.value;
+
+  /// 静止脉冲相位，0 表示完全静止。
+  double get pulseValue => Curves.easeInOut.transform(pulse.value);
+
+  /// 启动入场填充并开始静止计时。
+  void start({required double target, required bool Function() reduceMotion}) {
+    animateTo(target, fromZero: true, reduceMotion: reduceMotion());
+    startIdle(reduceMotion);
+  }
+
+  /// 只启动静止脉冲，用于滚动条这类没有填充目标的控件。
+  void startIdle(bool Function() reduceMotion) {
+    _idle?.cancel();
+    _idle = Timer.periodic(idlePeriod, (_) {
+      if (reduceMotion()) return;
+      pulse.forward(from: 0);
+    });
+  }
+
+  /// 用户刚滚动或拖动后，打断当前脉冲并重新计时。
+  void restartIdle(bool Function() reduceMotion) {
+    if (pulse.isAnimating || pulse.value > 0) {
+      pulse.stop();
+      pulse.reset();
+      _onTick();
+    }
+    startIdle(reduceMotion);
+  }
+
+  /// 把展示值缓动到 [next]；系统「减弱动态效果」时直接跳到终值。
+  void animateTo(
+    double next, {
+    bool fromZero = false,
+    required bool reduceMotion,
+    Duration? duration,
+  }) {
+    final end = next.clamp(0.0, 1.0);
+    if (reduceMotion) {
+      displayed = AlwaysStoppedAnimation(end);
+      _onTick();
+      return;
+    }
+    fill.duration =
+        duration ??
+        (fromZero ? fillDuration : const Duration(milliseconds: 450));
+    displayed = Tween<double>(
+      begin: fromZero ? 0 : displayed.value,
+      end: end,
+    ).animate(CurvedAnimation(parent: fill, curve: Curves.easeOutCubic));
+    fill.forward(from: 0);
+  }
+
+  void dispose() {
+    _idle?.cancel();
+    fill.dispose();
+    pulse.dispose();
+  }
+}
+
+/// 同时显示服务端可信边界、当前播放位置与完成阈值的刻度轨。
+
 final class _StripedProgressPainter extends CustomPainter {
   const _StripedProgressPainter({
     required this.value,
@@ -1376,12 +948,17 @@ final class _StripedProgressPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final breathe = math.sin(math.pi * pulse);
     final radius = Radius.circular(size.height / 2);
+    // 高亮样式同样绘制完整底轨，不能仅靠已完成部分表达总长度。
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Offset.zero & size, radius),
+      Paint()..color = ShanganColors.progressTrack,
+    );
     canvas.drawRRect(
       RRect.fromRectAndRadius(Offset.zero & size, radius),
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5 + 0.4 * breathe
-        ..color = color,
+        ..color = ShanganColors.progressOutline,
     );
     final fillWidth = (size.width - 2) * value;
     if (fillWidth <= 0) return;
@@ -1418,33 +995,4 @@ final class _StripedProgressPainter extends CustomPainter {
       oldDelegate.value != value ||
       oldDelegate.color != color ||
       oldDelegate.pulse != pulse;
-}
-
-final class _DashedRoundedBorderPainter extends CustomPainter {
-  const _DashedRoundedBorderPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(18)),
-      );
-    final metric = path.computeMetrics().first;
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    for (double distance = 0; distance < metric.length; distance += 9) {
-      canvas.drawPath(
-        metric.extractPath(distance, math.min(distance + 5, metric.length)),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedRoundedBorderPainter oldDelegate) =>
-      oldDelegate.color != color;
 }
