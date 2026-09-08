@@ -15,7 +15,7 @@ public class JdbcUserPresenceRepository implements UserPresenceRepository {
 
   private static final String SELECT =
       """
-      SELECT user_id, last_heartbeat_at, last_effective_action_at, app_state, client_version
+      SELECT user_id, last_heartbeat_at, last_effective_action_at, app_state, client_version, current_page, activity_state, activity_todo_id
         FROM user_presence
       """;
 
@@ -40,24 +40,35 @@ public class JdbcUserPresenceRepository implements UserPresenceRepository {
   }
 
   @Override
-  public void recordHeartbeat(String userId, Instant at, String appState, String clientVersion) {
+  public void recordHeartbeat(
+      String userId,
+      Instant at,
+      String appState,
+      String clientVersion,
+      com.shangan.presence.domain.AppActivity activity) {
     jdbcClient
         .sql(
             """
             INSERT INTO user_presence (
                 user_id, last_heartbeat_at, last_effective_action_at,
-                app_state, client_version, updated_at
-            ) VALUES (:userId, :at, NULL, :appState, :clientVersion, :at)
+                app_state, client_version, updated_at, current_page, activity_state, activity_todo_id
+            ) VALUES (:userId, :at, NULL, :appState, :clientVersion, :at, :page, :activity, :todoId)
             ON CONFLICT(user_id) DO UPDATE SET
                 last_heartbeat_at = excluded.last_heartbeat_at,
                 app_state = excluded.app_state,
                 client_version = excluded.client_version,
+                current_page = excluded.current_page,
+                activity_state = excluded.activity_state,
+                activity_todo_id = excluded.activity_todo_id,
                 updated_at = excluded.updated_at
             """)
         .param("userId", userId)
         .param("at", at.toEpochMilli())
         .param("appState", appState)
         .param("clientVersion", clientVersion == null ? "" : clientVersion)
+        .param("page", activity.page().name())
+        .param("activity", activity.state().name())
+        .param("todoId", activity.todoId())
         .update();
   }
 
@@ -85,7 +96,11 @@ public class JdbcUserPresenceRepository implements UserPresenceRepository {
         nullableInstant(row, "last_heartbeat_at"),
         nullableInstant(row, "last_effective_action_at"),
         row.getString("app_state"),
-        row.getString("client_version"));
+        row.getString("client_version"),
+        com.shangan.presence.domain.AppActivity.parse(
+            row.getString("current_page"),
+            row.getString("activity_state"),
+            row.getString("activity_todo_id")));
   }
 
   private Instant nullableInstant(ResultSet row, String column) throws SQLException {

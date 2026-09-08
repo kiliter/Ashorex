@@ -1,3 +1,4 @@
+import 'package:shangan_ios/core/presence/app_activity.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shangan_ios/core/models/shangan_models.dart';
@@ -67,7 +68,13 @@ class _FullscreenNagPageState extends ConsumerState<FullscreenNagPage> {
       !_busy;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => AppActivityScope(
+    activity: const AppActivity('NAG', 'RESPONDING'),
+    child: _buildPage(context),
+  );
+
+  /// 催办覆盖播放器时，当前位置应显示回应催办。
+  Widget _buildPage(BuildContext context) {
     return PopScope(
       canPop: false,
       child: Scaffold(

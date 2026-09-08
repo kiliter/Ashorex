@@ -22,9 +22,22 @@ public class HeartbeatController {
   @PostMapping
   HeartbeatResponse heartbeat(
       CurrentUser currentUser, @RequestBody(required = false) HeartbeatRequest request) {
-    HeartbeatRequest body = request == null ? new HeartbeatRequest("BACKGROUND", "", 0) : request;
-    return presence.heartbeat(currentUser.userId(), body.appState(), body.clientVersion());
+    HeartbeatRequest body =
+        request == null ? new HeartbeatRequest("BACKGROUND", "", 0, null, null, null) : request;
+    return presence.heartbeat(
+        currentUser.userId(),
+        body.appState(),
+        body.clientVersion(),
+        body.currentPage(),
+        body.activityState(),
+        body.activityTodoId());
   }
 
-  record HeartbeatRequest(String appState, String clientVersion, int queuedEvents) {}
+  record HeartbeatRequest(
+      String appState,
+      String clientVersion,
+      int queuedEvents,
+      String currentPage,
+      String activityState,
+      String activityTodoId) {}
 }

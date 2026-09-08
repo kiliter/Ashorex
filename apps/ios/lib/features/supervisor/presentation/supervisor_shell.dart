@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:shangan_ios/core/widgets/shangan_feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:shangan_ios/features/profile/presentation/profile_page.dart';
@@ -140,6 +141,17 @@ class _SupervisorLearnersTabState
 
   @override
   Widget build(BuildContext context) {
+    return _ActivityRefresh(
+      onRefresh: () {
+        if (!ref.read(learnersProvider).isLoading) {
+          ref.invalidate(learnersProvider);
+        }
+      },
+      child: _buildLearners(context),
+    );
+  }
+
+  Widget _buildLearners(BuildContext context) {
     final learners = ref.watch(learnersProvider);
     final me = ref.watch(meSettingsProvider).value;
     return RefreshIndicator(
@@ -332,6 +344,7 @@ final class _LearnerCard extends ConsumerWidget {
                         ),
                       ],
                     ),
+                    _CurrentActivityText(activity: learner.activity),
                     const SizedBox(height: 8),
                     TargetProgressBar(
                       value: learner.todayTotal == 0
@@ -1268,197 +1281,208 @@ final class SupervisorLearnerPage extends ConsumerWidget {
             .firstOrNull
             ?.canNag ==
         true;
-    return Scaffold(
-      body: Column(
-        children: [
-          Container(height: 4, color: ShanganColors.ochre),
-          Expanded(
-            child: SafeArea(
-              // 督学页没有 AppBar，必须保留系统顶部安全区，避免标题覆盖刘海和状态栏。
-              top: true,
-              child: detail.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => Center(child: Text('学员详情加载失败：$error')),
-                data: (data) => ListView(
-                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
-                  children: [
-                    Row(
-                      children: [
-                        ShanganIconButton(
-                          icon: Icons.chevron_right,
-                          quarterTurns: 2,
-                          semanticLabel: '返回',
-                          onTap: () => Navigator.of(context).pop(),
-                        ),
-                        Expanded(
-                          child: Text(
-                            data.displayName,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        if (canNag)
-                          _RedIconButton(
-                            icon: Icons.notifications_none,
-                            semanticLabel: '督学 ${data.displayName}',
-                            onTap: () => _nag(context, ref, data),
-                          )
-                        else
-                          const SizedBox(width: 44),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    // 在线状态卡：dotstate + 最近上报 + 关键 kv。
-                    ShanganCard(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return _ActivityRefresh(
+      onRefresh: () {
+        if (!ref.read(learnerDetailProvider(learnerId)).isLoading) {
+          ref.invalidate(learnerDetailProvider(learnerId));
+        }
+      },
+      child: Scaffold(
+        body: Column(
+          children: [
+            Container(height: 4, color: ShanganColors.ochre),
+            Expanded(
+              child: SafeArea(
+                // 督学页没有 AppBar，必须保留系统顶部安全区，避免标题覆盖刘海和状态栏。
+                top: true,
+                child: detail.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, _) => Center(child: Text('学员详情加载失败：$error')),
+                  data: (data) => ListView(
+                    padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
+                    children: [
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              ShanganDotState(
-                                state: data.presenceState,
-                                label: _presenceLabel(data),
-                              ),
-                              const Spacer(),
-                              Text(
-                                data.idleMinutes < 0
-                                    ? '今日无有效操作'
-                                    : '空闲 ${data.idleMinutes} 分钟',
-                                style: const TextStyle(
-                                  fontSize: 11.5,
-                                  color: ShanganColors.mutedInk,
-                                ),
-                              ),
-                            ],
+                          ShanganIconButton(
+                            icon: Icons.chevron_right,
+                            quarterTurns: 2,
+                            semanticLabel: '返回',
+                            onTap: () => Navigator.of(context).pop(),
                           ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: Divider(
-                              height: 1,
-                              color: ShanganColors.hair,
+                          Expanded(
+                            child: Text(
+                              data.displayName,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
-                          _KeyValueRow(
-                            label: '今日完成',
-                            value:
-                                '${data.day.totals.done} / ${data.day.totals.total} · '
-                                '${formatDurationCompact(data.day.totals.watchedMs + data.day.totals.focusedMs)}',
-                          ),
-                          const SizedBox(height: 6),
-                          _KeyValueRow(
-                            label: '区间统计',
-                            value:
-                                '${formatDurationCompact(data.stats.totalMs)} · '
-                                '完成 ${data.stats.doneTodos}/${data.stats.totalTodos}',
-                          ),
+                          if (canNag)
+                            _RedIconButton(
+                              icon: Icons.notifications_none,
+                              semanticLabel: '督学 ${data.displayName}',
+                              onTap: () => _nag(context, ref, data),
+                            )
+                          else
+                            const SizedBox(width: 44),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    StatStrip(
-                      items: [
-                        StatStripItem(
-                          value:
-                              '${data.day.totals.done}/${data.day.totals.total}',
-                          label: '完成',
-                        ),
-                        StatStripItem(
-                          value: formatDurationCompact(
-                            data.day.totals.watchedMs,
-                          ),
-                          label: '观看',
-                        ),
-                        StatStripItem(
-                          value: formatDurationCompact(
-                            data.day.totals.focusedMs,
-                          ),
-                          label: '专注',
-                        ),
-                        StatStripItem(
-                          value: '${data.deletions.length}',
-                          label: '今日删除',
-                        ),
-                      ],
-                    ),
-                    SectionTitle(
-                      title: '今日待办',
-                      count:
-                          '${data.day.totals.done} / ${data.day.totals.total}',
-                      trailing: const ShanganBadge(label: '只读'),
-                    ),
-                    ShanganCard(
-                      padding: const EdgeInsets.symmetric(horizontal: 13),
-                      child: Column(
-                        children: [
-                          for (
-                            var index = 0;
-                            index < data.day.todos.length;
-                            index++
-                          ) ...[
-                            if (index > 0)
-                              const Divider(
-                                height: 1,
-                                color: ShanganColors.hair,
-                              ),
-                            _ReadonlyTodoRow(todo: data.day.todos[index]),
-                          ],
-                          if (data.day.todos.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 20),
-                              child: Text(
-                                '该学员今日没有待办',
-                                style: TextStyle(color: ShanganColors.mutedInk),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    if (data.deletions.isNotEmpty) ...[
-                      SectionTitle(
-                        title: '今日删除',
-                        count: '${data.deletions.length}',
-                      ),
+                      const SizedBox(height: 12),
+                      // 在线状态卡：dotstate + 最近上报 + 关键 kv。
                       ShanganCard(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 14,
-                          vertical: 13,
+                          vertical: 12,
                         ),
-                        borderColor: ShanganColors.redLine,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            for (
-                              var index = 0;
-                              index < data.deletions.length;
-                              index++
-                            ) ...[
-                              if (index > 0)
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 12),
-                                  child: Divider(
-                                    height: 1,
-                                    color: ShanganColors.hair,
+                            Row(
+                              children: [
+                                ShanganDotState(
+                                  state: data.presenceState,
+                                  label: _presenceLabel(data),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  data.idleMinutes < 0
+                                      ? '今日无有效操作'
+                                      : '空闲 ${data.idleMinutes} 分钟',
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    color: ShanganColors.mutedInk,
                                   ),
                                 ),
-                              _DeletionBlock(deletion: data.deletions[index]),
-                            ],
+                              ],
+                            ),
+                            _CurrentActivityText(activity: data.activity),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              child: Divider(
+                                height: 1,
+                                color: ShanganColors.hair,
+                              ),
+                            ),
+                            _KeyValueRow(
+                              label: '今日完成',
+                              value:
+                                  '${data.day.totals.done} / ${data.day.totals.total} · '
+                                  '${formatDurationCompact(data.day.totals.watchedMs + data.day.totals.focusedMs)}',
+                            ),
+                            const SizedBox(height: 6),
+                            _KeyValueRow(
+                              label: '区间统计',
+                              value:
+                                  '${formatDurationCompact(data.stats.totalMs)} · '
+                                  '完成 ${data.stats.doneTodos}/${data.stats.totalTodos}',
+                            ),
                           ],
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      StatStrip(
+                        items: [
+                          StatStripItem(
+                            value:
+                                '${data.day.totals.done}/${data.day.totals.total}',
+                            label: '完成',
+                          ),
+                          StatStripItem(
+                            value: formatDurationCompact(
+                              data.day.totals.watchedMs,
+                            ),
+                            label: '观看',
+                          ),
+                          StatStripItem(
+                            value: formatDurationCompact(
+                              data.day.totals.focusedMs,
+                            ),
+                            label: '专注',
+                          ),
+                          StatStripItem(
+                            value: '${data.deletions.length}',
+                            label: '今日删除',
+                          ),
+                        ],
+                      ),
+                      SectionTitle(
+                        title: '今日待办',
+                        count:
+                            '${data.day.totals.done} / ${data.day.totals.total}',
+                        trailing: const ShanganBadge(label: '只读'),
+                      ),
+                      ShanganCard(
+                        padding: const EdgeInsets.symmetric(horizontal: 13),
+                        child: Column(
+                          children: [
+                            for (
+                              var index = 0;
+                              index < data.day.todos.length;
+                              index++
+                            ) ...[
+                              if (index > 0)
+                                const Divider(
+                                  height: 1,
+                                  color: ShanganColors.hair,
+                                ),
+                              _ReadonlyTodoRow(todo: data.day.todos[index]),
+                            ],
+                            if (data.day.todos.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 20),
+                                child: Text(
+                                  '该学员今日没有待办',
+                                  style: TextStyle(
+                                    color: ShanganColors.mutedInk,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (data.deletions.isNotEmpty) ...[
+                        SectionTitle(
+                          title: '今日删除',
+                          count: '${data.deletions.length}',
+                        ),
+                        ShanganCard(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 13,
+                          ),
+                          borderColor: ShanganColors.redLine,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              for (
+                                var index = 0;
+                                index < data.deletions.length;
+                                index++
+                              ) ...[
+                                if (index > 0)
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 12),
+                                    child: Divider(
+                                      height: 1,
+                                      color: ShanganColors.hair,
+                                    ),
+                                  ),
+                                _DeletionBlock(deletion: data.deletions[index]),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1701,4 +1725,72 @@ final class _ReadonlyTodoRow extends StatelessWidget {
       TodoType.task => todo.isDone ? '已完成' : '未完成',
     };
   }
+}
+
+/// 当前 App 位置与服务端接收时间一起显示，未知值不会渲染成“正在学习”。
+class _CurrentActivityText extends StatelessWidget {
+  const _CurrentActivityText({required this.activity});
+  final CurrentAppActivity activity;
+  @override
+  Widget build(BuildContext context) {
+    final time = activity.updatedAt?.toLocal();
+    final updated = time == null
+        ? '尚未上报位置'
+        : '更新于 ${time.year}-${time.month.toString().padLeft(2, '0')}-${time.day.toString().padLeft(2, '0')} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:${time.second.toString().padLeft(2, '0')}';
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Text(
+        '${activity.summary}\n$updated',
+        style: const TextStyle(
+          fontSize: 12,
+          height: 1.5,
+          color: ShanganColors.mutedInk,
+        ),
+      ),
+    );
+  }
+}
+
+/// 查看页每 15 秒刷新一次；后台或被其他路由覆盖时不读取，离页释放定时器。
+class _ActivityRefresh extends StatefulWidget {
+  const _ActivityRefresh({required this.onRefresh, required this.child});
+  final VoidCallback onRefresh;
+  final Widget child;
+  @override
+  State<_ActivityRefresh> createState() => _ActivityRefreshState();
+}
+
+class _ActivityRefreshState extends State<_ActivityRefresh>
+    with WidgetsBindingObserver {
+  Timer? _timer;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _timer = Timer.periodic(const Duration(seconds: 15), (_) => _refresh());
+  }
+
+  void _refresh() {
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (mounted &&
+        (ModalRoute.of(context)?.isCurrent ?? true) &&
+        (lifecycle == null || lifecycle == AppLifecycleState.resumed)) {
+      widget.onRefresh();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refresh();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

@@ -1,3 +1,4 @@
+import 'package:shangan_ios/core/presence/app_activity.dart';
 import 'dart:typed_data';
 import 'package:shangan_ios/core/models/course_addition_models.dart';
 
@@ -445,6 +446,7 @@ final class ShanganRepository {
     required bool foreground,
     required String clientVersion,
     int queuedEvents = 0,
+    AppActivity? activity,
   }) async {
     return HeartbeatResult.fromJson(
       await _api.postJson(
@@ -453,6 +455,9 @@ final class ShanganRepository {
           'appState': foreground ? 'FOREGROUND' : 'BACKGROUND',
           'clientVersion': clientVersion,
           'queuedEvents': queuedEvents,
+          'currentPage': activity?.page,
+          'activityState': activity?.state,
+          'activityTodoId': activity?.todoId,
         },
       ),
     );

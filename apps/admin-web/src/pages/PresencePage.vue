@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { api, ApiError } from '@/api/client';
 import { formatDuration, formatInstant, presenceLabel, todoTypeLabel } from '@/api/format';
 
@@ -13,6 +13,8 @@ interface PresenceView {
   lastHeartbeatAt: string | null;
   lastEffectiveActionAt: string | null;
   idleMinutes: number;
+  activity?: { pageLabel: string; stateLabel: string; todoTitle: string | null;
+    updatedAt: string | null; background: boolean; stale: boolean };
 }
 
 interface PresenceRow {
@@ -63,16 +65,25 @@ const nagChannel = ref<'AUTO' | 'SERVERCHAN' | 'FULLSCREEN'>('AUTO');
 const submitting = ref(false);
 
 async function load(): Promise<void> {
+  if (loading) return;
+  loading = true;
   try {
     const data = await api.get<PresenceResponse>('/presence');
     rows.value = data.rows;
     error.value = '';
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '加载失败';
-  }
+  } finally { loading = false; }
 }
 
-onMounted(load);
+// 只在可见标签页定时更新当前快照，卸载时释放，不积压慢请求。
+let refreshTimer: ReturnType<typeof setInterval> | undefined;
+let loading = false;
+onMounted(() => {
+  void load();
+  refreshTimer = setInterval(() => { if (!document.hidden) void load(); }, 15000);
+});
+onUnmounted(() => clearInterval(refreshTimer));
 
 const counts = computed(() => ({
   ALL: rows.value.length,
@@ -178,6 +189,7 @@ function statusText(todo: TodoItem): { text: string; color: string } {
           <tr>
             <th>用户</th>
             <th>在线状态</th>
+            <th>App 当前位置</th>
             <th>最近心跳</th>
             <th>最近有效操作</th>
             <th>今日 Todo</th>
@@ -197,6 +209,14 @@ function statusText(todo: TodoItem): { text: string; color: string } {
                 <i></i>{{ presenceLabel(row.presence.state)
                 }}{{ row.presence.state === 'IDLE' ? ` ${row.presence.idleMinutes} 分` : '' }}
               </span>
+            </td>
+            <td style="min-width: 180px; max-width: 280px; white-space: normal">
+              <template v-if="row.presence.activity">
+                <div>{{ row.presence.activity.stale ? '最后上报 · ' : '' }}{{ row.presence.activity.background ? 'App 已切后台 · ' : '' }}{{ row.presence.activity.pageLabel }} · {{ row.presence.activity.stateLabel }}</div>
+                <div v-if="row.presence.activity.todoTitle">{{ row.presence.activity.todoTitle }}</div>
+                <div class="muted" style="font-size: 11px">更新于 {{ formatInstant(row.presence.activity.updatedAt) }}</div>
+              </template>
+              <span v-else class="muted">尚未上报位置</span>
             </td>
             <td
               class="mono"
@@ -222,7 +242,7 @@ function statusText(todo: TodoItem): { text: string; color: string } {
             </td>
           </tr>
           <tr v-if="visibleRows.length === 0">
-            <td colspan="8" class="empty">没有符合条件的用户</td>
+            <td colspan="9" class="empty">没有符合条件的用户</td>
           </tr>
         </tbody>
       </table>

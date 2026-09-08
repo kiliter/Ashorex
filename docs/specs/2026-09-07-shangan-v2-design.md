@@ -206,7 +206,7 @@ TodoDeletion(id, userId, todoId, todoType, titleSnapshot, resourceId,
 
 ```text
 UserPresence(userId, lastHeartbeatAt, lastEffectiveActionAt, appState,
-             clientVersion, updatedAt)
+             clientVersion, currentPage, activityState, activityTodoId, updatedAt)
 ```
 
 - **不保存心跳明细历史**。心跳只更新 `UserPresence` 单行，避免产生大量无价值行。
@@ -331,7 +331,8 @@ POST /api/v1/todos/{todoId}/progress
 
 ```http
 POST /api/v1/heartbeat
-{ "appState": "FOREGROUND", "clientVersion": "2.0.0", "queuedEvents": 0 }
+{ "appState": "FOREGROUND", "clientVersion": "2.0.0", "queuedEvents": 0,
+  "currentPage": "PLAYER", "activityState": "VIDEO_PLAYING", "activityTodoId": "Todo UUID" }
 ```
 
 ```json
@@ -341,7 +342,7 @@ POST /api/v1/heartbeat
 ```
 
 - 默认间隔 60 秒，实际间隔由服务端下发，客户端遵循。
-- 心跳只更新 `lastHeartbeatAt` 与 `appState`，**不更新** `lastEffectiveActionAt`。
+- 心跳更新 `lastHeartbeatAt`、`appState` 及 ADR-0040 当前页面/活动快照，**不更新** `lastEffectiveActionAt`。
 - 心跳失败不影响本地播放与计时，只影响服务端在线判定；连续失败在首页显示离线条与待同步条数。
 - `pendingNagId` 非空时客户端必须拉起全屏催办弹框。
 
@@ -891,6 +892,6 @@ iOS 模拟器实测出现无声、操作失效和重复加载失败，当前默�
 
 中央播放/暂停图标可单击切换状态，暂停时常驻播放图标用于继续播放，播放时中央反馈显示暂停动作；点击不等待画面双击判断。全屏底栏移除快进快退按钮，左右双击仍执行 ±10 秒。左右动作反馈不拦截触摸。
 
-## 待批准变更：当前 App 页面与活动
+## 已批准变更：当前 App 页面与活动
 
-见 [ADR-0040](../adr/0040-current-app-activity.md)。拟扩展心跳单行快照，在后台与督学端显示页面、视频/专注状态及更新时间，涉及 T12 / T17 / T30 / T31。此节为提案，不改变已冻结协议，批准后才进入实施。
+见 [ADR-0040](../adr/0040-current-app-activity.md)。扩展心跳单行快照，在后台与督学端显示页面、视频/专注状态及更新时间，涉及 T12 / T17 / T30 / T31。2026-09-08 已获用户批准，按 ADR-0040 扩展协议与原型。新增 V004 迁移，只维护单行快照；位置变化不刷新有效操作。展示页面每 15 秒刷新，后台或离页停止读取。

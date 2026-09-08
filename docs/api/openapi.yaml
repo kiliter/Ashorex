@@ -742,6 +742,7 @@ paths:
       description: |
         间隔由服务端下发。心跳只更新在线状态，**不刷新有效操作时间**；
         `pendingNagId` 非空时客户端必须拉起全屏催办。
+        页面与活动非法返回 PRESENCE_ACTIVITY_INVALID；任务不存在或不属于当前用户返回 TODO_NOT_FOUND。
       requestBody:
         content:
           application/json:
@@ -751,12 +752,31 @@ paths:
                 appState: { type: string, enum: [FOREGROUND, BACKGROUND] }
                 clientVersion: { type: string }
                 queuedEvents: { type: integer }
+                currentPage:
+                  type: string
+                  nullable: true
+                  enum: [UNKNOWN, HOME, LIBRARY, COURSE, PLAYER, FOCUS, STATS, PROFILE, TODO, PENDING, GOALS, NAG, OTHER]
+                  description: 当前 App 页面白名单，不包含原始路由。缺失时按 UNKNOWN。
+                activityState:
+                  type: string
+                  nullable: true
+                  enum: [UNKNOWN, BROWSING, VIDEO_LOADING, VIDEO_PLAYING, VIDEO_PAUSED, VIDEO_BUFFERING, VIDEO_ERROR, VIDEO_ENDED, FOCUS_RUNNING, FOCUS_PAUSED, FOCUS_IDLE, FOCUS_FINISHED, FOCUS_STOPPED, FOCUS_ABANDONED, RESPONDING]
+                  description: 必须与页面匹配；页面切换不刷新有效操作时间。
+                activityTodoId:
+                  type: string
+                  nullable: true
+                  maxLength: 36
+                  description: 视频、专注或待办详情的 Todo ID，服务端校验归属与类型；不传客户端名称。
       responses:
         '200':
           description: 成功
           content:
             application/json:
               schema: { $ref: '#/components/schemas/HeartbeatResponse' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
 
   /api/v1/nags/events:
     get:
@@ -1530,9 +1550,23 @@ components:
         supervisorUserIdSnapshot: { type: string, nullable: true }
         createdAt: { type: string, format: date-time }
 
+    ActivityView:
+      type: object
+      description: 仅为本 App 自报的当前快照；离线时 stale 为真，显示最后上报，不能推断实际学习。
+      properties:
+        page: { type: string }
+        pageLabel: { type: string }
+        state: { type: string }
+        stateLabel: { type: string }
+        todoTitle: { type: string, nullable: true }
+        updatedAt: { type: string, format: date-time, nullable: true }
+        background: { type: boolean }
+        stale: { type: boolean }
+
     LearnerOverview:
       type: object
       properties:
+        activity: { $ref: '#/components/schemas/ActivityView' }
         userId: { type: string }
         username: { type: string }
         displayName: { type: string }
@@ -1574,6 +1608,7 @@ components:
         presence:
           type: object
           properties:
+            activity: { $ref: '#/components/schemas/ActivityView' }
             state: { $ref: '#/components/schemas/PresenceState' }
             lastHeartbeatAt: { type: string, format: date-time, nullable: true }
             lastEffectiveActionAt: { type: string, format: date-time, nullable: true }

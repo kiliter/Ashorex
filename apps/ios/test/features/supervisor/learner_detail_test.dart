@@ -18,7 +18,18 @@ void main() {
           'userId': 'u-2',
           'username': 'lisi',
           'displayName': '李四',
-          'presence': {'state': 'IDLE', 'idleMinutes': 95},
+          'presence': {
+            'state': 'IDLE',
+            'idleMinutes': 95,
+            'activity': {
+              'pageLabel': '视频页',
+              'stateLabel': '已暂停',
+              'todoTitle': '行政法第 3 讲',
+              'updatedAt': '2026-09-08T10:00:00Z',
+              'background': false,
+              'stale': false,
+            },
+          },
           'day': dayViewJson(
             todos: [
               todoJson(id: 't-1', status: 'DONE'),
@@ -44,6 +55,8 @@ void main() {
 
     expect(detail.presenceState, PresenceState.idle);
     expect(detail.idleMinutes, 95);
+    expect(detail.activity.summary, '视频页 · 已暂停 · 行政法第 3 讲');
+    expect(detail.activity.updatedAt, DateTime.utc(2026, 9, 8, 10));
     expect(detail.day.todos.length, 2);
     expect(detail.day.completed.single.id, 't-1');
     expect(detail.day.deletionCount, 1);

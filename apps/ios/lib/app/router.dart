@@ -1,3 +1,4 @@
+import 'package:shangan_ios/core/presence/app_activity.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
@@ -18,7 +19,7 @@ export 'package:shangan_ios/features/shell/presentation/app_shell.dart'
 GoRouter createRouter(AuthController authController) {
   return GoRouter(
     initialLocation: '/',
-    observers: [shanganRouteObserver],
+    observers: [shanganRouteObserver, activityRouteObserver],
     refreshListenable: authController,
     redirect: (context, state) {
       final status = authController.state.status;
@@ -62,9 +63,18 @@ GoRouter createRouter(AuthController authController) {
       GoRoute(path: '/home', builder: (context, state) => const AppShell()),
       GoRoute(
         path: '/todos/pending',
-        builder: (context, state) => const PendingSummaryPage(),
+        builder: (context, state) => const AppActivityScope(
+          activity: AppActivity('PENDING', 'BROWSING'),
+          child: PendingSummaryPage(),
+        ),
       ),
-      GoRoute(path: '/goals', builder: (context, state) => const GoalsPage()),
+      GoRoute(
+        path: '/goals',
+        builder: (context, state) => const AppActivityScope(
+          activity: AppActivity('GOALS', 'BROWSING'),
+          child: GoalsPage(),
+        ),
+      ),
       GoRoute(
         path: '/player/:todoId',
         builder: (context, state) => PlayerPage(
@@ -81,8 +91,10 @@ GoRouter createRouter(AuthController authController) {
       ),
       GoRoute(
         path: '/courses/:courseId',
-        builder: (context, state) =>
-            CourseDetailPage(courseId: state.pathParameters['courseId']!),
+        builder: (context, state) => AppActivityScope(
+          activity: const AppActivity('COURSE', 'BROWSING'),
+          child: CourseDetailPage(courseId: state.pathParameters['courseId']!),
+        ),
       ),
       GoRoute(
         path: '/supervisor',

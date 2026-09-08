@@ -52,6 +52,7 @@ class PresenceServiceTest {
   @Mock private NagPolicyResolver policies;
   @Mock private NagResponseService nagResponses;
   @Mock private UserTimeService userTime;
+  @Mock private com.shangan.todo.application.TodoActivityQuery activities;
 
   private PresenceService service;
 
@@ -66,7 +67,8 @@ class PresenceServiceTest {
             Clock.fixed(NOW, ZoneOffset.UTC),
             new com.shangan.nag.application.NagTransportService(
                 org.mockito.Mockito.mock(com.shangan.nag.infrastructure.NagPolicyRepository.class),
-                Clock.fixed(NOW, ZoneOffset.UTC)));
+                Clock.fixed(NOW, ZoneOffset.UTC)),
+            activities);
   }
 
   @Test
@@ -75,9 +77,12 @@ class PresenceServiceTest {
     when(policies.resolve(USER_ID)).thenReturn(policy(60, 5));
     when(nagResponses.pending(USER_ID)).thenReturn(Optional.empty());
 
-    PresenceService.HeartbeatResponse response = service.heartbeat(USER_ID, "FOREGROUND", "2.0.0");
+    PresenceService.HeartbeatResponse response =
+        service.heartbeat(USER_ID, "FOREGROUND", "2.0.0", null, null, null);
 
-    verify(presence).recordHeartbeat(USER_ID, NOW, "FOREGROUND", "2.0.0");
+    verify(presence)
+        .recordHeartbeat(
+            USER_ID, NOW, "FOREGROUND", "2.0.0", com.shangan.presence.domain.AppActivity.unknown());
     verify(presence, never()).recordEffectiveAction(anyString(), any());
     assertThat(response.serverTime()).isEqualTo(NOW);
     assertThat(response.heartbeatIntervalSeconds()).isEqualTo(60);
@@ -93,9 +98,11 @@ class PresenceServiceTest {
     when(policies.resolve(USER_ID)).thenReturn(policy(60, 5));
     when(nagResponses.pending(USER_ID)).thenReturn(Optional.empty());
 
-    service.heartbeat(USER_ID, null, "2.0.0");
+    service.heartbeat(USER_ID, null, "2.0.0", null, null, null);
 
-    verify(presence).recordHeartbeat(USER_ID, NOW, "BACKGROUND", "2.0.0");
+    verify(presence)
+        .recordHeartbeat(
+            USER_ID, NOW, "BACKGROUND", "2.0.0", com.shangan.presence.domain.AppActivity.unknown());
   }
 
   @Test
@@ -104,14 +111,17 @@ class PresenceServiceTest {
     when(policies.resolve(USER_ID)).thenReturn(policy(45, 8));
     when(nagResponses.pending(USER_ID)).thenReturn(Optional.of(nag()));
 
-    PresenceService.HeartbeatResponse response = service.heartbeat(USER_ID, "foreground", "2.0.0");
+    PresenceService.HeartbeatResponse response =
+        service.heartbeat(USER_ID, "foreground", "2.0.0", null, null, null);
 
     assertThat(response.pendingNagId()).isEqualTo("nag-1");
     assertThat(response.pendingNagMessage()).isEqualTo("还有 3 项没做");
     assertThat(response.requireReason()).isTrue();
     assertThat(response.minReasonLength()).isEqualTo(8);
     assertThat(response.heartbeatIntervalSeconds()).isEqualTo(45);
-    verify(presence).recordHeartbeat(USER_ID, NOW, "FOREGROUND", "2.0.0");
+    verify(presence)
+        .recordHeartbeat(
+            USER_ID, NOW, "FOREGROUND", "2.0.0", com.shangan.presence.domain.AppActivity.unknown());
   }
 
   @Test
@@ -147,6 +157,55 @@ class PresenceServiceTest {
     assertThat(view.idleMinutes()).isEqualTo(-1);
     assertThat(view.lastHeartbeatAt()).isNull();
     assertThat(view.lastEffectiveActionAt()).isNull();
+  }
+
+  @Test
+  void 活动上报校验任务并且不刷新有效操作() {
+    when(policies.resolve(USER_ID)).thenReturn(policy(60, 5));
+    when(nagResponses.pending(USER_ID)).thenReturn(Optional.empty());
+    service.heartbeat(USER_ID, "FOREGROUND", "2.0.0", "PLAYER", "VIDEO_PAUSED", "todo-1");
+    verify(activities).validate(USER_ID, "todo-1", "PLAYER");
+    verify(presence)
+        .recordHeartbeat(
+            USER_ID,
+            NOW,
+            "FOREGROUND",
+            "2.0.0",
+            com.shangan.presence.domain.AppActivity.parse("PLAYER", "VIDEO_PAUSED", "todo-1"));
+    verify(presence, never()).recordEffectiveAction(anyString(), any());
+  }
+
+  @Test
+  void 离线后台专注展示为最后快照() {
+    when(policies.resolve(USER_ID)).thenReturn(policy(60, 5));
+    when(userTime.today(USER)).thenReturn(LocalDate.of(2026, 9, 7));
+    when(presence.find(USER_ID))
+        .thenReturn(
+            Optional.of(
+                new PresenceSnapshot(
+                    USER_ID,
+                    NOW.minusSeconds(200),
+                    NOW.minusSeconds(600),
+                    "BACKGROUND",
+                    "2.0.0",
+                    com.shangan.presence.domain.AppActivity.parse(
+                        "FOCUS", "FOCUS_RUNNING", "todo-1"))));
+    when(activities.title(USER_ID, "todo-1")).thenReturn("背法条");
+    var view = service.view(USER).activity();
+    assertThat(view.stale()).isTrue();
+    assertThat(view.background()).isTrue();
+    assertThat(view.pageLabel()).isEqualTo("专注页");
+    assertThat(view.stateLabel()).isEqualTo("专注计时中");
+    assertThat(view.todoTitle()).isEqualTo("背法条");
+    assertThat(view.updatedAt()).isEqualTo(NOW.minusSeconds(200));
+  }
+
+  @Test
+  void 非法活动在持久化之前拒绝() {
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () -> service.heartbeat(USER_ID, "FOREGROUND", "2.0.0", "HOME", "VIDEO_PLAYING", null))
+        .hasMessage("页面与活动状态不匹配");
+    org.mockito.Mockito.verifyNoInteractions(presence, activities, policies, nagResponses);
   }
 
   private static Nag nag() {

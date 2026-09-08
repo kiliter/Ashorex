@@ -1,3 +1,4 @@
+import 'package:shangan_ios/core/presence/app_activity.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:shangan_ios/core/api/api_exception.dart';
@@ -155,7 +156,19 @@ class _FocusRunPageState extends ConsumerState<FocusRunPage>
   };
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => AppActivityScope(
+    activity: AppActivity(
+      'FOCUS',
+      _loading || _error != null
+          ? 'UNKNOWN'
+          : 'FOCUS_${_state.name.toUpperCase()}',
+      widget.todoId,
+    ),
+    child: _buildPage(context),
+  );
+
+  /// 专注活动来自已接受的服务端状态；每秒计时重绘不会重复触发心跳。
+  Widget _buildPage(BuildContext context) {
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }

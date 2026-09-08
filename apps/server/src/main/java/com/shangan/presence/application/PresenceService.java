@@ -29,6 +29,7 @@ public class PresenceService {
   private final NagResponseService nagResponses;
   private final UserTimeService userTime;
   private final Clock clock;
+  private final com.shangan.todo.application.TodoActivityQuery activities;
   private final com.shangan.nag.application.NagTransportService transport;
 
   public PresenceService(
@@ -37,20 +38,31 @@ public class PresenceService {
       NagResponseService nagResponses,
       UserTimeService userTime,
       Clock clock,
-      com.shangan.nag.application.NagTransportService transport) {
+      com.shangan.nag.application.NagTransportService transport,
+      com.shangan.todo.application.TodoActivityQuery activities) {
     this.presence = presence;
     this.policies = policies;
     this.nagResponses = nagResponses;
     this.userTime = userTime;
     this.clock = clock;
     this.transport = transport;
+    this.activities = activities;
   }
 
   @Transactional
-  public HeartbeatResponse heartbeat(String userId, String appState, String clientVersion) {
+  public HeartbeatResponse heartbeat(
+      String userId,
+      String appState,
+      String clientVersion,
+      String page,
+      String activityState,
+      String todoId) {
+    var activity = com.shangan.presence.domain.AppActivity.parse(page, activityState, todoId);
+    if (activity.todoId() != null)
+      activities.validate(userId, activity.todoId(), activity.page().name());
     Instant now = clock.instant();
     String normalizedState = "FOREGROUND".equalsIgnoreCase(appState) ? "FOREGROUND" : "BACKGROUND";
-    presence.recordHeartbeat(userId, now, normalizedState, clientVersion);
+    presence.recordHeartbeat(userId, now, normalizedState, clientVersion, activity);
     EffectiveNagPolicy policy = policies.resolve(userId);
     Optional<Nag> pending = nagResponses.pending(userId);
     return new HeartbeatResponse(
@@ -81,7 +93,8 @@ public class PresenceService {
         idleMinutes > 60 * 24 * 365 ? -1 : idleMinutes,
         snapshot.appState(),
         snapshot.clientVersion(),
-        userTime.today(user).toString());
+        userTime.today(user).toString(),
+        activityView(user.id(), snapshot, state));
   }
 
   /** 心跳响应：客户端据此调整上报间隔并决定是否拉起全屏催办。 */
@@ -103,5 +116,31 @@ public class PresenceService {
       long idleMinutes,
       String appState,
       String clientVersion,
-      String localDate) {}
+      String localDate,
+      ActivityView activity) {}
+
+  /** 时间取心跳接收时刻；离线显示最后上报，后台不能显示为当前前台播放。 */
+  private ActivityView activityView(String userId, PresenceSnapshot snapshot, PresenceState state) {
+    var activity = snapshot.activity();
+    return new ActivityView(
+        activity.page().name(),
+        activity.page().label(),
+        activity.state().name(),
+        activity.state().label(),
+        activities.title(userId, activity.todoId()),
+        snapshot.lastHeartbeatAt(),
+        !"FOREGROUND".equals(snapshot.appState()),
+        state == PresenceState.OFFLINE);
+  }
+
+  /** 后台与督学端共享中文活动视图，不向展示层暴露路由或资源来源。 */
+  public record ActivityView(
+      String page,
+      String pageLabel,
+      String state,
+      String stateLabel,
+      String todoTitle,
+      Instant updatedAt,
+      boolean background,
+      boolean stale) {}
 }

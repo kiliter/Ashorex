@@ -13,7 +13,23 @@ public record PresenceSnapshot(
     Instant lastHeartbeatAt,
     Instant lastEffectiveActionAt,
     String appState,
-    String clientVersion) {
+    String clientVersion,
+    AppActivity activity) {
+  /** 兼容不含活动快照的历史调用；未知不被误报为正在学习。 */
+  public PresenceSnapshot(
+      String userId,
+      Instant lastHeartbeatAt,
+      Instant lastEffectiveActionAt,
+      String appState,
+      String clientVersion) {
+    this(
+        userId,
+        lastHeartbeatAt,
+        lastEffectiveActionAt,
+        appState,
+        clientVersion,
+        AppActivity.unknown());
+  }
 
   /** 按在线宽限期判定当前状态；空闲阈值由催办策略决定，这里只区分在线与离线。 */
   public PresenceState state(Instant now, Duration grace, Duration idleThreshold) {

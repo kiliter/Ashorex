@@ -97,7 +97,8 @@ public class SupervisorViewService {
               supervision.canNag(),
               primaryGoal == null ? null : primaryGoal.name(),
               primaryGoal == null ? null : primaryGoal.daysRemaining(),
-              primaryGoal == null ? null : primaryGoal.urgency()));
+              primaryGoal == null ? null : primaryGoal.urgency(),
+              presenceView.activity()));
     }
     return List.copyOf(result);
   }
@@ -260,7 +261,8 @@ public class SupervisorViewService {
       boolean canNag,
       String primaryGoalName,
       Long primaryGoalDaysRemaining,
-      GoalUrgency primaryGoalUrgency) {}
+      GoalUrgency primaryGoalUrgency,
+      PresenceService.ActivityView activity) {}
 
   /** 学员详情。 */
   public record LearnerDetail(
