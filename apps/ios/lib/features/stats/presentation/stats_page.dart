@@ -21,10 +21,10 @@ final class StatsPage extends ConsumerWidget {
       HomeRange.week => '本周',
       HomeRange.month => '${date.month} 月',
     };
-    return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(statsProvider),
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 110),
+    // 标题和周期固定，只有统计正文参与滚动。
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+      child: Column(
         children: [
           Row(
             children: [
@@ -68,13 +68,24 @@ final class StatsPage extends ConsumerWidget {
                 .select(HomeRange.values[index]),
           ),
           const SizedBox(height: 12),
-          stats.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 40),
-              child: Center(child: CircularProgressIndicator()),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async => ref.invalidate(statsProvider),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 110),
+                children: [
+                  stats.when(
+                    loading: () => const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (error, _) => Text('统计加载失败：$error'),
+                    data: (view) => _StatsBody(view: view, range: range),
+                  ),
+                ],
+              ),
             ),
-            error: (error, _) => Text('统计加载失败：$error'),
-            data: (view) => _StatsBody(view: view, range: range),
           ),
         ],
       ),

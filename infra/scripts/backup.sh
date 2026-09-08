@@ -9,6 +9,18 @@ DATABASE="${DATA_DIR}/study.db"
 ATTACHMENTS_DIR="${DATA_DIR}/attachments"
 DAILY_BACKUP="${BACKUP_DIR}/study-${STAMP}.db"
 
+# 仅写脱敏状态，推送配置和密钥由服务端持有；失败状态不会覆盖退出码。
+record_backup_status() {
+  local result=$?
+  local state=FAILED
+  if [[ "$result" -eq 0 ]]; then state=OK; fi
+  if [[ -d "${DATA_DIR}" ]]; then
+    printf '%s\n' "$state" > "${DATA_DIR}/backup-status.tmp" && mv "${DATA_DIR}/backup-status.tmp" "${DATA_DIR}/backup-status" || true
+  fi
+  return "$result"
+}
+trap record_backup_status EXIT
+
 if [[ ! -f "${DATABASE}" ]]; then
   echo "备份失败：数据库不存在。" >&2
   exit 1

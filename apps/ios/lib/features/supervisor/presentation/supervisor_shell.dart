@@ -509,6 +509,7 @@ class _NagSheetState extends ConsumerState<_NagSheet> {
   };
 
   final _controller = TextEditingController();
+  final _title = TextEditingController();
   String? _template;
   String _channel = 'AUTO';
   bool _requireReason = true;
@@ -517,6 +518,7 @@ class _NagSheetState extends ConsumerState<_NagSheet> {
   @override
   void dispose() {
     _controller.dispose();
+    _title.dispose();
     super.dispose();
   }
 
@@ -567,7 +569,17 @@ class _NagSheetState extends ConsumerState<_NagSheet> {
             ),
             const SizedBox(height: 10),
             TextField(
+              controller: _title,
+              maxLength: 80,
+              decoration: const InputDecoration(
+                labelText: '催办标题（可选）',
+                hintText: '不填写时使用默认标题',
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
               controller: _controller,
+              maxLength: 1000,
               minLines: 3,
               maxLines: 5,
               onChanged: (_) => setState(() => _template = null),
@@ -582,6 +594,7 @@ class _NagSheetState extends ConsumerState<_NagSheet> {
                   'AUTO': '自动',
                   'FULLSCREEN': '客户端全屏',
                   'SERVERCHAN': 'Server 酱',
+                  'BARK': '个人 Bark',
                 }.entries)
                   ShanganFilterChip(
                     label: entry.value,
@@ -601,7 +614,7 @@ class _NagSheetState extends ConsumerState<_NagSheet> {
                 backgroundColor: ShanganColors.ochreSoft,
                 child: Text(
                   offline
-                      ? '学员当前离线，自动模式会走 Server 酱；App 下次上线时仍会补一次全屏弹框，且必须填写原因才能关闭。'
+                      ? '学员当前离线，自动模式优先走学员 Bark，未启用时走 Server 酱；App 下次上线时仍会补一次全屏弹框，且必须填写原因才能关闭。'
                       : '学员当前在线，自动模式会直接弹全屏催办，必须填写原因才能关闭。',
                   style: const TextStyle(
                     fontSize: 11.5,
@@ -661,6 +674,7 @@ class _NagSheetState extends ConsumerState<_NagSheet> {
           .read(shanganRepositoryProvider)
           .nagLearner(
             widget.learner.userId,
+            title: _title.text,
             message: _controller.text.trim(),
             channel: _channel,
             requireReason: _requireReason,

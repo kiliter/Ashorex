@@ -58,10 +58,10 @@ class HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
     final selection = ref.watch(homeSelectionProvider);
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 6, 18, 110),
+    // 首页头部和汇总固定，仅列表区域滚动。
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+      child: Column(
         children: [
           _Header(
             selection: selection,
@@ -101,41 +101,92 @@ class HomePageState extends ConsumerState<HomePage> {
             ),
             const SizedBox(height: 12),
           ],
-          if (_editing)
-            _EditingSection(
-              selected: _selected,
-              onSelectionChanged: (id, value) => setState(() {
-                if (value) {
-                  _selected.add(id);
-                } else {
-                  _selected.remove(id);
-                }
-              }),
-              onDone: () async {
-                setState(() {
-                  _editing = false;
-                  _selected.clear();
-                });
-                await _refresh();
-              },
-            )
-          else
-            switch (selection.range) {
-              HomeRange.day => _DaySection(
-                onRefresh: _refresh,
-                onEdit: () => setState(() {
-                  _editing = true;
-                  _jumpPanelOpen = false;
-                  _selected.clear();
-                }),
+          if (!_editing && selection.range == HomeRange.day)
+            const _FixedDayTotals(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 110),
+                children: [
+                  if (_editing)
+                    _EditingSection(
+                      selected: _selected,
+                      onSelectionChanged: (id, value) => setState(() {
+                        if (value) {
+                          _selected.add(id);
+                        } else {
+                          _selected.remove(id);
+                        }
+                      }),
+                      onDone: () async {
+                        setState(() {
+                          _editing = false;
+                          _selected.clear();
+                        });
+                        await _refresh();
+                      },
+                    )
+                  else
+                    switch (selection.range) {
+                      HomeRange.day => _DaySection(
+                        onRefresh: _refresh,
+                        onEdit: () => setState(() {
+                          _editing = true;
+                          _jumpPanelOpen = false;
+                          _selected.clear();
+                        }),
+                      ),
+                      HomeRange.week => const _WeekSection(),
+                      HomeRange.month => _MonthSection(onRefresh: _refresh),
+                    },
+                ],
               ),
-              HomeRange.week => const _WeekSection(),
-              HomeRange.month => _MonthSection(onRefresh: _refresh),
-            },
+            ),
+          ),
         ],
       ),
     );
   }
+}
+
+/// 固定的当日汇总，与待办结果使用同一份服务端统计。
+class _FixedDayTotals extends ConsumerWidget {
+  const _FixedDayTotals();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => ref
+      .watch(dayViewProvider)
+      .maybeWhen(
+        data: (view) {
+          final pending = view.todos.where((todo) => !todo.isDone).toList();
+          return StatStrip(
+            items: [
+              StatStripItem(
+                value: '${view.totals.done}/${view.totals.total}',
+                label: view.history ? '当日完成' : '今日完成',
+                highlighted: true,
+              ),
+              StatStripItem(
+                value: formatDurationCompact(view.totals.watchedMs),
+                label: view.history ? '观看' : '观看时长',
+              ),
+              StatStripItem(
+                value: formatDurationCompact(view.totals.focusedMs),
+                label: view.history ? '专注' : '专注时长',
+              ),
+              if (view.history)
+                StatStripItem(value: '${pending.length}', label: '未完成')
+              else
+                StatStripItem(
+                  value: '${view.totals.attachmentCount}',
+                  label: '附件',
+                ),
+            ],
+          );
+        },
+        orElse: () => const SizedBox.shrink(),
+      );
 }
 
 /// 页头：kicker + 大号日期 + 右侧日历 / 铃铛按钮。
@@ -501,30 +552,6 @@ class _DaySectionState extends ConsumerState<_DaySection> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            StatStrip(
-              items: [
-                StatStripItem(
-                  value: '${view.totals.done}/${view.totals.total}',
-                  label: view.history ? '当日完成' : '今日完成',
-                  highlighted: true,
-                ),
-                StatStripItem(
-                  value: formatDurationCompact(view.totals.watchedMs),
-                  label: view.history ? '观看' : '观看时长',
-                ),
-                StatStripItem(
-                  value: formatDurationCompact(view.totals.focusedMs),
-                  label: view.history ? '专注' : '专注时长',
-                ),
-                if (view.history)
-                  StatStripItem(value: '${pending.length}', label: '未完成')
-                else
-                  StatStripItem(
-                    value: '${view.totals.attachmentCount}',
-                    label: '附件',
-                  ),
-              ],
-            ),
             if (view.history) ...[
               const SizedBox(height: 12),
               if (allDone)

@@ -41,6 +41,38 @@ tags:
     description: 播放代理
 
 paths:
+  /api/v1/me/bark:
+    get:
+      tags: [identity]
+      summary: 读取当前用户的个人 Bark 配置（不返回密钥）
+      responses:
+        '200':
+          description: 个人配置
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BarkSettingsView' }
+    put:
+      tags: [identity]
+      summary: 更新当前用户自己的 Bark 配置
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                baseUrl: { type: string, description: HTTPS 服务地址 }
+                deviceKey: { type: string, maxLength: 512, description: 留空保留旧值 }
+                enabled: { type: boolean }
+      responses:
+        '200':
+          description: 保存后的个人配置
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BarkSettingsView' }
+        '400':
+          $ref: '#/components/responses/Problem'
+
   /api/v1/auth/login:
     post:
       tags: [auth]
@@ -895,10 +927,11 @@ paths:
             schema:
               type: object
               properties:
-                message: { type: string }
+                title: { type: string, maxLength: 80, nullable: true }
+                message: { type: string, maxLength: 1000 }
                 channel:
                   type: string
-                  enum: [AUTO, FULLSCREEN, SERVERCHAN]
+                  enum: [AUTO, FULLSCREEN, SERVERCHAN, BARK]
                   default: AUTO
                 requireReason: { type: boolean, default: true }
       responses:
@@ -997,6 +1030,13 @@ components:
           schema: { $ref: '#/components/schemas/ProblemDetail' }
 
   schemas:
+    BarkSettingsView:
+      type: object
+      properties:
+        baseUrl: { type: string }
+        deviceKeyConfigured: { type: boolean }
+        enabled: { type: boolean }
+
     ProblemDetail:
       type: object
       properties:
@@ -1540,6 +1580,7 @@ components:
         triggeredByUserId: { type: string, nullable: true }
         idleMinutes: { type: integer }
         pendingCount: { type: integer }
+        title: { type: string, nullable: true }
         message: { type: string }
         requireReason: { type: boolean }
         status: { type: string, enum: [PENDING, DELIVERED, RESPONDED, EXPIRED] }

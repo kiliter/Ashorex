@@ -61,7 +61,8 @@ const selectedDay = ref<DayView | null>(null);
 const error = ref('');
 const notice = ref('');
 const nagMessage = ref('');
-const nagChannel = ref<'AUTO' | 'SERVERCHAN' | 'FULLSCREEN'>('AUTO');
+const nagTitle = ref('');
+const nagChannel = ref<'AUTO' | 'SERVERCHAN' | 'FULLSCREEN' | 'BARK'>('AUTO');
 const submitting = ref(false);
 
 async function load(): Promise<void> {
@@ -120,10 +121,12 @@ async function sendNag(): Promise<void> {
     await api.post('/presence/nag', {
       userId: selected.value.userId,
       message: nagMessage.value || null,
+      title: nagTitle.value || null,
       channel: nagChannel.value,
     });
     notice.value = `已向 ${selected.value.username} 投递一次手动催办`;
     nagMessage.value = '';
+    nagTitle.value = '';
     await load();
   } catch (cause) {
     error.value =
@@ -313,9 +316,12 @@ function statusText(todo: TodoItem): { text: string; color: string } {
         </span>
       </div>
 
+      <div class="wlabel" style="margin-top: 14px">催办标题（可选）</div>
+      <input v-model="nagTitle" class="winput" maxlength="80" placeholder="不填写时使用默认标题" />
       <div class="wlabel" style="margin-top: 14px">附加说明（可选）</div>
       <textarea
         v-model="nagMessage"
+        maxlength="1000"
         class="winput"
         style="min-height: 64px"
         placeholder="今天一项都没开始，先把第一项做完。"
@@ -325,6 +331,7 @@ function statusText(todo: TodoItem): { text: string; color: string } {
         <button class="wbtn" :disabled="submitting" @click="sendNag">
           {{ submitting ? '投递中…' : '立即投递' }}
         </button>
+        <button type="button" :class="{ on: nagChannel === 'BARK' }" @click="nagChannel = 'BARK'">个人 Bark</button>
         <button class="wbtn ghost" @click="selected = null">取消</button>
       </div>
       <div class="muted mt10" style="font-size: 11.5px">

@@ -174,6 +174,9 @@ final class CatalogFilterController extends Notifier<CatalogFilter> {
   @override
   CatalogFilter build() => const CatalogFilter();
 
+  /// 面板应用一次替换条件，避免逐字段更新触发多次加载。
+  void apply(CatalogFilter filter) => state = filter;
+
   void toggleGenre(String genre) {
     state = state.genre == genre
         ? state.copyWith(clearGenre: true)

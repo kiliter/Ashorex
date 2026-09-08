@@ -168,7 +168,13 @@ public class OverviewAdminController {
             ? null
             : NagChannelType.valueOf(request.channel().toUpperCase(Locale.ROOT));
     nagScanner.createManualNag(
-        request.userId(), null, NagTrigger.MANUAL, request.message(), target, true);
+        request.userId(),
+        null,
+        NagTrigger.MANUAL,
+        request.message(),
+        target,
+        true,
+        request.title());
     return ResponseEntity.noContent().build();
   }
 
@@ -222,5 +228,5 @@ public class OverviewAdminController {
       int unansweredNags) {}
 
   /** 手动催办请求。 */
-  public record ManualNagRequest(String userId, String message, String channel) {}
+  public record ManualNagRequest(String userId, String message, String channel, String title) {}
 }

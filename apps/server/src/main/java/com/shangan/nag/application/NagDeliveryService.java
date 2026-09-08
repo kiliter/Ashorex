@@ -51,7 +51,8 @@ public class NagDeliveryService {
       EffectiveNagPolicy policy,
       NagChannelType preferred) {
     Instant now = clock.instant();
-    NagChannelType target = preferred != null ? preferred : chooseChannel(presence, policy, now);
+    NagChannelType target =
+        preferred != null ? preferred : chooseChannel(nag.userId(), presence, policy, now);
     if (target != null) dispatch(nag, recipientDisplayName, target);
   }
 
@@ -67,15 +68,16 @@ public class NagDeliveryService {
       EffectiveNagPolicy policy = policies.apply(nag.userId());
       if (nag.deliveredAt() == null
           || !nag.deliveredAt().isBefore(now.minus(policy.fullscreenTimeout()))) continue;
-      if (nags.deliveredVia(nag.id(), NagChannelType.SERVERCHAN)) {
+      if (nags.deliveredVia(nag.id(), NagChannelType.SERVERCHAN)
+          || nags.deliveredVia(nag.id(), NagChannelType.BARK)) {
         continue;
       }
-      if (!policy.channelServerchanEnabled()) {
+      if (!externalEnabled(nag.userId(), policy)) {
         continue;
       }
       // 全屏等待期间可能跨入免打扰时段，降级同样遵守学员当前本地时间。
       if (policy.inQuietHours(userTime.localTimeNow(userTime.requireUser(nag.userId())))) continue;
-      dispatch(nag, displayNames.apply(nag.userId()), NagChannelType.SERVERCHAN);
+      dispatch(nag, displayNames.apply(nag.userId()), externalChannel(nag.userId()));
       escalated++;
     }
     return escalated;
@@ -85,7 +87,7 @@ public class NagDeliveryService {
     Instant now = clock.instant();
     Optional<NagChannel> channel =
         channels.stream().filter(candidate -> candidate.type() == target).findFirst();
-    if (channel.isEmpty() || !channel.get().available()) {
+    if (channel.isEmpty() || !channel.get().available(nag.userId())) {
       // 失败原因交由渠道自述，后台才能区分「没填 SendKey」与「推送被关」这类不同处置动作。
       String reason = channel.map(NagChannel::unavailableReason).orElse("渠道未注册");
       nags.insertDelivery(idGenerator.nextId(), nag.id(), target, "FAILED", reason, now);
@@ -99,15 +101,27 @@ public class NagDeliveryService {
     }
   }
 
+  /** Bark 开启即替代 Server 酱，失败也不双发。 */
+  private NagChannelType externalChannel(String userId) {
+    return channels.stream().anyMatch(c -> c.type() == NagChannelType.BARK && c.enabled(userId))
+        ? NagChannelType.BARK
+        : NagChannelType.SERVERCHAN;
+  }
+
+  /** Bark 是独立开关；旧的 Server 酱开关仅控制原渠道。 */
+  public boolean externalEnabled(String userId, EffectiveNagPolicy policy) {
+    return externalChannel(userId) == NagChannelType.BARK || policy.channelServerchanEnabled();
+  }
+
   /** 在线优先全屏；不在线或全屏被关闭时用 Server 酱。 */
   private NagChannelType chooseChannel(
-      PresenceSnapshot presence, EffectiveNagPolicy policy, Instant now) {
+      String userId, PresenceSnapshot presence, EffectiveNagPolicy policy, Instant now) {
     boolean online = presence != null && presence.online(now, policy.presenceGrace());
     if (online && policy.channelFullscreenEnabled()) {
       return NagChannelType.FULLSCREEN;
     }
-    if (policy.channelServerchanEnabled()) {
-      return NagChannelType.SERVERCHAN;
+    if (externalEnabled(userId, policy)) {
+      return externalChannel(userId);
     }
     // 两个渠道都关闭时不暗中回退到全屏。
     return policy.channelFullscreenEnabled() ? NagChannelType.FULLSCREEN : null;

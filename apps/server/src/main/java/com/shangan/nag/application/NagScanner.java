@@ -106,7 +106,7 @@ public class NagScanner {
     LocalDate today = userTime.today(user);
     nags.expireBefore(user.id(), today);
     int pending = todos.countPendingOn(user.id(), today);
-    if (!policy.channelFullscreenEnabled() && !policy.channelServerchanEnabled())
+    if (!policy.channelFullscreenEnabled() && !delivery.externalEnabled(user.id(), policy))
       return Optional.empty();
     if (pending < policy.minPending()) {
       return Optional.empty();
@@ -152,6 +152,22 @@ public class NagScanner {
       String message,
       NagChannelType preferredChannel,
       boolean requireReason) {
+    return createManualNag(
+        learnerUserId, triggeredByUserId, trigger, message, preferredChannel, requireReason, null);
+  }
+
+  /** 标题和附加说明仅扩展手动/督学入口，保留自动催办原内容。 */
+  @Transactional
+  public Nag createManualNag(
+      String learnerUserId,
+      String triggeredByUserId,
+      NagTrigger trigger,
+      String message,
+      NagChannelType preferredChannel,
+      boolean requireReason,
+      String title) {
+    title = Nag.manualText(title, 80);
+    message = Nag.manualText(message, 1000);
     User user = userTime.requireUser(learnerUserId);
     EffectiveNagPolicy policy = policies.resolve(user.id());
     LocalDate today = userTime.today(user);
@@ -169,7 +185,16 @@ public class NagScanner {
             : message.trim();
     Nag nag =
         buildNagWithRequirement(
-            user, today, 0, trigger, triggeredByUserId, idleMinutes, pending, text, requireReason);
+                user,
+                today,
+                0,
+                trigger,
+                triggeredByUserId,
+                idleMinutes,
+                pending,
+                text,
+                requireReason)
+            .withTitle(title);
     nags.insert(nag);
     delivery.deliver(nag, user.displayName(), snapshot, policy, preferredChannel);
     return nag;

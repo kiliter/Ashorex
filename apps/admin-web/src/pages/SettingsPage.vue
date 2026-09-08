@@ -29,6 +29,7 @@ interface FeaturesView {
 }
 
 interface SettingsResponse {
+  bark: { baseUrl: string; deviceKeyConfigured: boolean; enabled: boolean; timeoutSeconds: number };
   emby: EmbyView;
   serverChan: ServerChanView;
   features: FeaturesView;
@@ -44,6 +45,12 @@ interface TestEmbyResult {
   latencyMs: number;
 }
 
+// 系统异常专用目的地，密钥不回显。
+const barkBaseUrl = ref('https://api.day.app');
+const barkDeviceKey = ref('');
+const barkEnabled = ref(false);
+const barkTimeoutSeconds = ref(8);
+const barkConfigured = ref(false);
 const loaded = ref(false);
 const error = ref('');
 const notice = ref('');
@@ -70,6 +77,11 @@ const documentResources = ref(false);
 const maxDocumentSizeMb = ref(200);
 
 function applySnapshot(data: SettingsResponse): void {
+  barkBaseUrl.value = data.bark.baseUrl;
+  barkEnabled.value = data.bark.enabled;
+  barkTimeoutSeconds.value = data.bark.timeoutSeconds;
+  barkConfigured.value = data.bark.deviceKeyConfigured;
+  barkDeviceKey.value = "";
   embyBaseUrl.value = data.emby.baseUrl;
   embyUserId.value = data.emby.userId;
   embyTimeoutSeconds.value = data.emby.timeoutSeconds;
@@ -109,6 +121,8 @@ async function save(): Promise<void> {
   fieldErrors.value = {};
   try {
     await api.post('/settings', {
+      barkBaseUrl: barkBaseUrl.value.trim(), barkDeviceKey: barkDeviceKey.value.trim(),
+      barkEnabled: barkEnabled.value, barkTimeoutSeconds: barkTimeoutSeconds.value,
       embyBaseUrl: embyBaseUrl.value.trim(),
       embyApiKey: embyApiKey.value.trim(),
       embyUserId: embyUserId.value.trim(),
@@ -176,6 +190,15 @@ const embyDotClass = computed(() => {
 </script>
 
 <template>
+  <section class="card" v-if="loaded">
+    <h2>系统 Bark 异常通知</h2>
+    <p>仅通知 Emby 同步、备份和完整性检查异常；个人催办使用用户自己的配置。</p>
+    <label><input type="checkbox" v-model="barkEnabled" />启用系统异常通知</label>
+    <label>服务地址<input v-model="barkBaseUrl" placeholder="https://api.day.app" /></label>
+    <label>设备 Key<input type="password" v-model="barkDeviceKey" :placeholder="barkConfigured ? '已配置，留空保持原值' : '填写系统通知设备 Key'" autocomplete="new-password" /></label>
+    <button class="btn" :disabled="saving" @click="save">保存运行配置</button>
+  </section>
+
   <div class="page-head">
     <h1>运行配置</h1>
     <p class="lead">

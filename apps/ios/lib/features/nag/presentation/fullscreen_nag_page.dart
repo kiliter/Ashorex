@@ -113,7 +113,8 @@ class _FullscreenNagPageState extends ConsumerState<FullscreenNagPage> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          '你已经 ${widget.nag.idleMinutes} 分钟没动了',
+                          widget.nag.title ??
+                              '你已经 ${widget.nag.idleMinutes} 分钟没动了',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 25,
@@ -266,7 +267,7 @@ class _FullscreenNagPageState extends ConsumerState<FullscreenNagPage> {
                         ),
                         const SizedBox(height: 9),
                         const Text(
-                          '未响应会改用 Server 酱推送给督学人',
+                          '未响应将按配置通过 Bark 或 Server 酱提醒',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 11,

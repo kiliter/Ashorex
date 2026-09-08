@@ -942,6 +942,7 @@ final class StatsView {
 /// 待回应催办。
 final class PendingNag {
   const PendingNag({
+    this.title,
     required this.id,
     required this.message,
     required this.idleMinutes,
@@ -949,6 +950,7 @@ final class PendingNag {
     required this.requireReason,
   });
 
+  final String? title;
   final String id;
   final String message;
   final int idleMinutes;
@@ -957,6 +959,7 @@ final class PendingNag {
 
   factory PendingNag.fromJson(Map<String, dynamic> json) {
     return PendingNag(
+      title: json['title'] as String?,
       id: json['id'] as String,
       message: json['message'] as String? ?? '',
       idleMinutes: (json['idleMinutes'] as num?)?.toInt() ?? 0,

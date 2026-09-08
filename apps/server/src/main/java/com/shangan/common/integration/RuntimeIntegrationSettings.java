@@ -13,13 +13,36 @@ public record RuntimeIntegrationSettings(
     List<EmbyLibrary> embyLibraries,
     ServerChan serverChan,
     Features features,
-    long updatedAt) {
+    long updatedAt,
+    Bark bark) {
 
   public RuntimeIntegrationSettings {
+    bark = bark == null ? Bark.defaults() : bark;
     embyLibraries = embyLibraries == null ? List.of() : List.copyOf(embyLibraries);
     emby = emby == null ? Emby.defaults() : emby;
     serverChan = serverChan == null ? ServerChan.defaults() : serverChan;
     features = features == null ? Features.defaults() : features;
+  }
+
+  /** 兼容旧调用；新增配置默认关闭。 */
+  public RuntimeIntegrationSettings(
+      Emby emby,
+      List<EmbyLibrary> libraries,
+      ServerChan serverChan,
+      Features features,
+      long updatedAt) {
+    this(emby, libraries, serverChan, features, updatedAt, Bark.defaults());
+  }
+
+  /** 系统 Bark 仅发送运维异常，与个人催办完全独立。 */
+  public record Bark(String baseUrl, String deviceKey, boolean enabled, int timeoutSeconds) {
+    public boolean configured() {
+      return present(baseUrl) && present(deviceKey);
+    }
+
+    public static Bark defaults() {
+      return new Bark("https://api.day.app", "", false, 8);
+    }
   }
 
   /** 便于只关心 Emby 的调用方与协议测试构造快照。 */

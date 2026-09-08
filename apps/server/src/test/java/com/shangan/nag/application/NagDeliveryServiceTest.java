@@ -40,6 +40,23 @@ class NagDeliveryServiceTest {
   @Mock private com.shangan.identity.application.UserTimeService userTime;
 
   @Test
+  void 个人Bark启用替代Server酱且失败不双发() {
+    RecordingChannel bark = new RecordingChannel(NagChannelType.BARK, true, false);
+    RecordingChannel serverchan = new RecordingChannel(NagChannelType.SERVERCHAN, true, true);
+    service(List.of(bark, serverchan)).deliver(nag(), "小明", null, policy(false, true), null);
+    verify(nags)
+        .insertDelivery(
+            anyString(),
+            org.mockito.ArgumentMatchers.eq(nag().id()),
+            org.mockito.ArgumentMatchers.eq(NagChannelType.BARK),
+            org.mockito.ArgumentMatchers.eq("FAILED"),
+            org.mockito.ArgumentMatchers.eq("推送失败"),
+            org.mockito.ArgumentMatchers.eq(NOW));
+    assertThat(serverchan.deliveries).isEmpty();
+    verify(nags, never()).markDelivered(anyString(), any());
+  }
+
+  @Test
   @DisplayName("全屏等待期间跨入用户免打扰时段不追加推送")
   void 免打扰期间不降级() {
     RecordingChannel serverchan = new RecordingChannel(NagChannelType.SERVERCHAN, true, true);

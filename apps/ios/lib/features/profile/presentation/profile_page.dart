@@ -1,3 +1,4 @@
+import 'bark_settings_sheet.dart';
 import 'package:shangan_ios/core/widgets/shangan_feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -50,6 +51,20 @@ final class ProfilePage extends ConsumerWidget {
                     const ShanganGroupLabel('考试目标'),
                     _GoalList(onManage: () => context.push('/goals')),
                   ],
+                  const ShanganGroupLabel('个人推送'),
+                  ShanganCard(
+                    padding: EdgeInsets.zero,
+                    child: _MenuItem(
+                      icon: Icons.notifications_active_outlined,
+                      title: '我的 Bark 推送',
+                      subtitle: '配置个人设备，启用后替代 Server 酱',
+                      onTap: () => showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (_) => const BarkSettingsSheet(),
+                      ),
+                    ),
+                  ),
                   const ShanganGroupLabel('账号与安全'),
                   ShanganCard(
                     padding: EdgeInsets.zero,
@@ -116,7 +131,7 @@ final class ProfilePage extends ConsumerWidget {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'App 端不提供任何催办阈值或渠道开关，这些配置只在服务端管理后台维护。',
+                      '催办阈值和免打扰由服务端维护；个人 Bark 可在上方自行配置。',
                       style: TextStyle(
                         fontSize: 11.5,
                         color: ShanganColors.mutedInk,

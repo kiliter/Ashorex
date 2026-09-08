@@ -42,6 +42,20 @@ final class ShanganRepository {
     );
   }
 
+  /// 个人推送配置通过当前会话确定归属，不接受其他用户 ID。
+  Future<Map<String, dynamic>> loadBarkSettings() =>
+      _api.getJson('/api/v1/me/bark');
+  Future<void> saveBarkSettings({
+    required String baseUrl,
+    required String deviceKey,
+    required bool enabled,
+  }) async {
+    await _api.putJson(
+      '/api/v1/me/bark',
+      data: {'baseUrl': baseUrl, 'deviceKey': deviceKey, 'enabled': enabled},
+    );
+  }
+
   // ---------------- 考试目标 ----------------
 
   Future<List<ExamGoal>> loadGoals() async {
@@ -517,6 +531,7 @@ final class ShanganRepository {
   Future<void> nagLearner(
     String learnerId, {
     String? message,
+    String? title,
     String channel = 'AUTO',
     bool requireReason = true,
   }) async {
@@ -524,6 +539,7 @@ final class ShanganRepository {
       '/api/v1/supervisor/learners/$learnerId/nag',
       data: {
         if (message != null && message.isNotEmpty) 'message': message,
+        if (title != null && title.isNotEmpty) 'title': title,
         'channel': channel,
         'requireReason': requireReason,
       },

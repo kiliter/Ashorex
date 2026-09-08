@@ -39,6 +39,9 @@ GoRouter createRouter(AuthController authController) {
       }
       // 会话身份同时约束深链接，不能绕过登录选择进入另一端。
       final supervisor = authController.isSupervisorSession;
+      if (state.uri.scheme == 'shangan' && state.uri.host == 'home') {
+        return supervisor ? '/supervisor' : '/home';
+      }
       final inSupervisor = state.matchedLocation.startsWith('/supervisor');
       if (onLogin ||
           onLoading ||
