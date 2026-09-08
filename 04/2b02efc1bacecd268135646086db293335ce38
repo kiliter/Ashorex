@@ -1,0 +1,19 @@
+apps/ios/lib/features/profile/presentation/bark_settings_sheet.dart
+  s_ff636111372d7e::t_f3d8fc93ca1e38 63,65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "042b02efc1bacecd268135646086db293335ce38",
+  "prompts": {},
+  "sessions": {
+    "s_ff636111372d7e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0815b-9ddd-7440-89c0-6b2d9fe7931d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
