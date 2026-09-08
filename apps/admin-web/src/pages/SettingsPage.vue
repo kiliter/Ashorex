@@ -4,10 +4,10 @@ import { api, ApiError } from '@/api/client';
 
 /**
  * 结构对应原型 8-9 下半部分「运行配置 · Emby」与「运行配置 · Server 酱」两张并排卡片，
- * 另加一张功能开关卡片承载 ADR-0030 预留的材料（DOCUMENT）开关。
+ * 系统 Bark 与功能开关分别使用独立卡片，个人催办目的地由用户在 App 维护。
  *
  * 安全边界：后端 `/settings` 只回传 `apiKeyConfigured` / `sendKeyConfigured` 布尔值，
- * 页面绝不持有也绝不回显明文密钥；两个密钥输入框留空即表示「保持原值」。
+ * 页面不接收已保存的明文密钥；密钥输入框留空即表示「保持原值」。
  */
 interface EmbyView {
   baseUrl: string;
@@ -81,7 +81,7 @@ function applySnapshot(data: SettingsResponse): void {
   barkEnabled.value = data.bark.enabled;
   barkTimeoutSeconds.value = data.bark.timeoutSeconds;
   barkConfigured.value = data.bark.deviceKeyConfigured;
-  barkDeviceKey.value = "";
+  barkDeviceKey.value = '';
   embyBaseUrl.value = data.emby.baseUrl;
   embyUserId.value = data.emby.userId;
   embyTimeoutSeconds.value = data.emby.timeoutSeconds;
@@ -113,7 +113,7 @@ async function load(): Promise<void> {
 
 onMounted(load);
 
-/** 保存提交整份运行配置（三张卡片一起），因为后端只有一个 `POST /settings` 端点。 */
+/** 保存提交整份运行配置（全部卡片一起），因为后端只有一个 `POST /settings` 端点。 */
 async function save(): Promise<void> {
   saving.value = true;
   notice.value = '';
@@ -135,7 +135,7 @@ async function save(): Promise<void> {
       maxDocumentSizeMb: maxDocumentSizeMb.value,
     });
     await load();
-    notice.value = '运行配置已保存，Emby 与 Server 酱调用立即生效';
+    notice.value = '运行配置已保存，Emby、Server 酱与系统 Bark 配置立即生效';
   } catch (cause) {
     if (cause instanceof ApiError) {
       fieldErrors.value = cause.fieldErrors;
@@ -190,19 +190,10 @@ const embyDotClass = computed(() => {
 </script>
 
 <template>
-  <section class="card" v-if="loaded">
-    <h2>系统 Bark 异常通知</h2>
-    <p>仅通知 Emby 同步、备份和完整性检查异常；个人催办使用用户自己的配置。</p>
-    <label><input type="checkbox" v-model="barkEnabled" />启用系统异常通知</label>
-    <label>服务地址<input v-model="barkBaseUrl" placeholder="https://api.day.app" /></label>
-    <label>设备 Key<input type="password" v-model="barkDeviceKey" :placeholder="barkConfigured ? '已配置，留空保持原值' : '填写系统通知设备 Key'" autocomplete="new-password" /></label>
-    <button class="btn" :disabled="saving" @click="save">保存运行配置</button>
-  </section>
-
   <div class="page-head">
     <h1>运行配置</h1>
     <p class="lead">
-      只保留 Emby 与 Server 酱两项外部依赖，以及材料资源开关。密钥只在服务端保存与使用，<b>不下发给 App</b>，日志与错误响应中一律脱敏；页面只能看到「是否已配置」。
+      管理 Emby、Server 酱、系统 Bark 异常通知及材料资源开关。密钥只在服务端保存与使用，<b>不下发给 App</b>，日志与错误响应中一律脱敏；页面只能看到「是否已配置」。
     </p>
   </div>
 
@@ -375,6 +366,52 @@ const embyDotClass = computed(() => {
       </div>
     </div>
 
+    <!-- 系统目的地独立成卡；沿用后台表单组件，避免原生控件挤成一行。 -->
+    <section class="wcard mt16 bark-settings" aria-labelledby="system-bark-title">
+      <div class="wcard-head">
+        <h2 id="system-bark-title">系统 Bark 异常通知</h2>
+        <span class="badge b-ink">系统专用</span>
+      </div>
+      <p class="muted bark-description">接收 Emby 同步、备份和完整性检查异常。个人催办使用用户自己的 Bark 配置。</p>
+      <div class="bark-switch-row">
+        <label class="wcheck" for="system-bark-enabled">
+          <input id="system-bark-enabled" v-model="barkEnabled" type="checkbox" :disabled="saving" />
+          <b>启用系统异常通知</b>
+        </label>
+        <span class="dotstate" :class="barkEnabled ? 'on' : 'idle'"><i></i>{{ barkEnabled ? '已启用' : '未启用' }}</span>
+      </div>
+      <div class="wgrid c2 bark-fields mt16">
+        <div>
+          <label class="wlabel" for="system-bark-url">服务地址</label>
+          <input id="system-bark-url" v-model="barkBaseUrl" class="winput mono" type="url" :disabled="saving" placeholder="https://api.day.app" :aria-invalid="!!fieldErrors.barkBaseUrl" aria-describedby="system-bark-url-help" />
+          <div id="system-bark-url-help" class="muted mt6">默认使用 Bark 官方服务，也可填写系统通知专用的自建服务地址。</div>
+          <div v-if="fieldErrors.barkBaseUrl" class="field-error">{{ fieldErrors.barkBaseUrl }}</div>
+        </div>
+        <div>
+          <label class="wlabel" for="system-bark-key">设备 Key</label>
+          <input id="system-bark-key" v-model="barkDeviceKey" class="winput mono" type="password" :disabled="saving" :placeholder="barkConfigured ? '已配置 · 留空保持原值' : '填写系统通知设备 Key'" autocomplete="new-password" :aria-invalid="!!fieldErrors.barkDeviceKey" />
+          <div class="muted mt6"><span class="dotstate" :class="barkConfigured ? 'on' : 'idle'"><i></i>{{ barkConfigured ? '已配置' : '未配置' }}</span> · 密钥不回显，留空保持原值</div>
+          <div v-if="fieldErrors.barkDeviceKey" class="field-error">{{ fieldErrors.barkDeviceKey }}</div>
+        </div>
+        <div>
+          <label class="wlabel" for="system-bark-timeout">请求超时（秒）</label>
+          <div class="winput-row">
+            <input id="system-bark-timeout" v-model.number="barkTimeoutSeconds" class="winput mono" type="number" min="1" max="60" :disabled="saving" :aria-invalid="!!fieldErrors.barkTimeoutSeconds" />
+            <span class="unit">1–60</span>
+          </div>
+          <div v-if="fieldErrors.barkTimeoutSeconds" class="field-error">{{ fieldErrors.barkTimeoutSeconds }}</div>
+        </div>
+        <div>
+          <div class="wlabel">默认通知方式</div>
+          <div class="bark-modes"><span class="badge b-ink">上岸分组</span><span class="badge b-ink">重要通知</span><span class="badge b-ink">点击打开 App</span></div>
+        </div>
+      </div>
+      <div class="wbtn-row mt16">
+        <button type="button" class="wbtn sm" :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存运行配置' }}</button>
+        <span class="muted">保存本页全部配置后生效</span>
+      </div>
+    </section>
+
     <div class="wcard mt16">
       <div class="wcard-head">
         <h2>功能开关</h2>
@@ -417,8 +454,19 @@ const embyDotClass = computed(() => {
         </button>
       </div>
       <div class="muted mt10" style="font-size: 11.5px">
-        服务端只有一个保存端点，任意一处「保存」都会提交本页三张卡片的全部配置。
+        服务端只有一个保存端点，任意一处「保存」都会提交本页全部卡片的配置。
       </div>
     </div>
   </template>
 </template>
+
+<style scoped>
+/* 仅约束系统 Bark 卡片，不影响其他任务正在调整的全局后台样式。 */
+.bark-description { margin: 0 0 16px; line-height: 1.6; }
+.bark-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--rule); border-radius: var(--r-field); background: var(--bg); }
+.bark-fields > div { min-width: 0; }
+.bark-fields .wlabel { display: block; }
+.bark-fields .muted, .bark-settings .wbtn-row .muted { font-size: 11.5px; line-height: 1.6; }
+.bark-modes { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+@media (max-width: 760px) { .bark-fields.wgrid.c2 { grid-template-columns: minmax(0, 1fr); } }
+</style>
