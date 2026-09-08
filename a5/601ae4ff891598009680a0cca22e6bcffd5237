@@ -1,0 +1,32 @@
+apps/ios/test/features/nag/fullscreen_nag_test.dart
+  s_ff636111372d7e::t_382f9f46d42100 13-34,41-43
+  s_ff636111372d7e::t_1b3a3138c0e7f5 35-40
+docs/adr/0040-current-app-activity.md
+  s_ff636111372d7e::t_e12a8a9dbe1804 1-27
+docs/specs/2026-09-07-shangan-v2-design.md
+  s_ff636111372d7e::t_e12a8a9dbe1804 893-896
+docs/plans/2026-09-07-shangan-v2-implementation-plan.md
+  s_ff636111372d7e::t_e12a8a9dbe1804 1162-1165
+docs/traceability/2026-09-07-shangan-v2-traceability.md
+  s_ff636111372d7e::t_f2f9c83d3bf76a 235-238
+apps/ios/lib/features/nag/presentation/fullscreen_nag_page.dart
+  s_ff636111372d7e::t_e12a8a9dbe1804 80
+  s_ff636111372d7e::t_4a52038414b727 76-78,81-87,273-274
+  s_ff636111372d7e::t_1b3a3138c0e7f5 79,88-96,98-103,106-126,128-211,214-222,224-229,231-236,241-253,256-258,260-267,269
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "a5601ae4ff891598009680a0cca22e6bcffd5237",
+  "prompts": {},
+  "sessions": {
+    "s_ff636111372d7e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0815b-9ddd-7440-89c0-6b2d9fe7931d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
