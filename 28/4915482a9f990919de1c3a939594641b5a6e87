@@ -1,0 +1,25 @@
+docs/adr/0042-bark-nag-push.md
+  s_ff636111372d7e::t_92d0695e35418e 44-47
+apps/admin-web/src/pages/SettingsPage.vue
+  s_ff636111372d7e::t_019f4d7daec4eb 10,457
+  s_ff636111372d7e::t_92d0695e35418e 7,84,116,138,196,369-413,462-472
+  s_ff636111372d7e::t_c34db57bdf5c84 414
+docs/prototypes/shangan-v2-prototype.html
+  s_ff636111372d7e::t_019f4d7daec4eb 568
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "284915482a9f990919de1c3a939594641b5a6e87",
+  "prompts": {},
+  "sessions": {
+    "s_ff636111372d7e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0815b-9ddd-7440-89c0-6b2d9fe7931d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
