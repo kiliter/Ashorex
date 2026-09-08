@@ -51,6 +51,26 @@ const barkDeviceKey = ref('');
 const barkEnabled = ref(false);
 const barkTimeoutSeconds = ref(8);
 const barkConfigured = ref(false);
+const testingBark = ref(false);
+const barkTestResult = ref<{ ok: boolean; status: string; message: string } | null>(null);
+/** 只测试已保存的系统配置，修改草稿后先保存，避免发往旧设备。 */
+const barkSaved = ref('');
+const barkDraft = computed(() => JSON.stringify([barkBaseUrl.value.trim(), barkEnabled.value, barkTimeoutSeconds.value]));
+const barkDirty = computed(() => barkDeviceKey.value.trim() !== '' || barkDraft.value !== barkSaved.value);
+
+/** 点击明确发送一条测试通知，加载态防止重复点击，不改动异常开关。 */
+async function testBark(): Promise<void> {
+  if (testingBark.value || saving.value || barkDirty.value) return;
+  testingBark.value = true;
+  barkTestResult.value = null;
+  try {
+    barkTestResult.value = await api.post('/settings/test-bark', {});
+  } catch (cause) {
+    barkTestResult.value = { ok: false, status: '发送失败', message: cause instanceof Error ? cause.message : '测试通知发送失败，请稍后重试' };
+  } finally {
+    testingBark.value = false;
+  }
+}
 const loaded = ref(false);
 const error = ref('');
 const notice = ref('');
@@ -82,6 +102,8 @@ function applySnapshot(data: SettingsResponse): void {
   barkTimeoutSeconds.value = data.bark.timeoutSeconds;
   barkConfigured.value = data.bark.deviceKeyConfigured;
   barkDeviceKey.value = '';
+  barkSaved.value = barkDraft.value;
+  barkTestResult.value = null;
   embyBaseUrl.value = data.emby.baseUrl;
   embyUserId.value = data.emby.userId;
   embyTimeoutSeconds.value = data.emby.timeoutSeconds;
@@ -407,9 +429,12 @@ const embyDotClass = computed(() => {
         </div>
       </div>
       <div class="wbtn-row mt16">
-        <button type="button" class="wbtn sm" :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存运行配置' }}</button>
+        <button type="button" class="wbtn sm" :disabled="saving || testingBark" @click="save">{{ saving ? '保存中…' : '保存运行配置' }}</button>
+        <button type="button" class="wbtn ghost sm" :disabled="saving || testingBark || barkDirty" @click="testBark">{{ testingBark ? '发送中…' : '发送测试通知' }}</button>
         <span class="muted">保存本页全部配置后生效</span>
       </div>
+      <p class="muted mt10 bark-test-help">{{ barkDirty ? '系统 Bark 配置已修改，请先保存再发送测试通知。' : '测试使用已保存的系统配置；异常通知开关关闭时也可手动测试。' }}</p>
+      <p v-if="barkTestResult && !barkDirty" class="notice mt10" :class="barkTestResult.ok ? 'success' : 'danger'" role="status">{{ barkTestResult.message }}</p>
     </section>
 
     <div class="wcard mt16">

@@ -565,7 +565,7 @@ table.wt td b{font-weight:700;}
 <div style="padding:14px;border:1px solid #ddd;border-radius:12px">启用个人 Bark <input type="checkbox" aria-label="启用个人 Bark"><p>启用后替代 Server 酱</p></div>
 <h4>接收设备</h4><p>服务地址</p><input value="https://api.day.app"><small style="display:block;margin:6px 0 16px">默认使用 Bark 官方服务；自建地址需由管理员允许。</small>
 <p>设备 Key</p><input type="password" placeholder="已配置，留空保持原值"><p>通知方式</p><p>上岸分组 · 重要通知 · 点击打开 App</p><button>保存</button></div>
-<h3>后台系统 Bark</h3><p>运行配置页内独立卡片，位于页面标题、状态提示及 Emby / Server 酱卡片之后，功能开关之前。统一后台表单样式；启用开关独立一行并显示状态。服务地址、设备 Key、请求超时（1–60 秒）与默认通知方式按双列排列，窄屏改为单列。字段错误在输入框下显示；保存提交本页全部配置。用于同步和备份异常，与个人催办隔离。</p>
+<h3>后台系统 Bark</h3><p>运行配置页内独立卡片，位于页面标题、状态提示及 Emby / Server 酱卡片之后，功能开关之前。统一后台表单样式；启用开关独立一行并显示状态。服务地址、设备 Key、请求超时（1–60 秒）与默认通知方式按双列排列，窄屏改为单列。字段错误在输入框下显示；保存提交本页全部配置。另设“发送测试通知”按钮，使用已保存的系统配置并展示发送结果；草稿修改后需先保存，发送中禁用重复点击。用于同步和备份异常，与个人催办隔离。</p>
 <script>let filterStart=0;document.getElementById('filter-demo').addEventListener('touchstart',e=>filterStart=e.touches[0].clientX);document.getElementById('filter-demo').addEventListener('touchend',e=>{if(e.changedTouches[0].clientX<filterStart-60)document.getElementById('filter-drawer').showModal()});</script>
 </section>
 

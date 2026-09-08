@@ -14,6 +14,7 @@ info:
     管理后台是 Vue 3 SPA，通过 `/admin/api/**` 的独立内部 REST 接口取数（见 ADR-0033）。
     该组接口只服务后台自身、只接受管理员 Session Cookie + CSRF，不面向 App 客户端，
     因此刻意不纳入本契约；后台接口的变更不构成本文件的契约漂移。
+    系统 Bark 测试通知内部接口 POST /admin/api/settings/test-bark 见 ADR-0042。
 servers:
   - url: http://127.0.0.1:18080
     description: 本地开发

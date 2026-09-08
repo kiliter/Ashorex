@@ -22,11 +22,15 @@ public class SettingsAdminController {
 
   private final RuntimeIntegrationSettingsService settings;
   private final EmbyHealthService embyHealth;
+  private final com.shangan.common.integration.SystemAlertService systemAlerts;
 
   public SettingsAdminController(
-      RuntimeIntegrationSettingsService settings, EmbyHealthService embyHealth) {
+      RuntimeIntegrationSettingsService settings,
+      EmbyHealthService embyHealth,
+      com.shangan.common.integration.SystemAlertService systemAlerts) {
     this.settings = settings;
     this.embyHealth = embyHealth;
+    this.systemAlerts = systemAlerts;
   }
 
   @GetMapping("/settings")
@@ -105,6 +109,12 @@ public class SettingsAdminController {
   TestEmbyResponse testEmby() {
     EmbyHealthService.Probe probe = embyHealth.probe();
     return new TestEmbyResponse(probe.ok(), probe.status(), probe.message(), probe.latencyMs());
+  }
+
+  /** 管理员手动发送系统测试通知，目的地只从服务端已保存配置读取。 */
+  @PostMapping("/settings/test-bark")
+  com.shangan.common.integration.SystemAlertService.TestNotificationResult testBark() {
+    return systemAlerts.testNotification();
   }
 
   /** 配置校验失败时返回字段级错误，前端逐项高亮。 */
