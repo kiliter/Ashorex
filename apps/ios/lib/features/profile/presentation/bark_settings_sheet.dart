@@ -60,8 +60,9 @@ class _BarkSettingsSheetState extends ConsumerState<BarkSettingsSheet> {
           );
       if (mounted) Navigator.pop(context);
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() => _error = '保存失败，请检查设备 Key 和网络；自建 HTTPS 服务需管理员加入可信源站');
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
