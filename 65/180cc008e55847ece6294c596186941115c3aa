@@ -1,0 +1,33 @@
+docs/api/openapi.yaml
+  s_ff636111372d7e::t_a6d9b561304bf0 4
+docs/releases/v2.2.0.md
+  s_ff636111372d7e::t_a6d9b561304bf0 1-23
+apps/admin-web/package.json
+  s_ff636111372d7e::t_a6d9b561304bf0 4
+apps/ios/pubspec.yaml
+  s_ff636111372d7e::t_a6d9b561304bf0 4
+apps/server/pom.xml
+  s_ff636111372d7e::t_a6d9b561304bf0 16
+apps/admin-web/package-lock.json
+  s_ff636111372d7e::t_d5865e0c05a26c 3,9
+apps/ios/android/app/src/main/AndroidManifest.xml
+  s_ff636111372d7e::t_ed4aff5cd6d1f6 7-8
+apps/ios/android/app/src/main/res/values/colors.xml
+  s_ff636111372d7e::t_dc43b6ca3e7938 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "65180cc008e55847ece6294c596186941115c3aa",
+  "prompts": {},
+  "sessions": {
+    "s_ff636111372d7e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0815b-9ddd-7440-89c0-6b2d9fe7931d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
