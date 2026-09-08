@@ -8,10 +8,18 @@
 .env
 .env.*
 !.env.example
+!.env.local.example
 
 # Java / Maven 构建产物
 apps/server/target/
 *.log
+
+# 管理后台前端构建产物。
+# 由 apps/admin-web 的 vite build 生成（outDir 指向这里且 emptyOutDir=true），
+# 每次 mvn package 都会重新生成，不应提交生成物。
+# 注意：用 -Dskip.admin.web=true 跳过前端构建时，全新克隆下 /admin 会没有静态资源，
+# 这是该开关的预期行为；完整打包与 CI 始终会生成。
+apps/server/src/main/resources/static/admin/
 
 # Flutter / Dart 构建产物
 apps/ios/.dart_tool/
@@ -38,4 +46,18 @@ apps/ios/android/key.properties
 *.db
 *.db-shm
 *.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3
 *.tmp
+
+# 本地媒体库盘点产物。
+# 这些文件由 .run/ 下的脚本生成，含 Emby 媒体库的原始相对路径与文件名，
+# 属于「禁止入库、禁止上页面、禁止进日志」的信息，绝不能提交到仓库。
+/emby-metadata-report.html
+/emby-metadata-report.sqlite
+
+# Python 本地脚本缓存不属于源码。
+__pycache__/
+*.py[cod]

@@ -7,17 +7,17 @@
 按顺序完整阅读：
 
 1. `AGENTS.md`
-2. `docs/specs/2026-08-27-shangan-v1-design.md`
-3. `docs/plans/2026-08-27-shangan-v1-implementation-plan.md`
-4. `docs/traceability/2026-08-27-shangan-v1-traceability.md`
-5. `docs/roadmap/2026-09-04-shangan-version-roadmap.md`
-6. 与当前任务相关的 ADR
+2. `docs/specs/2026-09-07-shangan-v2-design.md`
+3. `docs/plans/2026-09-07-shangan-v2-implementation-plan.md`
+4. `docs/traceability/2026-09-07-shangan-v2-traceability.md`
+5. `docs/prototypes/shangan-v2-prototype.html`（唯一 UI 事实来源）
+6. 与当前任务相关的 ADR（V2 为 ADR-0025 ~ ADR-0032）
 
 然后检查 Git 状态，区分用户已有修改和本次任务需要修改的文件。
 
 ## 当前版本边界
 
-- 默认活动开发线为 V1.x.x。
+- 默认活动开发线为 V2.0.0。
 - V1.x.x 固定现有需求和主逻辑，只允许完成已批准 Task、Bug 修复和不改变业务语义的 UI 调整。
 - V2 AI 助教、V2 立绘升级、V2 报表外部投递和 V3 性能、集群、主题、课程仅音频播放、画中画、PDF 资料阅读等内容只存在于路线图中，不是当前实现授权。
 - V1 已有后台 ASR、LLM 摘要和题目草稿能力；不得把“V2 做 AI”误解为删除或迁移这些 V1 能力。

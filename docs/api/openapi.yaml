@@ -1,1954 +1,1618 @@
 openapi: 3.1.0
 info:
-  title: 上岸 V1 API
-  description: iOS 客户端使用的只读与学习业务接口；所有业务路由统一使用 /api/v1 前缀。
-  version: 0.1.0-rc1
+  title: 上岸 V2 App API
+  version: 2.0.0
+  description: |
+    上岸 V2 移动端 API 契约。
+
+    约定：
+    - 所有路径前缀为 `/api/v1`；
+    - 时间戳为 ISO-8601 UTC；`localDate` 为用户时区下的 `YYYY-MM-DD`；
+    - 错误响应统一为 RFC 9457 Problem Details，并带稳定 `errorCode`；
+    - 业务判定（是否达标、是否完成）一律由服务端裁决，客户端不自行推算。
+
+    管理后台是 Vue 3 SPA，通过 `/admin/api/**` 的独立内部 REST 接口取数（见 ADR-0033）。
+    该组接口只服务后台自身、只接受管理员 Session Cookie + CSRF，不面向 App 客户端，
+    因此刻意不纳入本契约；后台接口的变更不构成本文件的契约漂移。
 servers:
-- url: http://localhost:18080
-  description: 本地开发服务
+  - url: http://127.0.0.1:18080
+    description: 本地开发
+
+tags:
+  - name: auth
+    description: 身份认证
+  - name: me
+    description: 当前用户与只读设置
+  - name: goals
+    description: 考试目标倒计时
+  - name: catalog
+    description: 课程库（维度来自 Emby 元数据）
+  - name: todos
+    description: Todo 全链路
+  - name: stats
+    description: 统计
+  - name: presence
+    description: 心跳与在线
+  - name: nags
+    description: 催办
+  - name: supervisor
+    description: 督学端
+  - name: playback
+    description: 播放代理
+
 paths:
-  /api/v1/preferences:
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      summary: 登录
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '401':
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [auth]
+      summary: 刷新 Token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '401':
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: 退出登录（幂等）
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '204': { description: 已撤销 }
+
+  /api/v1/me:
     get:
-      tags:
-      - auth-controller
-      operationId: preferences
+      tags: [me]
+      summary: 当前用户、督学人与只读催办策略
       responses:
-        "200":
-          description: OK
+        '200':
+          description: 成功
           content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/PreferencesResponse"
-      security:
-      - bearerAuth: []
-    put:
-      tags:
-      - auth-controller
-      operationId: updatePreferences
+            application/json:
+              schema: { $ref: '#/components/schemas/MeResponse' }
+
+  /api/v1/me/password:
+    patch:
+      tags: [me]
+      summary: 修改本人密码（成功后撤销全部会话）
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PreferencesRequest"
-        required: true
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string, minLength: 8 }
       responses:
-        "200":
-          description: OK
+        '204': { description: 已修改 }
+        '400':
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/me/timezone:
+    patch:
+      tags: [me]
+      summary: 修改时区（影响每日边界与统计口径）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [timezone]
+              properties:
+                timezone: { type: string, example: Asia/Shanghai }
+      responses:
+        '200':
+          description: 成功
           content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/PreferencesResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/plans/{date}:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeResponse' }
+
+  /api/v1/exam-goals:
     get:
-      tags:
-      - daily-plan-controller
-      operationId: plan
-      parameters:
-      - name: date
-        in: path
-        required: true
-        schema:
-          type: string
-          format: date
+      tags: [goals]
+      summary: 目标看板（剩余天数由服务端计算）
       responses:
-        "200":
-          description: OK
+        '200':
+          description: 成功
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: "#/components/schemas/PlanView"
-      security:
-      - bearerAuth: []
-    put:
-      tags:
-      - daily-plan-controller
-      operationId: save
-      parameters:
-      - name: date
-        in: path
-        required: true
-        schema:
-          type: string
-          format: date
+                type: array
+                items: { $ref: '#/components/schemas/GoalView' }
+    post:
+      tags: [goals]
+      summary: 新建目标
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SaveBattleOrderRequest"
-        required: true
+              type: object
+              required: [name, examDate]
+              properties:
+                name: { type: string, maxLength: 40 }
+                examDate: { type: string, format: date }
+                note: { type: string }
+                primary: { type: boolean }
       responses:
-        "200":
-          description: OK
+        '200':
+          description: 成功
           content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/PlanView"
-      security:
-      - bearerAuth: []
-  /api/v1/mock-exam-presets/{presetId}:
-    put:
-      tags:
-      - mock-exam-preset-controller
-      operationId: update
-      parameters:
-      - name: presetId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PresetRequest"
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/PresetView"
-      security:
-      - bearerAuth: []
-    delete:
-      tags:
-      - mock-exam-preset-controller
-      operationId: delete
-      parameters:
-      - name: presetId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "204":
-          description: No Content
-      security:
-      - bearerAuth: []
+            application/json:
+              schema: { $ref: '#/components/schemas/GoalView' }
+
   /api/v1/exam-goals/{goalId}:
-    get:
-      tags:
-      - exam-controller
-      operationId: goalById
-      parameters:
-      - name: goalId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ExamGoalResponse"
-      security:
-      - bearerAuth: []
-    put:
-      tags:
-      - exam-controller
-      operationId: update_1
-      parameters:
-      - name: goalId
-        in: path
-        required: true
-        schema:
-          type: string
+    parameters:
+      - $ref: '#/components/parameters/GoalId'
+    patch:
+      tags: [goals]
+      summary: 修改目标
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ExamGoalRequest"
-        required: true
+              type: object
+              properties:
+                name: { type: string }
+                examDate: { type: string, format: date }
+                note: { type: string }
+                primary: { type: boolean }
       responses:
-        "200":
-          description: OK
+        '200':
+          description: 成功
           content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ExamGoalResponse"
-      security:
-      - bearerAuth: []
+            application/json:
+              schema: { $ref: '#/components/schemas/GoalView' }
     delete:
-      tags:
-      - exam-controller
-      operationId: delete_1
-      parameters:
-      - name: goalId
-        in: path
-        required: true
-        schema:
-          type: string
+      tags: [goals]
+      summary: 删除目标
       responses:
-        "200":
-          description: OK
-      security:
-      - bearerAuth: []
-  /api/v1/exam-goal:
+        '204': { description: 已删除 }
+
+  /api/v1/catalog/facets:
     get:
-      tags:
-      - exam-controller
-      operationId: goal
+      tags: [catalog]
+      summary: 筛选维度（流派 / 标签 / 人物 / 年份）
       responses:
-        "200":
-          description: OK
+        '200':
+          description: 成功
           content:
-            '*/*':
+            application/json:
+              schema: { $ref: '#/components/schemas/CatalogFacets' }
+
+  /api/v1/catalog/courses:
+    get:
+      tags: [catalog]
+      summary: 课程列表
+      parameters:
+        - { name: genre, in: query, schema: { type: string } }
+        - { name: tag, in: query, schema: { type: string } }
+        - { name: person, in: query, schema: { type: string } }
+        - { name: year, in: query, schema: { type: integer } }
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
               schema:
-                $ref: "#/components/schemas/ExamGoalResponse"
-      security:
-      - bearerAuth: []
-    put:
-      tags:
-      - exam-controller
-      operationId: save_1
+                type: array
+                items: { $ref: '#/components/schemas/CourseSummary' }
+
+  /api/v1/catalog/courses/{courseId}:
+    get:
+      tags: [catalog]
+      summary: 课程详情与资源列表
+      parameters:
+        - { name: courseId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CourseDetail' }
+        '404':
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/todos:
+    get:
+      tags: [todos]
+      summary: 日 / 周 / 月视图
+      description: 周月只返回聚合摘要；展开某天时再请求 `view=DAY`。
+      parameters:
+        - name: view
+          in: query
+          schema: { type: string, enum: [DAY, WEEK, MONTH], default: DAY }
+        - { name: date, in: query, schema: { type: string, format: date } }
+        - { name: weekStart, in: query, schema: { type: string, format: date } }
+        - { name: month, in: query, schema: { type: string, example: 2026-09 } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/DayView'
+                  - $ref: '#/components/schemas/RangeView'
+    post:
+      tags: [todos]
+      summary: 批量创建 Todo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  items: { $ref: '#/components/schemas/CreateTodoCommand' }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TodoView' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/todos/course-additions/preview:
+    post:
+      tags: [todos]
+      summary: 预览课时重复与历史未完成项
+      description: 依据 ADR-0038，今日同目标跳过；不同目标明确确认后复用，目标取较高值；历史未完成只在明确确认后顺延，取消预览不写入。实际复用或顺延前重新校验课时可用性，下架课时返回 RESOURCE_UNAVAILABLE；同目标纯跳过保持幂等。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseAdditionsRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseAdditionPreview'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/todos/course-additions:
+    post:
+      tags: [todos]
+      summary: 确认添加课时与顺延原待办
+      description: 依据 ADR-0038，今日同目标跳过；不同目标明确确认后复用，目标取较高值；历史未完成只在明确确认后顺延，取消预览不写入。实际复用或顺延前重新校验课时可用性，下架课时返回 RESOURCE_UNAVAILABLE；同目标纯跳过保持幂等。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseAdditionsRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseAdditionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/todos/pending-summary:
+    get:
+      tags: [todos]
+      summary: 跨日期未完成汇总
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PendingSummary' }
+
+  /api/v1/todos/reorder:
+    post:
+      tags: [todos]
+      summary: 整日重排
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderedIds]
+              properties:
+                localDate: { type: string, format: date }
+                orderedIds:
+                  type: array
+                  items: { type: string }
+      responses:
+        '204': { description: 已重排 }
+
+  /api/v1/todos/{todoId}:
+    parameters:
+      - $ref: '#/components/parameters/TodoId'
+    patch:
+      tags: [todos]
+      summary: 修改标题、备注、目标进度与凭证要求
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                note: { type: string }
+                targetProgressPermille: { type: integer, minimum: 1, maximum: 1000 }
+                plannedSeconds: { type: integer, minimum: 60, maximum: 43200 }
+                requireEvidence: { type: boolean }
+                noteTags:
+                  type: array
+                  items: { $ref: '#/components/schemas/NoteTag' }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TodoView' }
+    delete:
+      tags: [todos]
+      summary: 删除 Todo（必须填写原因）
+      description: |
+        `reasonTag` 与 `reasonText` 都必填，`reasonText` 长度不得少于生效策略的
+        `minReasonLength`。删除会写入台账并按规则通知督学人。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reasonTag, reasonText]
+              properties:
+                reasonTag: { $ref: '#/components/schemas/DeletionReasonTag' }
+                reasonText: { type: string }
+      responses:
+        '200':
+          description: 已删除
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeletionOutcome' }
+        '400':
+          description: 缺少原因或原因过短（errorCode = TODO_DELETE_REASON_REQUIRED）
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/todos/batch-delete:
+    post:
+      tags: [todos]
+      summary: 批量删除（共用一份原因）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [todoIds, reasonTag, reasonText]
+              properties:
+                todoIds:
+                  type: array
+                  items: { type: string }
+                reasonTag: { $ref: '#/components/schemas/DeletionReasonTag' }
+                reasonText: { type: string }
+      responses:
+        '200':
+          description: 已删除
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeletionOutcome' }
+
+  /api/v1/todos/{todoId}/progress:
+    parameters:
+      - $ref: '#/components/parameters/TodoId'
+    post:
+      tags: [todos]
+      summary: 上报进度（幂等）
+      description: |
+        `clientSeq` 在单个 Todo 内单调递增，`(todoId, clientSeq)` 唯一；
+        重复提交返回当前状态且不重复计数。`positionMs` 取 max，允许自由拖动；
+        `deltaWatchedMs` 只在 `appState=FOREGROUND` 时累计。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProgressRequest' }
+      responses:
+        '200':
+          description: 服务端裁决结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProgressResult' }
+        '400':
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/todos/{todoId}/complete:
+    parameters:
+      - $ref: '#/components/parameters/TodoId'
+    post:
+      tags: [todos]
+      summary: 完成或补记完成
+      description: |
+        要求凭证但没有附件时返回 `TODO_EVIDENCE_REQUIRED`。
+        `backfill=true` 只允许用于历史日期且 `note` 必填。
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ExamGoalRequest"
-        required: true
+              type: object
+              properties:
+                note: { type: string }
+                noteTags:
+                  type: array
+                  items: { $ref: '#/components/schemas/NoteTag' }
+                backfill: { type: boolean, default: false }
       responses:
-        "200":
-          description: OK
+        '200':
+          description: 成功
           content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ExamGoalResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/watch-sessions/{sessionId}/stop:
+            application/json:
+              schema: { $ref: '#/components/schemas/TodoView' }
+        '400':
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/todos/{todoId}/annotate:
+    parameters:
+      - $ref: '#/components/parameters/TodoId'
     post:
-      tags:
-      - watch-session-controller
-      operationId: stop
-      parameters:
-      - name: sessionId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/WatchHeartbeatResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/watch-sessions/{sessionId}/heartbeat:
-    post:
-      tags:
-      - watch-session-controller
-      operationId: heartbeat
-      parameters:
-      - name: sessionId
-        in: path
-        required: true
-        schema:
-          type: string
+      tags: [todos]
+      summary: 只回填备注与一键标签
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WatchHeartbeatRequest"
-        required: true
+              type: object
+              properties:
+                note: { type: string }
+                noteTags:
+                  type: array
+                  items: { $ref: '#/components/schemas/NoteTag' }
       responses:
-        "200":
-          description: OK
+        '200':
+          description: 成功
           content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/WatchHeartbeatResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/watch-sessions/{sessionId}/fast-forward:
+            application/json:
+              schema: { $ref: '#/components/schemas/TodoView' }
+
+  /api/v1/todos/{todoId}/attachments:
+    parameters:
+      - $ref: '#/components/parameters/TodoId'
     post:
-      tags:
-      - watch-session-controller
-      operationId: fastForward
-      parameters:
-      - name: sessionId
-        in: path
-        required: true
-        schema:
-          type: string
+      tags: [todos]
+      summary: 上传附件（≤10MB，单 Todo ≤9 个）
+      description: |
+        「完成凭证必填」（`requireEvidence`）唯一的解除入口：未上传任何附件时完成接口会返回
+        `TODO_EVIDENCE_REQUIRED`，上传成功后即可完成。
+        大小、类型与数量三道限制全部由服务端裁决；multipart 解析器提前拦下的超限请求同样返回
+        `ATTACHMENT_TOO_LARGE`，与服务层保持一致。
+        响应复用只读投影，不含 `storagePath` 与 `sha256`。
       requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WatchHeartbeatRequest"
         required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/WatchSeekResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/watch-sessions/{sessionId}/alive-check:
-    post:
-      tags:
-      - watch-session-controller
-      operationId: confirmAliveCheck
-      parameters:
-      - name: sessionId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/WatchHeartbeatResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/mock-exams/{sessionId}/submit-early:
-    post:
-      tags:
-      - mock-exam-controller
-      operationId: submitEarly
-      parameters:
-      - name: sessionId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/SessionView"
-      security:
-      - bearerAuth: []
-  /api/v1/mock-exams/{sessionId}/retake:
-    post:
-      tags:
-      - mock-exam-controller
-      operationId: retake
-      parameters:
-      - name: sessionId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/SessionView"
-      security:
-      - bearerAuth: []
-  /api/v1/mock-exams/{sessionId}/attachments:
-    post:
-      tags:
-      - mock-exam-controller
-      operationId: addAttachment
-      parameters:
-      - name: sessionId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
         content:
           multipart/form-data:
             schema:
               type: object
+              required: [file]
               properties:
                 file:
                   type: string
                   format: binary
-              required:
-              - file
+                  description: 图片（`image/*`）或 PDF（`application/pdf`）；单文件 ≤10MiB
       responses:
-        "200":
-          description: OK
+        '200':
+          description: 上传成功，返回新建附件
           content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/SessionWithAttachments"
-      security:
-      - bearerAuth: []
-  /api/v1/mock-exams/{planItemId}/start:
-    post:
-      tags:
-      - mock-exam-controller
-      operationId: start
-      parameters:
-      - name: planItemId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/SessionView"
-      security:
-      - bearerAuth: []
-  /api/v1/mock-exam-presets:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttachmentView' }
+        '400':
+          description: |
+            errorCode 取值：
+            `ATTACHMENT_TOO_LARGE`（单文件超过 10MiB）、
+            `ATTACHMENT_TYPE_UNSUPPORTED`（不是图片或 PDF）、
+            `ATTACHMENT_LIMIT_REACHED`（该 Todo 已有 9 个附件）
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: Todo 不存在或不属于当前用户（errorCode = TODO_NOT_FOUND）
+          $ref: '#/components/responses/Problem'
     get:
-      tags:
-      - mock-exam-preset-controller
-      operationId: list
+      tags: [todos]
+      summary: 读取该 Todo 的附件列表
+      description: |
+        供原型 3-3 / 1-9 渲染附件缩略图与凭证列表。
+        归属校验：他人的 todoId 一律按「不存在」返回 404 `TODO_NOT_FOUND`，不暴露该 Todo 是否存在。
+        响应刻意不含 `storagePath` 与 `sha256`：前者是服务器文件系统相对路径，会暴露 `DATA_DIR/attachments/{userId}/` 目录结构。
       responses:
-        "200":
-          description: OK
+        '200':
+          description: 成功；该 Todo 没有附件时返回空数组
           content:
-            '*/*':
+            application/json:
               schema:
                 type: array
-                items:
-                  $ref: "#/components/schemas/PresetView"
-      security:
-      - bearerAuth: []
-    post:
-      tags:
-      - mock-exam-preset-controller
-      operationId: create
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PresetRequest"
-        required: true
+                items: { $ref: '#/components/schemas/AttachmentView' }
+        '404':
+          description: Todo 不存在或不属于当前用户（errorCode = TODO_NOT_FOUND）
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/todos/{todoId}/attachments/{attachmentId}:
+    parameters:
+      - $ref: '#/components/parameters/TodoId'
+      - { name: attachmentId, in: path, required: true, schema: { type: string } }
+    delete:
+      tags: [todos]
+      summary: 删除单个附件
+      description: |
+        两层归属校验：先确认 Todo 属于当前用户，再确认该附件确实挂在这条 Todo 上，任一层不成立都返回 404。
+        删除同时清理数据库行与本地文件。
       responses:
-        "201":
-          description: Created
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/PresetView"
-      security:
-      - bearerAuth: []
-  /api/v1/lessons/{lessonId}/watch-sessions:
-    post:
-      tags:
-      - watch-session-controller
-      operationId: create_1
-      parameters:
-      - name: lessonId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateWatchSessionRequest"
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/PlaybackSession"
-      security:
-      - bearerAuth: []
-  /api/v1/lessons/{lessonId}/quiz-attempts:
+        '204': { description: 已删除 }
+        '404':
+          description: Todo 或附件不存在、不属于当前用户、不属于该 Todo（errorCode = TODO_NOT_FOUND / ATTACHMENT_NOT_FOUND）
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/todos/{todoId}/attachments/{attachmentId}/content:
+    parameters:
+      - $ref: '#/components/parameters/TodoId'
+      - { name: attachmentId, in: path, required: true, schema: { type: string } }
     get:
-      tags:
-      - quiz-controller
-      operationId: attempts
-      parameters:
-      - name: lessonId
+      tags: [todos]
+      summary: 下载单个附件字节流
+      description: |
+        `AttachmentView.downloadUrl` 指向的端点。两层归属校验：先确认 Todo 属于当前用户，
+        再确认该附件确实挂在这条 Todo 上，任一层不成立都返回 404。
+        不设置 `Content-Disposition: attachment`，便于客户端直接内联渲染缩略图。
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '404':
+          description: Todo 或附件不存在、不属于当前用户、不属于该 Todo（errorCode = TODO_NOT_FOUND / ATTACHMENT_NOT_FOUND）
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/todos/{todoId}/focus/{action}:
+    parameters:
+      - $ref: '#/components/parameters/TodoId'
+      - name: action
         in: path
         required: true
         schema:
           type: string
+          enum: [start, pause, resume, stop, finish, abandon]
+    post:
+      tags: [todos]
+      parameters:
+        - name: requestId
+          in: query
+          required: false
+          description: 同一操作重试复用标识；重复请求返回当前状态，不重复写流水或计时。
+          schema: { type: string, minLength: 1, maxLength: 100 }
+      summary: 专注状态机操作
+      description: |
+        `finish` 仅本轮达到设定时长才能完成；`abandon` 表示跳过，未完成但保留总时长。
+        `stop` 停止本轮，再次 `start` 从零计时，不抵扣历史时长。
+        非法转移返回 `FOCUS_ILLEGAL_TRANSITION`；同一时刻只允许一个 RUNNING。
       responses:
-        "200":
-          description: OK
+        '200':
+          description: 成功
           content:
-            '*/*':
+            application/json:
+              schema: { $ref: '#/components/schemas/TodoView' }
+        '409':
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/todos/{todoId}/defer:
+    parameters:
+      - $ref: '#/components/parameters/TodoId'
+    post:
+      tags: [todos]
+      summary: 顺延到指定日期（保留进度与附件，不计入删除统计）
+      description: 下架或归档课时只能补记完成或删除，顺延返回 RESOURCE_UNAVAILABLE。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetDate]
+              properties:
+                targetDate: { type: string, format: date }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TodoView' }
+
+  /api/v1/todos/batch-defer:
+    post:
+      tags: [todos]
+      summary: 批量顺延
+      description: 每项均校验课时可用性；包含下架或归档课时则整批拒绝（RESOURCE_UNAVAILABLE）。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [todoIds, targetDate]
+              properties:
+                todoIds:
+                  type: array
+                  items: { type: string }
+                targetDate: { type: string, format: date }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  affected: { type: integer }
+
+  /api/v1/stats:
+    get:
+      tags: [stats]
+      summary: 日 / 周 / 月统计
+      parameters:
+        - name: range
+          in: query
+          schema: { type: string, enum: [DAY, WEEK, MONTH], default: DAY }
+        - { name: date, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StatsView' }
+
+  /api/v1/heartbeat:
+    post:
+      tags: [presence]
+      summary: 心跳上报
+      description: |
+        间隔由服务端下发。心跳只更新在线状态，**不刷新有效操作时间**；
+        `pendingNagId` 非空时客户端必须拉起全屏催办。
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                appState: { type: string, enum: [FOREGROUND, BACKGROUND] }
+                clientVersion: { type: string }
+                queuedEvents: { type: integer }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HeartbeatResponse' }
+
+  /api/v1/nags/events:
+    get:
+      tags: [nags]
+      summary: 订阅当前用户的催办 SSE 通知
+      description: Bearer 认证。ready 帧触发补查，nag 帧 data 为催办 ID；每 15 秒注释保活，60 秒换连重新认证。断线后查询 pending 补偿，不支持事件历史重放。
+      responses:
+        '200':
+          description: SSE 通知流；已发送不等于已展示
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '401': { description: 未认证或令牌失效 }
+
+  /api/v1/nags/pending:
+    get:
+      tags: [nags]
+      summary: 拉取待回应催办
+      responses:
+        '200':
+          description: 有待回应催办
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NagView' }
+        '204': { description: 当前没有待回应催办 }
+
+  /api/v1/nags:
+    get:
+      tags: [nags]
+      summary: 催办历史
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 30 } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
               schema:
                 type: array
-                items:
-                  $ref: "#/components/schemas/AttemptSummary"
-      security:
-      - bearerAuth: []
+                items: { $ref: '#/components/schemas/NagView' }
+
+  /api/v1/nags/{nagId}/respond:
+    parameters:
+      - { name: nagId, in: path, required: true, schema: { type: string } }
     post:
-      tags:
-      - quiz-controller
-      operationId: submit
-      parameters:
-      - name: lessonId
-        in: path
-        required: true
-        schema:
-          type: string
+      tags: [nags]
+      summary: 回应催办（必须填写原因）
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AttemptRequest"
-        required: true
+              type: object
+              properties:
+                reasonTag: { type: string }
+                reasonText: { type: string }
       responses:
-        "200":
-          description: OK
+        '200':
+          description: 已回应
           content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/AttemptResult"
-      security:
-      - bearerAuth: []
-  /api/v1/focus-sessions:
-    post:
-      tags:
-      - focus-session-controller
-      operationId: start_1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/StartRequest"
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/FocusView"
-      security:
-      - bearerAuth: []
-  /api/v1/focus-sessions/{id}/resume:
-    post:
-      tags:
-      - focus-session-controller
-      operationId: resume
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/FocusView"
-      security:
-      - bearerAuth: []
-  /api/v1/focus-sessions/{id}/pause:
-    post:
-      tags:
-      - focus-session-controller
-      operationId: pause
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/FocusView"
-      security:
-      - bearerAuth: []
-  /api/v1/focus-sessions/{id}/finish:
-    post:
-      tags:
-      - focus-session-controller
-      operationId: finish
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/FocusView"
-      security:
-      - bearerAuth: []
-  /api/v1/focus-sessions/{id}/cancel:
-    post:
-      tags:
-      - focus-session-controller
-      operationId: cancel
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/FocusView"
-      security:
-      - bearerAuth: []
-  /api/v1/auth/refresh:
-    post:
-      tags:
-      - auth-controller
-      operationId: refresh
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/RefreshTokenRequest"
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/TokenPair"
-  /api/v1/auth/logout:
-    post:
-      tags:
-      - auth-controller
-      operationId: logout
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/RefreshTokenRequest"
-        required: true
-      responses:
-        "200":
-          description: OK
-  /api/v1/auth/login:
-    post:
-      tags:
-      - auth-controller
-      operationId: login
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/LoginRequest"
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/TokenPair"
-  /api/v1/reports/weekly:
+            application/json:
+              schema: { $ref: '#/components/schemas/NagView' }
+        '400':
+          description: 原因缺失或过短（errorCode = NAG_REASON_REQUIRED）
+          $ref: '#/components/responses/Problem'
+        '409':
+          description: 催办已过期，不再接受回应（errorCode = NAG_EXPIRED）
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/supervisor/learners:
     get:
-      tags:
-      - report-controller
-      operationId: weekly
-      parameters:
-      - name: weekStart
-        in: query
-        required: true
-        schema:
-          type: string
-          format: date
+      tags: [supervisor]
+      summary: 学员总览
       responses:
-        "200":
-          description: OK
+        '200':
+          description: 成功
           content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/WeeklyReportView"
-      security:
-      - bearerAuth: []
-  /api/v1/reports/daily:
-    get:
-      tags:
-      - report-controller
-      operationId: daily
-      parameters:
-      - name: date
-        in: query
-        required: true
-        schema:
-          type: string
-          format: date
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/DailyReportView"
-      security:
-      - bearerAuth: []
-  /api/v1/playback/{ticket}/stream:
-    get:
-      tags:
-      - playback-proxy-controller
-      operationId: stream
-      parameters:
-      - name: ticket
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/StreamingResponseBody"
-  /api/v1/playback/{ticket}/proxy/**:
-    get:
-      tags:
-      - playback-proxy-controller
-      operationId: hlsChild
-      parameters:
-      - name: ticket
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/StreamingResponseBody"
-  /api/v1/playback/{ticket}/master.m3u8:
-    get:
-      tags:
-      - playback-proxy-controller
-      operationId: master
-      parameters:
-      - name: ticket
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/StreamingResponseBody"
-  /api/v1/plans:
-    get:
-      tags:
-      - battle-order-calendar-controller
-      operationId: calendar
-      parameters:
-      - name: from
-        in: query
-        required: true
-        schema:
-          type: string
-          format: date
-      - name: to
-        in: query
-        required: true
-        schema:
-          type: string
-          format: date
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/CalendarView"
-      security:
-      - bearerAuth: []
-  /api/v1/mock-exams/{sessionId}:
-    get:
-      tags:
-      - mock-exam-controller
-      operationId: get
-      parameters:
-      - name: sessionId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/SessionWithAttachments"
-      security:
-      - bearerAuth: []
-  /api/v1/mock-exams/{sessionId}/attachments/{attachmentId}:
-    get:
-      tags:
-      - mock-exam-controller
-      operationId: downloadAttachment
-      parameters:
-      - name: sessionId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: attachmentId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                type: string
-                format: byte
-      security:
-      - bearerAuth: []
-  /api/v1/me:
-    get:
-      tags:
-      - auth-controller
-      operationId: me
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/UserResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/lessons/{lessonId}:
-    get:
-      tags:
-      - catalog-controller
-      operationId: lesson
-      parameters:
-      - name: lessonId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/LessonResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/lessons/{lessonId}/study-content:
-    get:
-      tags:
-      - catalog-controller
-      operationId: studyContent
-      parameters:
-      - name: lessonId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/LessonStudyContentResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/lessons/{lessonId}/quiz:
-    get:
-      tags:
-      - quiz-controller
-      operationId: quiz
-      parameters:
-      - name: lessonId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/QuizView"
-      security:
-      - bearerAuth: []
-  /api/v1/focus-sessions/active:
-    get:
-      tags:
-      - focus-session-controller
-      operationId: active
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/FocusView"
-      security:
-      - bearerAuth: []
-  /api/v1/exam-progress:
-    get:
-      tags:
-      - exam-controller
-      operationId: progress
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Progress"
-      security:
-      - bearerAuth: []
-  /api/v1/exam-goals:
-    get:
-      tags:
-      - exam-controller
-      operationId: goals
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
+            application/json:
               schema:
                 type: array
-                items:
-                  $ref: "#/components/schemas/ExamGoalResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/debts:
+                items: { $ref: '#/components/schemas/LearnerOverview' }
+        '403':
+          description: 没有督学权限（errorCode = SUPERVISION_FORBIDDEN）
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/supervisor/learners/{learnerId}:
+    parameters:
+      - { name: learnerId, in: path, required: true, schema: { type: string } }
     get:
-      tags:
-      - debt-controller
-      operationId: list_1
+      tags: [supervisor]
+      summary: 学员详情（只读镜像）
       parameters:
-      - name: page
-        in: query
-        required: false
-        schema:
-          type: integer
-          format: int32
-          default: 0
-      - name: size
-        in: query
-        required: false
-        schema:
-          type: integer
-          format: int32
-          default: 50
+        - name: range
+          in: query
+          schema: { type: string, enum: [DAY, WEEK, MONTH], default: DAY }
+        - { name: date, in: query, schema: { type: string, format: date } }
       responses:
-        "200":
-          description: OK
+        '200':
+          description: 成功
           content:
-            '*/*':
+            application/json:
+              schema: { $ref: '#/components/schemas/LearnerDetail' }
+        '403':
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/supervisor/learners/{learnerId}/nag:
+    parameters:
+      - { name: learnerId, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [supervisor]
+      summary: 一键督学
+      description: 走与自动催办相同的投递管道，计入每日上限但不参与自动幂等键。
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message: { type: string }
+                channel:
+                  type: string
+                  enum: [AUTO, FULLSCREEN, SERVERCHAN]
+                  default: AUTO
+                requireReason: { type: boolean, default: true }
+      responses:
+        '200':
+          description: 已投递
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NagView' }
+        '409':
+          description: 今日催办次数已达上限（errorCode = NAG_DAILY_LIMIT_REACHED）
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/supervisor/feed:
+    get:
+      tags: [supervisor]
+      summary: 督学端时间线（催办与删除通知）
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 50 } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
               schema:
                 type: array
-                items:
-                  $ref: "#/components/schemas/LearningDebt"
-      security:
-      - bearerAuth: []
-  /api/v1/dashboard:
+                items: { $ref: '#/components/schemas/SupervisorFeedItem' }
+
+  /api/v1/supervisor/report:
     get:
-      tags:
-      - dashboard-controller
-      operationId: dashboard
+      tags: [supervisor]
+      summary: 学员周 / 月对比报告
+      parameters:
+        - name: range
+          in: query
+          schema: { type: string, enum: [WEEK, MONTH], default: WEEK }
+        - { name: date, in: query, schema: { type: string, format: date } }
       responses:
-        "200":
-          description: OK
+        '200':
+          description: 成功
           content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/DashboardResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/courses:
-    get:
-      tags:
-      - catalog-controller
-      operationId: courses
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
+            application/json:
               schema:
                 type: array
-                items:
-                  $ref: "#/components/schemas/CourseResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/courses/{courseId}:
+                items: { $ref: '#/components/schemas/LearnerReport' }
+
+  /api/v1/playback/{resourceId}/stream:
+    parameters:
+      - { name: resourceId, in: path, required: true, schema: { type: string } }
     get:
-      tags:
-      - catalog-controller
-      operationId: course
+      tags: [playback]
+      summary: 播放代理（透传 Range）
+      description: |
+        服务端代理 Emby 流，API Key 不出服务端，目标主机由配置固定。
+        V2 取消播放票据，改为普通 Bearer 鉴权 + 归属与可用性校验。
       parameters:
-      - name: courseId
-        in: path
-        required: true
-        schema:
-          type: string
+        - { name: Range, in: header, schema: { type: string } }
+        - { name: If-Range, in: header, schema: { type: string } }
       responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/CourseDetailResponse"
-      security:
-      - bearerAuth: []
+        '200': { description: 完整流 }
+        '206': { description: 分段流 }
+        '416':
+          description: 请求范围越界，保留 Content-Range 但不返回 Emby 错误正文
+          headers:
+            Content-Range: { schema: { type: string }, description: 上游媒体总长度 }
+        '503':
+          description: 上游媒体不可用，返回固定安全提示（errorCode = EMBY_STREAM_UNAVAILABLE）
+          $ref: '#/components/responses/Problem'
+        '409':
+          description: 资源已下架或未启用（errorCode = RESOURCE_UNAVAILABLE）
+          $ref: '#/components/responses/Problem'
+
 components:
-  schemas:
-    PreferencesRequest:
-      type: object
-      properties:
-        timezone:
-          type: string
-          minLength: 1
-        aliveCheckEnabled:
-          type: boolean
-        aliveCheckIntervalPercent:
-          type: integer
-          format: int32
-          maximum: 50
-          minimum: 1
-        dayEndLocalTime:
-          type: string
-          minLength: 1
-      required:
-      - aliveCheckEnabled
-      - aliveCheckIntervalPercent
-      - dayEndLocalTime
-      - timezone
-    PreferencesResponse:
-      type: object
-      properties:
-        timezone:
-          type: string
-        aliveCheckEnabled:
-          type: boolean
-        aliveCheckIntervalPercent:
-          type: integer
-          format: int32
-        dayEndLocalTime:
-          type: string
-    BattleOrderItemRequest:
-      type: object
-      properties:
-        existingItemId:
-          type: string
-        itemType:
-          type: string
-          minLength: 1
-        mediaItemId:
-          type: string
-        mockExamPresetId:
-          type: string
-        sortOrder:
-          type: integer
-          format: int32
-      required:
-      - itemType
-    SaveBattleOrderRequest:
-      type: object
-      properties:
-        expectedVersion:
-          type: integer
-          format: int64
-          minimum: 0
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/BattleOrderItemRequest"
-      required:
-      - items
-    ItemView:
-      type: object
-      properties:
-        id:
-          type: string
-        itemType:
-          type: string
-        title:
-          type: string
-        mediaItemId:
-          type: string
-        mockExamPresetId:
-          type: string
-        mockExamName:
-          type: string
-        plannedSeconds:
-          type: integer
-          format: int64
-        completedSeconds:
-          type: integer
-          format: int64
-        status:
-          type: string
-        sortOrder:
-          type: integer
-          format: int32
-        immutable:
-          type: boolean
-        courseId:
-          type: string
-        courseName:
-          type: string
-        quizRequired:
-          type: boolean
-        debtId:
-          type: string
-        mockExamSessionStatus:
-          type: string
-    PlanView:
-      type: object
-      properties:
-        id:
-          type: string
-        date:
-          type: string
-          format: date
-        status:
-          type: string
-        version:
-          type: integer
-          format: int64
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/ItemView"
-    PresetRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          maxLength: 80
-          minLength: 0
-        durationSeconds:
-          type: integer
-          format: int64
-          maximum: 43200
-          minimum: 60
-        sortOrder:
-          type: integer
-          format: int32
-      required:
-      - name
-    PresetView:
-      type: object
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        durationSeconds:
-          type: integer
-          format: int64
-        sortOrder:
-          type: integer
-          format: int32
-    ExamGoalRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          minLength: 1
-        examDate:
-          type: string
-          format: date
-        targetCompletionDate:
-          type: string
-          format: date
-        reviewBufferDays:
-          type: integer
-          format: int32
-          maximum: 365
-          minimum: 0
-        courseIds:
-          type: array
-          items:
-            type: string
-            minLength: 1
-          minItems: 1
-      required:
-      - courseIds
-      - examDate
-      - name
-      - targetCompletionDate
-    ExamGoalResponse:
-      type: object
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        examDate:
-          type: string
-          format: date
-        targetCompletionDate:
-          type: string
-          format: date
-        reviewBufferDays:
-          type: integer
-          format: int32
-        timezone:
-          type: string
-        courseIds:
-          type: array
-          items:
-            type: string
-    WatchHeartbeatResponse:
-      type: object
-      properties:
-        trustedPositionMs:
-          type: integer
-          format: int64
-        verifiedWatchMs:
-          type: integer
-          format: int64
-        seekAllowed:
-          type: boolean
-        aliveCheckRequired:
-          type: boolean
-        completed:
-          type: boolean
-        status:
-          type: string
-    WatchHeartbeatRequest:
-      type: object
-      properties:
-        sequence:
-          type: integer
-          format: int64
-          minimum: 0
-        positionMs:
-          type: integer
-          format: int64
-          minimum: 0
-        playing:
-          type: boolean
-        foreground:
-          type: boolean
-        playbackSpeed:
-          type: number
-          format: double
-          minimum: 0
-    WatchSeekResponse:
-      type: object
-      properties:
-        positionMs:
-          type: integer
-          format: int64
-        progress:
-          $ref: "#/components/schemas/WatchHeartbeatResponse"
-    SessionView:
-      type: object
-      properties:
-        id:
-          type: string
-        planItemId:
-          type: string
-        name:
-          type: string
-        durationSeconds:
-          type: integer
-          format: int64
-        status:
-          type: string
-        startedAt:
-          type: string
-          format: date-time
-        deadlineAt:
-          type: string
-          format: date-time
-        submittedAt:
-          type: string
-          format: date-time
-        completedAt:
-          type: string
-          format: date-time
-        serverNow:
-          type: string
-          format: date-time
-    AttachmentView:
-      type: object
-      properties:
-        id:
-          type: string
-        originalFilename:
-          type: string
-        contentType:
-          type: string
-        sizeBytes:
-          type: integer
-          format: int64
-        sortOrder:
-          type: integer
-          format: int32
-        createdAt:
-          type: string
-          format: date-time
-    SessionWithAttachments:
-      type: object
-      properties:
-        session:
-          $ref: "#/components/schemas/SessionView"
-        attachments:
-          type: array
-          items:
-            $ref: "#/components/schemas/AttachmentView"
-    CreateWatchSessionRequest:
-      type: object
-      properties:
-        planItemId:
-          type: string
-        deviceId:
-          type: string
-          minLength: 1
-      required:
-      - deviceId
-    PlaybackSession:
-      type: object
-      properties:
-        sessionId:
-          type: string
-        ticketUrl:
-          type: string
-        trustedPositionMs:
-          type: integer
-          format: int64
-        durationMs:
-          type: integer
-          format: int64
-        heartbeatIntervalSeconds:
-          type: integer
-          format: int32
-        review:
-          type: boolean
-    AnswerRequest:
-      type: object
-      properties:
-        questionId:
-          type: string
-          minLength: 1
-        selectedOptionId:
-          type: string
-          minLength: 1
-        durationMs:
-          type: integer
-          format: int64
-          minimum: 0
-      required:
-      - questionId
-      - selectedOptionId
-    AttemptRequest:
-      type: object
-      properties:
-        planItemId:
-          type: string
-        durationMs:
-          type: integer
-          format: int64
-          minimum: 0
-        answers:
-          type: array
-          items:
-            $ref: "#/components/schemas/AnswerRequest"
-          minItems: 1
-      required:
-      - answers
-    AnswerResult:
-      type: object
-      properties:
-        questionId:
-          type: string
-        selectedOptionId:
-          type: string
-        correct:
-          type: boolean
-        explanation:
-          type: string
-    AttemptResult:
-      type: object
-      properties:
-        id:
-          type: string
-        score:
-          type: integer
-          format: int32
-        correctCount:
-          type: integer
-          format: int32
-        totalCount:
-          type: integer
-          format: int32
-        durationMs:
-          type: integer
-          format: int64
-        submittedAt:
-          type: string
-          format: date-time
-        answers:
-          type: array
-          items:
-            $ref: "#/components/schemas/AnswerResult"
-    StartRequest:
-      type: object
-      properties:
-        mediaItemId:
-          type: string
-        focusType:
-          type: string
-          minLength: 1
-        plannedSeconds:
-          type: integer
-          format: int64
-          minimum: 1
-      required:
-      - focusType
-    FocusView:
-      type: object
-      properties:
-        id:
-          type: string
-        planItemId:
-          type: string
-        mediaItemId:
-          type: string
-        focusType:
-          type: string
-        status:
-          type: string
-        plannedSeconds:
-          type: integer
-          format: int64
-        actualSeconds:
-          type: integer
-          format: int64
-        startedAt:
-          type: string
-          format: date-time
-        runningSince:
-          type: string
-          format: date-time
-        pausedAt:
-          type: string
-          format: date-time
-        endedAt:
-          type: string
-          format: date-time
-        serverNow:
-          type: string
-          format: date-time
-    RefreshTokenRequest:
-      type: object
-      properties:
-        refreshToken:
-          type: string
-          minLength: 1
-      required:
-      - refreshToken
-    TokenPair:
-      type: object
-      properties:
-        accessToken:
-          type: string
-        refreshToken:
-          type: string
-        expiresInSeconds:
-          type: integer
-          format: int64
-    LoginRequest:
-      type: object
-      properties:
-        username:
-          type: string
-          minLength: 1
-        password:
-          type: string
-          minLength: 1
-      required:
-      - password
-      - username
-    DayTrend:
-      type: object
-      properties:
-        date:
-          type: string
-          format: date
-        effectiveStudySeconds:
-          type: integer
-          format: int64
-        completionRate:
-          type: integer
-          format: int32
-        newDebtSeconds:
-          type: integer
-          format: int64
-        repaidDebtSeconds:
-          type: integer
-          format: int64
-    ReviewedLesson:
-      type: object
-      properties:
-        mediaItemId:
-          type: string
-        lessonTitle:
-          type: string
-        reviewCount:
-          type: integer
-          format: int32
-    WeeklyReportView:
-      type: object
-      properties:
-        weekStart:
-          type: string
-          format: date
-        days:
-          type: array
-          items:
-            $ref: "#/components/schemas/DayTrend"
-        totalEffectiveStudySeconds:
-          type: integer
-          format: int64
-        videoStudySeconds:
-          type: integer
-          format: int64
-        focusSeconds:
-          type: integer
-          format: int64
-        videoCompletedCount:
-          type: integer
-          format: int32
-        answerCount:
-          type: integer
-          format: int32
-        answerAccuracy:
-          type: integer
-          format: int32
-        planCompletionRate:
-          type: integer
-          format: int32
-        newDebtSeconds:
-          type: integer
-          format: int64
-        repaidDebtSeconds:
-          type: integer
-          format: int64
-        abandonmentCount:
-          type: integer
-          format: int32
-        slackedDayCount:
-          type: integer
-          format: int32
-        reviewedLessons:
-          type: array
-          items:
-            $ref: "#/components/schemas/ReviewedLesson"
-        aliveCheckFailureCount:
-          type: integer
-          format: int32
-        previousWeekEffectiveStudySeconds:
-          type: integer
-          format: int64
-        effectiveStudySecondsChange:
-          type: integer
-          format: int64
-        previousWeekPlanCompletionRate:
-          type: integer
-          format: int32
-        planCompletionRateChange:
-          type: integer
-          format: int32
-    DailyReportView:
-      type: object
-      properties:
-        date:
-          type: string
-          format: date
-        planStatus:
-          type: string
-        dayOutcome:
-          type: string
-        plannedSeconds:
-          type: integer
-          format: int64
-        videoStudySeconds:
-          type: integer
-          format: int64
-        focusSeconds:
-          type: integer
-          format: int64
-        completedTasks:
-          type: integer
-          format: int32
-        totalTasks:
-          type: integer
-          format: int32
-        completionRate:
-          type: integer
-          format: int32
-        videoCompletedCount:
-          type: integer
-          format: int32
-        mockExamCompletedCount:
-          type: integer
-          format: int32
-        mockExamAwaitingUploadCount:
-          type: integer
-          format: int32
-        answerCount:
-          type: integer
-          format: int32
-        correctAnswerCount:
-          type: integer
-          format: int32
-        answerAccuracy:
-          type: integer
-          format: int32
-        aliveCheckFailureCount:
-          type: integer
-          format: int32
-        abandoned:
-          type: boolean
-        newDebtSeconds:
-          type: integer
-          format: int64
-        repaidDebtSeconds:
-          type: integer
-          format: int64
-        openDebtSeconds:
-          type: integer
-          format: int64
-        judgmentText:
-          type: string
-        generatedAt:
-          type: string
-          format: date-time
-    StreamingResponseBody: {}
-    CalendarView:
-      type: object
-      properties:
-        from:
-          type: string
-          format: date
-        to:
-          type: string
-          format: date
-        days:
-          type: array
-          items:
-            $ref: "#/components/schemas/DayView"
-    DayView:
-      type: object
-      properties:
-        date:
-          type: string
-          format: date
-        status:
-          type: string
-        completed:
-          type: boolean
-        hasDebt:
-          type: boolean
-        itemCount:
-          type: integer
-          format: int32
-        completedItemCount:
-          type: integer
-          format: int32
-        plannedSeconds:
-          type: integer
-          format: int64
-    UserResponse:
-      type: object
-      properties:
-        id:
-          type: string
-        username:
-          type: string
-        displayName:
-          type: string
-        role:
-          type: string
-        timezone:
-          type: string
-    LessonResponse:
-      type: object
-      properties:
-        id:
-          type: string
-        courseId:
-          type: string
-        title:
-          type: string
-        durationMs:
-          type: integer
-          format: int64
-        sortOrder:
-          type: integer
-          format: int32
-        maxVerifiedPositionMs:
-          type: integer
-          format: int64
-        progressPercent:
-          type: integer
-          format: int32
-        learningStatus:
-          type: string
-        summaryAvailable:
-          type: boolean
-    LessonStudyContentResponse:
-      type: object
-      properties:
-        lessonId:
-          type: string
-        transcriptStatus:
-          type: string
-          enum:
-          - READY
-          - MISSING
-        summaryStatus:
-          type: string
-          enum:
-          - READY
-          - MISSING
-        fullText:
-          type:
-          - string
-          - "null"
-        summaryMarkdown:
-          type:
-          - string
-          - "null"
-        transcriptUpdatedAt:
-          type:
-          - string
-          - "null"
-          format: date-time
-        summaryUpdatedAt:
-          type:
-          - string
-          - "null"
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-      required:
-      - lessonId
-      - summaryStatus
-      - transcriptStatus
-      - updatedAt
-    OptionView:
-      type: object
-      properties:
-        id:
-          type: string
-        content:
-          type: string
-    QuestionView:
-      type: object
-      properties:
-        id:
-          type: string
-        questionType:
-          type: string
-        content:
-          type: string
-        options:
-          type: array
-          items:
-            $ref: "#/components/schemas/OptionView"
-    QuizView:
-      type: object
-      properties:
-        mediaItemId:
-          type: string
-        questions:
-          type: array
-          items:
-            $ref: "#/components/schemas/QuestionView"
-    AttemptSummary:
-      type: object
-      properties:
-        id:
-          type: string
-        score:
-          type: integer
-          format: int32
-        correctCount:
-          type: integer
-          format: int32
-        totalCount:
-          type: integer
-          format: int32
-        durationMs:
-          type: integer
-          format: int64
-        submittedAt:
-          type: string
-          format: date-time
-    Progress:
-      type: object
-      properties:
-        daysUntilExam:
-          type: integer
-          format: int64
-        daysUntilTarget:
-          type: integer
-          format: int64
-        totalLessons:
-          type: integer
-          format: int32
-        completedLessons:
-          type: integer
-          format: int32
-        remainingLessons:
-          type: integer
-          format: int32
-        requiredDailyPace:
-          type: number
-          format: double
-        actualDailyPace:
-          type: number
-          format: double
-        projectedFinishDate:
-          type: string
-          format: date
-        riskStatus:
-          type: string
-    LearningDebt:
-      type: object
-      properties:
-        id:
-          type: string
-        userId:
-          type: string
-        sourcePlanItemId:
-          type: string
-        debtType:
-          type: string
-        mediaItemId:
-          type: string
-        title:
-          type: string
-        originalSeconds:
-          type: integer
-          format: int64
-        remainingSeconds:
-          type: integer
-          format: int64
-        baselineCompletedSeconds:
-          type: integer
-          format: int64
-        status:
-          type: string
-        reason:
-          type: string
-        openedOn:
-          type: string
-          format: date
-        paidAt:
-          type: string
-          format: date-time
-    DashboardResponse:
-      type: object
-      properties:
-        exam:
-          $ref: "#/components/schemas/ExamGoalResponse"
-        todayPlan:
-          $ref: "#/components/schemas/TodayPlan"
-        openDebtSeconds:
-          type: integer
-          format: int64
-        studyTodaySeconds:
-          type: integer
-          format: int64
-        answerAccuracy:
-          type: number
-          format: double
-        continueLesson: {}
-        progressPressure:
-          $ref: "#/components/schemas/Progress"
-        exams:
-          type: array
-          items:
-            $ref: "#/components/schemas/ExamCard"
-    ExamCard:
-      type: object
-      properties:
-        exam:
-          $ref: "#/components/schemas/ExamGoalResponse"
-        progressPressure:
-          $ref: "#/components/schemas/Progress"
-    TodayPlan:
-      type: object
-      properties:
-        status:
-          type: string
-        plannedSeconds:
-          type: integer
-          format: int64
-        completedSeconds:
-          type: integer
-          format: int64
-    CourseResponse:
-      type: object
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-    CourseDetailResponse:
-      type: object
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-        lessons:
-          type: array
-          items:
-            $ref: "#/components/schemas/LessonResponse"
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  parameters:
+    TodoId:
+      name: todoId
+      in: path
+      required: true
+      schema: { type: string }
+    GoalId:
+      name: goalId
+      in: path
+      required: true
+      schema: { type: string }
+
+  responses:
+    Problem:
+      description: 业务错误（RFC 9457）
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+
+  schemas:
+    ProblemDetail:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        errorCode:
+          type: string
+          description: |
+            稳定错误码。已定义：TODO_EVIDENCE_REQUIRED、TODO_DELETE_REASON_REQUIRED、
+            TODO_BACKFILL_NOT_HISTORY、TODO_BACKFILL_NOTE_REQUIRED、TODO_TARGET_INVALID、
+            TODO_PLANNED_INVALID、TODO_DAILY_LIMIT、FOCUS_ILLEGAL_TRANSITION、
+            FOCUS_ALREADY_RUNNING、ATTACHMENT_TOO_LARGE、ATTACHMENT_LIMIT_REACHED、
+            ATTACHMENT_TYPE_UNSUPPORTED、NAG_REASON_REQUIRED、NAG_EXPIRED、NAG_DAILY_LIMIT_REACHED、
+            SUPERVISION_FORBIDDEN、SUPERVISION_PRIMARY_EXISTS、RESOURCE_UNAVAILABLE、
+            RESOURCE_NOT_MEASURABLE、CATALOG_MAPPING_AMBIGUOUS、ARCHIVE_LABEL_MISMATCH、ARCHIVE_REQUIRED、
+            EMBY_STREAM_UNAVAILABLE、
+            AUTH_INVALID_CREDENTIALS、AUTH_USER_ARCHIVED、GOAL_NOT_FOUND。
+
+    TodoType:
+      type: string
+      enum: [COURSE, FOCUS, TASK]
+    TodoStatus:
+      type: string
+      enum: [TODO, IN_PROGRESS, DONE]
+    FocusState:
+      type: string
+      enum: [IDLE, RUNNING, PAUSED, STOPPED, FINISHED, ABANDONED]
+    NoteTag:
+      type: string
+      enum: [MASTERED, NEED_REVIEW, HAS_QUESTION, NOTED, BEHIND]
+    DeletionReasonTag:
+      type: string
+      enum: [TOO_MANY_PLANNED, TEMP_BUSY, ADDED_BY_MISTAKE, SWITCHED_TO_OTHER, GAVE_UP]
+    ResourceType:
+      type: string
+      enum: [VIDEO, DOCUMENT]
+      description: DOCUMENT 按 ADR-0030 预留，默认关闭。
+    GoalUrgency:
+      type: string
+      enum: [NORMAL, SOON, URGENT, EXPIRED]
+    DayOutcome:
+      type: string
+      enum: [NO_TODOS, NONE_DONE, PARTIAL, ALL_DONE]
+    PresenceState:
+      type: string
+      enum: [ONLINE, IDLE, OFFLINE]
+
+    AuthenticatedUser:
+      type: object
+      properties:
+        id: { type: string }
+        username: { type: string }
+        displayName: { type: string }
+        timezone: { type: string }
+        roles:
+          type: array
+          items: { type: string, enum: [LEARNER, SUPERVISOR, ADMIN] }
+
+    TokenResponse:
+      type: object
+      properties:
+        accessToken: { type: string }
+        accessTokenExpiresAt: { type: string, format: date-time }
+        refreshToken: { type: string }
+        refreshTokenExpiresAt: { type: string, format: date-time }
+        user: { $ref: '#/components/schemas/AuthenticatedUser' }
+
+    MeResponse:
+      type: object
+      properties:
+        id: { type: string }
+        username: { type: string }
+        displayName: { type: string }
+        timezone: { type: string }
+        roles:
+          type: array
+          items: { type: string }
+        supervisors:
+          type: array
+          items:
+            type: object
+            properties:
+              userId: { type: string }
+              displayName: { type: string }
+              kind: { type: string, enum: [PRIMARY, COLLABORATOR] }
+              canNag: { type: boolean }
+        supervisorMode:
+          type: boolean
+          description: 是否绑定了学员，决定「我的」页是否出现督学端入口。
+        learnerCount: { type: integer }
+        nagPolicy:
+          type: object
+          description: 只读催办策略；App 端没有任何修改入口。
+          properties:
+            heartbeatIntervalSeconds: { type: integer }
+            firstThresholdMinutes: { type: integer }
+            repeatIntervalMinutes: { type: integer }
+            dailyMax: { type: integer }
+            quietStart: { type: string }
+            quietEnd: { type: string }
+            minReasonLength: { type: integer }
+            fullscreenTimeoutMinutes:
+              type: integer
+              description: 全屏催办展示后超过该分钟数仍未回应，服务端在同一条催办上追加 Server 酱投递；App 用它渲染「N 分钟内未响应将改用 Server 酱」。
+            fullscreenEnabled: { type: boolean }
+            serverChanEnabled: { type: boolean }
+        features:
+          type: object
+          properties:
+            documentResources: { type: boolean }
+            maxDocumentSizeMb: { type: integer }
+
+    GoalView:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        examDate: { type: string, format: date }
+        note: { type: string }
+        primary: { type: boolean }
+        daysRemaining: { type: integer }
+        urgency: { $ref: '#/components/schemas/GoalUrgency' }
+
+    FacetValue:
+      type: object
+      properties:
+        value: { type: string }
+        courseCount: { type: integer }
+
+    CatalogFacets:
+      type: object
+      properties:
+        genres:
+          type: array
+          items: { $ref: '#/components/schemas/FacetValue' }
+        tags:
+          type: array
+          items: { $ref: '#/components/schemas/FacetValue' }
+        people:
+          type: array
+          items: { $ref: '#/components/schemas/FacetValue' }
+        years:
+          type: array
+          items: { $ref: '#/components/schemas/FacetValue' }
+
+    Person:
+      type: object
+      properties:
+        name: { type: string }
+        role: { type: string }
+
+    CourseSummary:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        overview: { type: string }
+        productionYear: { type: integer, nullable: true }
+        genres: { type: array, items: { type: string } }
+        tags: { type: array, items: { type: string } }
+        people: { type: array, items: { $ref: '#/components/schemas/Person' } }
+        resourceCount: { type: integer }
+        totalDurationMs: { type: integer }
+        completedCount: { type: integer }
+        watchedMs: { type: integer }
+        completedPercent: { type: integer }
+
+    ResourceView:
+      type: object
+      properties:
+        id: { type: string }
+        resourceType: { $ref: '#/components/schemas/ResourceType' }
+        title: { type: string }
+        sortIndex: { type: integer }
+        durationMs: { type: integer, nullable: true }
+        pageCount: { type: integer, nullable: true }
+        maxPositionMs: { type: integer }
+        maxPositionPage: { type: integer }
+        watchedMs: { type: integer }
+        progressPermille: { type: integer }
+        completedBefore: { type: boolean }
+        measurable:
+          type: boolean
+          description: 缺少总量（时长或页数）时为 false，不能加入 Todo。
+
+    CourseDetail:
+      type: object
+      properties:
+        summary: { $ref: '#/components/schemas/CourseSummary' }
+        genres: { type: array, items: { type: string } }
+        tags: { type: array, items: { type: string } }
+        people: { type: array, items: { $ref: '#/components/schemas/Person' } }
+        resources:
+          type: array
+          items: { $ref: '#/components/schemas/ResourceView' }
+
+    CreateTodoCommand:
+      type: object
+      required: [todoType]
+      properties:
+        todoType: { $ref: '#/components/schemas/TodoType' }
+        localDate: { type: string, format: date }
+        title: { type: string }
+        note: { type: string }
+        resourceId:
+          type: string
+          description: COURSE 必填。
+        targetProgressPermille:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          description: COURSE 必填，千分比；1000 表示全部看完。
+        plannedSeconds:
+          type: integer
+          minimum: 60
+          maximum: 43200
+          description: FOCUS 必填。
+        requireEvidence: { type: boolean, default: false }
+        noteTags:
+          type: array
+          items: { $ref: '#/components/schemas/NoteTag' }
+
+    TodoView:
+      type: object
+      properties:
+        id: { type: string }
+        localDate: { type: string, format: date }
+        todoType: { $ref: '#/components/schemas/TodoType' }
+        title: { type: string }
+        note: { type: string }
+        sortOrder: { type: integer }
+        status: { $ref: '#/components/schemas/TodoStatus' }
+        resourceId: { type: string, nullable: true }
+        resourceType: { $ref: '#/components/schemas/ResourceType' }
+        resourceTitle: { type: string, nullable: true }
+        resourceDurationMs: { type: integer, nullable: true }
+        resourcePageCount: { type: integer, nullable: true }
+        resourceAvailable: { type: boolean }
+        targetProgressPermille: { type: integer, nullable: true }
+        progressPermille: { type: integer }
+        progressPositionMs: { type: integer }
+        progressPage: { type: integer }
+        watchedMs: { type: integer }
+        plannedSeconds: { type: integer, nullable: true }
+        focusState: { $ref: '#/components/schemas/FocusState' }
+        focusStartedAt: { type: [string, 'null'], format: date-time }
+        focusAttemptBaseMs: { type: integer, format: int64, description: 本轮开始时的历史累计时长，不抵扣本轮倒计时 }
+        focusedMs: { type: integer }
+        requireEvidence: { type: boolean }
+        completedAt: { type: string, format: date-time, nullable: true }
+        backfilled: { type: boolean }
+        supervisorUserIdSnapshot: { type: string, nullable: true }
+        attachmentCount: { type: integer }
+        noteTags:
+          type: array
+          items: { $ref: '#/components/schemas/NoteTag' }
+
+    AttachmentView:
+      type: object
+      description: |
+        附件只读视图。安全边界：只投影客户端渲染需要的字段，
+        `storagePath`（服务器文件系统相对路径）与 `sha256` 一律不出现在响应里。
+      properties:
+        id: { type: string }
+        filename:
+          type: string
+          description: 上传时的原始文件名，已去掉全部路径分隔符，仅用于展示。
+        contentType: { type: string }
+        sizeBytes: { type: integer }
+        sortOrder: { type: integer }
+        createdAt: { type: string, format: date-time }
+        downloadUrl:
+          type: string
+          description: 相对路径，指向 `/api/v1/todos/{todoId}/attachments/{attachmentId}/content`。
+
+    DayTotals:
+      type: object
+      properties:
+        total: { type: integer }
+        done: { type: integer }
+        watchedMs: { type: integer }
+        focusedMs: { type: integer }
+        attachmentCount: { type: integer }
+
+    DayView:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        today: { type: boolean }
+        history: { type: boolean }
+        todos:
+          type: array
+          items: { $ref: '#/components/schemas/TodoView' }
+        totals: { $ref: '#/components/schemas/DayTotals' }
+        deletionCount: { type: integer }
+
+    DaySummary:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        today: { type: boolean }
+        total: { type: integer }
+        done: { type: integer }
+        pending: { type: integer }
+        watchedMs: { type: integer }
+        focusedMs: { type: integer }
+        countByType:
+          type: object
+          additionalProperties: { type: integer }
+        outcome: { $ref: '#/components/schemas/DayOutcome' }
+
+    RangeView:
+      type: object
+      properties:
+        start: { type: string, format: date }
+        end: { type: string, format: date }
+        days:
+          type: array
+          items: { $ref: '#/components/schemas/DaySummary' }
+        totals: { $ref: '#/components/schemas/DayTotals' }
+
+    PendingSummary:
+      type: object
+      properties:
+        total: { type: integer }
+        countByType:
+          type: object
+          additionalProperties: { type: integer }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              todo: { $ref: '#/components/schemas/TodoView' }
+              overdueDays: { type: integer }
+              bucket:
+                type: string
+                enum: [ONE_TO_TWO_DAYS, THREE_DAYS_OR_MORE]
+
+    CourseAdditionsRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 500
+          description: 本接口仅接受 COURSE 类型。
+          items: { $ref: '#/components/schemas/CreateTodoCommand' }
+        reuseTodoIds:
+          type: array
+          description: 仅提交接口使用；用户确认要复用或顺延的原待办 ID，未选择的课时跳过。
+          items: { type: string }
+
+    CourseAdditionPreview:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [resourceId, title, status, history]
+            properties:
+              resourceId: { type: string }
+              title: { type: string }
+              status: { type: string, enum: [NEW, EXISTING, TARGET_CONFLICT, HISTORY, DUPLICATE] }
+              history:
+                type: array
+                items:
+                  type: object
+                  required: [id, localDate, title, targetProgressPermille, progressPositionMs, watchedMs]
+                  properties:
+                    id: { type: string }
+                    localDate: { type: string, format: date }
+                    title: { type: string }
+                    targetProgressPermille: { type: integer }
+                    progressPositionMs: { type: integer, format: int64 }
+                    watchedMs: { type: integer, format: int64 }
+
+    CourseAdditionResult:
+      type: object
+      required: [created, deferred, reused, skipped, items]
+      properties:
+        created: { type: integer }
+        deferred: { type: integer }
+        reused: { type: integer }
+        skipped: { type: integer }
+        items:
+          type: array
+          items:
+            type: object
+            required: [resourceId, title, status]
+            properties:
+              resourceId: { type: string }
+              title: { type: string }
+              todoId: { type: string, nullable: true }
+              status:
+                type: string
+                enum: [CREATED, DEFERRED, REUSED, SKIPPED_EXISTING, SKIPPED_TARGET_CONFLICT, SKIPPED_HISTORY, SKIPPED_DUPLICATE]
+
+    ProgressRequest:
+      type: object
+      required: [clientSeq]
+      properties:
+        clientSeq: { type: integer, minimum: 0 }
+        occurredAt: { type: string, format: date-time }
+        eventType:
+          type: string
+          description: 退出使用 PAUSE；EXIT 仅兼容旧客户端排队请求，服务端按 PAUSE 保存。未知类型返回 TODO_PROGRESS_EVENT_INVALID。
+          enum: [PROGRESS, PAUSE, RESUME, COMPLETE, EXIT]
+        positionMs: { type: integer, nullable: true }
+        positionPage: { type: integer, nullable: true }
+        deltaWatchedMs: { type: integer, default: 0 }
+        deltaFocusedMs:
+          type: integer
+          default: 0
+          enum: [0]
+          description: 仅保留旧课程客户端默认值；非零返回 TODO_PROGRESS_NOT_APPLICABLE。专注时长按 ADR-0036 由专用操作接口计算与记录。
+        appState: { type: string, enum: [FOREGROUND, BACKGROUND] }
+
+    ProgressResult:
+      type: object
+      properties:
+        status: { $ref: '#/components/schemas/TodoStatus' }
+        positionMs: { type: integer }
+        positionPage: { type: integer }
+        watchedMs: { type: integer }
+        progressPermille: { type: integer }
+        targetProgressPermille: { type: integer, nullable: true }
+        completed: { type: boolean }
+
+    DeletionOutcome:
+      type: object
+      properties:
+        deletedCount: { type: integer }
+        reasonTag: { $ref: '#/components/schemas/DeletionReasonTag' }
+        notifications:
+          type: array
+          items:
+            type: object
+            properties:
+              rule:
+                type: string
+                enum: [BULK_DELETE, GAVE_UP, HALF_DONE_DELETE]
+              supervisorUserId: { type: string }
+              count: { type: integer }
+
+    StatsView:
+      type: object
+      properties:
+        range: { type: string, enum: [DAY, WEEK, MONTH] }
+        start: { type: string, format: date }
+        end: { type: string, format: date }
+        totalTodos: { type: integer }
+        doneTodos: { type: integer }
+        backfilledTodos:
+          type: integer
+          description: 补记完成单列统计，不计入当日时长。
+        watchedMs: { type: integer }
+        focusedMs: { type: integer }
+        focusFinished: { type: integer }
+        focusAbandoned: { type: integer }
+        days:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string, format: date }
+              total: { type: integer }
+              done: { type: integer }
+              backfilled: { type: integer }
+              watchedMs: { type: integer }
+              focusedMs: { type: integer }
+              countByType:
+                type: object
+                additionalProperties: { type: integer }
+        hours:
+          type: array
+          items:
+            type: object
+            properties:
+              hour: { type: integer }
+              watchedMs: { type: integer }
+              focusedMs: { type: integer }
+        rankings:
+          type: object
+          properties:
+            courses:
+              type: array
+              items: { $ref: '#/components/schemas/RankingEntry' }
+            people:
+              type: array
+              items: { $ref: '#/components/schemas/RankingEntry' }
+            genres:
+              type: array
+              items: { $ref: '#/components/schemas/RankingEntry' }
+        noteTags:
+          type: array
+          items:
+            type: object
+            properties:
+              tag: { $ref: '#/components/schemas/NoteTag' }
+              count: { type: integer }
+        deletions:
+          type: array
+          items:
+            type: object
+            properties:
+              reasonTag: { type: string }
+              count: { type: integer }
+
+    RankingEntry:
+      type: object
+      properties:
+        name: { type: string }
+        watchedMs: { type: integer }
+        lessonCount: { type: integer }
+
+    HeartbeatResponse:
+      type: object
+      properties:
+        serverTime: { type: string, format: date-time }
+        heartbeatIntervalSeconds: { type: integer }
+        nagTransportMode: { type: string, enum: [SSE, HEARTBEAT], description: 全局通知方式，默认 SSE }
+        pendingNagId: { type: string, nullable: true }
+        pendingNagMessage: { type: string, nullable: true }
+        requireReason: { type: boolean }
+        minReasonLength: { type: integer }
+
+    NagView:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        localDate: { type: string, format: date }
+        thresholdLevel: { type: integer }
+        trigger: { type: string, enum: [AUTO, MANUAL, SUPERVISOR] }
+        triggeredByUserId: { type: string, nullable: true }
+        idleMinutes: { type: integer }
+        pendingCount: { type: integer }
+        message: { type: string }
+        requireReason: { type: boolean }
+        status: { type: string, enum: [PENDING, DELIVERED, RESPONDED, EXPIRED] }
+        deliveredAt: { type: string, format: date-time, nullable: true }
+        respondedAt: { type: string, format: date-time, nullable: true }
+        reasonTag: { type: string, nullable: true }
+        reasonText: { type: string, nullable: true }
+        supervisorUserIdSnapshot: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    LearnerOverview:
+      type: object
+      properties:
+        userId: { type: string }
+        username: { type: string }
+        displayName: { type: string }
+        presenceState: { $ref: '#/components/schemas/PresenceState' }
+        lastHeartbeatAt: { type: string, format: date-time, nullable: true }
+        idleMinutes: { type: integer }
+        todayTotal: { type: integer }
+        todayDone: { type: integer }
+        todayWatchedMs: { type: integer }
+        todayFocusedMs: { type: integer }
+        monthlyDeletions: { type: integer }
+        unansweredNags: { type: integer }
+        alerts:
+          type: array
+          items:
+            type: string
+            enum: [ZERO_DONE, OFFLINE, FREQUENT_DELETION, NAG_UNANSWERED]
+        canNag: { type: boolean }
+        primaryGoalName:
+          type: string
+          nullable: true
+          description: 学员主目标名称；没有任何考试目标时为 null。
+        primaryGoalDaysRemaining:
+          type: integer
+          nullable: true
+          description: 主目标剩余天数，按学员时区由服务端计算，已过期为负数；没有主目标时为 null。
+        primaryGoalUrgency:
+          allOf:
+            - $ref: '#/components/schemas/GoalUrgency'
+          nullable: true
+          description: 主目标紧急度分档；没有主目标时为 null。三个 primaryGoal* 字段同生共死。
+
+    LearnerDetail:
+      type: object
+      properties:
+        userId: { type: string }
+        username: { type: string }
+        displayName: { type: string }
+        presence:
+          type: object
+          properties:
+            state: { $ref: '#/components/schemas/PresenceState' }
+            lastHeartbeatAt: { type: string, format: date-time, nullable: true }
+            lastEffectiveActionAt: { type: string, format: date-time, nullable: true }
+            idleMinutes: { type: integer }
+        day: { $ref: '#/components/schemas/DayView' }
+        deletions:
+          type: array
+          items:
+            type: object
+            properties:
+              titleSnapshot: { type: string }
+              todoType: { $ref: '#/components/schemas/TodoType' }
+              reasonTag: { $ref: '#/components/schemas/DeletionReasonTag' }
+              reasonText: { type: string }
+              progressSnapshotJson: { type: string }
+              deletedAt: { type: string, format: date-time }
+        stats: { $ref: '#/components/schemas/StatsView' }
+
+    SupervisorFeedItem:
+      type: object
+      properties:
+        kind: { type: string, enum: [NAG, DELETION] }
+        learnerUserId: { type: string }
+        occurredAt: { type: string, format: date-time }
+        title: { type: string }
+        tag: { type: string }
+        status: { type: string }
+        reasonText: { type: string }
+        sentByMe: { type: boolean, description: 是否由当前督学本人发起 }
+
+    LearnerReport:
+      type: object
+      properties:
+        userId: { type: string }
+        username: { type: string }
+        displayName: { type: string }
+        stats: { $ref: '#/components/schemas/StatsView' }
+        nagCount: { type: integer }
+        nagRespondedCount: { type: integer }
+
+security:
+  - bearerAuth: []

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shangan_ios/core/config/server_configuration_store.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shangan_ios/core/config/server_configuration.dart';
 import 'package:shangan_ios/core/config/server_configuration_controller.dart';
@@ -16,18 +17,43 @@ final class ServerSettingsPage extends ConsumerStatefulWidget {
 final class _ServerSettingsPageState extends ConsumerState<ServerSettingsPage> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _addressController;
+  List<String> _history = [];
   bool _saving = false;
   String? _message;
 
   @override
   void initState() {
     super.initState();
+    _loadHistory();
     _addressController = TextEditingController(
       text: ref
           .read(serverConfigurationControllerProvider)
           .configuration
           .baseUrl,
     );
+  }
+
+  /// 历史读取失败仍允许输入新地址；当前地址始终可选。
+  Future<void> _loadHistory() async {
+    try {
+      final items = await ref.read(serverHistoryStoreProvider).read();
+      if (mounted) setState(() => _history = items);
+    } catch (_) {
+      if (mounted) setState(() => _message = '读取服务器历史失败，可手动填写地址');
+    }
+  }
+
+  /// 删除仅影响快捷历史；失败时保留条目并提示，避免误以为删除成功。
+  Future<void> _deleteHistory(String origin) async {
+    setState(() => _saving = true);
+    try {
+      await ref.read(serverHistoryStoreProvider).remove(origin);
+      if (mounted) setState(() => _history.remove(origin));
+    } catch (_) {
+      if (mounted) setState(() => _message = '删除服务器记录失败，请重试');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
@@ -54,6 +80,12 @@ final class _ServerSettingsPageState extends ConsumerState<ServerSettingsPage> {
     });
     try {
       await ref.read(serverHealthCheckerProvider).check(configuration);
+      final history = ref.read(serverHistoryStoreProvider);
+      // 在切换导致根组件销毁前保存历史，同时纳入升级前使用的当前地址。
+      await history.remember(
+        ref.read(serverConfigurationControllerProvider).configuration,
+      );
+      await history.remember(configuration);
       await ref
           .read(serverConfigurationControllerProvider)
           .switchTo(configuration);
@@ -94,8 +126,28 @@ final class _ServerSettingsPageState extends ConsumerState<ServerSettingsPage> {
               style: shanganNumberStyle(context, fontSize: 13),
             ),
             const SizedBox(height: 22),
+            const Text('已记住的服务器'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final origin in _history)
+                  InputChip(
+                    label: Text(origin),
+                    onDeleted: _saving ? null : () => _deleteHistory(origin),
+                    deleteButtonTooltipMessage: '删除此服务器记录',
+                    onPressed: _saving
+                        ? null
+                        : () =>
+                              setState(() => _addressController.text = origin),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
             TextFormField(
               key: const Key('serverAddressField'),
+              enabled: !_saving,
               controller: _addressController,
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.done,

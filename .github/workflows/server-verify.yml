@@ -10,6 +10,8 @@ on:
       - "v*"
     paths:
       - "apps/server/**"
+      - "apps/admin-web/**"
+      - "infra/docker/server.Dockerfile"
       - "docs/api/openapi.yaml"
       - "infra/scripts/check-openapi-drift.sh"
       - "Makefile"
@@ -17,6 +19,8 @@ on:
   pull_request:
     paths:
       - "apps/server/**"
+      - "apps/admin-web/**"
+      - "infra/docker/server.Dockerfile"
       - "docs/api/openapi.yaml"
       - "infra/scripts/check-openapi-drift.sh"
       - "Makefile"
@@ -39,6 +43,12 @@ jobs:
           cache: maven
       - name: 执行服务端验证
         run: make server-test
+      - name: 安装契约检查依赖
+        # 使用隔离环境，保证干净 Runner 也能解析手写 YAML 合同。
+        run: |
+          python3 -m venv .run/openapi-venv
+          .run/openapi-venv/bin/pip install PyYAML==6.0.3
+          echo "$PWD/.run/openapi-venv/bin" >> "$GITHUB_PATH"
       - name: 校验 OpenAPI 合同无漂移
         run: ./infra/scripts/check-openapi-drift.sh
       - name: 构建服务端 Docker 镜像

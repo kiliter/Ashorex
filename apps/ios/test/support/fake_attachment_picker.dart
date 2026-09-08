@@ -1,0 +1,48 @@
+import 'dart:typed_data';
+
+import 'package:shangan_ios/core/device/attachment_picker.dart';
+
+/// 测试用附件选择器：记录被请求的来源，返回预置字节。
+///
+/// 真实相机与文件选择器都走平台通道，Widget 测试无法调用，
+/// 因此「完成凭证必填」的验证一律通过这个假实现驱动。
+final class FakeAttachmentPicker implements AttachmentPicker {
+  FakeAttachmentPicker({this.result});
+
+  /// null 表示用户取消选择。
+  PickedAttachment? result;
+
+  /// 依次记录每一次被请求的来源。
+  final requested = <AttachmentSource>[];
+
+  @override
+  Future<PickedAttachment?> pick(AttachmentSource source) async {
+    requested.add(source);
+    return result;
+  }
+}
+
+/// 一个合法的 1x1 透明 PNG，用于附件上传与缩略图下载断言。
+final Uint8List onePixelPng = Uint8List.fromList(const <int>[
+  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, //
+  0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+  0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+  0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
+  0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41,
+  0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+  0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
+  0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE,
+  0x42, 0x60, 0x82,
+]);
+
+/// 默认的可上传图片。
+PickedAttachment pickedPng({
+  String filename = 'proof.png',
+  String contentType = 'image/png',
+}) {
+  return PickedAttachment(
+    filename: filename,
+    contentType: contentType,
+    bytes: onePixelPng,
+  );
+}

@@ -17,38 +17,31 @@ public class EnvironmentIntegrationSettings {
   public RuntimeIntegrationSettings snapshot() {
     return new RuntimeIntegrationSettings(
         new RuntimeIntegrationSettings.Emby(
-            value("app.emby.base-url"), value("app.emby.api-key"), value("app.emby.user-id")),
-        new RuntimeIntegrationSettings.Asr(
-            value("app.asr.base-url"),
-            value("app.asr.api-key"),
-            valueOr("app.asr.model", RuntimeIntegrationSettings.DEFAULT_ASR_MODEL),
-            valueOr("app.asr.language", "Chinese"),
-            integer("app.asr.chunk-duration-seconds", 30),
-            integer("app.asr.timeout-seconds", 1800)),
-        new RuntimeIntegrationSettings.Llm(
-            value("app.llm.base-url"),
-            value("app.llm.api-key"),
-            value("app.llm.model"),
-            integer("app.llm.context-length", 131072),
-            integer("app.llm.max-completion-tokens", 8192),
-            integer("app.llm.timeout-seconds", 300),
-            value("app.llm.reasoning-effort")),
-        new RuntimeIntegrationSettings.OpenRouter(value("app.openrouter.api-key")),
-        new RuntimeIntegrationSettings.AutoFill(
-            Boolean.parseBoolean(valueOr("app.content-auto-fill.enabled", "false")),
-            integer("app.content-auto-fill.interval-minutes", 15)),
-        0);
+            value("app.emby.base-url"),
+            value("app.emby.api-key"),
+            value("app.emby.user-id"),
+            integer("app.emby.timeout-seconds", 10)),
+        java.util.List.of(),
+        new RuntimeIntegrationSettings.ServerChan(
+            value("app.serverchan.send-key"),
+            integer("app.serverchan.timeout-seconds", 8),
+            bool("app.serverchan.nag-enabled", true),
+            bool("app.serverchan.daily-digest-enabled", false)),
+        new RuntimeIntegrationSettings.Features(
+            bool("app.features.document-resources", false),
+            integer("app.features.max-document-size-mb", 200)),
+        0L);
   }
 
   private String value(String key) {
     return environment.getProperty(key, "");
   }
 
-  private String valueOr(String key, String fallback) {
-    return environment.getProperty(key, fallback);
-  }
-
   private int integer(String key, int fallback) {
     return environment.getProperty(key, Integer.class, fallback);
+  }
+
+  private boolean bool(String key, boolean fallback) {
+    return environment.getProperty(key, Boolean.class, fallback);
   }
 }

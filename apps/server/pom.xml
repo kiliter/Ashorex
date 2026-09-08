@@ -19,12 +19,17 @@
 
   <properties>
     <java.version>21</java.version>
+    <!-- 管理后台 Vue SPA 的构建工具链；node 版本与 apps/admin-web/package.json 的 engines 一致。 -->
+    <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
+    <admin-web.node.version>v22.12.0</admin-web.node.version>
+    <admin-web.npm.version>10.9.0</admin-web.npm.version>
+    <admin-web.dir>${project.basedir}/../admin-web</admin-web.dir>
+    <skip.admin.web>false</skip.admin.web>
     <flyway.version>13.3.0</flyway.version>
     <sqlite-jdbc.version>3.53.4.0</sqlite-jdbc.version>
     <spotless-maven-plugin.version>3.10.0</spotless-maven-plugin.version>
     <!-- WireMock 稳定版本来自官方 3.x 安装文档，仅用于外部服务契约测试。 -->
     <wiremock.version>3.13.2</wiremock.version>
-    <langchain4j.version>1.19.0</langchain4j.version>
   </properties>
 
   <dependencies>
@@ -58,10 +63,6 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-flyway</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-thymeleaf</artifactId>
-    </dependency>
     <!-- 冻结 API 合同所需的 OpenAPI 3.1 生成器，版本由实施计划明确指定。 -->
     <dependency>
       <groupId>org.springdoc</groupId>
@@ -76,18 +77,6 @@
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-oauth2-resource-server</artifactId>
     </dependency>
-    <!-- 只使用稳定版 OpenAI-compatible ChatModel，不引入 Agentic、MCP 或向量能力。 -->
-    <dependency>
-      <groupId>dev.langchain4j</groupId>
-      <artifactId>langchain4j-open-ai</artifactId>
-      <version>${langchain4j.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>dev.langchain4j</groupId>
-      <artifactId>langchain4j-http-client-jdk</artifactId>
-      <version>${langchain4j.version}</version>
-    </dependency>
-
     <!-- SQLite 驱动与 Flyway SQLite 数据库支持必须使用冻结版本。 -->
     <dependency>
       <groupId>org.xerial</groupId>
@@ -134,6 +123,53 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <!--
+        管理后台前端构建。默认参与 mvn package，保证 JAR 里始终带最新后台产物；
+        本地只改 Java 时可用 -Dskip.admin.web=true 跳过，节省一次 npm 构建。
+      -->
+      <plugin>
+        <groupId>com.github.eirslett</groupId>
+        <artifactId>frontend-maven-plugin</artifactId>
+        <version>${frontend-maven-plugin.version}</version>
+        <configuration>
+          <workingDirectory>${admin-web.dir}</workingDirectory>
+          <installDirectory>${project.build.directory}/node</installDirectory>
+          <skip>${skip.admin.web}</skip>
+        </configuration>
+        <executions>
+          <execution>
+            <id>install-node-and-npm</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>install-node-and-npm</goal>
+            </goals>
+            <configuration>
+              <nodeVersion>${admin-web.node.version}</nodeVersion>
+              <npmVersion>${admin-web.npm.version}</npmVersion>
+            </configuration>
+          </execution>
+          <execution>
+            <id>npm-ci</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <configuration>
+              <arguments>ci --no-audit --no-fund</arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>npm-build</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <configuration>
+              <arguments>run build</arguments>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>com.diffplug.spotless</groupId>

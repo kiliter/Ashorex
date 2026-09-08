@@ -3,6 +3,7 @@ package com.shangan.media.emby;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.groups.Tuple.tuple;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import com.shangan.common.api.BusinessException;
 import com.shangan.common.integration.RuntimeIntegrationSettings;
@@ -12,10 +13,12 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
@@ -327,6 +330,88 @@ class EmbyClientContractTest {
   }
 
   @Test
+  void lessonIndexNumberComesFromRemoteAndDoesNotShiftWhenAnEpisodeIsDropped() throws Exception {
+    AtomicReference<String> requestedFields = new AtomicReference<>();
+    AtomicBoolean dropped = new AtomicBoolean(false);
+    startServer(
+        exchange -> {
+          String path = exchange.getRequestURI().getPath();
+          if (path.equals("/Users/user-1/Items/series-1")) {
+            respond(exchange, 200, "{\"Id\":\"series-1\",\"Type\":\"Series\",\"IsFolder\":true}");
+            return;
+          }
+          if (path.equals("/Users/user-1/Items")) {
+            requestedFields.set(query(exchange).get("Fields"));
+            String third =
+                dropped.get()
+                    ? ""
+                    : "{\"Id\":\"ep-3\",\"Name\":\"第03讲\",\"Type\":\"Episode\",\"IndexNumber\":3,\"RunTimeTicks\":30000000000,\"Path\":\"/study/ep-3.mkv\"},";
+            respond(
+                exchange,
+                200,
+                "{\"Items\":["
+                    + "{\"Id\":\"ep-1\",\"Name\":\"第01讲\",\"Type\":\"Episode\",\"IndexNumber\":1,\"RunTimeTicks\":10000000000,\"Path\":\"/study/ep-1.mkv\"},"
+                    + "{\"Id\":\"ep-2\",\"Name\":\"第02讲\",\"Type\":\"Episode\",\"IndexNumber\":2,\"RunTimeTicks\":20000000000,\"Path\":\"/study/ep-2.mkv\"},"
+                    + third
+                    + "{\"Id\":\"ep-4\",\"Name\":\"第04讲\",\"Type\":\"Episode\",\"IndexNumber\":4,\"RunTimeTicks\":40000000000,\"Path\":\"/study/ep-4.mkv\"}"
+                    + "],\"TotalRecordCount\":"
+                    + (dropped.get() ? 3 : 4)
+                    + "}");
+            return;
+          }
+          respond(exchange, 404, "not found");
+        });
+    EmbyClient client = client(10);
+
+    List<EmbyDtos.MediaItem> before = client.listChildren("series-1");
+    dropped.set(true);
+    List<EmbyDtos.MediaItem> after = client.listChildren("series-1");
+
+    assertThat(requestedFields.get()).contains("IndexNumber");
+    assertThat(before)
+        .extracting(EmbyDtos.MediaItem::id, EmbyDtos.MediaItem::indexNumber)
+        .containsExactly(tuple("ep-1", 1), tuple("ep-2", 2), tuple("ep-3", 3), tuple("ep-4", 4));
+    // 第 3 讲下架后，第 4 讲的序号必须仍是 4：序号来自远端集号，不是列表位置。
+    assertThat(after)
+        .extracting(EmbyDtos.MediaItem::id, EmbyDtos.MediaItem::indexNumber)
+        .containsExactly(tuple("ep-1", 1), tuple("ep-2", 2), tuple("ep-4", 4));
+  }
+
+  @Test
+  void itemsWithoutIndexNumberFallBackAfterTheKnownMaximumWithoutColliding() throws Exception {
+    startServer(
+        exchange -> {
+          String path = exchange.getRequestURI().getPath();
+          if (path.equals("/Users/user-1/Items/folder-1")) {
+            respond(exchange, 200, "{\"Id\":\"folder-1\",\"Type\":\"Folder\",\"IsFolder\":true}");
+            return;
+          }
+          if (path.equals("/Users/user-1/Items")) {
+            respond(
+                exchange,
+                200,
+                """
+                {"Items":[
+                  {"Id":"video-a","Name":"导学","Type":"Video","RunTimeTicks":10000000000,"Path":"/study/a.mkv"},
+                  {"Id":"ep-2","Name":"第02讲","Type":"Episode","IndexNumber":2,"RunTimeTicks":20000000000,"Path":"/study/b.mkv"},
+                  {"Id":"video-c","Name":"答疑","Type":"Video","IndexNumber":null,"RunTimeTicks":30000000000,"Path":"/study/c.mkv"}
+                ],"TotalRecordCount":3}
+                """);
+            return;
+          }
+          respond(exchange, 404, "not found");
+        });
+
+    List<EmbyDtos.MediaItem> items = client(10).listChildren("folder-1");
+
+    // 缺失集号的条目排在已知最大集号（2）之后，不与集号撞车。
+    assertThat(items)
+        .extracting(EmbyDtos.MediaItem::id, EmbyDtos.MediaItem::indexNumber)
+        .containsExactly(tuple("video-a", 3), tuple("ep-2", 2), tuple("video-c", 4));
+    assertThat(items).extracting(EmbyDtos.MediaItem::indexNumber).doesNotHaveDuplicates();
+  }
+
+  @Test
   void parentNotFoundReturnsStableErrorWithoutRequestingPages() throws Exception {
     startServer(exchange -> respond(exchange, 404, "not found"));
 
@@ -357,6 +442,76 @@ class EmbyClientContractTest {
         .isInstanceOfSatisfying(
             BusinessException.class,
             exception -> assertThat(exception.errorCode()).isEqualTo("EMBY_UNAVAILABLE"));
+  }
+
+  /** 书籍绑定不触发远端扫描；封面标志只暴露布尔值。 */
+  @Test
+  void bookBindingIsExcludedAndCoverMetadataIsSafe() throws Exception {
+    startServer(
+        exchange -> {
+          assertThat(query(exchange).get("ParentId")).isEqualTo("library-video");
+          respond(
+              exchange,
+              200,
+              """
+          {"Items":[{"Id":"series","Name":"课程","Type":"Series","ParentId":"library-video",
+          "ImageTags":{"Primary":"opaque-tag"},"Path":"/private/secret"}],"TotalRecordCount":1}
+          """);
+        });
+    var sources =
+        client(
+                2,
+                List.of(
+                    new RuntimeIntegrationSettings.EmbyLibrary(
+                        "library-book", "书籍", RuntimeIntegrationSettings.EmbyLibraryType.BOOK),
+                    new RuntimeIntegrationSettings.EmbyLibrary(
+                        "library-video", "视频", RuntimeIntegrationSettings.EmbyLibraryType.SERIES)))
+            .searchSources("");
+    assertThat(sources).hasSize(1);
+    assertThat(sources.getFirst().hasPrimaryImage()).isTrue();
+    assertThat(new ObjectMapper().writeValueAsString(sources))
+        .doesNotContain("opaque-tag", "/private/secret");
+  }
+
+  /** 无图片或上游返回 HTML 时，不允许作为封面返回浏览器。 */
+  @Test
+  void coverRejectsNonImageResponse() throws Exception {
+    startServer(exchange -> respond(exchange, 200, "<html>upstream error</html>"));
+    assertThatThrownBy(() -> client(2, List.of()).readCover("source"))
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("暂无封面");
+  }
+
+  /** 保存的一秒超时必须约束真实元数据请求，不能继续使用原来的固定三十秒。 */
+  @Test
+  void usesConfiguredMetadataTimeout() throws Exception {
+    CountDownLatch release = new CountDownLatch(1);
+    startServer(
+        exchange -> {
+          try {
+            release.await();
+          } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+          }
+        });
+    EmbyProperties properties =
+        new EmbyProperties(
+            () ->
+                new RuntimeIntegrationSettings(
+                    new RuntimeIntegrationSettings.Emby(
+                        "http://127.0.0.1:" + server.getAddress().getPort(), "secret", "user-1", 1),
+                    0L));
+    EmbyClient client = new EmbyClient(properties, new ObjectMapper());
+    try {
+      assertTimeoutPreemptively(
+          Duration.ofSeconds(4),
+          () ->
+              assertThatThrownBy(client::listMediaLibraries)
+                  .isInstanceOf(BusinessException.class)
+                  .hasMessage("媒体服务暂时不可用"));
+    } finally {
+      release.countDown();
+    }
   }
 
   private EmbyClient client(int pageSize) {

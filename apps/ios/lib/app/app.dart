@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/app/router.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
-import 'package:shangan_ios/features/companion/presentation/study_companion_overlay.dart';
 
 /// 上岸根应用，只提供 iOS 优先的亮色主题和受认证路由。
 final class ShanganApp extends StatefulWidget {
@@ -40,10 +39,6 @@ final class _ShanganAppState extends State<ShanganApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       routerConfig: _router,
-      builder: (context, child) => StudyCompanionHost(
-        authController: widget.authController,
-        child: child ?? const SizedBox.shrink(),
-      ),
     );
   }
 }

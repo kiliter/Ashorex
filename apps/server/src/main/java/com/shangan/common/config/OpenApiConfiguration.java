@@ -44,7 +44,7 @@ public class OpenApiConfiguration {
             : parameter;
   }
 
-  /** 除公开认证与签名播放票据外，所有 API 操作都标注 Bearer JWT 安全要求。 */
+  /** 除公开认证接口外，所有 API 操作都标注 Bearer JWT 安全要求。 */
   @Bean
   OperationCustomizer bearerSecurityRequirement() {
     return (operation, handlerMethod) -> {
@@ -53,9 +53,7 @@ public class OpenApiConfiguration {
       boolean publicAuthentication =
           controller.equals(com.shangan.identity.api.AuthController.class)
               && java.util.Set.of("login", "refresh", "logout").contains(method);
-      boolean signedPlayback =
-          controller.equals(com.shangan.learning.api.PlaybackProxyController.class);
-      if (!publicAuthentication && !signedPlayback) {
+      if (!publicAuthentication) {
         operation.addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
       }
       return operation;

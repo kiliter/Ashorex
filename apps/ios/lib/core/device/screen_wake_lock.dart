@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-/// 控制设备是否保持屏幕常亮。模拟考试页在进行中启用，离开时必须关闭。
+/// 控制设备是否保持屏幕常亮。课程播放页在前台播放时启用，暂停或退出必须关闭。
 abstract interface class ScreenWakeLock {
   Future<void> enable();
 

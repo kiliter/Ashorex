@@ -2,11 +2,13 @@ package com.shangan.common.integration;
 
 import java.net.URI;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -39,24 +41,21 @@ public class RuntimeIntegrationSettingsService implements IntegrationSettingsPro
 
   /** 在数据库提交完成后才替换内存快照，提交失败时旧配置继续可用。 */
   public RuntimeIntegrationSettings save(RuntimeIntegrationSettings submitted) {
-    RuntimeIntegrationSettings validated = validate(submitted);
-    return commit(validated);
+    return commit(validate(submitted));
   }
 
-  /** 单独更新 Emby 媒体库绑定，不要求管理员重复提交或暴露其他服务密钥。 */
+  /** 单独更新 Emby 媒体库绑定，不要求管理员重复提交其他服务密钥。 */
   public RuntimeIntegrationSettings saveEmbyLibraries(
       List<RuntimeIntegrationSettings.EmbyLibrary> libraries) {
     RuntimeIntegrationSettings previous = current.get();
-    RuntimeIntegrationSettings submitted =
-        new RuntimeIntegrationSettings(
-            previous.emby(),
-            libraries,
-            previous.asr(),
-            previous.llm(),
-            previous.openRouter(),
-            previous.autoFill(),
-            clock.instant().toEpochMilli());
-    return commit(validate(submitted));
+    return commit(
+        validate(
+            new RuntimeIntegrationSettings(
+                previous.emby(),
+                libraries,
+                previous.serverChan(),
+                previous.features(),
+                clock.millis())));
   }
 
   private RuntimeIntegrationSettings commit(RuntimeIntegrationSettings validated) {
@@ -71,136 +70,106 @@ public class RuntimeIntegrationSettingsService implements IntegrationSettingsPro
     return committed;
   }
 
+  /** 校验失败时抛出携带逐字段错误的异常，页面可直接回显；密钥不参与格式校验。 */
   private RuntimeIntegrationSettings validate(RuntimeIntegrationSettings submitted) {
     Map<String, String> errors = new LinkedHashMap<>();
     RuntimeIntegrationSettings.Emby emby =
         new RuntimeIntegrationSettings.Emby(
             url("embyBaseUrl", "Emby Base URL", submitted.emby().baseUrl(), errors),
             text(submitted.emby().apiKey()),
-            text(submitted.emby().userId()));
-    List<RuntimeIntegrationSettings.EmbyLibrary> embyLibraries =
-        validatedEmbyLibraries(submitted.embyLibraries(), errors);
-    RuntimeIntegrationSettings.Asr asr =
-        new RuntimeIntegrationSettings.Asr(
-            url("asrBaseUrl", "ASR Base URL", submitted.asr().baseUrl(), errors),
-            text(submitted.asr().apiKey()),
-            text(submitted.asr().model()),
-            text(submitted.asr().language()),
+            text(submitted.emby().userId()),
             range(
-                "asrChunkDurationSeconds",
-                "ASR 分片秒数",
-                submitted.asr().chunkDurationSeconds(),
-                5,
-                600,
-                errors),
-            range(
-                "asrTimeoutSeconds",
-                "ASR 超时秒数",
-                submitted.asr().timeoutSeconds(),
+                "embyTimeoutSeconds",
+                "Emby 超时秒数",
+                submitted.emby().timeoutSeconds(),
                 1,
-                7200,
+                120,
                 errors));
-    RuntimeIntegrationSettings.Llm llm =
-        new RuntimeIntegrationSettings.Llm(
-            url("llmBaseUrl", "LLM Base URL", submitted.llm().baseUrl(), errors),
-            text(submitted.llm().apiKey()),
-            text(submitted.llm().model()),
+    RuntimeIntegrationSettings.ServerChan serverChan =
+        new RuntimeIntegrationSettings.ServerChan(
+            text(submitted.serverChan().sendKey()),
             range(
-                "llmContextLength",
-                "LLM 上下文长度",
-                submitted.llm().contextLength(),
-                4096,
-                2_000_000,
-                errors),
-            // 最大输出直接采用 OpenRouter 模型目录或管理员手工配置的值，不额外限制。
-            submitted.llm().maxCompletionTokens(),
-            range(
-                "llmTimeoutSeconds", "LLM 超时秒数", submitted.llm().timeoutSeconds(), 1, 1800, errors),
-            text(submitted.llm().reasoningEffort()));
-    RuntimeIntegrationSettings.AutoFill autoFill =
-        new RuntimeIntegrationSettings.AutoFill(
-            submitted.autoFill().enabled(),
-            range(
-                "autoFillIntervalMinutes",
-                "自动补全扫描间隔",
-                submitted.autoFill().intervalMinutes(),
+                "serverChanTimeoutSeconds",
+                "Server 酱超时秒数",
+                submitted.serverChan().timeoutSeconds(),
                 1,
-                1440,
+                60,
+                errors),
+            submitted.serverChan().nagEnabled(),
+            submitted.serverChan().dailyDigestEnabled());
+    RuntimeIntegrationSettings.Features features =
+        new RuntimeIntegrationSettings.Features(
+            submitted.features().documentResources(),
+            range(
+                "featureMaxDocumentSizeMb",
+                "材料单文件上限（MB）",
+                submitted.features().maxDocumentSizeMb(),
+                1,
+                2048,
                 errors));
-    long inputBudget = (long) llm.contextLength() - llm.maxCompletionTokens() - 2048L;
-    if (llm.maxCompletionTokens() <= 0 || inputBudget < 256L) {
-      errors.put("llmMaxCompletionTokens", "LLM 输出预算必须为正文至少预留 256 Tokens");
+    List<RuntimeIntegrationSettings.EmbyLibrary> libraries =
+        validatedLibraries(submitted.embyLibraries(), errors);
+    if (!errors.isEmpty()) {
+      throw new IntegrationSettingsValidationException(errors);
     }
-    if (!errors.isEmpty()) throw new IntegrationSettingsValidationException(errors);
-    return new RuntimeIntegrationSettings(
-        emby,
-        embyLibraries,
-        asr,
-        llm,
-        new RuntimeIntegrationSettings.OpenRouter(text(submitted.openRouter().apiKey())),
-        autoFill,
-        clock.instant().toEpochMilli());
+    return new RuntimeIntegrationSettings(emby, libraries, serverChan, features, clock.millis());
   }
 
-  private List<RuntimeIntegrationSettings.EmbyLibrary> validatedEmbyLibraries(
+  /** 媒体库必须有 ID 且不重复；名称缺失时回退为 ID，避免页面出现空行。 */
+  private List<RuntimeIntegrationSettings.EmbyLibrary> validatedLibraries(
       List<RuntimeIntegrationSettings.EmbyLibrary> submitted, Map<String, String> errors) {
     if (submitted == null || submitted.isEmpty()) {
       return List.of();
     }
-    if (submitted.size() > 50) {
-      errors.put("embyLibraries", "最多绑定 50 个 Emby 媒体库");
+    Set<String> seen = new LinkedHashSet<>();
+    List<RuntimeIntegrationSettings.EmbyLibrary> normalized = new ArrayList<>();
+    for (RuntimeIntegrationSettings.EmbyLibrary library : submitted) {
+      String id = text(library.id());
+      if (id.isEmpty()) {
+        errors.put("embyLibraries", "媒体库 ID 不能为空");
+        continue;
+      }
+      if (!seen.add(id)) {
+        continue;
+      }
+      String name = text(library.name());
+      normalized.add(
+          new RuntimeIntegrationSettings.EmbyLibrary(
+              id,
+              name.isEmpty() ? id : name,
+              library.contentType() == null
+                  ? RuntimeIntegrationSettings.EmbyLibraryType.MIXED
+                  : library.contentType()));
     }
-    LinkedHashSet<String> ids = new LinkedHashSet<>();
-    List<RuntimeIntegrationSettings.EmbyLibrary> normalized =
-        submitted.stream()
-            .map(
-                library ->
-                    new RuntimeIntegrationSettings.EmbyLibrary(
-                        text(library.id()), text(library.name()), library.contentType()))
-            .filter(
-                library -> {
-                  boolean valid =
-                      !library.id().isBlank()
-                          && !library.name().isBlank()
-                          && library.contentType() != null
-                          && ids.add(library.id());
-                  if (!valid) {
-                    errors.put("embyLibraries", "Emby 媒体库绑定包含无效或重复项目");
-                  }
-                  return valid;
-                })
-            .toList();
     return List.copyOf(normalized);
   }
 
-  private int range(
-      String field, String label, int value, int minimum, int maximum, Map<String, String> errors) {
-    if (value < minimum || value > maximum) {
-      errors.put(field, label + "必须在 " + minimum + " 到 " + maximum + " 之间");
+  /** 允许留空表示未配置；填写时必须是带 scheme 与 host 的绝对地址。 */
+  private String url(String field, String label, String value, Map<String, String> errors) {
+    String normalized = text(value);
+    if (normalized.isEmpty()) {
+      return normalized;
     }
-    return value;
+    try {
+      URI uri = URI.create(normalized);
+      // 媒体代理仅支持 HTTP(S)，凭据必须单独填写，不能混入会回显的地址。
+      if ((!"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme()))
+          || uri.getHost() == null
+          || uri.getUserInfo() != null) {
+        errors.put(field, label + "必须是不含账号密码的 HTTP(S) 地址");
+      }
+    } catch (IllegalArgumentException exception) {
+      errors.put(field, label + "格式不合法");
+    }
+    return normalized;
   }
 
-  private String url(String field, String label, String raw, Map<String, String> errors) {
-    String value = text(raw);
-    if (value.isBlank()) return value;
-    try {
-      URI uri = URI.create(value);
-      boolean http =
-          "http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme());
-      if (!http
-          || uri.getHost() == null
-          || uri.getHost().isBlank()
-          || uri.getUserInfo() != null
-          || uri.getQuery() != null
-          || uri.getFragment() != null) {
-        throw new IllegalArgumentException();
-      }
-      return value.replaceAll("/+$", "");
-    } catch (IllegalArgumentException exception) {
-      errors.put(field, label + " 必须是完整的 HTTP 或 HTTPS 地址，且不能包含账号、Query 或 Fragment");
-      return value;
+  private int range(
+      String field, String label, int value, int min, int max, Map<String, String> errors) {
+    if (value < min || value > max) {
+      errors.put(field, label + "必须在 " + min + " 到 " + max + " 之间");
     }
+    return value;
   }
 
   private String text(String value) {

@@ -67,16 +67,13 @@ create_environment_file() {
   fi
 
   local jwt_secret
-  local playback_secret
   jwt_secret="$(random_hex 32)"
-  playback_secret="$(random_hex 32)"
   GENERATED_ADMIN_PASSWORD="$(random_hex 16)"
 
   umask 077
   {
     printf '# 此文件由部署脚本生成，包含真实密钥，禁止提交到 Git。\n'
     printf 'JWT_SECRET=%s\n' "${jwt_secret}"
-    printf 'PLAYBACK_TICKET_SECRET=%s\n' "${playback_secret}"
     printf 'ADMIN_BOOTSTRAP_PASSWORD=%s\n' "${GENERATED_ADMIN_PASSWORD}"
   } >"${ENV_FILE}"
   chmod 600 "${ENV_FILE}"
@@ -94,14 +91,11 @@ validate_environment_file() {
   chmod 600 "${ENV_FILE}"
 
   local jwt_secret
-  local playback_secret
   local admin_password
   jwt_secret="$(environment_value JWT_SECRET)"
-  playback_secret="$(environment_value PLAYBACK_TICKET_SECRET)"
   admin_password="$(environment_value ADMIN_BOOTSTRAP_PASSWORD)"
 
   [[ ${#jwt_secret} -ge 32 ]] || fail "JWT_SECRET 必须至少为 32 字节。"
-  [[ ${#playback_secret} -ge 32 ]] || fail "PLAYBACK_TICKET_SECRET 必须至少为 32 字节。"
   [[ -n "${admin_password}" ]] || fail "ADMIN_BOOTSTRAP_PASSWORD 不能为空。"
 }
 
@@ -162,7 +156,6 @@ compose_for_uninstall() {
   fi
   env \
     JWT_SECRET=uninstall-only-placeholder-0000000000000000 \
-    PLAYBACK_TICKET_SECRET=uninstall-only-placeholder-000000000000 \
     ADMIN_BOOTSTRAP_PASSWORD=uninstall-only-placeholder \
     docker compose -f "${COMPOSE_FILE}" "$@"
 }

@@ -1,4 +1,4 @@
-# 上岸 V1 单服务进程、单 SQLite 实例部署；秘密仅在运行时从宿主环境注入。
+# 上岸 V2 单服务进程、单 SQLite 实例部署；秘密仅在运行时从宿主环境注入。
 services:
   server:
     build:
@@ -7,31 +7,17 @@ services:
     image: shangan-server:local
     restart: unless-stopped
     environment:
+      # 容器内必须监听所有网卡，否则端口映射和反向代理都无法访问。
+      SERVER_ADDRESS: "0.0.0.0"
       DATA_DIR: /data
       JWT_SECRET: ${JWT_SECRET:-}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
-      PLAYBACK_TICKET_SECRET: ${PLAYBACK_TICKET_SECRET:-}
       ADMIN_BOOTSTRAP_USERNAME: ${ADMIN_BOOTSTRAP_USERNAME:-}
       ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
       EMBY_BASE_URL: ${EMBY_BASE_URL:-}
       EMBY_API_KEY: ${EMBY_API_KEY:-}
       EMBY_USER_ID: ${EMBY_USER_ID:-}
-      ASR_BASE_URL: ${ASR_BASE_URL:-}
-      ASR_API_KEY: ${ASR_API_KEY:-}
-      ASR_MODEL: ${ASR_MODEL:-mlx-community/Qwen3-ASR-1.7B-8bit}
-      ASR_LANGUAGE: ${ASR_LANGUAGE:-Chinese}
-      ASR_CHUNK_DURATION_SECONDS: ${ASR_CHUNK_DURATION_SECONDS:-30}
-      ASR_TIMEOUT_SECONDS: ${ASR_TIMEOUT_SECONDS:-1800}
-      LLM_BASE_URL: ${LLM_BASE_URL:-}
-      LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_MODEL: ${LLM_MODEL:-}
-      LLM_CONTEXT_LENGTH: ${LLM_CONTEXT_LENGTH:-131072}
-      LLM_MAX_COMPLETION_TOKENS: ${LLM_MAX_COMPLETION_TOKENS:-8192}
-      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-300}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      CONTENT_AUTO_FILL_ENABLED: ${CONTENT_AUTO_FILL_ENABLED:-false}
-      CONTENT_AUTO_FILL_INTERVAL_MINUTES: ${CONTENT_AUTO_FILL_INTERVAL_MINUTES:-15}
-      QUIZ_DEBT_ESTIMATE_SECONDS: ${QUIZ_DEBT_ESTIMATE_SECONDS:-600}
+      SERVERCHAN_SEND_KEY: ${SERVERCHAN_SEND_KEY:-}
     volumes:
       - study-data:/data
       - study-backup:/backup

@@ -120,7 +120,7 @@ final class FakeAuthRepository implements AuthRepository {
       id: 'user-1',
       username: 'alice',
       displayName: 'Alice',
-      role: 'USER',
+      roles: ['LEARNER'],
       timezone: 'Asia/Shanghai',
     );
   }

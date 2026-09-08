@@ -72,3 +72,7 @@ sqlite3 /srv/shangan/data/study.db "PRAGMA integrity_check;"
 ## 人工演练
 
 根据 ADR-0014，备份恢复不再作为数据库运行时自动化测试执行。发布前由维护人员在隔离目录按本文步骤完成备份、完整性检查、恢复和代表性数据核对，并记录执行时间、操作者、备份文件校验值与结果。
+
+## V2 附件目录
+
+备份和恢复使用 `DATA_DIR/attachments` 与 `todo_attachments`；数据库备份、同名 `.attachments.tar.gz` 和校验文件必须一起保留。V1 的 `mock-exams` 归档不作为 V2 附件来源。

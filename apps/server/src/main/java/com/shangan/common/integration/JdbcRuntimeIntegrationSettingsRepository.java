@@ -1,154 +1,158 @@
 package com.shangan.common.integration;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 
-/** 使用 JdbcClient 读取和整体替换固定的运行时配置行。 */
+/** 运行时集成配置的持久化实现；配置固定单行，媒体库绑定以 JSON 数组存储。 */
 @Repository
 public class JdbcRuntimeIntegrationSettingsRepository
     implements RuntimeIntegrationSettingsRepository {
 
-  private final JdbcClient jdbc;
-  private final ObjectMapper objectMapper;
+  private static final String SINGLETON_ID = "runtime";
 
-  public JdbcRuntimeIntegrationSettingsRepository(JdbcClient jdbc, ObjectMapper objectMapper) {
-    this.jdbc = jdbc;
+  private final JdbcClient jdbcClient;
+  private final ObjectMapper objectMapper;
+  private final Clock clock;
+
+  public JdbcRuntimeIntegrationSettingsRepository(
+      JdbcClient jdbcClient, ObjectMapper objectMapper, Clock clock) {
+    this.jdbcClient = jdbcClient;
     this.objectMapper = objectMapper;
+    this.clock = clock;
   }
 
   @Override
-  public java.util.Optional<RuntimeIntegrationSettings> find() {
-    return jdbc.sql("select * from runtime_integration_settings where id = 'default'")
-        .query(this::map)
+  public Optional<RuntimeIntegrationSettings> find() {
+    return jdbcClient
+        .sql(
+            """
+            SELECT emby_base_url, emby_api_key, emby_user_id, emby_timeout_seconds,
+                   emby_libraries_json,
+                   serverchan_send_key, serverchan_timeout_seconds,
+                   serverchan_nag_enabled, serverchan_daily_digest_enabled,
+                   feature_document_resources, feature_max_document_size_mb,
+                   updated_at
+              FROM runtime_settings
+             WHERE id = :id
+            """)
+        .param("id", SINGLETON_ID)
+        .query(
+            (row, rowNumber) ->
+                new RuntimeIntegrationSettings(
+                    new RuntimeIntegrationSettings.Emby(
+                        row.getString("emby_base_url"),
+                        row.getString("emby_api_key"),
+                        row.getString("emby_user_id"),
+                        row.getInt("emby_timeout_seconds")),
+                    parseLibraries(row.getString("emby_libraries_json")),
+                    new RuntimeIntegrationSettings.ServerChan(
+                        row.getString("serverchan_send_key"),
+                        row.getInt("serverchan_timeout_seconds"),
+                        row.getInt("serverchan_nag_enabled") == 1,
+                        row.getInt("serverchan_daily_digest_enabled") == 1),
+                    new RuntimeIntegrationSettings.Features(
+                        row.getInt("feature_document_resources") == 1,
+                        row.getInt("feature_max_document_size_mb")),
+                    row.getLong("updated_at")))
         .optional();
   }
 
   @Override
   public void replace(RuntimeIntegrationSettings value) {
-    jdbc.sql(
+    jdbcClient
+        .sql(
             """
-            insert into runtime_integration_settings (
-              id, emby_base_url, emby_api_key, emby_user_id,
-              asr_base_url, asr_api_key, asr_model, asr_language,
-              asr_chunk_duration_seconds, asr_timeout_seconds,
-              llm_base_url, llm_api_key, llm_model, llm_context_length,
-              llm_max_completion_tokens, llm_timeout_seconds, llm_reasoning_effort,
-              openrouter_api_key, content_auto_fill_enabled,
-              content_auto_fill_interval_minutes, emby_libraries_json, updated_at
-            ) values (
-              'default', :embyBaseUrl, :embyApiKey, :embyUserId,
-              :asrBaseUrl, :asrApiKey, :asrModel, :asrLanguage,
-              :asrChunkDurationSeconds, :asrTimeoutSeconds,
-              :llmBaseUrl, :llmApiKey, :llmModel, :llmContextLength,
-              :llmMaxCompletionTokens, :llmTimeoutSeconds, :llmReasoningEffort,
-              :openRouterApiKey, :autoFillEnabled, :autoFillIntervalMinutes,
-              :embyLibrariesJson, :updatedAt
+            INSERT INTO runtime_settings (
+                id, emby_base_url, emby_api_key, emby_user_id, emby_timeout_seconds,
+                emby_libraries_json,
+                serverchan_send_key, serverchan_timeout_seconds,
+                serverchan_nag_enabled, serverchan_daily_digest_enabled,
+                feature_document_resources, feature_max_document_size_mb,
+                updated_at
+            ) VALUES (
+                :id, :embyBaseUrl, :embyApiKey, :embyUserId, :embyTimeoutSeconds,
+                :embyLibrariesJson,
+                :serverChanSendKey, :serverChanTimeoutSeconds,
+                :serverChanNagEnabled, :serverChanDailyDigestEnabled,
+                :featureDocumentResources, :featureMaxDocumentSizeMb,
+                :updatedAt
             )
-            on conflict(id) do update set
-              emby_base_url = excluded.emby_base_url,
-              emby_api_key = excluded.emby_api_key,
-              emby_user_id = excluded.emby_user_id,
-              asr_base_url = excluded.asr_base_url,
-              asr_api_key = excluded.asr_api_key,
-              asr_model = excluded.asr_model,
-              asr_language = excluded.asr_language,
-              asr_chunk_duration_seconds = excluded.asr_chunk_duration_seconds,
-              asr_timeout_seconds = excluded.asr_timeout_seconds,
-              llm_base_url = excluded.llm_base_url,
-              llm_api_key = excluded.llm_api_key,
-              llm_model = excluded.llm_model,
-              llm_context_length = excluded.llm_context_length,
-              llm_max_completion_tokens = excluded.llm_max_completion_tokens,
-              llm_timeout_seconds = excluded.llm_timeout_seconds,
-              llm_reasoning_effort = excluded.llm_reasoning_effort,
-              openrouter_api_key = excluded.openrouter_api_key,
-              content_auto_fill_enabled = excluded.content_auto_fill_enabled,
-              content_auto_fill_interval_minutes = excluded.content_auto_fill_interval_minutes,
-              emby_libraries_json = :embyLibrariesJson,
-              updated_at = excluded.updated_at
+            ON CONFLICT(id) DO UPDATE SET
+                emby_base_url = excluded.emby_base_url,
+                emby_api_key = excluded.emby_api_key,
+                emby_user_id = excluded.emby_user_id,
+                emby_timeout_seconds = excluded.emby_timeout_seconds,
+                emby_libraries_json = excluded.emby_libraries_json,
+                serverchan_send_key = excluded.serverchan_send_key,
+                serverchan_timeout_seconds = excluded.serverchan_timeout_seconds,
+                serverchan_nag_enabled = excluded.serverchan_nag_enabled,
+                serverchan_daily_digest_enabled = excluded.serverchan_daily_digest_enabled,
+                feature_document_resources = excluded.feature_document_resources,
+                feature_max_document_size_mb = excluded.feature_max_document_size_mb,
+                updated_at = excluded.updated_at
             """)
+        .param("id", SINGLETON_ID)
         .param("embyBaseUrl", value.emby().baseUrl())
         .param("embyApiKey", value.emby().apiKey())
         .param("embyUserId", value.emby().userId())
-        .param("asrBaseUrl", value.asr().baseUrl())
-        .param("asrApiKey", value.asr().apiKey())
-        .param("asrModel", value.asr().model())
-        .param("asrLanguage", value.asr().language())
-        .param("asrChunkDurationSeconds", value.asr().chunkDurationSeconds())
-        .param("asrTimeoutSeconds", value.asr().timeoutSeconds())
-        .param("llmBaseUrl", value.llm().baseUrl())
-        .param("llmApiKey", value.llm().apiKey())
-        .param("llmModel", value.llm().model())
-        .param("llmContextLength", value.llm().contextLength())
-        .param("llmMaxCompletionTokens", value.llm().maxCompletionTokens())
-        .param("llmTimeoutSeconds", value.llm().timeoutSeconds())
-        .param("llmReasoningEffort", value.llm().reasoningEffort())
-        .param("openRouterApiKey", value.openRouter().apiKey())
-        .param("autoFillEnabled", value.autoFill().enabled() ? 1 : 0)
-        .param("autoFillIntervalMinutes", value.autoFill().intervalMinutes())
+        .param("embyTimeoutSeconds", value.emby().timeoutSeconds())
         .param("embyLibrariesJson", librariesJson(value.embyLibraries()))
-        .param("updatedAt", value.updatedAt())
+        .param("serverChanSendKey", value.serverChan().sendKey())
+        .param("serverChanTimeoutSeconds", value.serverChan().timeoutSeconds())
+        .param("serverChanNagEnabled", value.serverChan().nagEnabled() ? 1 : 0)
+        .param("serverChanDailyDigestEnabled", value.serverChan().dailyDigestEnabled() ? 1 : 0)
+        .param("featureDocumentResources", value.features().documentResources() ? 1 : 0)
+        .param("featureMaxDocumentSizeMb", value.features().maxDocumentSizeMb())
+        .param("updatedAt", clock.millis())
         .update();
   }
 
-  private RuntimeIntegrationSettings map(ResultSet row, int rowNumber) throws SQLException {
-    return new RuntimeIntegrationSettings(
-        new RuntimeIntegrationSettings.Emby(
-            row.getString("emby_base_url"),
-            row.getString("emby_api_key"),
-            row.getString("emby_user_id")),
-        parseLibraries(row.getString("emby_libraries_json")),
-        new RuntimeIntegrationSettings.Asr(
-            row.getString("asr_base_url"),
-            row.getString("asr_api_key"),
-            row.getString("asr_model"),
-            row.getString("asr_language"),
-            row.getInt("asr_chunk_duration_seconds"),
-            row.getInt("asr_timeout_seconds")),
-        new RuntimeIntegrationSettings.Llm(
-            row.getString("llm_base_url"),
-            row.getString("llm_api_key"),
-            row.getString("llm_model"),
-            row.getInt("llm_context_length"),
-            row.getInt("llm_max_completion_tokens"),
-            row.getInt("llm_timeout_seconds"),
-            row.getString("llm_reasoning_effort")),
-        new RuntimeIntegrationSettings.OpenRouter(row.getString("openrouter_api_key")),
-        new RuntimeIntegrationSettings.AutoFill(
-            row.getInt("content_auto_fill_enabled") == 1,
-            row.getInt("content_auto_fill_interval_minutes")),
-        row.getLong("updated_at"));
+  /** 媒体库绑定序列化为紧凑 JSON 数组，避免为少量固定数据单独建表。 */
+  private String librariesJson(List<RuntimeIntegrationSettings.EmbyLibrary> libraries) {
+    ArrayNode array = objectMapper.createArrayNode();
+    for (RuntimeIntegrationSettings.EmbyLibrary library : libraries) {
+      ObjectNode node = array.addObject();
+      node.put("id", library.id());
+      node.put("name", library.name());
+      node.put("contentType", library.contentType().name());
+    }
+    return array.toString();
   }
 
-  private String librariesJson(List<RuntimeIntegrationSettings.EmbyLibrary> libraries) {
+  /** 解析失败时返回空列表而不是抛出，避免一处脏数据让整个后台不可用。 */
+  private List<RuntimeIntegrationSettings.EmbyLibrary> parseLibraries(String json) {
+    if (json == null || json.isBlank()) {
+      return List.of();
+    }
     try {
-      return objectMapper.writeValueAsString(libraries);
-    } catch (Exception exception) {
-      throw new IllegalStateException("Emby 媒体库绑定无法序列化", exception);
+      List<RuntimeIntegrationSettings.EmbyLibrary> result = new ArrayList<>();
+      for (var node : objectMapper.readTree(json)) {
+        String contentType = node.path("contentType").asText("MIXED");
+        result.add(
+            new RuntimeIntegrationSettings.EmbyLibrary(
+                node.path("id").asText(""),
+                node.path("name").asText(""),
+                parseContentType(contentType)));
+      }
+      return List.copyOf(result);
+    } catch (JsonProcessingException exception) {
+      return List.of();
     }
   }
 
-  private List<RuntimeIntegrationSettings.EmbyLibrary> parseLibraries(String json)
-      throws SQLException {
+  private RuntimeIntegrationSettings.EmbyLibraryType parseContentType(String value) {
     try {
-      List<RuntimeIntegrationSettings.EmbyLibrary> result = new ArrayList<>();
-      for (JsonNode node : objectMapper.readTree(json == null ? "[]" : json)) {
-        result.add(
-            new RuntimeIntegrationSettings.EmbyLibrary(
-                node.path("id").asText(),
-                node.path("name").asText(),
-                RuntimeIntegrationSettings.EmbyLibraryType.valueOf(
-                    node.path("contentType").asText())));
-      }
-      return List.copyOf(result);
-    } catch (Exception exception) {
-      throw new SQLException("Emby 媒体库绑定配置损坏", exception);
+      return RuntimeIntegrationSettings.EmbyLibraryType.valueOf(value);
+    } catch (IllegalArgumentException exception) {
+      return RuntimeIntegrationSettings.EmbyLibraryType.MIXED;
     }
   }
 }
