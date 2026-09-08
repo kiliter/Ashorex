@@ -97,9 +97,30 @@ a {
 }
 
 .admin-nav .brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
   font-weight: 800;
   padding: 4px 8px 12px;
+}
+
+/* 与 App 图标同一套浪形对勾；圆角由 CSS 裁切，源图保持正方形。 */
+.brand-mark {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  object-fit: cover;
+  background: var(--blue);
+}
+
+.brand-mark.lg {
+  display: block;
+  width: 56px;
+  height: 56px;
+  border-radius: 13px;
+  margin-bottom: 14px;
 }
 
 .admin-nav .brand small {
