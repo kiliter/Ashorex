@@ -1,0 +1,27 @@
+apps/ios/pubspec.yaml
+  s_8c08f606af75ce::t_fdfc7aeabb744c 4
+apps/ios/lib/core/widgets/shangan_v2.dart
+  s_8c08f606af75ce::t_6b5463b7d019a0 593
+apps/server/pom.xml
+  s_8c08f606af75ce::t_fdfc7aeabb744c 16,18
+apps/admin-web/package-lock.json
+  s_8c08f606af75ce::t_82bb4cc59d0f41 16,389-398,1359-1365
+apps/admin-web/package.json
+  s_8c08f606af75ce::t_fb164a85b5409c 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "ab57dccd453c295f5fc03f097458a5e62823117c",
+  "prompts": {},
+  "sessions": {
+    "s_8c08f606af75ce": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0805f-aa0e-7953-92a2-bdf8570a1194",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
