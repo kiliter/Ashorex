@@ -42,9 +42,10 @@ class ActiveAccountSecurityTest {
   void 角色取当前账号而非旧令牌里的管理员声明() {
     when(users.findById("user-1"))
         .thenReturn(Optional.of(account(UserStatus.ACTIVE, UserRole.LEARNER)));
+    // 权限是无序集合；严格校验全部成员，不依赖不同 JVM 的遍历顺序。
     assertThat(configuration.jwtAuthenticationConverter(users).convert(token()).getAuthorities())
         .extracting(authority -> authority.getAuthority())
-        .containsExactly("FACTOR_BEARER", "ROLE_LEARNER");
+        .containsExactlyInAnyOrder("FACTOR_BEARER", "ROLE_LEARNER");
   }
 
   @Test
