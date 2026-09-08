@@ -1,0 +1,19 @@
+apps/server/src/test/java/com/shangan/common/config/ActiveAccountSecurityTest.java
+  s_8c08f606af75ce::t_3fc796b34ea18f 45,48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "806f21907a391160903a92130f90fd4d4b3471d6",
+  "prompts": {},
+  "sessions": {
+    "s_8c08f606af75ce": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0805f-aa0e-7953-92a2-bdf8570a1194",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
