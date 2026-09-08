@@ -95,6 +95,8 @@ Future<void> _pump(
   required List<Map<String, Object?>> days,
 }) async {
   final backend = FakeBackend()
+    // 统计页从今日接口取得账号日期，测试同时提供该依赖，避免 404 触发重试。
+    ..on('GET', '/api/v1/todos', json: dayViewJson(date: '2026-09-08'))
     ..on(
       'GET',
       '/api/v1/stats',
