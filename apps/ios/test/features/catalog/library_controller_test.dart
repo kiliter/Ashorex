@@ -6,7 +6,7 @@ import '../../support/fake_backend.dart';
 import '../../support/fixtures.dart';
 
 /// 课程库筛选：流派 / 标签 / 人物 / 年份全部来自 Emby 元数据，客户端只做筛选组合，
-/// 同一维度再次点选即取消，筛选条件必须原样出现在请求查询串里。
+/// 同类并集跨类交集，断言实际课程结果而非仅检查查询参数。
 void main() {
   test('筛选维度全部来自服务端投影，附带课程数', () async {
     final backend = FakeBackend()
@@ -58,26 +58,87 @@ void main() {
     expect(container.read(catalogFilterProvider).person, '袁东');
   });
 
-  test('筛选条件会进入课程列表请求的查询串', () async {
+  test('多选同类并集跨类交集，应用和清空均改变真实结果', () async {
     final backend = FakeBackend()
       ..on(
         'GET',
         '/api/v1/catalog/courses',
-        json: [courseSummaryJson(id: 'c-1')],
+        json: [
+          courseSummaryJson(
+            id: 'a',
+            title: '行政法',
+            genres: ['法律'],
+            people: ['甲'],
+            tags: ['重点'],
+          ),
+          courseSummaryJson(
+            id: 'b',
+            title: '数学',
+            genres: ['数学'],
+            people: ['乙'],
+            tags: ['重点'],
+          ),
+          courseSummaryJson(
+            id: 'c',
+            title: '英语',
+            genres: ['英语'],
+            people: ['甲'],
+            tags: ['重点'],
+          ),
+          courseSummaryJson(
+            id: 'd',
+            title: '民法',
+            genres: ['法律'],
+            people: ['丙'],
+            tags: ['重点'],
+          ),
+          courseSummaryJson(
+            id: 'e',
+            title: '基础法',
+            genres: ['法律'],
+            people: ['甲'],
+            tags: ['基础'],
+          ),
+        ],
       );
     final container = _container(backend);
     addTearDown(container.dispose);
     final controller = container.read(catalogFilterProvider.notifier);
-
-    controller.toggleGenre('法律');
-    controller.togglePerson('袁东');
+    final subscription = container.listen(coursesProvider, (_, _) {});
+    addTearDown(subscription.close);
+    expect((await container.read(coursesProvider.future)).map((c) => c.id), [
+      'a',
+      'b',
+      'c',
+      'd',
+      'e',
+    ]);
+    controller.apply(
+      const CatalogFilter(
+        genres: {'法律', '数学'},
+        people: {'甲', '乙'},
+        tags: {'重点'},
+      ),
+    );
+    expect((await container.read(coursesProvider.future)).map((c) => c.id), [
+      'a',
+      'b',
+    ]);
     controller.setQuery('行政');
-    await container.read(coursesProvider.future);
-
-    final path = backend.lastRequest('GET', '/api/v1/catalog/courses').path;
-    expect(path, contains('genre=%E6%B3%95%E5%BE%8B'));
-    expect(path, contains('person=%E8%A2%81%E4%B8%9C'));
-    expect(path, contains('q=%E8%A1%8C%E6%94%BF'));
+    expect((await container.read(coursesProvider.future)).map((c) => c.id), [
+      'a',
+    ]);
+    controller.setQuery('不存在');
+    expect(await container.read(coursesProvider.future), isEmpty);
+    controller.apply(const CatalogFilter());
+    expect((await container.read(coursesProvider.future)).map((c) => c.id), [
+      'a',
+      'b',
+      'c',
+      'd',
+      'e',
+    ]);
+    expect(backend.callCount('GET', '/api/v1/catalog/courses'), 1);
   });
 
   test('无筛选时不拼查询串', () async {

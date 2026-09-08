@@ -553,14 +553,18 @@ table.wt td b{font-weight:700;}
 <p>按流派　按人物</p><div id="selected-demo">全部课程</div><button onclick="document.getElementById('selected-demo').textContent='全部课程'">一键清空</button>
 <div style="overflow:auto;flex:1"><p>经济法精讲课程</p><p>税法基础课程</p><p>会计提高课程</p><p style="height:400px">课程结果独立滚动</p></div>
 </div>
-<dialog id="filter-drawer" style="margin-right:0;height:75vh;width:360px;border:1px solid #ddd">
+<dialog id="filter-drawer" style="margin-left:0;height:75vh;width:360px;border:1px solid #ddd">
 <form method="dialog" style="display:flex;flex-direction:column;height:100%"><h3>筛选课程</h3><input placeholder="搜索筛选标签"><div style="overflow:auto;flex:1">
-<p>流派 <select id="demo-genre"><option>全部</option><option>法律</option><option>会计</option></select></p>
-<p>人物 <select id="demo-person"><option>全部</option><option>老师甲</option></select></p>
-<p>标签 <select id="demo-tag"><option>全部</option><option>重点</option></select></p>
-<p>每类单选、跨类交集；草稿仅在应用时生效。</p></div><button>取消</button><button onclick="document.getElementById('selected-demo').textContent=['genre','person','tag'].map(x=>document.getElementById('demo-'+x).value).join(' · ')">应用筛选</button></form></dialog>
+<p>流派 <select multiple id="demo-genre"><option>全部</option><option>法律</option><option>会计</option></select></p>
+<p>人物 <select multiple id="demo-person"><option>全部</option><option>老师甲</option></select></p>
+<p>标签 <select multiple id="demo-tag"><option>全部</option><option>重点</option></select></p>
+<p>每类多选（同类并集）、跨类交集；草稿仅在应用时生效。</p></div><button>取消</button><button onclick="document.getElementById('selected-demo').textContent=['genre','person','tag'].map(x=>Array.from(document.getElementById('demo-'+x).selectedOptions).map(o=>o.value).join('、')).join(' · ')">应用筛选</button></form></dialog>
 <h3>手动催办</h3><input maxlength="80" placeholder="可选标题，最多 80 字"><textarea maxlength="1000" placeholder="附加说明，最多 1000 字"></textarea>
-<h3>我的 Bark 推送</h3><p>个人服务地址、设备 Key（不回显）、启用开关；启用后替代个人 Server 酱。</p>
+<h3>我的 Bark 推送</h3><p>仅用于当前账号的个人催办</p>
+<div style="max-width:390px;padding:18px;border:1px solid #ddd;border-radius:18px;background:white">
+<div style="padding:14px;border:1px solid #ddd;border-radius:12px">启用个人 Bark <input type="checkbox" aria-label="启用个人 Bark"><p>启用后替代 Server 酱</p></div>
+<h4>接收设备</h4><p>服务地址</p><input value="https://api.day.app"><small style="display:block;margin:6px 0 16px">默认使用 Bark 官方服务；自建地址需由管理员允许。</small>
+<p>设备 Key</p><input type="password" placeholder="已配置，留空保持原值"><p>通知方式</p><p>上岸分组 · 重要通知 · 点击打开 App</p><button>保存</button></div>
 <h3>后台系统 Bark</h3><p>独立服务地址、设备 Key（不回显）、异常通知开关；用于同步和备份异常，与个人催办隔离。</p>
 <script>let filterStart=0;document.getElementById('filter-demo').addEventListener('touchstart',e=>filterStart=e.touches[0].clientX);document.getElementById('filter-demo').addEventListener('touchend',e=>{if(e.changedTouches[0].clientX<filterStart-60)document.getElementById('filter-drawer').showModal()});</script>
 </section>

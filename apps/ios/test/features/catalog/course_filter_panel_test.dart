@@ -80,9 +80,9 @@ void main() {
     await tester.tap(find.text('重点'));
     await tester.tap(find.text('应用筛选'));
     await tester.pumpAndSettle();
-    expect(result?.genre, '会计');
-    expect(result?.person, '老师甲');
-    expect(result?.tag, '重点');
+    expect(result?.selectedGenres, {'法律', '会计'});
+    expect(result?.selectedPeople, {'老师甲'});
+    expect(result?.selectedTags, {'重点'});
     await tester.tap(find.text('打开'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('清空选择'));

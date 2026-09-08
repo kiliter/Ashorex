@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shangan_ios/core/state/shangan_providers.dart';
 
-/// 共享的课程筛选面板：每类单选，只有应用时才提交草稿。
+/// 共享的课程筛选面板：每类多选，只有应用时才提交草稿。
 Future<CatalogFilter?> showCourseFilterPanel(
   BuildContext context, {
   required CatalogFilter selected,
@@ -12,11 +12,25 @@ Future<CatalogFilter?> showCourseFilterPanel(
   context: context,
   barrierDismissible: true,
   barrierLabel: '关闭筛选',
+  transitionDuration: const Duration(milliseconds: 220),
+  // 只平移缓存的弹层子树，动画帧不重新构建全部候选。
+  transitionBuilder: (context, animation, secondaryAnimation, child) =>
+      SlideTransition(
+        position: Tween<Offset>(begin: const Offset(-1, 0), end: Offset.zero)
+            .animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+                reverseCurve: Curves.easeInCubic,
+              ),
+            ),
+        child: child,
+      ),
   // 弹层不会由 Scaffold 自动避让键盘，必须显式缩减可用高度。
   pageBuilder: (context, animation, secondaryAnimation) => Padding(
     padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
     child: Align(
-      alignment: Alignment.centerRight,
+      alignment: Alignment.centerLeft,
       child: SizedBox(
         width: MediaQuery.sizeOf(context).width.clamp(0, 420).toDouble(),
         child: Material(
@@ -41,10 +55,10 @@ class _FilterPanel extends StatefulWidget {
 }
 
 class _FilterPanelState extends State<_FilterPanel> {
-  late final List<String?> _values = [
-    widget.selected.genre,
-    widget.selected.person,
-    widget.selected.tag,
+  late final List<Set<String>> _values = [
+    widget.selected.selectedGenres,
+    widget.selected.selectedPeople,
+    widget.selected.selectedTags,
   ];
   int _category = 0;
   String _query = '';
@@ -68,13 +82,54 @@ class _FilterPanelState extends State<_FilterPanel> {
 
   /// 保留调用方分组和搜索状态，面板只改变三个元数据条件。
   CatalogFilter _result() => CatalogFilter(
-    genre: _values[0],
-    person: _values[1],
-    tag: _values[2],
+    genres: Set.unmodifiable(_values[0]),
+    people: Set.unmodifiable(_values[1]),
+    tags: Set.unmodifiable(_values[2]),
     groupByPerson: widget.selected.groupByPerson,
     query: widget.selected.query,
     year: widget.selected.year,
   );
+
+  /// 长候选列表只构建可见标签，避免打开动画前一次布局全部 Emby 元数据。
+  Widget _candidates() {
+    final candidates = widget.groups[_category]
+        .where((v) => v.contains(_query))
+        .toList(growable: false);
+    return GridView.builder(
+      key: ValueKey('$_category/$_query'),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 180,
+        mainAxisExtent: 52,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 4,
+      ),
+      itemCount: candidates.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return ChoiceChip(
+            label: const Text('全部'),
+            selected: _values[_category].isEmpty,
+            onSelected: (_) => setState(() => _values[_category].clear()),
+          );
+        }
+        final value = candidates[index - 1];
+        return Tooltip(
+          message: value,
+          child: ChoiceChip(
+            label: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis),
+            selected: _values[_category].contains(value),
+            onSelected: (on) => setState(() {
+              if (on) {
+                _values[_category].add(value);
+              } else {
+                _values[_category].remove(value);
+              }
+            }),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -135,40 +190,18 @@ class _FilterPanelState extends State<_FilterPanel> {
                       ],
                     ),
                   ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          ChoiceChip(
-                            label: const Text('全部'),
-                            selected: _values[_category] == null,
-                            onSelected: (_) =>
-                                setState(() => _values[_category] = null),
-                          ),
-                          for (final value in widget.groups[_category].where(
-                            (v) => v.contains(_query),
-                          ))
-                            ChoiceChip(
-                              label: Text(value),
-                              selected: _values[_category] == value,
-                              onSelected: (on) => setState(
-                                () => _values[_category] = on ? value : null,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  Expanded(child: _candidates()),
                 ],
               ),
             ),
             Row(
               children: [
                 TextButton(
-                  onPressed: () =>
-                      setState(() => _values.fillRange(0, 3, null)),
+                  onPressed: () => setState(() {
+                    for (final values in _values) {
+                      values.clear();
+                    }
+                  }),
                   child: const Text('清空选择'),
                 ),
                 const Spacer(),
@@ -204,26 +237,32 @@ class SelectedCourseFilters extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              if (filter.genre != null)
+              for (final value in filter.selectedGenres)
                 InputChip(
-                  label: Text('流派：${filter.genre}'),
-                  onDeleted: () => onChanged(filter.copyWith(clearGenre: true)),
+                  label: Text('流派：$value'),
+                  onDeleted: () => onChanged(
+                    filter.copyWith(
+                      genres: filter.selectedGenres..remove(value),
+                    ),
+                  ),
                 ),
-              if (filter.person != null)
+              for (final value in filter.selectedPeople)
                 InputChip(
-                  label: Text('人物：${filter.person}'),
-                  onDeleted: () =>
-                      onChanged(filter.copyWith(clearPerson: true)),
+                  label: Text('人物：$value'),
+                  onDeleted: () => onChanged(
+                    filter.copyWith(
+                      people: filter.selectedPeople..remove(value),
+                    ),
+                  ),
                 ),
-              if (filter.tag != null)
+              for (final value in filter.selectedTags)
                 InputChip(
-                  label: Text('标签：${filter.tag}'),
-                  onDeleted: () => onChanged(filter.copyWith(clearTag: true)),
+                  label: Text('标签：$value'),
+                  onDeleted: () => onChanged(
+                    filter.copyWith(tags: filter.selectedTags..remove(value)),
+                  ),
                 ),
-              if (filter.genre == null &&
-                  filter.person == null &&
-                  filter.tag == null)
-                const Text('全部课程'),
+              if (!filter.hasTags) const Text('全部课程'),
             ],
           ),
         ),

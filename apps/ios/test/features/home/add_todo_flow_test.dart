@@ -10,6 +10,48 @@ import '../../support/fixtures.dart';
 /// 添加 Todo：只有课程 / 专注计时 / 待办事项三个入口，
 /// 创建载荷必须带上 `localDate` 与类型专属字段，非法时长不允许提交。
 void main() {
+  testWidgets('首页选课慢速右滑多选应用，取消不改结果，清空恢复', (tester) async {
+    final backend = FakeBackend()
+      ..on(
+        'GET',
+        '/api/v1/catalog/courses',
+        json: [
+          courseSummaryJson(id: 'a', title: '法律基础', genres: ['法律']),
+          courseSummaryJson(id: 'b', title: '数学基础', genres: ['数学']),
+          courseSummaryJson(id: 'c', title: '英语基础', genres: ['英语']),
+        ],
+      );
+    await _open(tester, backend);
+    await tester.tap(find.text('课程'));
+    await tester.pumpAndSettle();
+    await tester.timedDrag(
+      find.text('法律基础'),
+      const Offset(180, 0),
+      const Duration(seconds: 2),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('应用筛选'), findsOneWidget);
+    await tester.tap(find.widgetWithText(ChoiceChip, '法律'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(ChoiceChip, '数学'));
+    await tester.pump();
+    await tester.tap(find.text('应用筛选'));
+    await tester.pumpAndSettle();
+    expect(find.text('法律基础'), findsOneWidget);
+    expect(find.text('数学基础'), findsOneWidget);
+    expect(find.text('英语基础'), findsNothing);
+    await tester.tap(find.text('筛选课程'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('清空选择'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('取消筛选'));
+    await tester.pumpAndSettle();
+    expect(find.text('英语基础'), findsNothing);
+    await tester.tap(find.text('一键清空'));
+    await tester.pumpAndSettle();
+    expect(find.text('英语基础'), findsOneWidget);
+  });
+
   testWidgets('选课横屏键盘下搜索和空结果不溢出', (tester) async {
     tester.view.physicalSize = const Size(844, 390);
     tester.view.devicePixelRatio = 1;

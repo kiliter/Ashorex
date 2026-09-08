@@ -212,20 +212,14 @@ final class _CoursePickerSheet extends ConsumerStatefulWidget {
 
 class _CoursePickerSheetState extends ConsumerState<_CoursePickerSheet> {
   final _keyword = TextEditingController();
-  String? _genre;
-  String? _tag;
-  String? _person;
+  CatalogFilter _filter = const CatalogFilter();
+  double _filterDrag = 0;
+  bool _openingFilters = false;
   Timer? _debounce;
   String _appliedKeyword = '';
 
-  /// 独立的选课草稿，不污染学习 Tab 的查询状态。
-  CatalogFilter get _filter =>
-      CatalogFilter(genre: _genre, tag: _tag, person: _person);
-  void _apply(CatalogFilter value) => setState(() {
-    _genre = value.genre;
-    _tag = value.tag;
-    _person = value.person;
-  });
+  /// 仅替换当前选课面板的已应用条件，不污染学习页。
+  void _apply(CatalogFilter value) => setState(() => _filter = value);
   void _search(String value) {
     _debounce?.cancel();
     if (value.isEmpty) {
@@ -237,15 +231,22 @@ class _CoursePickerSheetState extends ConsumerState<_CoursePickerSheet> {
     });
   }
 
+  /// 弹层打开期间忽略重复手势，避免多层面板重叠。
   Future<void> _filters(List<CourseSummary> list) async {
-    final result = await showCourseFilterPanel(
-      context,
-      selected: _filter,
-      genres: (<String>{for (final c in list) ...c.genres}.toList()..sort()),
-      people: (<String>{for (final c in list) ...c.people}.toList()..sort()),
-      tags: (<String>{for (final c in list) ...c.tags}.toList()..sort()),
-    );
-    if (mounted && result != null) _apply(result);
+    if (_openingFilters) return;
+    _openingFilters = true;
+    try {
+      final result = await showCourseFilterPanel(
+        context,
+        selected: _filter,
+        genres: (<String>{for (final c in list) ...c.genres}.toList()..sort()),
+        people: (<String>{for (final c in list) ...c.people}.toList()..sort()),
+        tags: (<String>{for (final c in list) ...c.tags}.toList()..sort()),
+      );
+      if (mounted && result != null) _apply(result);
+    } finally {
+      _openingFilters = false;
+    }
   }
 
   @override
@@ -274,13 +275,7 @@ class _CoursePickerSheetState extends ConsumerState<_CoursePickerSheet> {
             final keyword = _appliedKeyword;
             final filtered = list
                 .where((course) {
-                  if (_genre != null && !course.genres.contains(_genre)) {
-                    return false;
-                  }
-                  if (_tag != null && !course.tags.contains(_tag)) return false;
-                  if (_person != null && !course.people.contains(_person)) {
-                    return false;
-                  }
+                  if (!_filter.matches(course)) return false;
                   if (keyword.isEmpty) return true;
                   return course.title.contains(keyword) ||
                       course.people.any((person) => person.contains(keyword));
@@ -291,8 +286,15 @@ class _CoursePickerSheetState extends ConsumerState<_CoursePickerSheet> {
                 // 横屏键盘展开后合并标题、搜索和面板入口，固定区不挤掉课程列表。
                 final compact = constraints.maxHeight < 250;
                 return GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onHorizontalDragStart: (_) => _filterDrag = 0,
+                  onHorizontalDragUpdate: (details) =>
+                      _filterDrag += details.delta.dx,
                   onHorizontalDragEnd: (details) {
-                    if ((details.primaryVelocity ?? 0) < -150) _filters(list);
+                    if (_filterDrag > 60 ||
+                        (details.primaryVelocity ?? 0) > 150) {
+                      _filters(list);
+                    }
                   },
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
