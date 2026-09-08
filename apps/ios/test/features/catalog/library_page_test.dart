@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shangan_ios/core/state/shangan_providers.dart';
@@ -47,6 +48,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('法律基础'), findsOneWidget);
     expect(find.text('数学基础'), findsOneWidget);
+    expect(find.text('英语基础'), findsNothing);
+    await tester.tap(find.bySemanticsLabel('展开筛选'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('清空选择'));
+    await tester.pump();
+    await tester.timedDrag(
+      find.text('全部'),
+      const Offset(-180, 0),
+      const Duration(seconds: 2),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('应用筛选'), findsNothing);
     expect(find.text('英语基础'), findsNothing);
     await tester.tap(find.text('一键清空'));
     await tester.pumpAndSettle();
@@ -138,7 +151,10 @@ Future<void> _pump(WidgetTester tester, FakeBackend backend) async {
       overrides: [
         shanganRepositoryProvider.overrideWithValue(buildRepository(backend)),
       ],
-      child: const MaterialApp(home: Scaffold(body: LibraryPage())),
+      child: MaterialApp(
+        theme: ShanganTheme.light(),
+        home: const Scaffold(body: LibraryPage()),
+      ),
     ),
   );
   await tester.pumpAndSettle();

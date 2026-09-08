@@ -60,6 +60,7 @@ class _FilterPanelState extends State<_FilterPanel> {
     widget.selected.selectedPeople,
     widget.selected.selectedTags,
   ];
+  double _dismissDrag = 0;
   int _category = 0;
   String _query = '';
   final _searchController = TextEditingController();
@@ -132,89 +133,103 @@ class _FilterPanelState extends State<_FilterPanel> {
   }
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final compact = constraints.maxHeight < 280;
-      return Padding(
-        padding: EdgeInsets.all(compact ? 8 : 16),
-        child: Column(
-          children: [
-            if (!compact)
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      '筛选课程',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    // 左滑按取消处理，不提交草稿；竖向手势仍交给候选列表滚动。
+    onHorizontalDragStart: (_) => _dismissDrag = 0,
+    onHorizontalDragUpdate: (details) => _dismissDrag += details.delta.dx,
+    onHorizontalDragEnd: (details) {
+      if (_dismissDrag < -60 || (details.primaryVelocity ?? 0) < -350) {
+        Navigator.pop(context);
+      }
+    },
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 280;
+        return Padding(
+          padding: EdgeInsets.all(compact ? 8 : 16),
+          child: Column(
+            children: [
+              if (!compact)
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        '筛选课程',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: '取消筛选',
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
+                    IconButton(
+                      tooltip: '取消筛选',
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              if (compact)
+                Row(
+                  children: [
+                    Expanded(child: _searchField()),
+                    IconButton(
+                      tooltip: '取消筛选',
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                )
+              else
+                _searchField(),
+              SizedBox(height: compact ? 4 : 12),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 84,
+                      child: ListView(
+                        children: [
+                          for (var i = 0; i < 3; i++)
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(['流派', '人物', '标签'][i]),
+                              selected: _category == i,
+                              onTap: () => setState(() => _category = i),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Expanded(child: _candidates()),
+                  ],
+                ),
               ),
-            if (compact)
               Row(
                 children: [
-                  Expanded(child: _searchField()),
-                  IconButton(
-                    tooltip: '取消筛选',
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
+                  TextButton(
+                    onPressed: () => setState(() {
+                      for (final values in _values) {
+                        values.clear();
+                      }
+                    }),
+                    child: const Text('清空选择'),
                   ),
-                ],
-              )
-            else
-              _searchField(),
-            SizedBox(height: compact ? 4 : 12),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 84,
-                    child: ListView(
-                      children: [
-                        for (var i = 0; i < 3; i++)
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(['流派', '人物', '标签'][i]),
-                            selected: _category == i,
-                            onTap: () => setState(() => _category = i),
-                          ),
-                      ],
+                  const SizedBox(width: 12),
+                  // 全局主按钮为全宽样式，必须约束宽度，避免 Row 中无限宽导致按钮消失。
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(context, _result()),
+                      child: const Text('应用筛选'),
                     ),
                   ),
-                  Expanded(child: _candidates()),
                 ],
               ),
-            ),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: () => setState(() {
-                    for (final values in _values) {
-                      values.clear();
-                    }
-                  }),
-                  child: const Text('清空选择'),
-                ),
-                const Spacer(),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, _result()),
-                  child: const Text('应用筛选'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    },
+            ],
+          ),
+        );
+      },
+    ),
   );
 }
 

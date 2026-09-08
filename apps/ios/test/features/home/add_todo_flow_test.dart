@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shangan_ios/core/state/shangan_providers.dart';
@@ -44,8 +45,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('清空选择'));
     await tester.pump();
-    await tester.tap(find.byTooltip('取消筛选'));
+    await tester.timedDrag(
+      find.text('全部'),
+      const Offset(-180, 0),
+      const Duration(seconds: 2),
+    );
     await tester.pumpAndSettle();
+    expect(find.text('应用筛选'), findsNothing);
     expect(find.text('英语基础'), findsNothing);
     await tester.tap(find.text('一键清空'));
     await tester.pumpAndSettle();
@@ -265,6 +271,7 @@ Future<void> _open(
         shanganRepositoryProvider.overrideWithValue(buildRepository(backend)),
       ],
       child: MaterialApp(
+        theme: ShanganTheme.light(),
         home: Scaffold(
           body: Builder(
             builder: (context) => TextButton(

@@ -285,6 +285,18 @@ class _CoursePickerSheetState extends ConsumerState<_CoursePickerSheet> {
               builder: (context, constraints) {
                 // 横屏键盘展开后合并标题、搜索和面板入口，固定区不挤掉课程列表。
                 final compact = constraints.maxHeight < 250;
+                // 横屏键盘与主题拖动柄共同压缩高度时，已选条件并入搜索行。
+                final singleRow = constraints.maxHeight < 120;
+                final selectedFilters = SelectedCourseFilters(
+                  filter: _filter,
+                  onChanged: _apply,
+                  onClear: () {
+                    _keyword.clear();
+                    _search('');
+                    _apply(const CatalogFilter());
+                  },
+                );
+
                 return GestureDetector(
                   behavior: HitTestBehavior.translucent,
                   onHorizontalDragStart: (_) => _filterDrag = 0,
@@ -317,6 +329,7 @@ class _CoursePickerSheetState extends ConsumerState<_CoursePickerSheet> {
                               onPressed: () => _filters(list),
                               icon: const Icon(Icons.filter_list),
                             ),
+                            if (singleRow) Expanded(child: selectedFilters),
                           ],
                         )
                       else ...[
@@ -339,15 +352,7 @@ class _CoursePickerSheetState extends ConsumerState<_CoursePickerSheet> {
                           ),
                         ),
                       ],
-                      SelectedCourseFilters(
-                        filter: _filter,
-                        onChanged: _apply,
-                        onClear: () {
-                          _keyword.clear();
-                          _search('');
-                          _apply(const CatalogFilter());
-                        },
-                      ),
+                      if (!singleRow) selectedFilters,
                       SizedBox(height: compact ? 4 : 12),
                       if (filtered.isEmpty)
                         const Flexible(

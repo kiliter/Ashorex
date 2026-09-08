@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shangan_ios/core/state/shangan_providers.dart';
 import 'package:shangan_ios/features/catalog/presentation/course_filter_panel.dart';
@@ -15,6 +16,7 @@ void main() {
       CatalogFilter? result;
       await tester.pumpWidget(
         MaterialApp(
+          theme: ShanganTheme.light(),
           home: Builder(
             builder: (context) => TextButton(
               onPressed: () async {
@@ -51,6 +53,7 @@ void main() {
     CatalogFilter? result;
     await tester.pumpWidget(
       MaterialApp(
+        theme: ShanganTheme.light(),
         home: Scaffold(
           body: Builder(
             builder: (context) => TextButton(
@@ -86,8 +89,14 @@ void main() {
     await tester.tap(find.text('打开'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('清空选择'));
-    await tester.tap(find.byTooltip('取消筛选'));
+    // 从候选区慢速左滑也应关闭，且丢弃尚未应用的草稿。
+    await tester.timedDrag(
+      find.text('全部'),
+      const Offset(-180, 0),
+      const Duration(seconds: 2),
+    );
     await tester.pumpAndSettle();
+    expect(find.text('应用筛选'), findsNothing);
     expect(result, isNull);
   });
 }
