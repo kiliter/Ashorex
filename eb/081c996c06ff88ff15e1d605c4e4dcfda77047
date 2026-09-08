@@ -1,0 +1,19 @@
+apps/ios/test/features/stats/heatmap_test.dart
+  s_8c08f606af75ce::t_a473ce4d9427e4 98-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "eb081c996c06ff88ff15e1d605c4e4dcfda77047",
+  "prompts": {},
+  "sessions": {
+    "s_8c08f606af75ce": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0805f-aa0e-7953-92a2-bdf8570a1194",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
