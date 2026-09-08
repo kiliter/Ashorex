@@ -1,0 +1,116 @@
+apps/ios/test/core/presence/app_activity_test.dart
+  s_ff636111372d7e::t_d02b3ac5de744d 17-33,35-42,57-61,91-99,103-107,112-119,126-133,140-146,153-157,163
+  s_ff636111372d7e::t_397f3bdaf099ac 1-16,34,43-56,62,64-90,100-102,108-111,120-125,134-139,147-152,158-162,164-166
+  s_ff636111372d7e::t_84860e19c398b9 63
+apps/server/src/test/java/com/shangan/presence/application/PresenceServiceTest.java
+  s_ff636111372d7e::t_1aefb0a732454d 55,101
+  s_ff636111372d7e::t_d02b3ac5de744d 70-71,80-81,83-85,103-105,114-115,122-124,168-174,182-192,205-206
+  s_ff636111372d7e::t_397f3bdaf099ac 162-167,175-181,193-202
+  s_ff636111372d7e::t_d10f8e87e0d7fd 203-204,207-210
+apps/server/src/main/java/com/shangan/presence/domain/AppActivity.java
+  s_ff636111372d7e::t_1aefb0a732454d 1-8,22,31,33,49,62-71,74,91-94
+  s_ff636111372d7e::t_d02b3ac5de744d 9-21,23-30,32,34-48,50-61,72-73,75-90
+apps/ios/lib/app/router.dart
+  s_ff636111372d7e::t_19b7a52f8519aa 1,22,66-67,69,73,76,94-95,97
+  s_ff636111372d7e::t_5070b4f9977e22 68,70-72,74-75,96
+apps/server/src/main/java/com/shangan/presence/infrastructure/UserPresenceRepository.java
+  s_ff636111372d7e::t_d02b3ac5de744d 16-21
+apps/ios/lib/features/nag/presentation/fullscreen_nag_page.dart
+  s_ff636111372d7e::t_19b7a52f8519aa 1,71-77
+apps/ios/lib/features/home/presentation/complete_sheet.dart
+  s_ff636111372d7e::t_41f17c973ce1b6 1,81-87
+apps/server/src/main/java/com/shangan/supervision/application/SupervisorViewService.java
+  s_ff636111372d7e::t_d02b3ac5de744d 100-101,264-265
+apps/server/src/main/java/com/shangan/presence/domain/PresenceSnapshot.java
+  s_ff636111372d7e::t_1aefb0a732454d 18,32
+  s_ff636111372d7e::t_d02b3ac5de744d 16-17,19-31
+apps/server/src/main/resources/db/migration/V004__current_app_activity.sql
+  s_ff636111372d7e::t_1aefb0a732454d 1-5
+apps/ios/lib/core/presence/heartbeat_service.dart
+  s_ff636111372d7e::t_19b7a52f8519aa 1,20,39-42,61-64,71-72,94-98,100-102,105-111,116,138-140
+  s_ff636111372d7e::t_4c63ec2b4dba6e 99
+apps/ios/test/features/supervisor/learner_detail_test.dart
+  s_ff636111372d7e::t_d02b3ac5de744d 21-32
+  s_ff636111372d7e::t_d10f8e87e0d7fd 58-59
+apps/server/src/main/java/com/shangan/presence/application/PresenceService.java
+  s_ff636111372d7e::t_1aefb0a732454d 32,49,60,65,121-124,134-136
+  s_ff636111372d7e::t_d02b3ac5de744d 41-42,53-59,61-62,96-97,119-120,125-133,137-145
+apps/ios/lib/features/supervisor/presentation/supervisor_shell.dart
+  s_ff636111372d7e::t_a2b33c0805164a 1777,1779
+  s_ff636111372d7e::t_d02b3ac5de744d 144-145,147,149-151,1284-1285,1287,1289-1305,1307-1311,1313-1320,1323-1330,1333-1338,1340-1364,1368-1381,1383-1401,1403-1408,1412-1415,1418,1423,1427-1429,1431,1433-1442,1446-1478,1480,1484-1485,1762-1764,1772,1775-1776,1778,1781,1786,1793
+  s_ff636111372d7e::t_ade4640fbde7f5 1,152-154,1751-1761,1765-1771,1773-1774,1780,1782-1785,1787-1792,1794-1796
+  s_ff636111372d7e::t_e7c441ff72674f 146,148,1286,1288
+  s_ff636111372d7e::t_41f17c973ce1b6 347,1729-1746,1749-1750
+  s_ff636111372d7e::t_427691f93ad598 1747-1748
+apps/ios/lib/features/player/presentation/player_page.dart
+  s_ff636111372d7e::t_19b7a52f8519aa 1,197-211
+apps/server/src/test/java/com/shangan/presence/domain/AppActivityTest.java
+  s_ff636111372d7e::t_08c7dbe23bceca 1,3,5,7-8,11-12,18,24,28-33
+  s_ff636111372d7e::t_d02b3ac5de744d 2,4,6,9-10,13-17,19-23,25-27
+apps/ios/lib/features/shell/presentation/app_shell.dart
+  s_ff636111372d7e::t_19b7a52f8519aa 1,68,143-145
+  s_ff636111372d7e::t_57a2af058ee51d 146,148-155,158-169,171-198
+apps/server/src/main/java/com/shangan/todo/application/TodoActivityQuery.java
+  s_ff636111372d7e::t_1aefb0a732454d 1-13,18-20,31-37,43-44
+  s_ff636111372d7e::t_d02b3ac5de744d 14-17,21-30,38-42
+apps/server/src/test/java/com/shangan/supervision/application/SupervisorViewServiceTest.java
+  s_ff636111372d7e::t_d02b3ac5de744d 284-285
+apps/ios/lib/core/models/shangan_models.dart
+  s_ff636111372d7e::t_ade4640fbde7f5 1130
+  s_ff636111372d7e::t_41f17c973ce1b6 1109-1116,1118-1129,1131-1144,1151,1167,1188,1209,1220,1235
+  s_ff636111372d7e::t_b5ba42165c923e 1117
+docs/traceability/2026-09-07-shangan-v2-traceability.md
+  s_ff636111372d7e::t_e7c441ff72674f 239-244
+apps/ios/lib/core/data/shangan_repository.dart
+  s_ff636111372d7e::t_19b7a52f8519aa 1,449,458-460
+apps/ios/lib/features/focus/presentation/focus_run_page.dart
+  s_ff636111372d7e::t_19b7a52f8519aa 1,159-164,166-171
+  s_ff636111372d7e::t_c56f99055abcd0 165
+apps/server/src/test/java/com/shangan/todo/application/TodoActivityQueryTest.java
+  s_ff636111372d7e::t_d02b3ac5de744d 5,13-14,22-23,26-28,35-36
+  s_ff636111372d7e::t_84860e19c398b9 1-4,6-12,15-21,24-25,29-34,37-38
+docs/api/openapi.yaml
+  s_ff636111372d7e::t_2345058630b13c 745,776-779
+  s_ff636111372d7e::t_84860e19c398b9 755-769,1553-1565,1569,1611
+docs/adr/0040-current-app-activity.md
+  s_ff636111372d7e::t_08c7dbe23bceca 3
+  s_ff636111372d7e::t_e7c441ff72674f 11,22,28-34
+apps/ios/lib/core/presence/app_activity.dart
+  s_ff636111372d7e::t_19b7a52f8519aa 1-54,56-128
+  s_ff636111372d7e::t_5be6de3034174a 55
+apps/admin-web/src/pages/PresencePage.vue
+  s_ff636111372d7e::t_41f17c973ce1b6 2,16-17,68-69,76,79-86,192,213-220,245
+docs/plans/2026-09-07-shangan-v2-implementation-plan.md
+  s_ff636111372d7e::t_84860e19c398b9 1163,1165
+apps/ios/test/features/player/player_controls_test.dart
+  s_ff636111372d7e::t_2ea0ccaba5e6ca 1
+  s_ff636111372d7e::t_d02b3ac5de744d 248-251,257-260
+apps/server/src/main/java/com/shangan/presence/infrastructure/JdbcUserPresenceRepository.java
+  s_ff636111372d7e::t_1aefb0a732454d 18,54-55,60-62,69-71,99
+  s_ff636111372d7e::t_d02b3ac5de744d 43-48,100-103
+docs/prototypes/shangan-v2-prototype.html
+  s_ff636111372d7e::t_84860e19c398b9 2790,2795,2805,2815,2825,4046,4121
+apps/server/src/main/java/com/shangan/presence/api/HeartbeatController.java
+  s_ff636111372d7e::t_d02b3ac5de744d 25-33,36-42
+docs/specs/2026-09-07-shangan-v2-design.md
+  s_ff636111372d7e::t_84860e19c398b9 209,334-335,345,895,897
+apps/ios/test/features/focus/focus_run_test.dart
+  s_ff636111372d7e::t_2ea0ccaba5e6ca 1
+  s_ff636111372d7e::t_d02b3ac5de744d 78-81,105-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "14a3301e4b8ec97cd422044146e00bd7791fb188",
+  "prompts": {},
+  "sessions": {
+    "s_ff636111372d7e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0815b-9ddd-7440-89c0-6b2d9fe7931d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
