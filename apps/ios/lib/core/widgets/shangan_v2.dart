@@ -590,7 +590,7 @@ final class TargetProgressBar extends StatelessWidget {
               ),
               if (showTarget && width >= 2)
                 Positioned(
-                  left: (width * target! - 1).clamp(0.0, width - 2),
+                  left: (width * target - 1).clamp(0.0, width - 2),
                   top: 0,
                   child: Container(
                     width: 2,
