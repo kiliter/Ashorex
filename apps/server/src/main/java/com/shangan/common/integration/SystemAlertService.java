@@ -1,6 +1,5 @@
 package com.shangan.common.integration;
 
-import java.net.http.HttpClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -9,16 +8,15 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 
 /** 系统异常专用 Bark，按异常类型合并；不访问个人催办配置。 */
 @Service
 public class SystemAlertService {
   private final IntegrationSettingsProvider settings;
   private final Clock clock;
+  private final BarkPushClient client;
   private final Path backupState;
   private final Map<String, Instant> attempted = new HashMap<>();
   private final java.util.Set<String> notified = new java.util.HashSet<>();
@@ -26,9 +24,11 @@ public class SystemAlertService {
   public SystemAlertService(
       IntegrationSettingsProvider settings,
       Clock clock,
+      BarkPushClient client,
       @Value("${DATA_DIR:./data}") String dataDir) {
     this.settings = settings;
     this.clock = clock;
+    this.client = client;
     this.backupState = Path.of(dataDir, "backup-status");
   }
 
@@ -45,37 +45,9 @@ public class SystemAlertService {
     if (attempted.containsKey(event)
         && now.isBefore(attempted.get(event).plus(Duration.ofMinutes(10)))) return;
     attempted.put(event, now);
-    try {
-      var timeout = Duration.ofSeconds(config.timeoutSeconds());
-      var factory =
-          new JdkClientHttpRequestFactory(HttpClient.newBuilder().connectTimeout(timeout).build());
-      factory.setReadTimeout(timeout);
-      var result =
-          RestClient.builder()
-              .requestFactory(factory)
-              .build()
-              .post()
-              .uri(config.baseUrl().replaceAll("/+$", "") + "/push")
-              .body(
-                  Map.of(
-                      "device_key",
-                      config.deviceKey(),
-                      "title",
-                      "上岸系统异常",
-                      "body",
-                      message,
-                      "group",
-                      "上岸",
-                      "level",
-                      "critical",
-                      "url",
-                      "shangan://home"))
-              .retrieve()
-              .body(Map.class);
-      if (result != null && result.get("code") instanceof Number code && code.intValue() == 200)
-        notified.add(event);
-    } catch (Exception ignored) {
-      // 通知故障不能干扰同步、备份；不输出第三方响应与密钥。
+    if (client.send(
+        config.baseUrl(), config.deviceKey(), config.timeoutSeconds(), "上岸系统异常", message)) {
+      notified.add(event);
     }
   }
 

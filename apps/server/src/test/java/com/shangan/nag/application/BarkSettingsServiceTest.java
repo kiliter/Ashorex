@@ -14,7 +14,10 @@ class BarkSettingsServiceTest {
     var repository = mock(BarkSettingsRepository.class);
     when(repository.find("learner"))
         .thenReturn(new BarkSettings("https://api.day.app", "personal-key", true));
-    var service = new BarkSettingsService(repository);
+    var service =
+        new BarkSettingsService(
+            repository,
+            new com.shangan.common.integration.BarkEndpointPolicy("https://api.day.app"));
     var saved = service.save("learner", "https://api.day.app/", "", false);
     assertThat(saved).isEqualTo(new BarkSettings("https://api.day.app", "personal-key", false));
     verify(repository).save("learner", saved);
@@ -25,7 +28,10 @@ class BarkSettingsServiceTest {
   void 拒绝凭据地址与无密钥启用() {
     var repository = mock(BarkSettingsRepository.class);
     when(repository.find("learner")).thenReturn(BarkSettings.defaults());
-    var service = new BarkSettingsService(repository);
+    var service =
+        new BarkSettingsService(
+            repository,
+            new com.shangan.common.integration.BarkEndpointPolicy("https://api.day.app"));
     assertThatThrownBy(() -> service.save("learner", "https://user:pass@example.org", "key", true))
         .hasMessageContaining("HTTPS");
     assertThatThrownBy(() -> service.save("learner", "https://api.day.app", "", true))

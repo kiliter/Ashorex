@@ -64,10 +64,14 @@ class NagScannerTest {
   @Mock private NagDeliveryService delivery;
   @Mock private SupervisionService supervisions;
 
+  @Mock private org.springframework.transaction.PlatformTransactionManager transactions;
   private NagScanner scanner;
 
   @BeforeEach
   void setUp() {
+    org.mockito.Mockito.lenient()
+        .when(transactions.getTransaction(any()))
+        .thenReturn(new org.springframework.transaction.support.SimpleTransactionStatus());
     scanner =
         new NagScanner(
             users,
@@ -79,7 +83,8 @@ class NagScannerTest {
             delivery,
             supervisions,
             () -> "nag-1",
-            Clock.fixed(NOW, ZoneOffset.UTC));
+            Clock.fixed(NOW, ZoneOffset.UTC),
+            transactions);
   }
 
   @Test
@@ -243,6 +248,69 @@ class NagScannerTest {
     Nag nag = scanner.createManualNag("user-1", "admin-1", NagTrigger.MANUAL, "   ", null, true);
 
     assertThat(nag.message()).isEqualTo("小明 今天还有 2 项未完成，已经 42 分钟没有任何操作。");
+  }
+
+  @Test
+  void 创建提交后才允许投递() {
+    stubUser(3, LocalTime.NOON, 0, idleMinutes(95));
+    scanner.createAutoNag(USER);
+    var order = org.mockito.Mockito.inOrder(nags, transactions, delivery);
+    order.verify(nags).insert(any());
+    order.verify(transactions).commit(any());
+    order
+        .verify(delivery)
+        .deliver(any(), any(), any(), any(), org.mockito.ArgumentMatchers.isNull());
+  }
+
+  @Test
+  void 创建提交失败不能投递() {
+    stubUser(3, LocalTime.NOON, 0, idleMinutes(95));
+    org.mockito.Mockito.doThrow(new IllegalStateException("模拟提交失败"))
+        .when(transactions)
+        .commit(any());
+    assertThatThrownBy(() -> scanner.createAutoNag(USER)).isInstanceOf(IllegalStateException.class);
+    verify(delivery, never()).deliver(any(), any(), any(), any(), any());
+  }
+
+  @Test
+  void 外发等待不占创建锁且并发自动扫描保持幂等() throws Exception {
+    stubUser(3, LocalTime.NOON, 0, idleMinutes(95));
+    var inserted = new java.util.concurrent.atomic.AtomicBoolean();
+    when(nags.autoNagExists("user-1", TODAY, 1)).thenAnswer(call -> inserted.get());
+    org.mockito.Mockito.doAnswer(
+            call -> {
+              inserted.set(true);
+              return null;
+            })
+        .when(nags)
+        .insert(any());
+    var sending = new java.util.concurrent.CountDownLatch(1);
+    var release = new java.util.concurrent.CountDownLatch(1);
+    org.mockito.Mockito.doAnswer(
+            call -> {
+              sending.countDown();
+              if (!release.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                throw new AssertionError("发送未释放");
+              return null;
+            })
+        .when(delivery)
+        .deliver(any(), any(), any(), any(), org.mockito.ArgumentMatchers.isNull());
+    try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+      var first = executor.submit(() -> scanner.createAutoNag(USER));
+      try {
+        assertThat(sending.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        // 第一条仍在外发时第二次扫描可以完成，且已提交的幂等状态阻止重复创建。
+        assertThat(
+                executor
+                    .submit(() -> scanner.createAutoNag(USER))
+                    .get(5, java.util.concurrent.TimeUnit.SECONDS))
+            .isEmpty();
+      } finally {
+        release.countDown();
+      }
+      assertThat(first.get(5, java.util.concurrent.TimeUnit.SECONDS)).isPresent();
+      verify(nags).insert(any());
+    }
   }
 
   private void stubUser(

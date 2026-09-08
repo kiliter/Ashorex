@@ -60,7 +60,8 @@ class _BarkSettingsSheetState extends ConsumerState<BarkSettingsSheet> {
           );
       if (mounted) Navigator.pop(context);
     } catch (_) {
-      if (mounted) setState(() => _error = '保存失败，请检查 HTTPS 地址、设备 Key 和网络连接');
+      if (mounted)
+        setState(() => _error = '保存失败，请检查设备 Key 和网络；自建 HTTPS 服务需管理员加入可信源站');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -103,7 +104,9 @@ class _BarkSettingsSheetState extends ConsumerState<BarkSettingsSheet> {
           TextField(
             controller: _url,
             enabled: !_loading && !_saving,
-            decoration: const InputDecoration(labelText: 'Bark 服务地址（HTTPS）'),
+            decoration: const InputDecoration(
+              labelText: 'Bark 服务地址（HTTPS，默认官方服务）',
+            ),
           ),
           TextField(
             controller: _key,

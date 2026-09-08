@@ -286,78 +286,115 @@ class _CoursePickerSheetState extends ConsumerState<_CoursePickerSheet> {
                       course.people.any((person) => person.contains(keyword));
                 })
                 .toList(growable: false);
-            return GestureDetector(
-              onHorizontalDragEnd: (details) {
-                if ((details.primaryVelocity ?? 0) < -150) _filters(list);
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const ShanganSheetHeader(title: '选择课程', step: '第 1 / 2 步'),
-                  const SizedBox(height: 10),
-                  ShanganSearchField(
-                    controller: _keyword,
-                    hint: '搜索课程或讲师',
-                    onChanged: _search,
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: () => _filters(list),
-                      icon: const Icon(Icons.filter_list),
-                      label: const Text('筛选课程'),
-                    ),
-                  ),
-                  SelectedCourseFilters(
-                    filter: _filter,
-                    onChanged: _apply,
-                    onClear: () {
-                      _keyword.clear();
-                      _search('');
-                      _apply(const CatalogFilter());
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  if (filtered.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40),
-                      child: Text(
-                        '没有符合条件的课程；课程库为空时请让管理员先在后台同步 Emby。',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: ShanganColors.mutedInk),
-                      ),
-                    )
-                  else
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: ShanganCard(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Column(
-                            children: [
-                              for (
-                                var index = 0;
-                                index < filtered.length;
-                                index++
-                              ) ...[
-                                if (index > 0)
-                                  const Divider(
-                                    height: 1,
-                                    color: ShanganColors.hair,
-                                  ),
-                                _CoursePickRow(
-                                  course: filtered[index],
-                                  index: index,
-                                  onTap: () => _openResources(filtered[index]),
-                                ),
-                              ],
-                            ],
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                // 横屏键盘展开后合并标题、搜索和面板入口，固定区不挤掉课程列表。
+                final compact = constraints.maxHeight < 250;
+                return GestureDetector(
+                  onHorizontalDragEnd: (details) {
+                    if ((details.primaryVelocity ?? 0) < -150) _filters(list);
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (compact)
+                        Row(
+                          children: [
+                            const Text('选择课程'),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ShanganSearchField(
+                                controller: _keyword,
+                                hint: '搜索课程或讲师',
+                                onChanged: _search,
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: '筛选课程',
+                              onPressed: () => _filters(list),
+                              icon: const Icon(Icons.filter_list),
+                            ),
+                          ],
+                        )
+                      else ...[
+                        const ShanganSheetHeader(
+                          title: '选择课程',
+                          step: '第 1 / 2 步',
+                        ),
+                        const SizedBox(height: 10),
+                        ShanganSearchField(
+                          controller: _keyword,
+                          hint: '搜索课程或讲师',
+                          onChanged: _search,
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: () => _filters(list),
+                            icon: const Icon(Icons.filter_list),
+                            label: const Text('筛选课程'),
                           ),
                         ),
+                      ],
+                      SelectedCourseFilters(
+                        filter: _filter,
+                        onChanged: _apply,
+                        onClear: () {
+                          _keyword.clear();
+                          _search('');
+                          _apply(const CatalogFilter());
+                        },
                       ),
-                    ),
-                ],
-              ),
+                      SizedBox(height: compact ? 4 : 12),
+                      if (filtered.isEmpty)
+                        const Flexible(
+                          child: SingleChildScrollView(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40),
+                              child: Text(
+                                '没有符合条件的课程；课程库为空时请让管理员先在后台同步 Emby。',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: ShanganColors.mutedInk),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Flexible(
+                          child: SingleChildScrollView(
+                            child: ShanganCard(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: Column(
+                                children: [
+                                  for (
+                                    var index = 0;
+                                    index < filtered.length;
+                                    index++
+                                  ) ...[
+                                    if (index > 0)
+                                      const Divider(
+                                        height: 1,
+                                        color: ShanganColors.hair,
+                                      ),
+                                    _CoursePickRow(
+                                      course: filtered[index],
+                                      index: index,
+                                      onTap: () =>
+                                          _openResources(filtered[index]),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
             );
           },
         ),

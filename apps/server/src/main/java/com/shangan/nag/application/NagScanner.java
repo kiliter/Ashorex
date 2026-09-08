@@ -47,6 +47,8 @@ public class NagScanner {
   private final SupervisionService supervisions;
   private final IdGenerator idGenerator;
   private final Clock clock;
+  private final org.springframework.transaction.support.TransactionTemplate transaction;
+  private final Object creationLock = new Object();
 
   public NagScanner(
       AuthService users,
@@ -58,7 +60,8 @@ public class NagScanner {
       NagDeliveryService delivery,
       SupervisionService supervisions,
       IdGenerator idGenerator,
-      Clock clock) {
+      Clock clock,
+      org.springframework.transaction.PlatformTransactionManager transactionManager) {
     this.users = users;
     this.userTime = userTime;
     this.todos = todos;
@@ -69,10 +72,12 @@ public class NagScanner {
     this.supervisions = supervisions;
     this.idGenerator = idGenerator;
     this.clock = clock;
+    this.transaction =
+        new org.springframework.transaction.support.TransactionTemplate(transactionManager);
   }
 
   /** 执行一轮扫描；返回本轮生成与降级的数量，便于后台展示与日志。 */
-  @Transactional
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NEVER)
   public ScanReport scanOnce() {
     int created = 0;
     int skipped = 0;
@@ -100,8 +105,19 @@ public class NagScanner {
   }
 
   /** 对单个用户做一次判定；满足条件时创建并投递催办。 */
-  @Transactional
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NEVER)
   public Optional<Nag> createAutoNag(User user) {
+    Optional<PreparedDelivery> prepared;
+    // 单实例内串行检查每日上限和自动幂等键；锁仅持有至创建事务提交。
+    synchronized (creationLock) {
+      prepared = transaction.execute(status -> prepareAutoNag(user));
+    }
+    prepared.ifPresent(this::deliverPrepared);
+    return prepared.map(PreparedDelivery::nag);
+  }
+
+  /** 在短事务内决定并保存自动催办，不调用外部渠道。 */
+  private Optional<PreparedDelivery> prepareAutoNag(User user) {
     EffectiveNagPolicy policy = policies.resolve(user.id());
     LocalDate today = userTime.today(user);
     nags.expireBefore(user.id(), today);
@@ -139,12 +155,11 @@ public class NagScanner {
             policy.renderMessage(user.displayName(), pending, idleMinutes, today.toString()),
             policy);
     nags.insert(nag);
-    delivery.deliver(nag, user.displayName(), snapshot, policy, null);
-    return Optional.of(nag);
+    return Optional.of(new PreparedDelivery(nag, user.displayName(), snapshot, policy, null));
   }
 
   /** 管理员手动催办或督学人一键督学；不参与自动幂等键，但计入每日上限。 */
-  @Transactional
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NEVER)
   public Nag createManualNag(
       String learnerUserId,
       String triggeredByUserId,
@@ -157,7 +172,7 @@ public class NagScanner {
   }
 
   /** 标题和附加说明仅扩展手动/督学入口，保留自动催办原内容。 */
-  @Transactional
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NEVER)
   public Nag createManualNag(
       String learnerUserId,
       String triggeredByUserId,
@@ -166,8 +181,35 @@ public class NagScanner {
       NagChannelType preferredChannel,
       boolean requireReason,
       String title) {
-    title = Nag.manualText(title, 80);
-    message = Nag.manualText(message, 1000);
+    String normalizedTitle = Nag.manualText(title, 80);
+    String normalizedMessage = Nag.manualText(message, 1000);
+    PreparedDelivery prepared;
+    synchronized (creationLock) {
+      prepared =
+          transaction.execute(
+              status ->
+                  prepareManualNag(
+                      learnerUserId,
+                      triggeredByUserId,
+                      trigger,
+                      normalizedMessage,
+                      preferredChannel,
+                      requireReason,
+                      normalizedTitle));
+    }
+    deliverPrepared(prepared);
+    return prepared.nag();
+  }
+
+  /** 每日上限检查和写入在同一短事务内完成，提交之后才能外发。 */
+  private PreparedDelivery prepareManualNag(
+      String learnerUserId,
+      String triggeredByUserId,
+      NagTrigger trigger,
+      String message,
+      NagChannelType preferredChannel,
+      boolean requireReason,
+      String title) {
     User user = userTime.requireUser(learnerUserId);
     EffectiveNagPolicy policy = policies.resolve(user.id());
     LocalDate today = userTime.today(user);
@@ -196,9 +238,25 @@ public class NagScanner {
                 requireReason)
             .withTitle(title);
     nags.insert(nag);
-    delivery.deliver(nag, user.displayName(), snapshot, policy, preferredChannel);
-    return nag;
+    return new PreparedDelivery(nag, user.displayName(), snapshot, policy, preferredChannel);
   }
+
+  /** 提交完成后的编排只传递已持久化催办，不携带数据库事务。 */
+  private void deliverPrepared(PreparedDelivery prepared) {
+    delivery.deliver(
+        prepared.nag(),
+        prepared.displayName(),
+        prepared.presence(),
+        prepared.policy(),
+        prepared.preferred());
+  }
+
+  private record PreparedDelivery(
+      Nag nag,
+      String displayName,
+      PresenceSnapshot presence,
+      EffectiveNagPolicy policy,
+      NagChannelType preferred) {}
 
   private Nag buildNag(
       User user,

@@ -229,6 +229,7 @@ public class ArchiveService {
       case "nag_policies" -> "该用户的策略覆盖";
       case "supervisions" -> "双向督学绑定";
       case "user_presence" -> "在线状态";
+      case "user_bark_settings" -> "个人 Bark 推送配置";
       case "refresh_tokens" -> "登录会话";
       case "user_roles" -> "角色";
       case "users" -> "账号";

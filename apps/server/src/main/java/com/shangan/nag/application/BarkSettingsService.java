@@ -1,9 +1,9 @@
 package com.shangan.nag.application;
 
 import com.shangan.common.api.BusinessException;
+import com.shangan.common.integration.BarkEndpointPolicy;
 import com.shangan.nag.domain.BarkSettings;
 import com.shangan.nag.infrastructure.BarkSettingsRepository;
-import java.net.URI;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,8 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class BarkSettingsService {
   private final BarkSettingsRepository repository;
 
-  public BarkSettingsService(BarkSettingsRepository repository) {
+  private final BarkEndpointPolicy endpoints;
+
+  public BarkSettingsService(BarkSettingsRepository repository, BarkEndpointPolicy endpoints) {
     this.repository = repository;
+    this.endpoints = endpoints;
   }
 
   public BarkSettings get(String userId) {
@@ -26,17 +29,7 @@ public class BarkSettingsService {
     var previous = get(userId);
     String url = baseUrl == null ? previous.baseUrl() : baseUrl.trim().replaceAll("/+$", "");
     String key = deviceKey == null || deviceKey.isBlank() ? previous.deviceKey() : deviceKey.trim();
-    try {
-      URI uri = URI.create(url);
-      if (!"https".equalsIgnoreCase(uri.getScheme())
-          || uri.getHost() == null
-          || uri.getUserInfo() != null
-          || uri.getQuery() != null
-          || uri.getFragment() != null) throw new IllegalArgumentException();
-    } catch (IllegalArgumentException exception) {
-      throw new BusinessException(
-          HttpStatus.BAD_REQUEST, "BARK_SETTINGS_INVALID", "Bark 服务地址必须为不含凭据、查询参数的 HTTPS 地址");
-    }
+    url = endpoints.requirePersonalEndpoint(url);
     if (key.length() > 512 || (enabled && key.isBlank()))
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "BARK_SETTINGS_INVALID", "启用 Bark 前请填写有效设备 Key（最多 512 字符）");

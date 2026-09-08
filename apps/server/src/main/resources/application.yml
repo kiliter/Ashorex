@@ -64,6 +64,9 @@ app:
     api-key: ${EMBY_API_KEY:}
     user-id: ${EMBY_USER_ID:}
     timeout-seconds: ${EMBY_TIMEOUT_SECONDS:10}
+  bark:
+    # 个人用户仅可选择可信源站；自建 Bark 由部署者加入，多个源站用逗号分隔。
+    allowed-origins: ${BARK_ALLOWED_ORIGINS:https://api.day.app}
   serverchan:
     # 推送基址固定为官方地址；提取为配置项只为让协议测试指向本地假服务。
     base-url: ${SERVERCHAN_BASE_URL:https://sctapi.ftqq.com}

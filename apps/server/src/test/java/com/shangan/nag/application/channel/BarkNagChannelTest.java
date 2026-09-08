@@ -58,7 +58,13 @@ class BarkNagChannelTest {
                   null,
                   Instant.EPOCH)
               .withTitle("请开始学习");
-      var result = new BarkNagChannel(settings).deliver(nag, "小明");
+      var endpoints = mock(com.shangan.common.integration.BarkEndpointPolicy.class);
+      when(endpoints.requirePersonalEndpoint(anyString()))
+          .thenAnswer(invocation -> invocation.getArgument(0));
+      var result =
+          new BarkNagChannel(
+                  settings, new com.shangan.common.integration.BarkPushClient(), endpoints)
+              .deliver(nag, "小明");
       assertThat(result.succeeded()).isTrue();
       var json = new ObjectMapper().readTree(received.get());
       assertThat(json.path("device_key").asText()).isEqualTo("personal-key");

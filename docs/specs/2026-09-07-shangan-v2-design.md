@@ -580,7 +580,7 @@ todo_attachments(+文件) → todo_progress_events → todo_deletions(引用该�
 todo_attachments(+目录) → todo_progress_events → todos → todo_deletions
 → lesson_watch_states → exam_goals → nag_deliveries → nags
 → nag_policies(scope=USER) → supervisions(双向) → user_presence
-→ refresh_tokens → user_roles → users → deletion_audits(+1)
+→ user_bark_settings → refresh_tokens → user_roles → users → deletion_audits(+1)
 ```
 
 ### 11.5 孤儿数据自检

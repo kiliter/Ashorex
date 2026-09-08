@@ -1,22 +1,25 @@
 package com.shangan.nag.application.channel;
 
+import com.shangan.common.integration.BarkEndpointPolicy;
+import com.shangan.common.integration.BarkPushClient;
 import com.shangan.nag.application.BarkSettingsService;
 import com.shangan.nag.domain.Nag;
 import com.shangan.nag.domain.NagChannelType;
-import java.net.http.HttpClient;
-import java.time.Duration;
-import java.util.Map;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
 
 /** 个人催办只读取收件用户的 Bark 配置，绝不使用系统设备 Key。 */
 @Component
 public class BarkNagChannel implements NagChannel {
   private final BarkSettingsService settings;
 
-  public BarkNagChannel(BarkSettingsService settings) {
+  private final BarkPushClient client;
+  private final BarkEndpointPolicy endpoints;
+
+  public BarkNagChannel(
+      BarkSettingsService settings, BarkPushClient client, BarkEndpointPolicy endpoints) {
     this.settings = settings;
+    this.client = client;
+    this.endpoints = endpoints;
   }
 
   @Override
@@ -51,37 +54,15 @@ public class BarkNagChannel implements NagChannel {
     if (!available(nag.userId())) return DeliveryOutcome.failed(unavailableReason());
     var config = settings.get(nag.userId());
     try {
-      var timeout = Duration.ofSeconds(8);
-      var factory =
-          new JdkClientHttpRequestFactory(HttpClient.newBuilder().connectTimeout(timeout).build());
-      factory.setReadTimeout(timeout);
-      var response =
-          RestClient.builder()
-              .requestFactory(factory)
-              .build()
-              .post()
-              .uri(config.baseUrl().replaceAll("/+$", "") + "/push")
-              .body(
-                  Map.of(
-                      "device_key",
-                      config.deviceKey(),
-                      "title",
-                      nag.title() == null ? "上岸催办 · " + recipientDisplayName : nag.title(),
-                      "body",
-                      nag.message(),
-                      "group",
-                      "上岸",
-                      "level",
-                      "critical",
-                      "url",
-                      "shangan://home"))
-              .retrieve()
-              .body(Map.class);
-      return response != null
-              && response.get("code") instanceof Number code
-              && code.intValue() == 200
+      String endpoint = endpoints.requirePersonalEndpoint(config.baseUrl());
+      return client.send(
+              endpoint,
+              config.deviceKey(),
+              8,
+              nag.title() == null ? "上岸催办 · " + recipientDisplayName : nag.title(),
+              nag.message())
           ? DeliveryOutcome.sent("Bark 已发送")
-          : DeliveryOutcome.failed("Bark 返回失败状态");
+          : DeliveryOutcome.failed("Bark 请求失败或返回失败状态");
     } catch (Exception exception) {
       return DeliveryOutcome.failed("Bark 请求失败或超时");
     }
