@@ -30,6 +30,26 @@ class HomePageState extends ConsumerState<HomePage> {
   bool _jumpPanelOpen = false;
   final _selected = <String>{};
 
+  /// 小屏以独立弹层选日期，避免把固定页头撑满；日历仍可在弹层内滚动。
+  Future<void> _toggleJumpPanel(bool compact) async {
+    if (!compact) {
+      setState(() => _jumpPanelOpen = !_jumpPanelOpen);
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) => SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: _JumpPanel(
+          selection: ref.read(homeSelectionProvider),
+          onClose: () => Navigator.pop(sheetContext),
+        ),
+      ),
+    );
+  }
+
   /// 供外层 FAB 调用。
   Future<void> addTodo() async {
     try {
@@ -58,84 +78,142 @@ class HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
     final selection = ref.watch(homeSelectionProvider);
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 6, 18, 110),
-        children: [
-          _Header(
-            selection: selection,
-            editing: _editing,
-            selectedCount: _selected.length,
-            jumpPanelOpen: _jumpPanelOpen,
-            onToggleEditing: () => setState(() {
-              _editing = !_editing;
-              _jumpPanelOpen = false;
-              _selected.clear();
-            }),
-            onToggleJumpPanel: () =>
-                setState(() => _jumpPanelOpen = !_jumpPanelOpen),
-          ),
-          const SizedBox(height: 12),
-          if (!_editing) const _PendingNagStrip(),
-          if (_jumpPanelOpen && !_editing) ...[
-            _JumpPanel(
-              selection: selection,
-              onClose: () => setState(() => _jumpPanelOpen = false),
-            ),
-            const SizedBox(height: 12),
-          ],
-          if (!_editing) ...[
-            _GoalBoardSection(onManage: () => context.push('/goals')),
-            const SizedBox(height: 12),
-          ],
-          // 原型 1-1 默认日视图不显示分段控件，切换入口在日期头面板里；
-          // 周 / 月视图（1-5、1-6）才把分段常驻在页头下方。
-          if (!_editing && selection.range != HomeRange.day) ...[
-            ShanganSegmented(
-              labels: const ['日', '周', '月'],
-              selectedIndex: selection.range.index,
-              onChanged: (index) => ref
-                  .read(homeSelectionProvider.notifier)
-                  .selectRange(HomeRange.values[index]),
-            ),
-            const SizedBox(height: 12),
-          ],
-          if (_editing)
-            _EditingSection(
-              selected: _selected,
-              onSelectionChanged: (id, value) => setState(() {
-                if (value) {
-                  _selected.add(id);
-                } else {
-                  _selected.remove(id);
-                }
-              }),
-              onDone: () async {
-                setState(() {
-                  _editing = false;
-                  _selected.clear();
-                });
-                await _refresh();
-              },
-            )
-          else
-            switch (selection.range) {
-              HomeRange.day => _DaySection(
-                onRefresh: _refresh,
-                onEdit: () => setState(() {
-                  _editing = true;
+    // 首页头部和汇总固定，仅列表区域滚动。
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 600;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+          child: Column(
+            children: [
+              _Header(
+                selection: selection,
+                editing: _editing,
+                selectedCount: _selected.length,
+                jumpPanelOpen: _jumpPanelOpen,
+                onToggleEditing: () => setState(() {
+                  _editing = !_editing;
                   _jumpPanelOpen = false;
                   _selected.clear();
                 }),
+                onToggleJumpPanel: () => _toggleJumpPanel(compact),
               ),
-              HomeRange.week => const _WeekSection(),
-              HomeRange.month => _MonthSection(onRefresh: _refresh),
-            },
-        ],
-      ),
+              const SizedBox(height: 12),
+              if (!_editing) const _PendingNagStrip(),
+              if (_jumpPanelOpen && !_editing && !compact) ...[
+                _JumpPanel(
+                  selection: selection,
+                  onClose: () => setState(() => _jumpPanelOpen = false),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (!_editing) ...[
+                _GoalBoardSection(
+                  compact: compact,
+                  onManage: () => context.push('/goals'),
+                ),
+                const SizedBox(height: 12),
+              ],
+              // 原型 1-1 默认日视图不显示分段控件，切换入口在日期头面板里；
+              // 周 / 月视图（1-5、1-6）才把分段常驻在页头下方。
+              if (!_editing && selection.range != HomeRange.day) ...[
+                ShanganSegmented(
+                  labels: const ['日', '周', '月'],
+                  selectedIndex: selection.range.index,
+                  onChanged: (index) => ref
+                      .read(homeSelectionProvider.notifier)
+                      .selectRange(HomeRange.values[index]),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (!_editing && selection.range == HomeRange.day)
+                const _FixedDayTotals(),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _refresh,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.only(bottom: 110),
+                    children: [
+                      if (_editing)
+                        _EditingSection(
+                          selected: _selected,
+                          onSelectionChanged: (id, value) => setState(() {
+                            if (value) {
+                              _selected.add(id);
+                            } else {
+                              _selected.remove(id);
+                            }
+                          }),
+                          onDone: () async {
+                            setState(() {
+                              _editing = false;
+                              _selected.clear();
+                            });
+                            await _refresh();
+                          },
+                        )
+                      else
+                        switch (selection.range) {
+                          HomeRange.day => _DaySection(
+                            onRefresh: _refresh,
+                            onEdit: () => setState(() {
+                              _editing = true;
+                              _jumpPanelOpen = false;
+                              _selected.clear();
+                            }),
+                          ),
+                          HomeRange.week => const _WeekSection(),
+                          HomeRange.month => _MonthSection(onRefresh: _refresh),
+                        },
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
+}
+
+/// 固定的当日汇总，与待办结果使用同一份服务端统计。
+class _FixedDayTotals extends ConsumerWidget {
+  const _FixedDayTotals();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => ref
+      .watch(dayViewProvider)
+      .maybeWhen(
+        data: (view) {
+          final pending = view.todos.where((todo) => !todo.isDone).toList();
+          return StatStrip(
+            items: [
+              StatStripItem(
+                value: '${view.totals.done}/${view.totals.total}',
+                label: view.history ? '当日完成' : '今日完成',
+                highlighted: true,
+              ),
+              StatStripItem(
+                value: formatDurationCompact(view.totals.watchedMs),
+                label: view.history ? '观看' : '观看时长',
+              ),
+              StatStripItem(
+                value: formatDurationCompact(view.totals.focusedMs),
+                label: view.history ? '专注' : '专注时长',
+              ),
+              if (view.history)
+                StatStripItem(value: '${pending.length}', label: '未完成')
+              else
+                StatStripItem(
+                  value: '${view.totals.attachmentCount}',
+                  label: '附件',
+                ),
+            ],
+          );
+        },
+        orElse: () => const SizedBox.shrink(),
+      );
 }
 
 /// 页头：kicker + 大号日期 + 右侧日历 / 铃铛按钮。
@@ -432,7 +510,9 @@ final class _JumpPanel extends ConsumerWidget {
 }
 
 final class _GoalBoardSection extends ConsumerWidget {
-  const _GoalBoardSection({required this.onManage});
+  const _GoalBoardSection({required this.onManage, this.compact = false});
+
+  final bool compact;
 
   final VoidCallback onManage;
 
@@ -448,7 +528,42 @@ final class _GoalBoardSection extends ConsumerWidget {
         padding: const EdgeInsets.all(14),
         child: Text('目标加载失败：$error'),
       ),
-      data: (list) => GoalBoard(goals: list, onManage: onManage),
+      data: (list) {
+        // 目标数量不受限，固定区只在空间充足且目标较少时展示完整卡片。
+        if (!compact && list.length <= 3) {
+          return GoalBoard(goals: list, onManage: onManage);
+        }
+        final primary = list.isEmpty
+            ? null
+            : list.firstWhere((goal) => goal.primary, orElse: () => list.first);
+        return ShanganCard(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '我的目标 · ${list.length} 个',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      primary == null
+                          ? '设置你的考试目标'
+                          : '${primary.name} · ${primary.daysRemaining} 天',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(onPressed: onManage, child: const Text('管理')),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -501,30 +616,6 @@ class _DaySectionState extends ConsumerState<_DaySection> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            StatStrip(
-              items: [
-                StatStripItem(
-                  value: '${view.totals.done}/${view.totals.total}',
-                  label: view.history ? '当日完成' : '今日完成',
-                  highlighted: true,
-                ),
-                StatStripItem(
-                  value: formatDurationCompact(view.totals.watchedMs),
-                  label: view.history ? '观看' : '观看时长',
-                ),
-                StatStripItem(
-                  value: formatDurationCompact(view.totals.focusedMs),
-                  label: view.history ? '专注' : '专注时长',
-                ),
-                if (view.history)
-                  StatStripItem(value: '${pending.length}', label: '未完成')
-                else
-                  StatStripItem(
-                    value: '${view.totals.attachmentCount}',
-                    label: '附件',
-                  ),
-              ],
-            ),
             if (view.history) ...[
               const SizedBox(height: 12),
               if (allDone)

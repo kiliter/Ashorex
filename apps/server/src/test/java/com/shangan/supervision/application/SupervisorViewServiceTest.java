@@ -281,7 +281,8 @@ class SupervisorViewServiceTest {
         12,
         "FOREGROUND",
         "2.0.0",
-        TODAY.toString());
+        TODAY.toString(),
+        null);
   }
 
   private static List<TodoRepository.Deletion> deletions(int count) {

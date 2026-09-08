@@ -55,7 +55,8 @@ public class RuntimeIntegrationSettingsService implements IntegrationSettingsPro
                 libraries,
                 previous.serverChan(),
                 previous.features(),
-                clock.millis())));
+                clock.millis(),
+                previous.bark())));
   }
 
   private RuntimeIntegrationSettings commit(RuntimeIntegrationSettings validated) {
@@ -109,10 +110,32 @@ public class RuntimeIntegrationSettingsService implements IntegrationSettingsPro
                 errors));
     List<RuntimeIntegrationSettings.EmbyLibrary> libraries =
         validatedLibraries(submitted.embyLibraries(), errors);
+    RuntimeIntegrationSettings.Bark bark =
+        new RuntimeIntegrationSettings.Bark(
+            url("barkBaseUrl", "Bark 服务地址", submitted.bark().baseUrl(), errors),
+            text(submitted.bark().deviceKey()),
+            submitted.bark().enabled(),
+            range(
+                "barkTimeoutSeconds",
+                "Bark 超时秒数",
+                submitted.bark().timeoutSeconds(),
+                1,
+                60,
+                errors));
+    try {
+      URI uri = URI.create(bark.baseUrl());
+      if (uri.getQuery() != null || uri.getFragment() != null)
+        errors.put("barkBaseUrl", "Bark 服务地址不能包含查询参数或片段");
+    } catch (IllegalArgumentException ignored) {
+      errors.put("barkBaseUrl", "Bark 服务地址格式不合法");
+    }
+    if (bark.enabled() && !bark.configured())
+      errors.put("barkDeviceKey", "启用 Bark 前请填写服务地址和设备 Key");
     if (!errors.isEmpty()) {
       throw new IntegrationSettingsValidationException(errors);
     }
-    return new RuntimeIntegrationSettings(emby, libraries, serverChan, features, clock.millis());
+    return new RuntimeIntegrationSettings(
+        emby, libraries, serverChan, features, clock.millis(), bark);
   }
 
   /** 媒体库必须有 ID 且不重复；名称缺失时回退为 ID，避免页面出现空行。 */

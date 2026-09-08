@@ -39,7 +39,7 @@ public class JdbcRuntimeIntegrationSettingsRepository
                    serverchan_send_key, serverchan_timeout_seconds,
                    serverchan_nag_enabled, serverchan_daily_digest_enabled,
                    feature_document_resources, feature_max_document_size_mb,
-                   updated_at
+                   bark_base_url, bark_device_key, bark_enabled, bark_timeout_seconds, updated_at
               FROM runtime_settings
              WHERE id = :id
             """)
@@ -61,7 +61,12 @@ public class JdbcRuntimeIntegrationSettingsRepository
                     new RuntimeIntegrationSettings.Features(
                         row.getInt("feature_document_resources") == 1,
                         row.getInt("feature_max_document_size_mb")),
-                    row.getLong("updated_at")))
+                    row.getLong("updated_at"),
+                    new RuntimeIntegrationSettings.Bark(
+                        row.getString("bark_base_url"),
+                        row.getString("bark_device_key"),
+                        row.getInt("bark_enabled") == 1,
+                        row.getInt("bark_timeout_seconds"))))
         .optional();
   }
 
@@ -76,14 +81,14 @@ public class JdbcRuntimeIntegrationSettingsRepository
                 serverchan_send_key, serverchan_timeout_seconds,
                 serverchan_nag_enabled, serverchan_daily_digest_enabled,
                 feature_document_resources, feature_max_document_size_mb,
-                updated_at
+                bark_base_url, bark_device_key, bark_enabled, bark_timeout_seconds, updated_at
             ) VALUES (
                 :id, :embyBaseUrl, :embyApiKey, :embyUserId, :embyTimeoutSeconds,
                 :embyLibrariesJson,
                 :serverChanSendKey, :serverChanTimeoutSeconds,
                 :serverChanNagEnabled, :serverChanDailyDigestEnabled,
                 :featureDocumentResources, :featureMaxDocumentSizeMb,
-                :updatedAt
+                :barkBaseUrl, :barkDeviceKey, :barkEnabled, :barkTimeoutSeconds, :updatedAt
             )
             ON CONFLICT(id) DO UPDATE SET
                 emby_base_url = excluded.emby_base_url,
@@ -97,6 +102,10 @@ public class JdbcRuntimeIntegrationSettingsRepository
                 serverchan_daily_digest_enabled = excluded.serverchan_daily_digest_enabled,
                 feature_document_resources = excluded.feature_document_resources,
                 feature_max_document_size_mb = excluded.feature_max_document_size_mb,
+                bark_base_url = excluded.bark_base_url,
+                bark_device_key = excluded.bark_device_key,
+                bark_enabled = excluded.bark_enabled,
+                bark_timeout_seconds = excluded.bark_timeout_seconds,
                 updated_at = excluded.updated_at
             """)
         .param("id", SINGLETON_ID)
@@ -111,6 +120,10 @@ public class JdbcRuntimeIntegrationSettingsRepository
         .param("serverChanDailyDigestEnabled", value.serverChan().dailyDigestEnabled() ? 1 : 0)
         .param("featureDocumentResources", value.features().documentResources() ? 1 : 0)
         .param("featureMaxDocumentSizeMb", value.features().maxDocumentSizeMb())
+        .param("barkBaseUrl", value.bark().baseUrl())
+        .param("barkDeviceKey", value.bark().deviceKey())
+        .param("barkEnabled", value.bark().enabled() ? 1 : 0)
+        .param("barkTimeoutSeconds", value.bark().timeoutSeconds())
         .param("updatedAt", clock.millis())
         .update();
   }

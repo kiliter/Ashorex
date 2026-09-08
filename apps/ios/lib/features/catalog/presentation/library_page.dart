@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'course_filter_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,226 +25,226 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
   /// 原型 4-1 右上角两个 iconbtn：搜索框与筛选区都可收起。
   bool _searchOpen = false;
-  bool _filterOpen = true;
+  Timer? _debounce;
+  String _appliedKeyword = '';
+  bool _openingFilters = false;
+
+  /// 搜索只在停止输入 300ms 后生效；清空立即更新。
+  void _search(String value) {
+    _debounce?.cancel();
+    if (value.isEmpty) {
+      setState(() => _appliedKeyword = '');
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _appliedKeyword = value.trim());
+    });
+  }
+
+  /// 取消面板不会修改共享查询，应用仅提交一次。
+  Future<void> _openFilters() async {
+    if (_openingFilters) return;
+    _openingFilters = true;
+    try {
+      final facets = await ref.read(catalogFacetsProvider.future);
+      if (!mounted) return;
+      final result = await showCourseFilterPanel(
+        context,
+        selected: ref.read(catalogFilterProvider),
+        genres: facets.genres.map((f) => f.value).toList(),
+        people: facets.people.map((f) => f.value).toList(),
+        tags: facets.tags.map((f) => f.value).toList(),
+      );
+      if (mounted && result != null) {
+        ref.read(catalogFilterProvider.notifier).apply(result);
+      }
+    } catch (_) {
+      // 元数据暂时不可用不影响已展示课程；允许用户主动重试。
+      if (!mounted) return;
+      ref.invalidate(catalogFacetsProvider);
+      ShanganFeedback.show(context, '筛选条件加载失败，请重试', error: true);
+    } finally {
+      _openingFilters = false;
+    }
+  }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _keyword.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final facets = ref.watch(catalogFacetsProvider);
     final courses = ref.watch(coursesProvider);
     final filter = ref.watch(catalogFilterProvider);
-    final keyword = _keyword.text.trim();
-    return RefreshIndicator(
-      onRefresh: () async {
-        ref.invalidate(catalogFacetsProvider);
-        ref.invalidate(coursesProvider);
+    final keyword = _appliedKeyword;
+    final grouping = ShanganSegmented(
+      labels: const ['按流派', '按人物'],
+      selectedIndex: filter.groupByPerson ? 1 : 0,
+      onChanged: (index) =>
+          ref.read(catalogFilterProvider.notifier).setGroupByPerson(index == 1),
+    );
+    final selectedFilters = SelectedCourseFilters(
+      filter: filter,
+      onChanged: ref.read(catalogFilterProvider.notifier).apply,
+      onClear: () {
+        _keyword.clear();
+        _search('');
+        if (filter.genre != null ||
+            filter.tag != null ||
+            filter.person != null ||
+            filter.year != null ||
+            (filter.query?.isNotEmpty ?? false)) {
+          ref
+              .read(catalogFilterProvider.notifier)
+              .apply(CatalogFilter(groupByPerson: filter.groupByPerson));
+        }
       },
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 110),
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 横屏键盘展开后固定区压为两行，仍保留标题与所有筛选入口。
+        final compact =
+            constraints.maxHeight < 300 && constraints.maxWidth > 600;
+        return GestureDetector(
+          onHorizontalDragEnd: (details) {
+            if ((details.primaryVelocity ?? 0) < -150) _openFilters();
+          },
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+            child: Column(
+              children: [
+                Row(
                   children: [
-                    Text(
-                      'LIBRARY',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.6,
-                        color: ShanganColors.mutedInk,
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'LIBRARY',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.6,
+                              color: ShanganColors.mutedInk,
+                            ),
+                          ),
+                          Text(
+                            '课程库',
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.8,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    Text(
-                      '课程库',
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.8,
+                    if (compact && _searchOpen)
+                      Expanded(
+                        child: ShanganSearchField(
+                          controller: _keyword,
+                          hint: '搜索课程或人物',
+                          onChanged: _search,
+                        ),
                       ),
+                    ShanganIconButton(
+                      icon: Icons.search,
+                      highlighted: _searchOpen,
+                      semanticLabel: '搜索课程',
+                      onTap: () => setState(() => _searchOpen = !_searchOpen),
+                    ),
+                    const SizedBox(width: 9),
+                    ShanganIconButton(
+                      icon: Icons.filter_list,
+                      highlighted:
+                          filter.genre != null ||
+                          filter.person != null ||
+                          filter.tag != null,
+                      semanticLabel: '展开筛选',
+                      onTap: _openFilters,
                     ),
                   ],
                 ),
-              ),
-              ShanganIconButton(
-                icon: Icons.search,
-                highlighted: _searchOpen,
-                semanticLabel: '搜索课程',
-                onTap: () => setState(() => _searchOpen = !_searchOpen),
-              ),
-              const SizedBox(width: 9),
-              ShanganIconButton(
-                icon: Icons.filter_list,
-                highlighted: _filterOpen,
-                semanticLabel: '展开筛选',
-                onTap: () => setState(() => _filterOpen = !_filterOpen),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (_searchOpen) ...[
-            ShanganSearchField(
-              controller: _keyword,
-              hint: '搜索课程或人物',
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 12),
-          ],
-          ShanganSegmented(
-            labels: const ['按流派', '按人物'],
-            selectedIndex: filter.groupByPerson ? 1 : 0,
-            onChanged: (index) => ref
-                .read(catalogFilterProvider.notifier)
-                .setGroupByPerson(index == 1),
-          ),
-          if (_filterOpen) ...[
-            const SizedBox(height: 12),
-            facets.when(
-              loading: () => const SizedBox(
-                height: 60,
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (error, _) => Text('筛选维度加载失败：$error'),
-              data: (data) => _FacetBar(facets: data, filter: filter),
-            ),
-          ],
-          const SizedBox(height: 12),
-          courses.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 40),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (error, _) => Text('课程列表加载失败：$error'),
-            data: (list) {
-              final visible = keyword.isEmpty
-                  ? list
-                  : list
-                        .where(
-                          (course) =>
-                              course.title.contains(keyword) ||
-                              course.people.any(
-                                (person) => person.contains(keyword),
-                              ),
-                        )
-                        .toList(growable: false);
-              if (visible.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(
-                    child: Text(
-                      '没有符合条件的课程',
-                      style: TextStyle(color: ShanganColors.mutedInk),
+                const SizedBox(height: 12),
+                if (_searchOpen && !compact) ...[
+                  ShanganSearchField(
+                    controller: _keyword,
+                    hint: '搜索课程或人物',
+                    onChanged: _search,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (compact)
+                  Row(
+                    children: [
+                      Expanded(child: grouping),
+                      const SizedBox(width: 12),
+                      Expanded(child: selectedFilters),
+                    ],
+                  )
+                else ...[
+                  grouping,
+                  selectedFilters,
+                ],
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(catalogFacetsProvider);
+                      ref.invalidate(coursesProvider);
+                    },
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(bottom: 110),
+                      children: [
+                        courses.when(
+                          loading: () => const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 40),
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                          error: (error, _) => Text('课程列表加载失败：$error'),
+                          data: (list) {
+                            final visible = keyword.isEmpty
+                                ? list
+                                : list
+                                      .where(
+                                        (course) =>
+                                            course.title.contains(keyword) ||
+                                            course.people.any(
+                                              (person) =>
+                                                  person.contains(keyword),
+                                            ),
+                                      )
+                                      .toList(growable: false);
+                            if (visible.isEmpty) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 40),
+                                child: Center(
+                                  child: Text(
+                                    '没有符合条件的课程',
+                                    style: TextStyle(
+                                      color: ShanganColors.mutedInk,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                            return filter.groupByPerson
+                                ? _PeopleList(courses: visible)
+                                : _GenreGroups(courses: visible);
+                          },
+                        ),
+                      ],
                     ),
                   ),
-                );
-              }
-              return filter.groupByPerson
-                  ? _PeopleList(courses: visible)
-                  : _GenreGroups(courses: visible);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 原型 4-1 的筛选区：流派 / 标签 / 人物三行 pill，全部来自 Emby 元数据。
-final class _FacetBar extends ConsumerWidget {
-  const _FacetBar({required this.facets, required this.filter});
-
-  final CatalogFacets facets;
-  final CatalogFilter filter;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final controller = ref.read(catalogFilterProvider.notifier);
-    final totalCourses = facets.genres.fold<int>(
-      0,
-      (previous, facet) => previous + facet.courseCount,
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _FacetLabel('流派 · 来自 Emby Genres'),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 7,
-          runSpacing: 7,
-          children: [
-            ShanganFilterChip(
-              label: '全部 $totalCourses',
-              selected: filter.genre == null,
-              onTap: () {
-                if (filter.genre != null) controller.toggleGenre(filter.genre!);
-              },
+                ),
+              ],
             ),
-            for (final facet in facets.genres)
-              ShanganFilterChip(
-                label: '${facet.value} ${facet.courseCount}',
-                selected: filter.genre == facet.value,
-                onTap: () => controller.toggleGenre(facet.value),
-              ),
-          ],
-        ),
-        if (facets.tags.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          const _FacetLabel('标签 · 来自 Emby Tags'),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 7,
-            runSpacing: 7,
-            children: facets.tags
-                .map(
-                  (facet) => ShanganFilterChip(
-                    label: facet.value,
-                    selected: filter.tag == facet.value,
-                    onTap: () => controller.toggleTag(facet.value),
-                  ),
-                )
-                .toList(growable: false),
           ),
-        ],
-        if (facets.people.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          const _FacetLabel('人物 · 来自 Emby People'),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 7,
-            runSpacing: 7,
-            children: facets.people
-                .map(
-                  (facet) => ShanganFilterChip(
-                    label: facet.value,
-                    selected: filter.person == facet.value,
-                    onTap: () => controller.togglePerson(facet.value),
-                  ),
-                )
-                .toList(growable: false),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-final class _FacetLabel extends StatelessWidget {
-  const _FacetLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(fontSize: 11, color: ShanganColors.mutedInk),
+        );
+      },
     );
   }
 }

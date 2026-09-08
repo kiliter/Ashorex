@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { api, ApiError } from '@/api/client';
 import { formatDuration, formatInstant, presenceLabel, todoTypeLabel } from '@/api/format';
 
@@ -13,6 +13,8 @@ interface PresenceView {
   lastHeartbeatAt: string | null;
   lastEffectiveActionAt: string | null;
   idleMinutes: number;
+  activity?: { pageLabel: string; stateLabel: string; todoTitle: string | null;
+    updatedAt: string | null; background: boolean; stale: boolean };
 }
 
 interface PresenceRow {
@@ -59,20 +61,30 @@ const selectedDay = ref<DayView | null>(null);
 const error = ref('');
 const notice = ref('');
 const nagMessage = ref('');
-const nagChannel = ref<'AUTO' | 'SERVERCHAN' | 'FULLSCREEN'>('AUTO');
+const nagTitle = ref('');
+const nagChannel = ref<'AUTO' | 'SERVERCHAN' | 'FULLSCREEN' | 'BARK'>('AUTO');
 const submitting = ref(false);
 
 async function load(): Promise<void> {
+  if (loading) return;
+  loading = true;
   try {
     const data = await api.get<PresenceResponse>('/presence');
     rows.value = data.rows;
     error.value = '';
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '加载失败';
-  }
+  } finally { loading = false; }
 }
 
-onMounted(load);
+// 只在可见标签页定时更新当前快照，卸载时释放，不积压慢请求。
+let refreshTimer: ReturnType<typeof setInterval> | undefined;
+let loading = false;
+onMounted(() => {
+  void load();
+  refreshTimer = setInterval(() => { if (!document.hidden) void load(); }, 15000);
+});
+onUnmounted(() => clearInterval(refreshTimer));
 
 const counts = computed(() => ({
   ALL: rows.value.length,
@@ -109,10 +121,12 @@ async function sendNag(): Promise<void> {
     await api.post('/presence/nag', {
       userId: selected.value.userId,
       message: nagMessage.value || null,
+      title: nagTitle.value || null,
       channel: nagChannel.value,
     });
     notice.value = `已向 ${selected.value.username} 投递一次手动催办`;
     nagMessage.value = '';
+    nagTitle.value = '';
     await load();
   } catch (cause) {
     error.value =
@@ -178,6 +192,7 @@ function statusText(todo: TodoItem): { text: string; color: string } {
           <tr>
             <th>用户</th>
             <th>在线状态</th>
+            <th>App 当前位置</th>
             <th>最近心跳</th>
             <th>最近有效操作</th>
             <th>今日 Todo</th>
@@ -197,6 +212,14 @@ function statusText(todo: TodoItem): { text: string; color: string } {
                 <i></i>{{ presenceLabel(row.presence.state)
                 }}{{ row.presence.state === 'IDLE' ? ` ${row.presence.idleMinutes} 分` : '' }}
               </span>
+            </td>
+            <td style="min-width: 180px; max-width: 280px; white-space: normal">
+              <template v-if="row.presence.activity">
+                <div>{{ row.presence.activity.stale ? '最后上报 · ' : '' }}{{ row.presence.activity.background ? 'App 已切后台 · ' : '' }}{{ row.presence.activity.pageLabel }} · {{ row.presence.activity.stateLabel }}</div>
+                <div v-if="row.presence.activity.todoTitle">{{ row.presence.activity.todoTitle }}</div>
+                <div class="muted" style="font-size: 11px">更新于 {{ formatInstant(row.presence.activity.updatedAt) }}</div>
+              </template>
+              <span v-else class="muted">尚未上报位置</span>
             </td>
             <td
               class="mono"
@@ -222,7 +245,7 @@ function statusText(todo: TodoItem): { text: string; color: string } {
             </td>
           </tr>
           <tr v-if="visibleRows.length === 0">
-            <td colspan="8" class="empty">没有符合条件的用户</td>
+            <td colspan="9" class="empty">没有符合条件的用户</td>
           </tr>
         </tbody>
       </table>
@@ -293,9 +316,12 @@ function statusText(todo: TodoItem): { text: string; color: string } {
         </span>
       </div>
 
+      <div class="wlabel" style="margin-top: 14px">催办标题（可选）</div>
+      <input v-model="nagTitle" class="winput" maxlength="80" placeholder="不填写时使用默认标题" />
       <div class="wlabel" style="margin-top: 14px">附加说明（可选）</div>
       <textarea
         v-model="nagMessage"
+        maxlength="1000"
         class="winput"
         style="min-height: 64px"
         placeholder="今天一项都没开始，先把第一项做完。"
@@ -305,6 +331,7 @@ function statusText(todo: TodoItem): { text: string; color: string } {
         <button class="wbtn" :disabled="submitting" @click="sendNag">
           {{ submitting ? '投递中…' : '立即投递' }}
         </button>
+        <button type="button" :class="{ on: nagChannel === 'BARK' }" @click="nagChannel = 'BARK'">个人 Bark</button>
         <button class="wbtn ghost" @click="selected = null">取消</button>
       </div>
       <div class="muted mt10" style="font-size: 11.5px">

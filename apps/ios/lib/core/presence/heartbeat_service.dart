@@ -1,3 +1,4 @@
+import 'package:shangan_ios/core/presence/app_activity.dart';
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
@@ -16,6 +17,7 @@ final class HeartbeatService with WidgetsBindingObserver {
     this.onTransportMode,
     this.onConnected,
     this.queueDepth,
+    this.activity,
   });
 
   /// 数据仓库；心跳只调用一个接口。
@@ -34,6 +36,10 @@ final class HeartbeatService with WidgetsBindingObserver {
   final Future<void> Function()? onConnected;
   final int Function()? queueDepth;
 
+  final AppActivityTracker? activity;
+  Timer? _changes;
+  bool _sending = false;
+  bool _again = false;
   Timer? _timer;
   Duration _interval = const Duration(seconds: 60);
   bool _foreground = true;
@@ -52,12 +58,18 @@ final class HeartbeatService with WidgetsBindingObserver {
 
   void start() {
     WidgetsBinding.instance.addObserver(this);
+    _foreground =
+        WidgetsBinding.instance.lifecycleState == null ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+    activity?.addListener(_activityChanged);
     _schedule();
     unawaited(_beat());
   }
 
   void dispose() {
     _disposed = true;
+    activity?.removeListener(_activityChanged);
+    _changes?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _timer = null;
@@ -79,12 +91,29 @@ final class HeartbeatService with WidgetsBindingObserver {
     _timer = Timer.periodic(_interval, (_) => unawaited(_beat()));
   }
 
+  /// 将同一帧内切页与播放回调合并，只补报最新快照。
+  void _activityChanged() {
+    _changes?.cancel();
+    _changes = Timer(
+      const Duration(milliseconds: 150),
+      () => unawaited(_beat()),
+    );
+  }
+
   Future<void> _beat() async {
     if (_disposed) return;
+    // 一个在途请求，避免慢旧请求在新快照之后覆盖服务端。
+    if (_sending) {
+      _again = true;
+      return;
+    }
+    _sending = true;
+    _again = false;
     try {
       final HeartbeatResult result = await repository.heartbeat(
         foreground: _foreground,
         clientVersion: clientVersion,
+        activity: activity?.current,
         queuedEvents: queueDepth?.call() ?? _pendingQueuedEvents,
       );
       // 注销期间完成的旧请求不得重建定时器或恢复 SSE。
@@ -106,6 +135,9 @@ final class HeartbeatService with WidgetsBindingObserver {
     } catch (_) {
       // 心跳失败只标记离线，不影响本地播放与计时。
       _online = false;
+    } finally {
+      _sending = false;
+      if (_again && !_disposed) unawaited(_beat());
     }
   }
 }

@@ -20,6 +20,7 @@ interface NagRecord {
   triggeredByUserId: string | null;
   idleMinutes: number;
   pendingCount: number;
+  title?: string;
   message: string;
   requireReason: boolean;
   status: string;
@@ -102,6 +103,7 @@ const STATUS_ORDER = ['PENDING', 'DELIVERED', 'RESPONDED', 'EXPIRED'];
 const CHANNEL_LABELS: Record<string, string> = {
   FULLSCREEN: '全屏',
   SERVERCHAN: 'Server 酱',
+  BARK: '个人 Bark',
 };
 
 /** nag_deliveries.status 只有这三档：SENT 已发出、SHOWN 客户端已展示、FAILED 投递失败。 */
@@ -553,7 +555,8 @@ function reasonBadgeClass(tag: string): string {
                     <div class="cell-sub">未完成 {{ nag.pendingCount }} 项 · 第 {{ nag.thresholdLevel }} 档</div>
                   </template>
                   <template v-else>
-                    管理员发起
+                    {{ nag.title || (nag.trigger === 'SUPERVISOR' ? '督学发起' : '管理员发起') }}
+                    <div class="cell-sub">{{ nag.message }}</div>
                     <div class="cell-sub">未完成 {{ nag.pendingCount }} 项</div>
                   </template>
                 </td>

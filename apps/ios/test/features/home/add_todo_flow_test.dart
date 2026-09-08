@@ -10,6 +10,35 @@ import '../../support/fixtures.dart';
 /// 添加 Todo：只有课程 / 专注计时 / 待办事项三个入口，
 /// 创建载荷必须带上 `localDate` 与类型专属字段，非法时长不允许提交。
 void main() {
+  testWidgets('选课横屏键盘下搜索和空结果不溢出', (tester) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    await _open(
+      tester,
+      FakeBackend()..on(
+        'GET',
+        '/api/v1/catalog/courses',
+        json: [courseSummaryJson(id: 'a', title: '行政法')],
+      ),
+    );
+    await tester.tap(find.text('课程'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '不存在');
+    tester.view.viewInsets = const FakeViewPadding(bottom: 220);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining('没有符合条件的课程'), findsOneWidget);
+    expect(tester.getBottomRight(find.text('一键清空')).dy, lessThan(170));
+    await tester.tap(find.text('一键清空'));
+    await tester.pump();
+    expect(find.text('行政法'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('只提供三类入口，不出现答题、模拟考试或还债', (tester) async {
     await _open(tester, FakeBackend());
 

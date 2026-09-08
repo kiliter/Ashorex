@@ -15,6 +15,16 @@ public interface NagChannel {
   /** 该渠道当前是否可用（配置齐全且被启用）。 */
   boolean available();
 
+  /** 渠道选择开关与可发送状态分离，防止缺配置时偷偷换渠道。 */
+  default boolean enabled(String userId) {
+    return available();
+  }
+
+  /** 默认保持旧渠道的全局可用性；个人渠道按收件用户覆盖。 */
+  default boolean available(String userId) {
+    return available();
+  }
+
   /**
    * 渠道不可用的原因，写入投递流水供后台排查。
    *

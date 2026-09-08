@@ -73,7 +73,7 @@ public class ServerChanNagChannel implements NagChannel {
       return DeliveryOutcome.failed("Server 酱未配置或未启用");
     }
     MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-    form.add("title", "上岸催办 · " + recipientDisplayName);
+    form.add("title", nag.title() == null ? "上岸催办 · " + recipientDisplayName : nag.title());
     form.add("desp", nag.message());
     try {
       JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory();

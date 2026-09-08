@@ -942,6 +942,7 @@ final class StatsView {
 /// 待回应催办。
 final class PendingNag {
   const PendingNag({
+    this.title,
     required this.id,
     required this.message,
     required this.idleMinutes,
@@ -949,6 +950,7 @@ final class PendingNag {
     required this.requireReason,
   });
 
+  final String? title;
   final String id;
   final String message;
   final int idleMinutes;
@@ -957,6 +959,7 @@ final class PendingNag {
 
   factory PendingNag.fromJson(Map<String, dynamic> json) {
     return PendingNag(
+      title: json['title'] as String?,
       id: json['id'] as String,
       message: json['message'] as String? ?? '',
       idleMinutes: (json['idleMinutes'] as num?)?.toInt() ?? 0,
@@ -1106,12 +1109,49 @@ final class SupervisorRef {
 }
 
 /// 督学端学员总览行。
+/// 服务端当前活动展示；离线和后台标识与页面并列，避免把历史快照当实时播放。
+final class CurrentAppActivity {
+  const CurrentAppActivity({
+    this.pageLabel = '未知页面',
+    this.stateLabel = '未知状态',
+    this.todoTitle,
+    this.updatedAt,
+    this.background = false,
+    this.stale = true,
+  });
+  final String pageLabel;
+  final String stateLabel;
+  final String? todoTitle;
+  final DateTime? updatedAt;
+  final bool background;
+  final bool stale;
+  String get summary => [
+    if (stale) '最后上报',
+    if (background) 'App 已切后台',
+    pageLabel,
+    stateLabel,
+    ?todoTitle,
+  ].join(' · ');
+  factory CurrentAppActivity.fromJson(Object? value) {
+    if (value is! Map<String, dynamic>) return const CurrentAppActivity();
+    return CurrentAppActivity(
+      pageLabel: value['pageLabel'] as String? ?? '未知页面',
+      stateLabel: value['stateLabel'] as String? ?? '未知状态',
+      todoTitle: value['todoTitle'] as String?,
+      updatedAt: DateTime.tryParse(value['updatedAt'] as String? ?? ''),
+      background: value['background'] as bool? ?? false,
+      stale: value['stale'] as bool? ?? true,
+    );
+  }
+}
+
 final class LearnerOverview {
   const LearnerOverview({
     required this.userId,
     required this.username,
     required this.displayName,
     required this.presenceState,
+    this.activity = const CurrentAppActivity(),
     required this.idleMinutes,
     required this.todayTotal,
     required this.todayDone,
@@ -1127,6 +1167,7 @@ final class LearnerOverview {
   final String username;
   final String displayName;
   final PresenceState presenceState;
+  final CurrentAppActivity activity;
   final int idleMinutes;
   final int todayTotal;
   final int todayDone;
@@ -1147,6 +1188,7 @@ final class LearnerOverview {
       presenceState: PresenceState.parse(
         json['presenceState'] as String? ?? 'OFFLINE',
       ),
+      activity: CurrentAppActivity.fromJson(json['activity']),
       idleMinutes: (json['idleMinutes'] as num?)?.toInt() ?? 0,
       todayTotal: (json['todayTotal'] as num?)?.toInt() ?? 0,
       todayDone: (json['todayDone'] as num?)?.toInt() ?? 0,
@@ -1167,6 +1209,7 @@ final class LearnerDetail {
     required this.username,
     required this.displayName,
     required this.presenceState,
+    this.activity = const CurrentAppActivity(),
     required this.idleMinutes,
     required this.day,
     required this.deletions,
@@ -1177,6 +1220,7 @@ final class LearnerDetail {
   final String username;
   final String displayName;
   final PresenceState presenceState;
+  final CurrentAppActivity activity;
   final int idleMinutes;
   final DayView day;
   final List<LearnerDeletion> deletions;
@@ -1191,6 +1235,7 @@ final class LearnerDetail {
       presenceState: PresenceState.parse(
         presence['state'] as String? ?? 'OFFLINE',
       ),
+      activity: CurrentAppActivity.fromJson(presence['activity']),
       idleMinutes: (presence['idleMinutes'] as num?)?.toInt() ?? 0,
       day: DayView.fromJson(json['day'] as Map<String, dynamic>),
       deletions: (json['deletions'] as List? ?? const [])

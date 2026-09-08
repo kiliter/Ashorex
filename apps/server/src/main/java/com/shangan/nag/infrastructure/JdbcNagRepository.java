@@ -22,7 +22,7 @@ public class JdbcNagRepository implements NagRepository {
       SELECT id, user_id, local_date, threshold_level, trigger_source, triggered_by_user_id,
              idle_minutes, pending_count, message, require_reason, status,
              delivered_at, responded_at, reason_tag, reason_text,
-             supervisor_user_id_snapshot, created_at
+             supervisor_user_id_snapshot, created_at, title
         FROM nags
       """;
 
@@ -168,11 +168,11 @@ public class JdbcNagRepository implements NagRepository {
                 id, user_id, local_date, threshold_level, trigger_source, triggered_by_user_id,
                 idle_minutes, pending_count, message, require_reason, status,
                 delivered_at, responded_at, reason_tag, reason_text,
-                supervisor_user_id_snapshot, created_at
+                supervisor_user_id_snapshot, created_at, title
             ) VALUES (
                 :id, :userId, :date, :level, :trigger, :triggeredBy,
                 :idleMinutes, :pendingCount, :message, :requireReason, :status,
-                NULL, NULL, NULL, NULL, :supervisor, :createdAt
+                NULL, NULL, NULL, NULL, :supervisor, :createdAt, :title
             )
             """)
         .param("id", nag.id())
@@ -184,6 +184,7 @@ public class JdbcNagRepository implements NagRepository {
         .param("idleMinutes", Math.min(nag.idleMinutes(), Integer.MAX_VALUE))
         .param("pendingCount", nag.pendingCount())
         .param("message", nag.message())
+        .param("title", nag.title())
         .param("requireReason", nag.requireReason() ? 1 : 0)
         .param("status", nag.status().name())
         .param("supervisor", nag.supervisorUserIdSnapshot())
@@ -326,7 +327,8 @@ public class JdbcNagRepository implements NagRepository {
         row.getString("reason_tag"),
         row.getString("reason_text"),
         row.getString("supervisor_user_id_snapshot"),
-        Instant.ofEpochMilli(row.getLong("created_at")));
+        Instant.ofEpochMilli(row.getLong("created_at")),
+        row.getString("title"));
   }
 
   private Delivery mapDelivery(ResultSet row, int rowNumber) throws SQLException {

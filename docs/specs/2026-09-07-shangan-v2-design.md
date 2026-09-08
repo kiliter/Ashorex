@@ -206,7 +206,7 @@ TodoDeletion(id, userId, todoId, todoType, titleSnapshot, resourceId,
 
 ```text
 UserPresence(userId, lastHeartbeatAt, lastEffectiveActionAt, appState,
-             clientVersion, updatedAt)
+             clientVersion, currentPage, activityState, activityTodoId, updatedAt)
 ```
 
 - **不保存心跳明细历史**。心跳只更新 `UserPresence` 单行，避免产生大量无价值行。
@@ -331,7 +331,8 @@ POST /api/v1/todos/{todoId}/progress
 
 ```http
 POST /api/v1/heartbeat
-{ "appState": "FOREGROUND", "clientVersion": "2.0.0", "queuedEvents": 0 }
+{ "appState": "FOREGROUND", "clientVersion": "2.0.0", "queuedEvents": 0,
+  "currentPage": "PLAYER", "activityState": "VIDEO_PLAYING", "activityTodoId": "Todo UUID" }
 ```
 
 ```json
@@ -341,7 +342,7 @@ POST /api/v1/heartbeat
 ```
 
 - 默认间隔 60 秒，实际间隔由服务端下发，客户端遵循。
-- 心跳只更新 `lastHeartbeatAt` 与 `appState`，**不更新** `lastEffectiveActionAt`。
+- 心跳更新 `lastHeartbeatAt`、`appState` 及 ADR-0040 当前页面/活动快照，**不更新** `lastEffectiveActionAt`。
 - 心跳失败不影响本地播放与计时，只影响服务端在线判定；连续失败在首页显示离线条与待同步条数。
 - `pendingNagId` 非空时客户端必须拉起全屏催办弹框。
 
@@ -579,7 +580,7 @@ todo_attachments(+文件) → todo_progress_events → todo_deletions(引用该�
 todo_attachments(+目录) → todo_progress_events → todos → todo_deletions
 → lesson_watch_states → exam_goals → nag_deliveries → nags
 → nag_policies(scope=USER) → supervisions(双向) → user_presence
-→ refresh_tokens → user_roles → users → deletion_audits(+1)
+→ user_bark_settings → refresh_tokens → user_roles → users → deletion_audits(+1)
 ```
 
 ### 11.5 孤儿数据自检
@@ -890,3 +891,21 @@ iOS 模拟器实测出现无声、操作失效和重复加载失败，当前默�
 ### T25 中央播放控件修订
 
 中央播放/暂停图标可单击切换状态，暂停时常驻播放图标用于继续播放，播放时中央反馈显示暂停动作；点击不等待画面双击判断。全屏底栏移除快进快退按钮，左右双击仍执行 ±10 秒。左右动作反馈不拦截触摸。
+
+## 已批准变更：当前 App 页面与活动
+
+见 [ADR-0040](../adr/0040-current-app-activity.md)。扩展心跳单行快照，在后台与督学端显示页面、视频/专注状态及更新时间，涉及 T12 / T17 / T30 / T31。2026-09-08 已获用户批准，按 ADR-0040 扩展协议与原型。新增 V004 迁移，只维护单行快照；位置变化不刷新有效操作。展示页面每 15 秒刷新，后台或离页停止读取。
+
+### 2026-09-08 设置页用户信息固定
+
+按用户明确要求修订 T29 / 原型 6-1：我的/设置顶部用户信息固定，心跳状态及以下内容独立滚动；督学端复用相同固定用户区，保留其隐藏心跳的规则。下拉刷新、账号设置与退出登录行为不变。窄测试验证滚动前后用户区位置不变、心跳区随内容滚动。
+
+## 已批准变更：手动催办标题与课程筛选面板
+
+见 [ADR-0041](../adr/0041-manual-nag-content-and-course-filter-panel.md)。定义手动催办独立标题与附加说明、课程库和添加课程共用三类筛选面板、防抖与固定头部，以及首页/数据页固定范围。新增协议与筛选交互已获批准；保持自动催办原行为。
+
+## ADR-0041 / ADR-0042 增量范围（已批准）
+
+手动催办支持可选标题（80 字）和附加说明（1000 字），自动内容不变。课程库及今日选课复用三类单选交集筛选面板，应用提交、取消保留、搜索 300ms 防抖和一键清空；课程头部、首页待办前汇总与数据页周期选择固定。
+
+个人 Bark 由当前用户在 App 设置独立维护，启用后替代该用户 Server 酱，失败不双发；系统 Bark 由后台单独配置，仅用于 Emby 同步、备份及完整性检查异常。两套目的地不互相兜底。默认分组“上岸”、critical 重要通知、shangan://home 打开 App。系统持续异常合并通知，恢复后再次异常可通知。追加 V005/V006 迁移。

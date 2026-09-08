@@ -13,7 +13,12 @@ public interface UserPresenceRepository {
   List<PresenceSnapshot> findAll();
 
   /** 心跳只更新最近心跳时间与前后台状态。 */
-  void recordHeartbeat(String userId, Instant at, String appState, String clientVersion);
+  void recordHeartbeat(
+      String userId,
+      Instant at,
+      String appState,
+      String clientVersion,
+      com.shangan.presence.domain.AppActivity activity);
 
   /** 有效操作单独更新，用于空闲判定。 */
   void recordEffectiveAction(String userId, Instant at);

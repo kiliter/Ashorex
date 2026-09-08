@@ -48,7 +48,12 @@ public class SettingsAdminController {
             serverChan.dailyDigestEnabled()),
         new FeaturesView(
             current.features().documentResources(), current.features().maxDocumentSizeMb()),
-        embyHealth.status());
+        embyHealth.status(),
+        new BarkView(
+            current.bark().baseUrl(),
+            current.bark().configured(),
+            current.bark().enabled(),
+            current.bark().timeoutSeconds()));
   }
 
   @PostMapping("/settings")
@@ -75,7 +80,16 @@ public class SettingsAdminController {
                 request.serverChanDailyDigestEnabled()),
             new RuntimeIntegrationSettings.Features(
                 request.documentResources(), request.maxDocumentSizeMb()),
-            0L));
+            0L,
+            new RuntimeIntegrationSettings.Bark(
+                request.barkBaseUrl() == null ? current.bark().baseUrl() : request.barkBaseUrl(),
+                request.barkDeviceKey() == null || request.barkDeviceKey().isBlank()
+                    ? current.bark().deviceKey()
+                    : request.barkDeviceKey().trim(),
+                request.barkEnabled() == null ? current.bark().enabled() : request.barkEnabled(),
+                request.barkTimeoutSeconds() == null
+                    ? current.bark().timeoutSeconds()
+                    : request.barkTimeoutSeconds())));
     return ResponseEntity.noContent().build();
   }
 
@@ -107,7 +121,15 @@ public class SettingsAdminController {
 
   /** 运行配置响应。 */
   public record SettingsResponse(
-      EmbyView emby, ServerChanView serverChan, FeaturesView features, Object embyStatus) {}
+      EmbyView emby,
+      ServerChanView serverChan,
+      FeaturesView features,
+      Object embyStatus,
+      BarkView bark) {}
+
+  /** Bark 只回显配置状态，不回显设备密钥。 */
+  public record BarkView(
+      String baseUrl, boolean deviceKeyConfigured, boolean enabled, int timeoutSeconds) {}
 
   /** Emby 配置视图；`apiKeyConfigured` 代替明文密钥。 */
   public record EmbyView(
@@ -144,7 +166,11 @@ public class SettingsAdminController {
       boolean serverChanNagEnabled,
       boolean serverChanDailyDigestEnabled,
       boolean documentResources,
-      int maxDocumentSizeMb) {
+      int maxDocumentSizeMb,
+      String barkBaseUrl,
+      String barkDeviceKey,
+      Boolean barkEnabled,
+      Integer barkTimeoutSeconds) {
 
     /** 保留给未来的批量校验扩展点，当前仅用于文档化字段集合。 */
     public Map<String, Object> asMap() {

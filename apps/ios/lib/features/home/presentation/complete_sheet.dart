@@ -1,3 +1,4 @@
+import 'package:shangan_ios/core/presence/app_activity.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shangan_ios/core/models/shangan_models.dart';
@@ -77,7 +78,13 @@ class _CompleteSheetState extends ConsumerState<CompleteSheet> {
       !widget.todo.requireEvidence || _attachmentCount > 0;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => AppActivityScope(
+    activity: AppActivity('TODO', 'BROWSING', widget.todo.id),
+    child: _buildSheet(context),
+  );
+
+  /// 详情/回填弹层覆盖底层页面时上报当前待办位置。
+  Widget _buildSheet(BuildContext context) {
     final todo = widget.todo;
     return SafeArea(
       child: Padding(

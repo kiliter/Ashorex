@@ -46,6 +46,7 @@ public record CascadePlan(
         "nag_policies",
         "supervisions",
         "user_presence",
+        "user_bark_settings",
         "refresh_tokens",
         "user_roles",
         "users");

@@ -1,3 +1,4 @@
+import 'package:shangan_ios/core/presence/app_activity.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
@@ -244,11 +245,19 @@ void main() {
     await tester.tap(find.bySemanticsLabel('播放'));
     await tester.pumpAndSettle();
     expect(wakeLock.enabled, isTrue);
+    expect(
+      tester.widget<AppActivityScope>(find.byType(AppActivityScope)).activity,
+      const AppActivity('PLAYER', 'VIDEO_PLAYING', 't-1'),
+    );
     expect(find.bySemanticsLabel('暂停'), findsOneWidget);
 
     await tester.tap(find.bySemanticsLabel('暂停'));
     await tester.pumpAndSettle();
     expect(wakeLock.enabled, isFalse);
+    expect(
+      tester.widget<AppActivityScope>(find.byType(AppActivityScope)).activity,
+      const AppActivity('PLAYER', 'VIDEO_PAUSED', 't-1'),
+    );
 
     await _dispose(tester);
   });

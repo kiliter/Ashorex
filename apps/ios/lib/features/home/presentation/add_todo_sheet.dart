@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:shangan_ios/features/catalog/presentation/course_filter_panel.dart';
 import 'package:shangan_ios/core/widgets/shangan_feedback.dart';
 import 'package:flutter/material.dart';
 import 'course_addition_confirmation.dart';
@@ -212,9 +214,43 @@ class _CoursePickerSheetState extends ConsumerState<_CoursePickerSheet> {
   final _keyword = TextEditingController();
   String? _genre;
   String? _tag;
+  String? _person;
+  Timer? _debounce;
+  String _appliedKeyword = '';
+
+  /// 独立的选课草稿，不污染学习 Tab 的查询状态。
+  CatalogFilter get _filter =>
+      CatalogFilter(genre: _genre, tag: _tag, person: _person);
+  void _apply(CatalogFilter value) => setState(() {
+    _genre = value.genre;
+    _tag = value.tag;
+    _person = value.person;
+  });
+  void _search(String value) {
+    _debounce?.cancel();
+    if (value.isEmpty) {
+      setState(() => _appliedKeyword = '');
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _appliedKeyword = value.trim());
+    });
+  }
+
+  Future<void> _filters(List<CourseSummary> list) async {
+    final result = await showCourseFilterPanel(
+      context,
+      selected: _filter,
+      genres: (<String>{for (final c in list) ...c.genres}.toList()..sort()),
+      people: (<String>{for (final c in list) ...c.people}.toList()..sort()),
+      tags: (<String>{for (final c in list) ...c.tags}.toList()..sort()),
+    );
+    if (mounted && result != null) _apply(result);
+  }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _keyword.dispose();
     super.dispose();
   }
@@ -235,94 +271,130 @@ class _CoursePickerSheetState extends ConsumerState<_CoursePickerSheet> {
             child: Text('课程库加载失败：$error'),
           ),
           data: (list) {
-            final genres = <String>{for (final c in list) ...c.genres}.toList()
-              ..sort();
-            final tags = <String>{for (final c in list) ...c.tags}.toList()
-              ..sort();
-            final keyword = _keyword.text.trim();
+            final keyword = _appliedKeyword;
             final filtered = list
                 .where((course) {
                   if (_genre != null && !course.genres.contains(_genre)) {
                     return false;
                   }
                   if (_tag != null && !course.tags.contains(_tag)) return false;
+                  if (_person != null && !course.people.contains(_person)) {
+                    return false;
+                  }
                   if (keyword.isEmpty) return true;
                   return course.title.contains(keyword) ||
                       course.people.any((person) => person.contains(keyword));
                 })
                 .toList(growable: false);
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const ShanganSheetHeader(title: '选择课程', step: '第 1 / 2 步'),
-                const SizedBox(height: 10),
-                ShanganSearchField(
-                  controller: _keyword,
-                  hint: '搜索课程或讲师',
-                  onChanged: (_) => setState(() {}),
-                ),
-                if (genres.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  _FilterRow(
-                    labels: ['全部 ${list.length}', ...genres],
-                    selectedIndex: _genre == null
-                        ? 0
-                        : genres.indexOf(_genre!) + 1,
-                    onSelected: (index) => setState(
-                      () => _genre = index == 0 ? null : genres[index - 1],
-                    ),
-                  ),
-                ],
-                if (tags.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  _FilterRow(
-                    labels: ['全部标签', ...tags],
-                    selectedIndex: _tag == null ? 0 : tags.indexOf(_tag!) + 1,
-                    onSelected: (index) => setState(
-                      () => _tag = index == 0 ? null : tags[index - 1],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                if (filtered.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 40),
-                    child: Text(
-                      '没有符合条件的课程；课程库为空时请让管理员先在后台同步 Emby。',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: ShanganColors.mutedInk),
-                    ),
-                  )
-                else
-                  Flexible(
-                    child: SingleChildScrollView(
-                      child: ShanganCard(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Column(
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                // 横屏键盘展开后合并标题、搜索和面板入口，固定区不挤掉课程列表。
+                final compact = constraints.maxHeight < 250;
+                return GestureDetector(
+                  onHorizontalDragEnd: (details) {
+                    if ((details.primaryVelocity ?? 0) < -150) _filters(list);
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (compact)
+                        Row(
                           children: [
-                            for (
-                              var index = 0;
-                              index < filtered.length;
-                              index++
-                            ) ...[
-                              if (index > 0)
-                                const Divider(
-                                  height: 1,
-                                  color: ShanganColors.hair,
-                                ),
-                              _CoursePickRow(
-                                course: filtered[index],
-                                index: index,
-                                onTap: () => _openResources(filtered[index]),
+                            const Text('选择课程'),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ShanganSearchField(
+                                controller: _keyword,
+                                hint: '搜索课程或讲师',
+                                onChanged: _search,
                               ),
-                            ],
+                            ),
+                            IconButton(
+                              tooltip: '筛选课程',
+                              onPressed: () => _filters(list),
+                              icon: const Icon(Icons.filter_list),
+                            ),
                           ],
+                        )
+                      else ...[
+                        const ShanganSheetHeader(
+                          title: '选择课程',
+                          step: '第 1 / 2 步',
                         ),
+                        const SizedBox(height: 10),
+                        ShanganSearchField(
+                          controller: _keyword,
+                          hint: '搜索课程或讲师',
+                          onChanged: _search,
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: () => _filters(list),
+                            icon: const Icon(Icons.filter_list),
+                            label: const Text('筛选课程'),
+                          ),
+                        ),
+                      ],
+                      SelectedCourseFilters(
+                        filter: _filter,
+                        onChanged: _apply,
+                        onClear: () {
+                          _keyword.clear();
+                          _search('');
+                          _apply(const CatalogFilter());
+                        },
                       ),
-                    ),
+                      SizedBox(height: compact ? 4 : 12),
+                      if (filtered.isEmpty)
+                        const Flexible(
+                          child: SingleChildScrollView(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40),
+                              child: Text(
+                                '没有符合条件的课程；课程库为空时请让管理员先在后台同步 Emby。',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: ShanganColors.mutedInk),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Flexible(
+                          child: SingleChildScrollView(
+                            child: ShanganCard(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: Column(
+                                children: [
+                                  for (
+                                    var index = 0;
+                                    index < filtered.length;
+                                    index++
+                                  ) ...[
+                                    if (index > 0)
+                                      const Divider(
+                                        height: 1,
+                                        color: ShanganColors.hair,
+                                      ),
+                                    _CoursePickRow(
+                                      course: filtered[index],
+                                      index: index,
+                                      onTap: () =>
+                                          _openResources(filtered[index]),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-              ],
+                );
+              },
             );
           },
         ),

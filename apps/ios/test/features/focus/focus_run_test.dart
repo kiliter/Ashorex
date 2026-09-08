@@ -1,3 +1,4 @@
+import 'package:shangan_ios/core/presence/app_activity.dart';
 import 'package:shangan_ios/core/device/screen_wake_lock.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -74,6 +75,10 @@ void main() {
     await tester.tap(find.text('开始专注'));
     await tester.pumpAndSettle();
     expect(backend.callCount('POST', '/api/v1/todos/t-1/focus/start'), 1);
+    expect(
+      tester.widget<AppActivityScope>(find.byType(AppActivityScope)).activity,
+      const AppActivity('FOCUS', 'FOCUS_RUNNING', 't-1'),
+    );
 
     await tester.pump(const Duration(seconds: 3));
     expect(find.text('24:57'), findsOneWidget);
@@ -97,6 +102,10 @@ void main() {
     await tester.tap(find.text('暂停'));
     await tester.pumpAndSettle();
     expect(backend.callCount('POST', '/api/v1/todos/t-1/focus/pause'), 1);
+    expect(
+      tester.widget<AppActivityScope>(find.byType(AppActivityScope)).activity,
+      const AppActivity('FOCUS', 'FOCUS_PAUSED', 't-1'),
+    );
 
     await tester.ensureVisible(find.text('继续'));
     await tester.tap(find.text('继续'));

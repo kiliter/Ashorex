@@ -542,6 +542,29 @@ table.wt td b{font-weight:700;}
 </style>
 </head>
 <body>
+<!-- ADR-0041/0042 已批准增量原型：下方历史屏保留业务数据示例，以本段交互覆盖旧筛选布局。 -->
+<section style="padding:24px;background:#f7f4ee" id="approved-filter-update">
+<h2>课程筛选与推送设置 · 已批准增量</h2>
+<p>课程库及今日选课：标题、搜索、分组和已选条件固定，仅课程列表滚动。首页固定日期、目标与汇总，仅待办滚动；数据页固定标题至日/周/月切换。</p>
+<p>小屏适配：筛选面板避让键盘，横屏把搜索与关闭合并一行；课程库和今日选课也合并固定控件行。首页高度不足 600pt 时日期面板改为可滚动弹层；小屏或目标多于三个时固定区显示主目标倒计时及总数摘要，通过“管理”查看全部目标。</p>
+<div style="max-width:420px;height:480px;background:white;display:flex;flex-direction:column;padding:18px;border:1px solid #ddd" id="filter-demo">
+<h3>课程库 <button onclick="document.getElementById('filter-drawer').showModal()">筛选课程</button></h3>
+<input placeholder="搜索课程或人物（300ms 防抖）">
+<p>按流派　按人物</p><div id="selected-demo">全部课程</div><button onclick="document.getElementById('selected-demo').textContent='全部课程'">一键清空</button>
+<div style="overflow:auto;flex:1"><p>经济法精讲课程</p><p>税法基础课程</p><p>会计提高课程</p><p style="height:400px">课程结果独立滚动</p></div>
+</div>
+<dialog id="filter-drawer" style="margin-right:0;height:75vh;width:360px;border:1px solid #ddd">
+<form method="dialog" style="display:flex;flex-direction:column;height:100%"><h3>筛选课程</h3><input placeholder="搜索筛选标签"><div style="overflow:auto;flex:1">
+<p>流派 <select id="demo-genre"><option>全部</option><option>法律</option><option>会计</option></select></p>
+<p>人物 <select id="demo-person"><option>全部</option><option>老师甲</option></select></p>
+<p>标签 <select id="demo-tag"><option>全部</option><option>重点</option></select></p>
+<p>每类单选、跨类交集；草稿仅在应用时生效。</p></div><button>取消</button><button onclick="document.getElementById('selected-demo').textContent=['genre','person','tag'].map(x=>document.getElementById('demo-'+x).value).join(' · ')">应用筛选</button></form></dialog>
+<h3>手动催办</h3><input maxlength="80" placeholder="可选标题，最多 80 字"><textarea maxlength="1000" placeholder="附加说明，最多 1000 字"></textarea>
+<h3>我的 Bark 推送</h3><p>个人服务地址、设备 Key（不回显）、启用开关；启用后替代个人 Server 酱。</p>
+<h3>后台系统 Bark</h3><p>独立服务地址、设备 Key（不回显）、异常通知开关；用于同步和备份异常，与个人催办隔离。</p>
+<script>let filterStart=0;document.getElementById('filter-demo').addEventListener('touchstart',e=>filterStart=e.touches[0].clientX);document.getElementById('filter-demo').addEventListener('touchend',e=>{if(e.changedTouches[0].clientX<filterStart-60)document.getElementById('filter-drawer').showModal()});</script>
+</section>
+
 
 <!-- ===================== 图标库 ===================== -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -2347,13 +2370,12 @@ table.wt td b{font-weight:700;}
   <!-- 6-1 我的主页 -->
   <div class="frame-wrap">
     <p class="frame-cap">6-1 我的 · 主页
-      <small>顶部显示本机与服务端心跳状态，便于用户自查在线判定。</small>
+      <small>顶部用户信息固定；心跳状态及以下设置独立滚动。</small>
     </p>
     <div class="phone">
       <div class="statusbar"><span>9:41</span><div class="notch"></div><span class="sb-r">5G 86%</span></div>
       <div class="screen">
-        <div class="scroll">
-          <div class="me-head">
+        <div class="me-head" style="flex-shrink:0;margin:12px 18px;">
             <div class="av">Z</div>
             <div style="flex:1">
               <b>zhangjialin</b>
@@ -2362,6 +2384,7 @@ table.wt td b{font-weight:700;}
             <div class="iconbtn"><svg class="icon s20"><use href="#i-edit"/></svg></div>
           </div>
 
+        <div class="scroll" style="padding-top:0">
           <div class="card" style="padding:11px 13px;border-color:#BCDCC9;background:var(--green-soft)">
             <div class="between">
               <span class="row" style="gap:7px;font-size:12.5px;font-weight:700;color:var(--green)">
@@ -2787,12 +2810,12 @@ table.wt td b{font-weight:700;}
           <div class="wcard" style="padding:0">
             <table class="wt">
               <tr>
-                <th style="padding-left:18px">用户</th><th>在线状态</th><th>最近心跳</th><th>最近有效操作</th>
+                <th style="padding-left:18px">用户</th><th>在线状态</th><th>App 当前位置</th><th>最近心跳</th><th>最近有效操作</th>
                 <th>今日 Todo</th><th>今日时长</th><th>今日催办</th><th style="text-align:right;padding-right:18px">操作</th>
               </tr>
               <tr>
                 <td style="padding-left:18px"><b>zhangjialin</b><div class="muted" style="font-size:11px">Asia/Shanghai</div></td>
-                <td><span class="dotstate on"><i></i>在线</span></td>
+                <td><span class="dotstate on"><i></i>在线</span></td><td style="max-width:180px;white-space:normal">视频页 · 播放中<br>税法第 3 讲<div class="muted" style="font-size:11px">更新于 2026-09-08 09:40:00</div></td>
                 <td class="mono muted">12 秒前</td>
                 <td class="mono muted">4 分钟前<div style="font-size:11px">进度上报</div></td>
                 <td>3 / 6<div class="bar thin mt6" style="width:88px"><i style="width:50%"></i></div></td>
@@ -2802,7 +2825,7 @@ table.wt td b{font-weight:700;}
               </tr>
               <tr>
                 <td style="padding-left:18px"><b>lisi</b><div class="muted" style="font-size:11px">Asia/Shanghai</div></td>
-                <td><span class="dotstate off"><i></i>离线</span></td>
+                <td><span class="dotstate off"><i></i>离线</span></td><td style="max-width:180px;white-space:normal">最后上报 · App 已切后台<br>首页 · 停留页面<div class="muted" style="font-size:11px">更新于 2026-09-08 09:40:00</div></td>
                 <td class="mono" style="color:var(--red)">3 小时前</td>
                 <td class="mono" style="color:var(--red)">3 小时 12 分<div style="font-size:11px">心跳</div></td>
                 <td><span style="color:var(--red);font-weight:700">0 / 4</span><div class="bar thin mt6" style="width:88px"><i style="width:2%;background:var(--red)"></i></div></td>
@@ -2812,7 +2835,7 @@ table.wt td b{font-weight:700;}
               </tr>
               <tr>
                 <td style="padding-left:18px"><b>wangwu</b><div class="muted" style="font-size:11px">Asia/Shanghai</div></td>
-                <td><span class="dotstate idle"><i></i>空闲 42 分</span></td>
+                <td><span class="dotstate idle"><i></i>空闲 42 分</span></td><td style="max-width:180px;white-space:normal">专注页 · 专注计时中<br>背法条<div class="muted" style="font-size:11px">更新于 2026-09-08 09:40:00</div></td>
                 <td class="mono muted">40 秒前</td>
                 <td class="mono" style="color:var(--ochre)">42 分钟前<div style="font-size:11px">完成 Todo</div></td>
                 <td>5 / 7<div class="bar thin mt6" style="width:88px"><i style="width:71%"></i></div></td>
@@ -2822,7 +2845,7 @@ table.wt td b{font-weight:700;}
               </tr>
               <tr>
                 <td style="padding-left:18px"><b>zhaoliu</b><div class="muted" style="font-size:11px">Asia/Shanghai</div></td>
-                <td><span class="dotstate on"><i></i>在线</span></td>
+                <td><span class="dotstate on"><i></i>在线</span></td><td style="max-width:180px;white-space:normal">我的 · 停留页面<div class="muted" style="font-size:11px">更新于 2026-09-08 09:40:00</div></td>
                 <td class="mono muted">51 秒前</td>
                 <td class="mono muted">6 分钟前<div style="font-size:11px">附件上传</div></td>
                 <td><span style="color:var(--green);font-weight:700">6 / 6</span><div class="bar thin mt6" style="width:88px"><i class="green" style="width:100%"></i></div></td>
@@ -4043,7 +4066,7 @@ table.wt td b{font-weight:700;}
                   <span class="dotstate off" style="font-size:11px"><i></i>离线 3 小时</span>
                 </div>
                 <div class="muted" style="font-size:11.5px;margin-top:3px">目标：注会 · 剩 82 天</div>
-                <div class="bar thin mt8"><i style="width:2%;background:var(--red)"></i></div>
+                <div class="muted" style="font-size:12px;line-height:1.5;margin-top:8px">最后上报 · App 已切后台 · 首页 · 停留页面<br>更新于 2026-09-08 06:29:00</div><div class="bar thin mt8"><i style="width:2%;background:var(--red)"></i></div>
                 <div class="between mt6" style="font-size:11px;color:var(--muted)">
                   <span>今日 0 / 4 完成</span><span>0:00 学习</span>
                 </div>
@@ -4118,7 +4141,7 @@ table.wt td b{font-weight:700;}
               <span class="dotstate off"><i></i>离线 3 小时 12 分</span>
               <span class="muted mono" style="font-size:11.5px">最近上报 06:29</span>
             </div>
-            <div class="hr"></div>
+            <div class="muted" style="font-size:12px;line-height:1.5;margin-top:8px">最后上报 · App 已切后台 · 首页 · 停留页面<br>更新于 2026-09-08 06:29:00</div><div class="hr"></div>
             <div class="kv"><b>最近操作</b><span>06:29 心跳 · 今日无任何学习行为</span></div>
             <div class="kv mt6"><b>目标</b><span>注册会计师 · 2026-11-28 · 剩 82 天</span></div>
             <div class="kv mt6"><b>近 7 日</b><span>3.6 小时 · 日均 0.5 小时</span></div>

@@ -21,6 +21,8 @@ services:
       EMBY_BASE_URL: ${EMBY_BASE_URL:-}
       EMBY_API_KEY: ${EMBY_API_KEY:-}
       EMBY_USER_ID: ${EMBY_USER_ID:-}
+      # 仅部署者允许的个人 Bark HTTPS 源站，用户不能扩展网络权限。
+      BARK_ALLOWED_ORIGINS: ${BARK_ALLOWED_ORIGINS:-https://api.day.app}
       SERVERCHAN_SEND_KEY: ${SERVERCHAN_SEND_KEY:-}
     volumes:
       # Docker 本地卷位于宿主机本地磁盘，避免 SQLite 落到 NAS/NFS。

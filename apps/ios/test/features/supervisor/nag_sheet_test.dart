@@ -31,7 +31,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      tester.widget<TextField>(find.byType(TextField).last).controller?.text,
       '今天一项没动，先把第一条完成，完成了给我回一句。',
     );
   });
@@ -49,7 +49,7 @@ void main() {
     await tester.tap(find.text('一键督学').last);
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('学员当前离线，自动模式会走 Server 酱'), findsOneWidget);
+    expect(find.textContaining('学员当前离线，自动模式优先走学员 Bark'), findsOneWidget);
   });
 
   testWidgets('发送督学把文案、渠道与是否必须回应一起提交', (tester) async {
@@ -59,6 +59,7 @@ void main() {
     await tester.tap(find.text('一键督学').last);
     await tester.pumpAndSettle();
 
+    await tester.enterText(find.byType(TextField).first, '今天完成一课');
     await tester.tap(find.text('进度落后了'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Server 酱'));
@@ -70,6 +71,7 @@ void main() {
         .lastRequest('POST', '/api/v1/supervisor/learners/u-2/nag')
         .json;
     expect(body['message'], '进度落后了，今晚补一条，别再往后拖。');
+    expect(body['title'], '今天完成一课');
     expect(body['channel'], 'SERVERCHAN');
     expect(body['requireReason'], isTrue);
   });

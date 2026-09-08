@@ -71,7 +71,7 @@ public class SupervisorController {
       @PathVariable String learnerId,
       @RequestBody(required = false) NagRequest request) {
     guard.requirePermission(currentUser.userId(), learnerId, SupervisionPermission.NAG);
-    NagRequest body = request == null ? new NagRequest(null, null, null) : request;
+    NagRequest body = request == null ? new NagRequest(null, null, null, null) : request;
     NagChannelType channel = parseChannel(body.channel());
     boolean requireReason = body.requireReason() == null || body.requireReason();
     return nagScanner.createManualNag(
@@ -80,7 +80,8 @@ public class SupervisorController {
         NagTrigger.SUPERVISOR,
         body.message(),
         channel,
-        requireReason);
+        requireReason,
+        body.title());
   }
 
   /** 渠道为空表示自动选择（在线走全屏，离线走 Server 酱）。 */
@@ -96,5 +97,5 @@ public class SupervisorController {
     }
   }
 
-  record NagRequest(String message, String channel, Boolean requireReason) {}
+  record NagRequest(String message, String channel, Boolean requireReason, String title) {}
 }

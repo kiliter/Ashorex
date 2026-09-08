@@ -321,7 +321,7 @@ docker compose --env-file .env.deploy -f infra/compose.deploy.yml down
 | 产物 | 获取方式 | 说明 |
 |---|---|---|
 | 无签名 IPA | [Releases](https://github.com/kiliter/Ashorex/releases) 或手动运行“移动端验证” | 需要自行签名后才能安装到真机。 |
-| Android Debug APK | [Releases](https://github.com/kiliter/Ashorex/releases) 或手动运行“移动端验证” | 用于开发和内部验证，不是正式发布包。 |
+| Android 正式签名 APK | [Releases](https://github.com/kiliter/Ashorex/releases) 或手动运行“移动端验证” | 可安装的正式签名 Android 安装包。 |
 | Docker 镜像归档 | [Releases](https://github.com/kiliter/Ashorex/releases) 或手动运行“服务端验证” | 下载后可通过 `docker load` 导入。 |
 | GHCR 镜像 | `ghcr.io/kiliter/ashorex-server:latest` | `main` 分支验证通过后推送。 |
 

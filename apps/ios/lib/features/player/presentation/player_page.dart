@@ -1,3 +1,4 @@
+import 'package:shangan_ios/core/presence/app_activity.dart';
 export 'package:shangan_ios/core/player/progress_queue.dart' show ProgressQueue;
 import 'package:shangan_ios/core/player/progress_queue.dart';
 import 'package:shangan_ios/core/widgets/shangan_feedback.dart';
@@ -193,7 +194,21 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => AppActivityScope(
+    activity: AppActivity('PLAYER', _activityState, widget.todoId),
+    child: _buildPage(context),
+  );
+
+  /// 顺序按真实内核状态判定，缓冲和错误不能标为播放中。
+  String get _activityState {
+    if (_error != null) return 'VIDEO_ERROR';
+    if (_loading) return 'VIDEO_LOADING';
+    if (_player?.ended ?? false) return 'VIDEO_ENDED';
+    if (_player?.buffering ?? false) return 'VIDEO_BUFFERING';
+    return _playing && _foreground ? 'VIDEO_PLAYING' : 'VIDEO_PAUSED';
+  }
+
+  Widget _buildPage(BuildContext context) {
     if (_loading && _todo == null) {
       // 首次接口请求期间也保留返回入口。
       return Scaffold(

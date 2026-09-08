@@ -37,7 +37,25 @@ class NagDeliveryServiceTest {
   private static final String USER_ID = "user-1";
 
   @Mock private NagRepository nags;
+  @Mock private org.springframework.transaction.PlatformTransactionManager transactions;
   @Mock private com.shangan.identity.application.UserTimeService userTime;
+
+  @Test
+  void 个人Bark启用替代Server酱且失败不双发() {
+    RecordingChannel bark = new RecordingChannel(NagChannelType.BARK, true, false);
+    RecordingChannel serverchan = new RecordingChannel(NagChannelType.SERVERCHAN, true, true);
+    service(List.of(bark, serverchan)).deliver(nag(), "小明", null, policy(false, true), null);
+    verify(nags)
+        .insertDelivery(
+            anyString(),
+            org.mockito.ArgumentMatchers.eq(nag().id()),
+            org.mockito.ArgumentMatchers.eq(NagChannelType.BARK),
+            org.mockito.ArgumentMatchers.eq("FAILED"),
+            org.mockito.ArgumentMatchers.eq("推送失败"),
+            org.mockito.ArgumentMatchers.eq(NOW));
+    assertThat(serverchan.deliveries).isEmpty();
+    verify(nags, never()).markDelivered(anyString(), any());
+  }
 
   @Test
   @DisplayName("全屏等待期间跨入用户免打扰时段不追加推送")
@@ -233,10 +251,189 @@ class NagDeliveryServiceTest {
     assertThat(serverchan.deliveries).isEmpty();
   }
 
+  @Test
+  void 外部请求完成后才开启流水写事务() {
+    NagChannel channel =
+        new NagChannel() {
+          public NagChannelType type() {
+            return NagChannelType.SERVERCHAN;
+          }
+
+          public boolean available() {
+            return true;
+          }
+
+          public DeliveryOutcome deliver(Nag nag, String name) {
+            verify(transactions, never()).getTransaction(any());
+            return DeliveryOutcome.sent("已投递");
+          }
+        };
+    service(List.of(channel)).deliver(nag(), "小明", offline(), policy(true, true), null);
+    var order = org.mockito.Mockito.inOrder(transactions, nags);
+    order.verify(transactions).getTransaction(any());
+    order
+        .verify(nags)
+        .insertDelivery("delivery-1", "nag-1", NagChannelType.SERVERCHAN, "SENT", "已投递", NOW);
+    order.verify(nags).markDelivered("nag-1", NOW);
+    order.verify(transactions).commit(any());
+  }
+
+  @Test
+  void 降级前发现催办已删除不发送() {
+    RecordingChannel channel = new RecordingChannel(NagChannelType.SERVERCHAN, true, true);
+    var service = service(List.of(channel));
+    when(nags.findFullscreenAwaitingBefore(NOW)).thenReturn(List.of(nag()));
+    when(nags.findById("nag-1")).thenReturn(java.util.Optional.empty());
+    assertThat(service.escalateTimedOut(id -> policy(true, true), id -> "小明")).isZero();
+    assertThat(channel.deliveries).isEmpty();
+  }
+
+  @Test
+  void 并发降级扫描只成功发送一次() throws Exception {
+    var sent = new java.util.concurrent.atomic.AtomicBoolean();
+    var sending = new java.util.concurrent.CountDownLatch(1);
+    var release = new java.util.concurrent.CountDownLatch(1);
+    NagChannel channel =
+        new NagChannel() {
+          public NagChannelType type() {
+            return NagChannelType.SERVERCHAN;
+          }
+
+          public boolean available() {
+            return true;
+          }
+
+          public DeliveryOutcome deliver(Nag nag, String name) {
+            sending.countDown();
+            try {
+              if (!release.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                throw new AssertionError("发送未释放");
+            } catch (InterruptedException exception) {
+              Thread.currentThread().interrupt();
+              throw new AssertionError(exception);
+            }
+            return DeliveryOutcome.sent("已投递");
+          }
+        };
+    var service = service(List.of(channel));
+    when(nags.findFullscreenAwaitingBefore(NOW)).thenReturn(List.of(nag()));
+    when(nags.deliveredVia("nag-1", NagChannelType.SERVERCHAN)).thenAnswer(call -> sent.get());
+    org.mockito.Mockito.doAnswer(
+            call -> {
+              sent.set(true);
+              return null;
+            })
+        .when(nags)
+        .insertDelivery(any(), any(), any(), any(), any(), any());
+    try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+      var first =
+          executor.submit(() -> service.escalateTimedOut(id -> policy(true, true), id -> "小明"));
+      java.util.concurrent.Future<Integer> second;
+      try {
+        assertThat(sending.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        second =
+            executor.submit(() -> service.escalateTimedOut(id -> policy(true, true), id -> "小明"));
+      } finally {
+        release.countDown();
+      }
+      assertThat(first.get(5, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(1);
+      assertThat(second.get(5, java.util.concurrent.TimeUnit.SECONDS)).isZero();
+      verify(nags).insertDelivery(any(), any(), any(), any(), any(), any());
+    }
+  }
+
+  @Test
+  void 全屏事件仅在流水提交成功后触发() {
+    verifyFullscreenCommit(false);
+  }
+
+  @Test
+  void 全屏流水回滚不发送事务事件() {
+    verifyFullscreenCommit(true);
+  }
+
+  /** 使用 Spring 真实事务同步机制但不连接数据库，覆盖 SSE 所依赖的提交阶段。 */
+  private void verifyFullscreenCommit(boolean fail) {
+    var received = new java.util.ArrayList<NagAvailable>();
+    try (var context = new org.springframework.context.support.GenericApplicationContext()) {
+      context.addApplicationListener(
+          org.springframework.transaction.event.TransactionalApplicationListener
+              .<NagAvailable>forPayload(
+                  org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT,
+                  received::add));
+      context.refresh();
+      when(nags.findById("nag-1")).thenReturn(java.util.Optional.of(nag()));
+      org.mockito.Mockito.doAnswer(
+              call -> {
+                assertThat(received).isEmpty();
+                if (fail) throw new IllegalStateException("模拟流水失败");
+                return null;
+              })
+          .when(nags)
+          .insertDelivery(any(), any(), any(), any(), any(), any());
+      var manager =
+          new org.springframework.transaction.support.AbstractPlatformTransactionManager() {
+            protected Object doGetTransaction() {
+              return new Object();
+            }
+
+            protected void doBegin(
+                Object tx, org.springframework.transaction.TransactionDefinition definition) {}
+
+            protected void doCommit(
+                org.springframework.transaction.support.DefaultTransactionStatus status) {}
+
+            protected void doRollback(
+                org.springframework.transaction.support.DefaultTransactionStatus status) {}
+          };
+      var service =
+          new NagDeliveryService(
+              nags,
+              List.of(new com.shangan.nag.application.channel.FullscreenNagChannel(context)),
+              sequentialIds(),
+              Clock.fixed(NOW, ZoneOffset.UTC),
+              userTime,
+              manager);
+      Runnable deliver = () -> service.deliver(nag(), "小明", online(), policy(true, true), null);
+      if (fail) {
+        org.assertj.core.api.Assertions.assertThatThrownBy(deliver::run)
+            .isInstanceOf(IllegalStateException.class);
+        assertThat(received).isEmpty();
+      } else {
+        deliver.run();
+        assertThat(received).containsExactly(new NagAvailable(USER_ID, "nag-1"));
+      }
+    }
+  }
+
+  @Test
+  void 外发期间催办被删除不写孤儿流水() {
+    NagChannel channel =
+        new NagChannel() {
+          public NagChannelType type() {
+            return NagChannelType.SERVERCHAN;
+          }
+
+          public boolean available() {
+            return true;
+          }
+
+          public DeliveryOutcome deliver(Nag nag, String name) {
+            when(nags.findById("nag-1")).thenReturn(java.util.Optional.empty());
+            return DeliveryOutcome.sent("已投递");
+          }
+        };
+    service(List.of(channel)).deliver(nag(), "小明", offline(), policy(true, true), null);
+    verify(nags, never()).insertDelivery(any(), any(), any(), any(), any(), any());
+  }
+
   private NagDeliveryService service(List<NagChannel> channels) {
     org.mockito.Mockito.lenient().when(userTime.localTimeNow(any())).thenReturn(LocalTime.NOON);
+    org.mockito.Mockito.lenient()
+        .when(nags.findById("nag-1"))
+        .thenReturn(java.util.Optional.of(nag()));
     return new NagDeliveryService(
-        nags, channels, sequentialIds(), Clock.fixed(NOW, ZoneOffset.UTC), userTime);
+        nags, channels, sequentialIds(), Clock.fixed(NOW, ZoneOffset.UTC), userTime, transactions);
   }
 
   private static PresenceSnapshot online() {

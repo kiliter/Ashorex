@@ -36,6 +36,13 @@ public class CourseSyncService {
   private final IdGenerator idGenerator;
   private final Clock clock;
   private final TransactionTemplate transaction;
+  private com.shangan.common.integration.SystemAlertService alerts;
+
+  /** 运维通知在业务事务之外发送，不改变同步失败保留快照的行为。 */
+  @org.springframework.beans.factory.annotation.Autowired
+  public void setSystemAlerts(com.shangan.common.integration.SystemAlertService alerts) {
+    this.alerts = alerts;
+  }
 
   public CourseSyncService(
       CourseRepository courses,
@@ -116,9 +123,12 @@ public class CourseSyncService {
             courses.markSourceMissing(
                 current.id(), missing, exception.getMessage(), clock.instant());
           });
+      if (alerts != null)
+        alerts.report("EMBY_SYNC:" + courseId, true, "Emby 课程同步失败，已保留上次快照，请检查服务连接与后台同步记录。");
       log.warn("课程 {} 同步失败", course.id());
       return SyncResult.failed(exception.getMessage());
     }
+    if (alerts != null) alerts.report("EMBY_SYNC:" + courseId, false, "");
     return transaction.execute(
         status -> {
           Course current = requireUnchangedCourse(course);

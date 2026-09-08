@@ -2,6 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Bark 通知只打开 App，认证与归属仍由路由和服务端校验。 -->
+	<key>CFBundleURLTypes</key>
+	<array><dict><key>CFBundleURLSchemes</key><array><string>shangan</string></array></dict></array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

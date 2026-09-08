@@ -1,3 +1,4 @@
+import 'package:shangan_ios/core/presence/app_activity.dart';
 import 'package:shangan_ios/core/player/progress_queue.dart';
 import 'dart:async';
 
@@ -64,6 +65,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     final service = HeartbeatService(
       repository: ref.read(shanganRepositoryProvider),
       clientVersion: '2.0.0',
+      activity: ref.read(appActivityProvider),
       queueDepth: () => outbox.depth,
       onConnected: () async {
         await outbox.flush();
@@ -138,56 +140,62 @@ class _AppShellState extends ConsumerState<AppShell> {
       const StatsPage(),
       const ProfilePage(),
     ];
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            if (_offline) const _OfflineBanner(),
-            Expanded(child: pages[_index]),
-          ],
-        ),
+    return AppActivityScope(
+      activity: AppActivity(
+        const ['HOME', 'LIBRARY', 'STATS', 'PROFILE'][_index],
+        'BROWSING',
       ),
-      floatingActionButton: _index == 0
-          ? _AddTodoFab(onTap: () => _homeKey.currentState?.addTodo())
-          : null,
-      bottomNavigationBar: DecoratedBox(
-        // 原型 `.tabbar{border-top:1.5px solid var(--ink)}`；NavigationBar 自身
-        // 没有描边属性，只能在外层补一条上边线（1-1 ~ 1-9 底部 Tab）。
-        decoration: const BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: ShanganColors.ink,
-              width: ShanganRadius.borderWidth,
-            ),
+      child: Scaffold(
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              if (_offline) const _OfflineBanner(),
+              Expanded(child: pages[_index]),
+            ],
           ),
         ),
-        child: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: (index) => setState(() => _index = index),
-          // 原型 tabbar 选中态只换底色与描边，图标本身保持同一套线性图标。
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_outlined),
-              label: '首页',
+        floatingActionButton: _index == 0
+            ? _AddTodoFab(onTap: () => _homeKey.currentState?.addTodo())
+            : null,
+        bottomNavigationBar: DecoratedBox(
+          // 原型 `.tabbar{border-top:1.5px solid var(--ink)}`；NavigationBar 自身
+          // 没有描边属性，只能在外层补一条上边线（1-1 ~ 1-9 底部 Tab）。
+          decoration: const BoxDecoration(
+            border: Border(
+              top: BorderSide(
+                color: ShanganColors.ink,
+                width: ShanganRadius.borderWidth,
+              ),
             ),
-            NavigationDestination(
-              icon: Icon(Icons.menu_book_outlined),
-              selectedIcon: Icon(Icons.menu_book_outlined),
-              label: '学习',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.bar_chart_outlined),
-              selectedIcon: Icon(Icons.bar_chart_outlined),
-              label: '数据',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person_outline),
-              label: '我的',
-            ),
-          ],
+          ),
+          child: NavigationBar(
+            selectedIndex: _index,
+            onDestinationSelected: (index) => setState(() => _index = index),
+            // 原型 tabbar 选中态只换底色与描边，图标本身保持同一套线性图标。
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home_outlined),
+                label: '首页',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.menu_book_outlined),
+                selectedIcon: Icon(Icons.menu_book_outlined),
+                label: '学习',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.bar_chart_outlined),
+                selectedIcon: Icon(Icons.bar_chart_outlined),
+                label: '数据',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person_outline),
+                label: '我的',
+              ),
+            ],
+          ),
         ),
       ),
     );
