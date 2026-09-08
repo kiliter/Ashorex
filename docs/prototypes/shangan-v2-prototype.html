@@ -2347,13 +2347,12 @@ table.wt td b{font-weight:700;}
   <!-- 6-1 我的主页 -->
   <div class="frame-wrap">
     <p class="frame-cap">6-1 我的 · 主页
-      <small>顶部显示本机与服务端心跳状态，便于用户自查在线判定。</small>
+      <small>顶部用户信息固定；心跳状态及以下设置独立滚动。</small>
     </p>
     <div class="phone">
       <div class="statusbar"><span>9:41</span><div class="notch"></div><span class="sb-r">5G 86%</span></div>
       <div class="screen">
-        <div class="scroll">
-          <div class="me-head">
+        <div class="me-head" style="flex-shrink:0;margin:12px 18px;">
             <div class="av">Z</div>
             <div style="flex:1">
               <b>zhangjialin</b>
@@ -2362,6 +2361,7 @@ table.wt td b{font-weight:700;}
             <div class="iconbtn"><svg class="icon s20"><use href="#i-edit"/></svg></div>
           </div>
 
+        <div class="scroll" style="padding-top:0">
           <div class="card" style="padding:11px 13px;border-color:#BCDCC9;background:var(--green-soft)">
             <div class="between">
               <span class="row" style="gap:7px;font-size:12.5px;font-weight:700;color:var(--green)">

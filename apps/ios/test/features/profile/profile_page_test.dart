@@ -13,6 +13,21 @@ import '../../support/fixtures.dart';
 /// 我的页：催办策略与免打扰全部只读，App 端不得出现任何阈值或渠道开关；
 /// 心跳卡按在线状态双编码（图标 + 文字），督学端入口只在有学员时出现。
 void main() {
+  testWidgets('滚动设置时用户信息固定，心跳状态随内容滚动', (tester) async {
+    await _pump(tester, _backend());
+    final header = find.textContaining(' · Asia/Shanghai');
+    final before = tester.getTopLeft(header);
+    final heartbeatBefore = tester.getTopLeft(find.text('在线 · 心跳正常'));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -250));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(header), before);
+    final heartbeat = find.text('在线 · 心跳正常');
+    if (heartbeat.evaluate().isNotEmpty) {
+      expect(tester.getTopLeft(heartbeat).dy, lessThan(heartbeatBefore.dy));
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('催办策略与免打扰只读展示，并说明配置只在服务端', (tester) async {
     await _pump(tester, _backend());
 

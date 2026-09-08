@@ -30,96 +30,113 @@ final class ProfilePage extends ConsumerWidget {
           padding: const EdgeInsets.all(18),
           children: [Text('资料加载失败：$error')],
         ),
-        data: (data) => ListView(
-          padding: const EdgeInsets.fromLTRB(18, 12, 18, 110),
+        // 用户身份固定在顶部；心跳状态及以下设置共用独立滚动区域。
+        data: (data) => Column(
           children: [
-            _ProfileHeader(profile: data.profile),
-            const SizedBox(height: 12),
-            if (!supervisor) const _HeartbeatCard(),
-            const SizedBox(height: 10),
-            if (data.supervisors.isNotEmpty) _SupervisionCard(settings: data),
-            if (!supervisor) ...[
-              const ShanganGroupLabel('考试目标'),
-              _GoalList(onManage: () => context.push('/goals')),
-            ],
-            const ShanganGroupLabel('账号与安全'),
-            ShanganCard(
-              padding: EdgeInsets.zero,
-              child: Column(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+              child: _ProfileHeader(profile: data.profile),
+            ),
+            Expanded(
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 110),
                 children: [
-                  _MenuItem(
-                    icon: Icons.person_outline,
-                    title: '用户名',
-                    value: data.profile.username,
+                  if (!supervisor) const _HeartbeatCard(),
+                  const SizedBox(height: 10),
+                  if (data.supervisors.isNotEmpty)
+                    _SupervisionCard(settings: data),
+                  if (!supervisor) ...[
+                    const ShanganGroupLabel('考试目标'),
+                    _GoalList(onManage: () => context.push('/goals')),
+                  ],
+                  const ShanganGroupLabel('账号与安全'),
+                  ShanganCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        _MenuItem(
+                          icon: Icons.person_outline,
+                          title: '用户名',
+                          value: data.profile.username,
+                        ),
+                        _MenuItem(
+                          icon: Icons.lock_outline,
+                          title: '修改密码',
+                          onTap: () => _showPasswordSheet(context, ref, data),
+                        ),
+                        _MenuItem(
+                          icon: Icons.public,
+                          title: '时区',
+                          subtitle: '影响每日边界与统计口径',
+                          value: data.profile.timezone,
+                          onTap: () => _showTimezoneSheet(context, ref, data),
+                        ),
+                        _MenuItem(
+                          icon: Icons.dns_outlined,
+                          title: '服务端地址',
+                          subtitle: ref
+                              .read(serverConfigurationControllerProvider)
+                              .configuration
+                              .displayLabel,
+                          value: '已连接',
+                        ),
+                      ],
+                    ),
                   ),
-                  _MenuItem(
-                    icon: Icons.lock_outline,
-                    title: '修改密码',
-                    onTap: () => _showPasswordSheet(context, ref, data),
-                  ),
-                  _MenuItem(
-                    icon: Icons.public,
-                    title: '时区',
-                    subtitle: '影响每日边界与统计口径',
-                    value: data.profile.timezone,
-                    onTap: () => _showTimezoneSheet(context, ref, data),
-                  ),
-                  _MenuItem(
-                    icon: Icons.dns_outlined,
-                    title: '服务端地址',
-                    subtitle: ref
-                        .read(serverConfigurationControllerProvider)
-                        .configuration
-                        .displayLabel,
-                    value: '已连接',
+                  if (!supervisor) ...[
+                    const ShanganGroupLabel('提醒与在线（只读）'),
+                    ShanganCard(
+                      padding: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          _MenuItem(
+                            icon: Icons.monitor_heart_outlined,
+                            title: '后台心跳',
+                            // 原型 6-1「每 60 秒上报，由服务端下发间隔」。
+                            subtitle:
+                                '每 ${data.heartbeatIntervalSeconds} 秒上报，由服务端下发间隔',
+                            value: '${data.heartbeatIntervalSeconds} 秒',
+                          ),
+                          _MenuItem(
+                            icon: Icons.notifications_outlined,
+                            title: '催办策略',
+                            subtitle:
+                                '无操作 ${data.firstThresholdMinutes} 分钟触发 · 每日最多 ${data.dailyMax} 次',
+                            value: '服务端配置',
+                          ),
+                          _MenuItem(
+                            icon: Icons.nights_stay_outlined,
+                            title: '免打扰时段',
+                            subtitle: '由管理员在服务端设置',
+                            value: '${data.quietStart} – ${data.quietEnd}',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'App 端不提供任何催办阈值或渠道开关，这些配置只在服务端管理后台维护。',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: ShanganColors.mutedInk,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ShanganColors.red,
+                      side: const BorderSide(
+                        color: ShanganColors.red,
+                        width: 1.5,
+                      ),
+                    ),
+                    onPressed: () => ref.read(authControllerProvider).logout(),
+                    child: const Text('退出登录'),
                   ),
                 ],
               ),
-            ),
-            if (!supervisor) ...[
-              const ShanganGroupLabel('提醒与在线（只读）'),
-              ShanganCard(
-                padding: EdgeInsets.zero,
-                child: Column(
-                  children: [
-                    _MenuItem(
-                      icon: Icons.monitor_heart_outlined,
-                      title: '后台心跳',
-                      // 原型 6-1「每 60 秒上报，由服务端下发间隔」。
-                      subtitle:
-                          '每 ${data.heartbeatIntervalSeconds} 秒上报，由服务端下发间隔',
-                      value: '${data.heartbeatIntervalSeconds} 秒',
-                    ),
-                    _MenuItem(
-                      icon: Icons.notifications_outlined,
-                      title: '催办策略',
-                      subtitle:
-                          '无操作 ${data.firstThresholdMinutes} 分钟触发 · 每日最多 ${data.dailyMax} 次',
-                      value: '服务端配置',
-                    ),
-                    _MenuItem(
-                      icon: Icons.nights_stay_outlined,
-                      title: '免打扰时段',
-                      subtitle: '由管理员在服务端设置',
-                      value: '${data.quietStart} – ${data.quietEnd}',
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'App 端不提供任何催办阈值或渠道开关，这些配置只在服务端管理后台维护。',
-                style: TextStyle(fontSize: 11.5, color: ShanganColors.mutedInk),
-              ),
-            ],
-            const SizedBox(height: 18),
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: ShanganColors.red,
-                side: const BorderSide(color: ShanganColors.red, width: 1.5),
-              ),
-              onPressed: () => ref.read(authControllerProvider).logout(),
-              child: const Text('退出登录'),
             ),
           ],
         ),
