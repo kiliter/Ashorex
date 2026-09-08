@@ -1,0 +1,523 @@
+apps/ios/lib/features/player/presentation/player_page.dart
+  s_8c08f606af75ce::t_70fe69f3201ff6 1-1098,1104-1117,1120-1383
+  s_8c08f606af75ce::t_209511c8d468a5 1099-1103
+  s_8c08f606af75ce::t_f779cf6f7b27e2 1118-1119
+docs/specs/2026-09-07-shangan-v2-design.md
+  s_8c08f606af75ce::t_68f0aa06d76514 1-892
+apps/server/src/main/java/com/shangan/todo/application/TodoCompletionService.java
+  s_8c08f606af75ce::t_266e5eeaf5bcba 1-117
+.github/workflows/server-verify.yml
+  s_8c08f606af75ce::t_b725199021097c 13-14,22-23,46-51
+apps/ios/test/features/home/pending_summary_edit_test.dart
+  s_8c08f606af75ce::t_1c75bedf218cc4 1-50,63-89,91-105,107-138
+  s_8c08f606af75ce::t_6efd5eaebf4961 51,54-62,90,106
+  s_8c08f606af75ce::t_732abe1b8bdb44 52-53
+apps/ios/test/core/api/api_client_test.dart
+  s_8c08f606af75ce::t_702c74d6f70f90 14-16,20-27,29-39,50-52,55-58,60-62,72-74,77-80,83-88,202-205,209-216,228-232,243
+  s_8c08f606af75ce::t_a826cf3d5ae897 8,12-13,17-19,28,40-49,53-54,59,63-71,75-76,81-82,89-94,199-201,206-207,217-227,233-242,244
+  s_8c08f606af75ce::t_70ac2343fda7db 208,245-246
+apps/ios/lib/app/application_bootstrap.dart
+  s_8c08f606af75ce::t_8bd800e87c8436 1,11-13,138-140,151,156-167,171-180,187,205,211-212,216-218
+  s_8c08f606af75ce::t_cc6831573bc942 219
+apps/server/src/main/java/com/shangan/todo/infrastructure/JdbcTodoRepository.java
+  s_8c08f606af75ce::t_266e5eeaf5bcba 1-927
+apps/server/src/main/java/com/shangan/todo/application/TodoProgressService.java
+  s_8c08f606af75ce::t_ae5bf39a33c48c 1-63,66-94,98-130,132-173
+  s_8c08f606af75ce::t_266e5eeaf5bcba 64-65,95-97,131
+apps/ios/test/features/home/home_controller_test.dart
+  s_8c08f606af75ce::t_097cd2abfca373 12-13,21-24,54-55
+  s_8c08f606af75ce::t_9d2ab1d457fc16 1-11,14-20,25-53,56-114
+apps/server/src/test/java/com/shangan/catalog/application/CourseSyncReviewTest.java
+  s_8c08f606af75ce::t_efcb7c279cd7e6 25-26,31-34,62-67
+  s_8c08f606af75ce::t_74a1003492b8a5 1-24,27-30,35-61,68-90
+apps/ios/test/features/home/history_day_test.dart
+  s_8c08f606af75ce::t_4f1773d3ea7b7f 52-60
+  s_8c08f606af75ce::t_a6a70277d4c1b7 1-51,61-170
+apps/server/src/test/java/com/shangan/todo/application/TodoProgressServiceTest.java
+  s_8c08f606af75ce::t_ae5bf39a33c48c 1-385
+apps/server/src/test/java/com/shangan/catalog/application/CourseSyncSortIndexTest.java
+  s_8c08f606af75ce::t_efcb7c279cd7e6 109-110
+  s_8c08f606af75ce::t_376fa5e3f7c33a 1-108,111-389
+apps/ios/lib/features/home/presentation/home_page.dart
+  s_8c08f606af75ce::t_5b12d613f64986 1-34,36-42,46-387,393-414,416-764,779-1195,1203-1261,1263-1272,1274-1277,1279-1342
+  s_8c08f606af75ce::t_935509806ad54e 765,1196,1262,1278
+  s_8c08f606af75ce::t_732abe1b8bdb44 766-778,1197-1202
+  s_8c08f606af75ce::t_08d7fdee0cb2d1 388-390,392
+  s_8c08f606af75ce::t_9530c41be7394a 35,43-45
+  s_8c08f606af75ce::t_ab8c1cac2a19ad 391,415,1273
+apps/ios/test/features/player/progress_queue_test.dart
+  s_8c08f606af75ce::t_9ce0719483f9b2 1-3,13,19-20,25-27,29,36,39,43-44,47,49-52,57,59,66,69-71,73-74,76-77,116-121,123-128,130-134,136-145,147-350,352-360
+  s_8c08f606af75ce::t_7a43350380adbf 15,18,42,79-84,86-91,93-96,98-103,105-111,113-115
+  s_8c08f606af75ce::t_86385a77828620 5-7,9-10,12,14,16-17,21-24,28,30-35,38,40-41,45-46,48,53-56,58,60-65,67-68,72,75,85,92,97,104,112,122,129,135,146,351
+apps/server/src/test/java/com/shangan/todo/application/TodoServiceTest.java
+  s_8c08f606af75ce::t_1c75bedf218cc4 1-601,611,614-623,626-667
+  s_8c08f606af75ce::t_767872ce52e99f 602-610,612-613,624-625
+run.sh
+  s_8c08f606af75ce::t_4b38f4af687590 10,12-67,77-80,84,86,89-101,110-111,148,152-155,157-163,169-242,263-265,268-277,293,296-297,299,301-302,371-383,388,393-401,409-421
+apps/ios/test/core/presence/heartbeat_service_test.dart
+  s_8c08f606af75ce::t_4068f9090c99a4 18-26,29-32
+  s_8c08f606af75ce::t_988f77898966e2 1-17,27-28,33-199
+apps/server/src/main/java/com/shangan/catalog/infrastructure/JdbcCourseRepository.java
+  s_8c08f606af75ce::t_376fa5e3f7c33a 3,5-7,16,20-25,27-37,41-43,45,49-55,59-64,68-73,79-80,82-89,92-104,109-118,120-128,130-142,145-155,157,162-164,166-168,170-171,173,178-180,182-184,186-189,194-253,258-268,273-299,304-310,315-317,319-321,323-326,331-354,357-438,442-464,468-472,474-506,509-511,514-516
+  s_8c08f606af75ce::t_7f7fa657bb2845 143-144
+apps/ios/lib/core/state/shangan_providers.dart
+  s_8c08f606af75ce::t_9d2ab1d457fc16 44,46
+  s_8c08f606af75ce::t_5b12d613f64986 1-22,24-32,34-43,45,47-67,69-286,288-376
+  s_8c08f606af75ce::t_c641f189eb153c 23,33,68,287
+apps/ios/test/features/stats/stats_controller_test.dart
+  s_8c08f606af75ce::t_097cd2abfca373 19-22
+  s_8c08f606af75ce::t_9d2ab1d457fc16 1-18,23-136
+apps/server/src/main/java/com/shangan/catalog/application/ResourceMappingPlanner.java
+  s_8c08f606af75ce::t_7f7fa657bb2845 55-56,91-103
+  s_8c08f606af75ce::t_1c75bedf218cc4 106,115
+  s_8c08f606af75ce::t_767872ce52e99f 107-111
+  s_8c08f606af75ce::t_bcb39fc5af926b 1-54,57-90,104-105,112-114,116-176
+apps/ios/test/features/home/home_edit_mode_test.dart
+  s_8c08f606af75ce::t_a6a70277d4c1b7 1-138
+apps/ios/lib/features/home/presentation/pending_summary_page.dart
+  s_8c08f606af75ce::t_732abe1b8bdb44 60-66,195-199
+  s_8c08f606af75ce::t_935509806ad54e 1-59,67-194,200-338
+apps/server/src/main/java/com/shangan/nag/application/NagDeliveryService.java
+  s_8c08f606af75ce::t_4ba8ded7a18d3c 30,33-37,42,76-77
+  s_8c08f606af75ce::t_74d71a208ea5ab 1-29,31-32,38-41,43-75,78-115
+apps/server/src/main/java/com/shangan/common/config/SecurityConfiguration.java
+  s_8c08f606af75ce::t_266e5eeaf5bcba 77-80,154-161,163-166,173-184
+  s_8c08f606af75ce::t_153471926719e8 7,9,30-31,44-55,58-61,63-68,71-76,81-84,87-91,96-109,149,152-153,162,167-168,172,187,198-203
+  s_8c08f606af75ce::t_aeb7ce84ae1dad 185-186
+apps/server/src/test/java/com/shangan/nag/application/NagDeliveryServiceTest.java
+  s_8c08f606af75ce::t_4ba8ded7a18d3c 1-350
+apps/server/src/main/java/com/shangan/stats/application/StatsService.java
+  s_8c08f606af75ce::t_ae5bf39a33c48c 1-147,149,152-159,164-281
+  s_8c08f606af75ce::t_266e5eeaf5bcba 148,150-151,160-163
+apps/admin-web/src/pages/EmbySyncPage.vue
+  s_8c08f606af75ce::t_74a1003492b8a5 1-768
+apps/server/src/test/java/com/shangan/common/integration/RuntimeSettingsUrlTest.java
+  s_8c08f606af75ce::t_377efee7e3420c 1-43
+apps/server/src/main/java/com/shangan/nag/application/NagResponseService.java
+  s_8c08f606af75ce::t_74d71a208ea5ab 1-83
+apps/server/src/test/java/com/shangan/stats/application/StatsServiceTest.java
+  s_8c08f606af75ce::t_ae5bf39a33c48c 1-278,280,283-423
+  s_8c08f606af75ce::t_68f0aa06d76514 279,281-282
+apps/ios/lib/core/player/progress_queue.dart
+  s_8c08f606af75ce::t_9ce0719483f9b2 128-130
+  s_8c08f606af75ce::t_70fe69f3201ff6 1-127,131-181
+apps/server/src/main/java/com/shangan/common/integration/RuntimeIntegrationSettingsService.java
+  s_8c08f606af75ce::t_4b38f4af687590 5,11,44,47,51-58,73,80,82-84,86,88-90,92-96,98-102,104-106,108,110-113,115,118-119,124-142,147-151,154-156,159,162-170,172
+  s_8c08f606af75ce::t_266e5eeaf5bcba 158
+apps/ios/lib/features/catalog/presentation/library_page.dart
+  s_8c08f606af75ce::t_9530c41be7394a 8,696,708-710
+  s_8c08f606af75ce::t_5b12d613f64986 1-7,9-695,697-707,711-809
+apps/ios/test/support/fake_backend.dart
+  s_8c08f606af75ce::t_9ce0719483f9b2 1-186
+docs/reviews/2026-09-08-v2-review.md
+  s_8c08f606af75ce::t_e2cdc92502f7ee 1-41
+apps/ios/test/features/focus/focus_run_test.dart
+  s_8c08f606af75ce::t_8bd800e87c8436 1-422
+apps/ios/test/app/router_test.dart
+  s_8c08f606af75ce::t_8071561832ad5b 1-181,187-259
+  s_8c08f606af75ce::t_10331b63b8d868 182-186
+apps/ios/lib/core/api/api_client.dart
+  s_8c08f606af75ce::t_73fdd0769419a8 438,447,449
+  s_8c08f606af75ce::t_702c74d6f70f90 316-322,352-353,356-362,382-388,395-403,439,448,468-470
+  s_8c08f606af75ce::t_bd42d5aaf7ef08 381,389-390
+  s_8c08f606af75ce::t_8fbac54e71ede4 2-3,44,50-67,72-136,205-232,234-236,241,248-252,261-276,313-315,323-324,326,345-351,354-355,363-364,366,372,374,379,391,417,420,423-424,431,436,446,451-452,456-463,466-467,471
+  s_8c08f606af75ce::t_b7985c88d0db5c 472
+apps/server/src/test/java/com/shangan/catalog/application/ResourceMappingPlannerTest.java
+  s_8c08f606af75ce::t_1c75bedf218cc4 213
+  s_8c08f606af75ce::t_bcb39fc5af926b 1-212,214-241
+apps/ios/test/features/player/player_controls_test.dart
+  s_8c08f606af75ce::t_4068f9090c99a4 33-39,385-387
+  s_8c08f606af75ce::t_e1041b0963f676 52,61
+  s_8c08f606af75ce::t_7a43350380adbf 62
+  s_8c08f606af75ce::t_988f77898966e2 1-32,40-51,53-60,63-384,388-470
+apps/server/src/test/java/com/shangan/common/config/ActiveAccountSecurityTest.java
+  s_8c08f606af75ce::t_4b38f4af687590 46-47
+  s_8c08f606af75ce::t_153471926719e8 1-45,48-78
+infra/scripts/backup.sh
+  s_8c08f606af75ce::t_4b38f4af687590 9,33-38,40
+apps/server/src/main/java/com/shangan/catalog/infrastructure/CourseRepository.java
+  s_8c08f606af75ce::t_376fa5e3f7c33a 4-5,10,13,15-16,18-20,24-32,34-35,37-61,64,66,68-69,71-72,74,76,78-88
+docs/api/openapi.yaml
+  s_8c08f606af75ce::t_cdc55ee847db1b 319,342,678,699
+  s_8c08f606af75ce::t_68f0aa06d76514 1392,1396,1398-1400
+  s_8c08f606af75ce::t_5d92d54e183e52 3-16,18-42,44-58,60-61,63-72,74,78-81,83-84,86-96,98-111,113-114,116-122,124,128-142,144-161,163-164,166,168-172,174,178-198,200-208,210-211,213-214,216-217,219-221,223-224,226-227,229-235,237-241,243-244,246,248-254,256,258-266,268-277,279-280,282,284-289,291,295-301,303-304,306,308-315,317-318,320,322-325,327-328,330,332-338,340-341,344,348,350-351,353,355-372,374-376,378-396,398,402-424,426-433,435-436,438-444,446-448,450-460,462-463,465-470,472-478,480-482,484-485,487-494,496-511,513-514,516-523,525-527,529-556,558,563,568-591,593-594,596,598-644,649-662,664-665,667-674,676-677,680,684-687,689-690,692-695,697-698,701,705-711,713-714,716,718-722,724-725,727-730,732-733,735-738,740-744,749-753,755-756,758-765,767-768,770-777,779-780,782-789,791,793-794,796,798-803,805-806,812-815,817-818,820-829,831-832,834-835,837,840-847,849-850,852-855,857-858,860-883,885-886,888-894,896-899,901-902,904,907-909,911-912,914-917,919-920,922-980,983-1029,1032-1040,1043-1049,1052-1059,1062-1094,1097-1105,1108-1111,1114-1127,1130-1133,1136-1163,1165-1167,1170-1174,1176-1178,1180,1182-1186,1188-1189,1192-1193,1196-1204,1207-1239,1241-1243,1245-1257,1260-1266,1269-1278,1281-1293,1296-1297,1300-1310,1313-1321,1323,1325-1336,1338,1340,1343-1362,1364,1366-1383,1385,1387-1389,1391,1393-1395,1401-1403,1406-1414,1417-1419,1422-1430,1433-1445,1448-1494,1497-1501,1504-1512,1515-1533,1536-1548,1551-1568,1571-1595,1598-1607,1610-1618
+apps/server/src/main/java/com/shangan/catalog/application/CourseSyncService.java
+  s_8c08f606af75ce::t_376fa5e3f7c33a 3-4,6-7,22-26,28,30,34-36,42-44,48-50,56-58,61-76,80-89,93-94,97-110,119-120,129-137,172-176,179,181-182,184,186-196,199-213,215-216,219-246,249-270,283-287,290-306,309-310
+  s_8c08f606af75ce::t_efcb7c279cd7e6 18,20,38,46,52,55,271,274-278,280
+  s_8c08f606af75ce::t_7f7fa657bb2845 59-60,111-118,122-126,138-169
+  s_8c08f606af75ce::t_08d7fdee0cb2d1 214
+apps/server/src/main/java/com/shangan/todo/application/TodoService.java
+  s_8c08f606af75ce::t_74d71a208ea5ab 1-225,228-406,409-469,472-575
+  s_8c08f606af75ce::t_935509806ad54e 226-227,470-471
+  s_8c08f606af75ce::t_266e5eeaf5bcba 407-408
+.env.local.example
+  s_213650f39eb226::t_c4c5fc4a4afe9a 1-14,16-20,22-25,27-31,33-38,40-48,50-53,55-59,61-103
+.gitignore
+  s_8c08f606af75ce::t_cf10bee2af9512 11,17-23,49-52,54-63
+AGENTS.md
+  s_e617834d689171::t_47778c3aebfa90 11,17,20-28,31,37-41,43,45,47,53-56,62-70,73-86,95-96,103-114,117,125-126,128-129,133-144,157,173-175,177,183,185,202,207,216-221,223,227,230,233-236,238,241-245,248,250,253,256,258,261,264-288,290-294,303,311-313,315,317,323,326,330-333,337-341,345-352,356-359,361-363,367-372,392-394,396-400,402
+README.md
+  s_213650f39eb226::t_c9b4d426bf6514 5,19,42,44,47-55,58-59,64-74,83,89-91,95,98,100-101,110-111,140,142-167,177-182,241,266,269,302,340-341,362-366,368,370,372,375-376,378,383
+apps/admin-web/src/components/EmbyCourseImportDialog.vue
+  s_8c08f606af75ce::t_7642635b0cb1e1 1-53
+apps/admin-web/src/pages/CoursesPage.vue
+  s_8c08f606af75ce::t_667e2c66a98a1b 1-511
+apps/admin-web/src/pages/NagPolicyPage.vue
+  s_213650f39eb226::t_a28f1b18631b48 1-418,420-421,423-656,658-659
+apps/admin-web/vite.config.ts
+  s_213650f39eb226::t_bc8bef42ca8ab7 1-38
+apps/ios/android/app/src/main/kotlin/com/shangan/app/MainActivity.kt
+  s_213650f39eb226::t_35575bc0b36fbe 3-4,6-7,9-21
+apps/ios/ios/Flutter/Debug.xcconfig
+  s_8c08f606af75ce::t_2cbbd10c259d06 1
+apps/ios/ios/Flutter/Release.xcconfig
+  s_8c08f606af75ce::t_29b563669c9881 1
+apps/ios/ios/Podfile
+  s_8c08f606af75ce::t_7b4596d1aa69aa 1-2,4-5,7-10,12-44
+apps/ios/ios/Podfile.lock
+  s_8c08f606af75ce::t_68461c7136b60f 1-6,8-11,13-19,21-24,26-28
+apps/ios/ios/Runner.xcodeproj/project.pbxproj
+  s_8c08f606af75ce::t_17adae75ab2ffe 19-20,47,53-54,60-62,70-71,75-82,88,103-116,136-137,166-174,182,185,201,208,252,286-307,339-377,505,523,539,745
+apps/ios/ios/Runner.xcworkspace/contents.xcworkspacedata
+  s_8c08f606af75ce::t_178f21c3175edd 7-9
+apps/ios/ios/Runner/AppDelegate.swift
+  s_213650f39eb226::t_85b8f8b3e2fa2e 28-35
+apps/ios/lib/app/router.dart
+  s_8c08f606af75ce::t_8344bd3f310f60 5-15,39-47,64-65,67,69-72,76-79,88-89,92-94
+apps/ios/lib/core/auth/auth_controller.dart
+  s_213650f39eb226::t_a82338b6a5317a 33,36,39-44,49-53,62,70,75,112,117,128-134,139-142,151-159,178,182-190
+apps/ios/lib/core/auth/auth_repository.dart
+  s_213650f39eb226::t_c76d298cf6099b 11,13-14,20-22,25-30,32-36,40-44,55-56
+apps/ios/lib/core/config/server_configuration_store.dart
+  s_213650f39eb226::t_6c57d05f90880a 1,46-92
+apps/ios/lib/core/data/shangan_repository.dart
+  s_8c08f606af75ce::t_dfda89b17a5e15 1-65,68-86,88-106,108-115,117-137,139-154,157-230,232-265,268-282,284-296,298,300-310,314-317,321-380,382-456,458-495,497-502,505-532
+apps/ios/lib/core/device/player_device_status.dart
+  s_213650f39eb226::t_c4da0d7378074c 5-7,9,12-16,20-21,24-37,42,48-51
+apps/ios/lib/core/models/shangan_models.dart
+  s_e617834d689171::t_15be4436ca17a7 1-5,7-179,182-186,191-195,197-207,210-212,214-215,217,219-239,243-244,246,248-360,364-376,379-387,389-541,544-748,751-832,834-835,839-1105,1108-1124,1126-1138,1140,1142-1160,1163-1174,1176-1183,1185-1200,1202,1204-1223,1226,1228-1247,1249-1302,1305-1316
+apps/ios/lib/core/player/media_kit_playback_adapter.dart
+  s_8c08f606af75ce::t_71c4038711d490 4-37,39,42,44,46,48,50-52,54-72,74-90,92-128,132-140,144,146,148-159
+apps/ios/lib/core/player/playback_adapter.dart
+  s_8c08f606af75ce::t_8a02ce522e851e 1-124
+apps/ios/lib/core/presence/heartbeat_service.dart
+  s_8c08f606af75ce::t_2e45f060045c87 1-111
+apps/ios/lib/core/presence/nag_event_service.dart
+  s_213650f39eb226::t_227927e3efbb23 1-89
+apps/ios/lib/core/storage/remembered_login_store.dart
+  s_213650f39eb226::t_3d75f496874a1a 1,3-4,6-10,13-17,19-20,22-30,33-45,48-51
+apps/ios/lib/core/storage/token_store.dart
+  s_213650f39eb226::t_ad0a8064de6d00 60-76
+apps/ios/lib/core/theme/shangan_theme.dart
+  s_e617834d689171::t_44a568ee2fe680 6-7,13-14,16-23,37-46,49-57,70,92-95,99-102,106-108,112-114,119-120,134,139,151-152,171-175,179-180,200,208-209,214,222-225,229,236-240,250-251,257,265-266,274,298
+apps/ios/lib/core/widgets/shangan_feedback.dart
+  s_e617834d689171::t_dcd3b605b38d8f 1,5-7,9-42,44-46,48,50-60,62-67,70-76,82-86,89-97,100-134
+apps/ios/lib/core/widgets/shangan_v2.dart
+  s_e617834d689171::t_0f558912f267b1 1-2398
+apps/ios/lib/features/auth/presentation/login_page.dart
+  s_213650f39eb226::t_eafecfa7830621 2,19-75,91-115,117,119,121,134-135,197-212,215,228,240-257,277
+apps/ios/lib/features/auth/presentation/server_settings_page.dart
+  s_213650f39eb226::t_e95d7b90b0d9cd 2,20,27,36-58,83-88,129-147,150
+apps/ios/lib/features/focus/presentation/focus_run_page.dart
+  s_8c08f606af75ce::t_c410d75fe1f541 2-5,9-11,13-24,26,28-29,32,35,37-54,59,61,65-70,73-76,78-82,85-86,88-90,92-94,97-100,102-106,108-109,114-121,124-133,136-145,148-156,159-179,183-197,199-201,203-204,206-213,216-225,227,229-247,249-261,263-268,270-276,279-288,291-304,306-312,314-326,328-338,340-349,351-375,377-378,380-394,396-400,403-435,439-442,447,453-457,459-492,494-498,500-540,542-544,546-548,550-576,578-622,624-627,631-636,638-645
+apps/ios/lib/features/home/presentation/course_addition_confirmation.dart
+  s_8c08f606af75ce::t_0c2049f4e4110c 2,4-30,32-58,60-63,65-69,71-79,81-85,89-90
+apps/ios/lib/features/home/presentation/todo_row.dart
+  s_8c08f606af75ce::t_8dc666a4a396c9 4,6-8,10-31,33-39,41-42,44-45,47-48,50-51,53-54,56-57,60-118,121-141,143-144,146-156,159-161,163-186,188-210,214-219,222-225,229-236,238-245,248-257,259-268,271-279,282-285,287-298,307-420,423-425,427-428,431-457
+apps/ios/lib/features/nag/presentation/fullscreen_nag_page.dart
+  s_213650f39eb226::t_f1159fe0fc5a02 3-4,6,8-16,18-19,21-22,24-44,47-49,51-55,59,63-68,71-79,81-128,131-132,134-141,143-152,154-164,166-173,175-184,186-194,198-199,203-205,207-227,229-242,245-252,254,257,262-282
+apps/ios/lib/features/profile/presentation/goals_page.dart
+  s_e617834d689171::t_b1c661113a711b 1,4-5,7,9-13,15-141,144,147-152,157-161,164-169,172-184,186-201,203-210,213-215,219-226,228-236,239-243,249-271,275-289,295-325,328-331,333-334,336-338,340,343-369,372-384
+apps/ios/lib/features/profile/presentation/profile_page.dart
+  s_e617834d689171::t_53f36f89a018ed 1,4-8,10,12-14,16-17,20-122,126-127,130-137,139-190,195-219,222-223,226-229,231-236,238-240,242-256,258,260-261,263,266-270,273-277,282-324,326-349,352,355,357-404,408,410-442,444-450,456,458-494,496-503,505-527,529-540
+apps/ios/lib/features/shell/presentation/app_shell.dart
+  s_8c08f606af75ce::t_842ffb05e57d0a 1-3,7-9,11-15,17,20-22,30-33,35-38,43-44,49-51,55-94,97-103,105-127,131-132,135-140,142-153,155-156,159-162,164-189,192-230,238-240,244-254,256-267,270-281,289-291
+apps/ios/lib/features/supervisor/presentation/supervisor_shell.dart
+  s_e617834d689171::t_1ac7e98819e03f 1-1704
+apps/ios/pubspec.lock
+  s_8c08f606af75ce::t_1cb8f6a7ae0aea 20-35,116-123,204-283,315-322,458-529,639-702,855-862,895-902,1060-1067,1108-1131,1260-1267
+apps/ios/pubspec.yaml
+  s_8c08f606af75ce::t_9d955b481eef68 25-29
+apps/ios/test/core/api/nag_event_stream_test.dart
+  s_213650f39eb226::t_3056703feeb5c0 1-4,6,9,11-27,29-38,40-48,50-60,62-72,75-89,92-139,143,146-151,155-156,160-161
+apps/ios/test/core/data/course_addition_repository_test.dart
+  s_8c08f606af75ce::t_e4b863c6256cd0 2,4,6-47,49-58,60-61
+apps/ios/test/core/presence/nag_event_service_test.dart
+  s_213650f39eb226::t_3121430542d700 1-2,4,6,8-17,19-24,26-48,50-80
+apps/ios/test/core/storage/remembered_login_store_test.dart
+  s_213650f39eb226::t_30122ccc7b05bb 1-47
+apps/ios/test/features/auth/login_page_test.dart
+  s_213650f39eb226::t_baf803767dce3d 1-3,16-19,46,49,55-57,61-63,67-104,147
+apps/ios/test/features/auth/server_settings_page_test.dart
+  s_213650f39eb226::t_783e7c5ab5c354 1-2,17-20,82-85
+apps/ios/test/features/home/add_todo_flow_test.dart
+  s_213650f39eb226::t_ffab888aec6267 4-5,7-11,13-22,24-28,31-33,36-39,41,44-47,50-53,56-62,65-67,70-71,73,75,77-79,82-85,88-92,95-96,99-102,105-106,108,111-115,118-130,132-139,141-146,148,150-152,154-162,165-169,171-175,178-180,184-202,205,207-209
+apps/ios/test/features/home/course_addition_confirmation_test.dart
+  s_8c08f606af75ce::t_3569ca887542a5 3-4,6,8-23,27-31,36-42,44-57,60-63,65-96,98
+apps/ios/test/features/nag/fullscreen_nag_test.dart
+  s_213650f39eb226::t_c6b9b9881bcb4b 4-6,8-11,13-14,18-20,22-28,32-35,37-40,42,44-53,55-57,59,62-63,65-70,72-74,77-78,80-83,85-90,92-94,96-101,103-107,109-124,126-128,130-132,134-136,138-140,142,144-145,147-149,152-157,161-172,174-206,208
+apps/ios/test/features/player/media_kit_adapter_test.dart
+  s_8c08f606af75ce::t_96de8ef26dcbb9 1-150
+apps/ios/test/features/profile/profile_page_test.dart
+  s_213650f39eb226::t_79a34ddad9308f 1-152
+apps/ios/test/features/supervisor/learner_report_test.dart
+  s_213650f39eb226::t_f6fa2ce2b45ed0 4-6,8-9,11-17,19-22,24-28,30,32-35,38-42,44-50,52-55,57,59-62,64-68,70-117,119-131
+apps/ios/test/features/supervisor/role_switch_test.dart
+  s_213650f39eb226::t_03c792cf232122 5,7,9-15,17-23,25-36,38-44,48-50,52,54-55,59-62,64-68,72-73,75,77
+apps/ios/test/features/supervisor/supervisor_feed_test.dart
+  s_213650f39eb226::t_b11673f8df73d4 2,5-9,11,13-57,60-63,67,69-73
+apps/ios/test/features/supervisor/supervisor_layout_test.dart
+  s_213650f39eb226::t_ce609b251c3286 4-7,9,11-34,38,40,44-50,52,55-95
+apps/server/src/main/java/com/shangan/admin/EmbyImportAdminController.java
+  s_8c08f606af75ce::t_5f16aab446f0bf 1,3-6,12,15,17-19,21-22,25-28,31-34,37-44,47-50,53,55
+apps/server/src/main/java/com/shangan/admin/NagTransportAdminController.java
+  s_213650f39eb226::t_27a54774885eb7 1,3-4,7,9,11-13,15-16,20-21,24-27,30-37,40-41
+apps/server/src/main/java/com/shangan/archive/application/ArchiveService.java
+  s_8c08f606af75ce::t_a5bce64711b9f4 1,3-8,10-15,18-19,21-24,30,32,35-47,49,51-65,67,70,72,74-82,87-94,97-106,109-113,115-130,132-159,162,164-165,168,170-172,176-177,180-190,193-202,205-210,212,215-250,254-272,275-286,289-301
+apps/server/src/main/java/com/shangan/catalog/api/CatalogController.java
+  s_308ed61a16fb88::t_0e4f9b0efbe151 4-7,13,16,18,23,27-29,32-40,43-45
+apps/server/src/main/java/com/shangan/catalog/api/PlaybackController.java
+  s_8c08f606af75ce::t_0de8e72f99229f 1,3-5,7-9,15,20-25,27-28,30,33-34,38,40-47,49-51,54-56,59-66
+apps/server/src/main/java/com/shangan/catalog/application/CourseImportService.java
+  s_8c08f606af75ce::t_9f7d2d9b1144f1 3-4,6,11,14-15,17,19,21-25,27-34,36-40,43-61,64-68,70-73,76-99,101-119,121-128,131-135,137-142,144,146-147
+apps/server/src/main/java/com/shangan/catalog/application/ResourceProgressPort.java
+  s_308ed61a16fb88::t_babc475efc123d 4,6-30
+apps/server/src/main/java/com/shangan/catalog/infrastructure/JdbcCatalogFacetRepository.java
+  s_308ed61a16fb88::t_9f10890f6d72c7 1,3,8,10,12-17,21-32,37-49,53-55,57-65,69-71,73-80,84-144
+apps/server/src/main/java/com/shangan/common/config/AdminSecurityHandlers.java
+  s_e617834d689171::t_bc0c4e3e1199bd 1,3,5-7,9-16,18,20-35,38-67
+apps/server/src/main/java/com/shangan/media/emby/EmbyClient.java
+  s_8c08f606af75ce::t_bd19f6e94db5fe 39,52,98-99,173-252,259,276,281,289-327,338,368-370,407-442,444-445,492-493,502,516-521,529,534-543
+apps/server/src/main/java/com/shangan/media/emby/EmbyDtos.java
+  s_8c08f606af75ce::t_394c34f652b621 13-51
+apps/server/src/main/java/com/shangan/media/emby/EmbyGateway.java
+  s_8c08f606af75ce::t_eb2020fda9496c 35-51
+apps/server/src/main/java/com/shangan/media/emby/EmbyStreamProxy.java
+  s_8c08f606af75ce::t_21369b9dc981c8 43-44,55-63
+apps/server/src/main/java/com/shangan/nag/api/NagEventController.java
+  s_213650f39eb226::t_b24b738de1a489 1,4-6,9,11,13-14,16-17,20-25
+apps/server/src/main/java/com/shangan/nag/application/NagAvailable.java
+  s_213650f39eb226::t_e2e8b5a0e3554d 1-4
+apps/server/src/main/java/com/shangan/nag/application/NagEventService.java
+  s_213650f39eb226::t_4de55cc99d208e 1,3-4,6-9,11-12,14,16-23,25-26,29-45,47-62,65-72,75-88,91-95,97-100,103-116
+apps/server/src/main/java/com/shangan/nag/application/NagPolicyResolver.java
+  s_308ed61a16fb88::t_8f4bcb88ba5597 1,3-4,6,10-14,16,18-36,38,40-41,44-49,52-60,64-65,69-70,73-75,79-80,83-104
+apps/server/src/main/java/com/shangan/nag/application/NagScanner.java
+  s_8c08f606af75ce::t_812ad166bd4319 1-231
+apps/server/src/main/java/com/shangan/nag/application/NagTransportService.java
+  s_213650f39eb226::t_48a4126ffbe664 1,3-4,9,11-12,15-16,20-25,27-28
+apps/server/src/main/java/com/shangan/nag/application/channel/FullscreenNagChannel.java
+  s_213650f39eb226::t_443001221bb015 1,3-4,7,9-10,12-13,17-29
+apps/server/src/main/java/com/shangan/nag/domain/Nag.java
+  s_308ed61a16fb88::t_923e8ba7481218 1,6-7,10-29
+apps/server/src/main/java/com/shangan/nag/domain/NagChannelType.java
+  s_308ed61a16fb88::t_db41abf88d5b90 1-7
+apps/server/src/main/java/com/shangan/nag/domain/NagStatus.java
+  s_308ed61a16fb88::t_1e9983163596a6 1-9
+apps/server/src/main/java/com/shangan/nag/domain/NagTransportMode.java
+  s_213650f39eb226::t_bffe52739a416c 1,3-6
+apps/server/src/main/java/com/shangan/nag/infrastructure/JdbcNagPolicyRepository.java
+  s_213650f39eb226::t_f29af6cb3b5a97 1,3,7,13,15,17-32,35,37-42,46-52,56-57,61-65,70-74,78-81,86-95,97-112,114-116,122-124,126-173,176-197
+apps/server/src/main/java/com/shangan/nag/infrastructure/JdbcNagRepository.java
+  s_8c08f606af75ce::t_34c0d19652639d 1,3-8,16,18,20-38,41,43-51,53-56,60-72,74-83,85-89,92-94,96-103,105,108,112-175,178-191,195-197,199-200,202-203,208-224,228-234,238-242,246-249,251-252,254-268,272-281,284-298,300-309,311-330,332-345
+apps/server/src/main/java/com/shangan/nag/infrastructure/NagPolicyRepository.java
+  s_213650f39eb226::t_8a840cc5376e2f 1,3,8-9,11-12,14,16,18,20,22,24-25,27,29-30
+apps/server/src/main/java/com/shangan/nag/infrastructure/NagRepository.java
+  s_8c08f606af75ce::t_ea80a8c1774012 1,3-5,7,11-12,14,16-17,19-20,22,24,26-27,29,31,33-34,36-37,39-51,53-62,64-67,69-73
+apps/server/src/main/java/com/shangan/presence/application/EffectiveActionRecorder.java
+  s_308ed61a16fb88::t_b3a893cfd7884e 1,3-4,7-11,13,15-20,23-24
+apps/server/src/main/java/com/shangan/presence/application/PresenceService.java
+  s_213650f39eb226::t_82d552de95518e 1-107
+apps/server/src/main/java/com/shangan/presence/domain/PresenceState.java
+  s_308ed61a16fb88::t_708baebfc0995c 1-8
+apps/server/src/main/java/com/shangan/presence/infrastructure/JdbcUserPresenceRepository.java
+  s_308ed61a16fb88::t_65ce1722c8ca11 1,3-5,12,14,16-25,29-31,33-34,38-39,43-60,65-76,78,82-93
+apps/server/src/main/java/com/shangan/presence/infrastructure/UserPresenceRepository.java
+  s_308ed61a16fb88::t_0dfad73d64b76a 1,3,8-9,11,13,15-16,18-19
+apps/server/src/main/java/com/shangan/stats/api/StatsController.java
+  s_308ed61a16fb88::t_e005b9a9a7f2b1 1,4-5,11,13-14,16-19,23-27
+apps/server/src/main/java/com/shangan/supervision/application/SupervisorViewService.java
+  s_213650f39eb226::t_c24f4164b4e781 1-294
+apps/server/src/main/java/com/shangan/todo/api/TodoController.java
+  s_8c08f606af75ce::t_5482ceb8b357aa 1,4-34,37,39,42,44,49,51-52,54-182,185-188,191-198,201-214,217-249,252-272,275-296,299-400
+apps/server/src/main/java/com/shangan/todo/application/FocusService.java
+  s_8c08f606af75ce::t_21398221e9a4f2 1,4-9,17-22,24,26-28,31-34,36-38,42,44-49,51-54,56,58-71,74-89,92,94-99,101-103,105-115,118,120-133,136,138-162,165-175,177-184,186-188,191-206,209-215,218-221,223,226-230
+apps/server/src/main/java/com/shangan/todo/application/LessonWatchStateAdapter.java
+  s_308ed61a16fb88::t_96258038ac79e3 1,3-5,7,11,13,15,17-18,22-44
+apps/server/src/main/java/com/shangan/todo/application/TodoViewService.java
+  s_e617834d689171::t_3e1b152fcfe56b 1,3-5,7-14,16,19,22,28,30,32-39,42,44-56,59,61-66,69-76,78-87,89-91,93-94,96-100,102-105,107,110-117,119-138,141-144,146-189,191,194-200,203-208,211-212,215-219,222-225,227-230,234-239,242-247,250-253,256-257,259-260,262,264-322
+apps/server/src/main/java/com/shangan/todo/domain/Todo.java
+  s_e617834d689171::t_d3f23aea449e0c 1,4,6-11,13-15,17,19-53
+apps/server/src/main/java/com/shangan/todo/domain/TodoType.java
+  s_308ed61a16fb88::t_f925e458aa824c 1-8
+apps/server/src/main/java/com/shangan/todo/infrastructure/TodoRepository.java
+  s_8c08f606af75ce::t_a847ec2e996285 1,3-6,10,12,14-15,17-18,20-21,23,25,27,29-30,32-33,35,37,39,41-42,44-66,68-158,160-163,165-205
+apps/server/src/main/resources/db/migration/V002__nag_transport_mode.sql
+  s_213650f39eb226::t_478092925609cf 1-2
+apps/server/src/main/resources/db/support/focus_stop_v3.sql
+  s_e617834d689171::t_f634f50ccc8b69 1-3,6-7,9,11,13-20,22-35,38-41,43,46-54,56-65
+apps/server/src/test/java/com/shangan/admin/NagTransportAdminControllerTest.java
+  s_213650f39eb226::t_281d41c04cb813 1,4,8-10,14-21,25,27,29-30,32,34,36,38-42
+apps/server/src/test/java/com/shangan/archive/application/ArchiveServiceTest.java
+  s_8c08f606af75ce::t_b17ff5d7037be1 1,5-14,18-25,33-35,37-71,73-83,86-109,113-115,117,119-120,124-126,128-131,135-154,156-165,167-170,173-202,205-220,223-250,253-266,269-278
+apps/server/src/test/java/com/shangan/catalog/api/PlaybackControllerTest.java
+  s_8c08f606af75ce::t_83b54c73abc2c3 1,4,6-14,16,18-19,21-61
+apps/server/src/test/java/com/shangan/catalog/application/CourseImportServiceTest.java
+  s_8c08f606af75ce::t_774e2764055008 1-185
+apps/server/src/test/java/com/shangan/common/config/AdminAccessDeniedHandlerTest.java
+  s_e617834d689171::t_9b739968a0d775 1,5-6,8-34,37-44,48-56,60-62,64-66,69-78,81-95
+apps/server/src/test/java/com/shangan/media/emby/EmbyClientContractTest.java
+  s_8c08f606af75ce::t_f13c3f00f49f3e 6,16,21,332-413,447-516
+apps/server/src/test/java/com/shangan/media/emby/RangeProxyIntegrationTest.java
+  s_8c08f606af75ce::t_a16a81c1115f67 4,6,54-91
+apps/server/src/test/java/com/shangan/nag/api/NagEventControllerTest.java
+  s_213650f39eb226::t_bc742bb6294dce 1,3-4,6,8-11,13-15,18-19,21-58
+apps/server/src/test/java/com/shangan/nag/application/NagResponseServiceTest.java
+  s_8c08f606af75ce::t_23b8cf99b48e0a 1,5-10,13-18,22-23,25-26,28-92,94-104,107-115,119-124,126-138,140-141,145-152,156-160,162-171,174-192,195-213
+apps/server/src/test/java/com/shangan/nag/application/NagTransportServiceTest.java
+  s_213650f39eb226::t_831487a6cb2a83 1,4,6-8,10-11,14-15,17-25
+apps/server/src/test/java/com/shangan/presence/application/PresenceServiceTest.java
+  s_213650f39eb226::t_d2c65a83be8c17 1,5,10-19,22-23,26,28,30-56,60-69,72-87,91-98,102-114,118-126,128-134,137-158,160-165,170,173-191
+apps/server/src/test/java/com/shangan/supervision/application/SupervisorViewServiceTest.java
+  s_213650f39eb226::t_bc04edf75a2ad1 1,5,8-28,31,34-36,38-78,81-95,99-111,115-128,130-133,135,138-168,171-192,195-213,215-229,231-244,246-250,252-262,265-273,275-285,287-303,305,308-309,312-332,334-335
+apps/server/src/test/java/com/shangan/todo/application/FocusServiceTest.java
+  s_8c08f606af75ce::t_12a2efaabce41c 1-351
+apps/server/src/test/java/com/shangan/todo/application/TodoCompletionServiceTest.java
+  s_8c08f606af75ce::t_06915a1645d59d 1-219
+docs/adr/0026-heartbeat-presence-and-nag-channels.md
+  s_213650f39eb226::t_02fdf9a1c7ff45 1-94
+docs/adr/0028-supervisor-role-and-snapshot.md
+  s_213650f39eb226::t_020fed8daa23af 1-83
+docs/adr/0032-code-baseline-rebuild.md
+  s_308ed61a16fb88::t_fd259be101592f 1,3-5,9,11-26,30-63,65,67-69,71-80,84-103,105,107-108
+docs/adr/0036-focus-stop-skip-and-feedback.md
+  s_e617834d689171::t_63231255281238 1-59
+docs/adr/0037-emby-batch-course-import.md
+  s_8c08f606af75ce::t_cca3bf71209eb3 1,3-4,6,8,10,12-18,20,22-25,27,29,31,33-37,39,41
+docs/adr/0038-course-todo-dedup-and-defer.md
+  s_8c08f606af75ce::t_918669ca215f1d 1-32
+docs/adr/0039-media-kit-playback-trial.md
+  s_8c08f606af75ce::t_afdfa9466c0ae9 1-47
+docs/plans/2026-09-07-shangan-v2-implementation-plan.md
+  s_8c08f606af75ce::t_3ca288946a1452 1-34,38,40,42,44,46-47,49,52-67,69,71,73-84,86,88,90,92-93,95,97,99,101-114,116,118,120,122,124,127-128,131,133-136,138,140,142-146,148,150,152,154,156,158-160,163-176,179,181-183,185-187,189,191,193,196-199,202,204,206-208,210,212,214,216,218,220-227,229,231-235,238,240,242-244,246,248,250,252,254,256-263,265,267-272,274,276,278-280,282,284,286,288,290,292-297,299-310,312,314-320,324-328,331-335,337-344,346-352,356,358-360,363-385,389,391,393,396-410,414-416,418,420-424,427-429,431-433,435-437,439,441-443,446-449,452,454-458,460,462-466,468,470,472,474,476,479-485,488-496,498,500-503,506-514,517-519,522,524-527,530-534,536,538,541-542,545,547-553,555-560,563,565-571,574-577,580,582-587,590,592,594-595,598-606,608,611-622,625-626,629,631,633,636-638,641,643,645-647,649,651,653,655,657,659-663,665,667,669-671,673,675,677,679,681,683-689,691,693,695-697,699,701,703,705,707,709,711-718,720-726,730,732,734,736-750,752,754,756,759-761,764,766-768,770,772,774,776,778-783,785,787-789,791,795,797,799,802-805,808,810,812-814,816,818,820,822,824,826-830,832,834-836,838-840,842,844-846,849-850,853,855-857,859,861,863,865,867,869-872,874,876-878,880,882,884,886,888,890-893,895,897-899,901,903,905,907,909,912-915,917-919,921-925,929-931,933-935,938-952,956,958,960,962,964-966,970,972,974,976-985,988,990,992,994,998-1004,1006,1008-1010,1012,1014,1016,1018,1020,1022,1024,1026-1034,1036,1038,1040,1042,1044,1046-1047,1049-1051,1054-1055,1058,1060,1062-1068,1071,1073,1076,1078,1081,1083,1086,1088,1091,1093,1095,1097,1100,1103,1105,1108,1110,1113,1115,1117,1119-1121,1123,1125,1127,1129,1131,1133,1135,1137-1155,1157,1159,1161
+docs/prototypes/shangan-v2-prototype.html
+  s_8c08f606af75ce::t_d1982b33760efc 1-36,38-44,47-61,63-76,78-81,83-85,87-95,97-99,101-122,124-136,138-140,142-149,151-172,174-175,177-282,284-291,293-459,461-474,476-479,481-4439
+docs/runbooks/2026-09-08-supervisor-ui-api-verification.md
+  s_213650f39eb226::t_7fdc2db5dce7f9 1,3,5,7-12,14,16-22,24,26-30
+docs/runbooks/backup-restore.md
+  s_8c08f606af75ce::t_8b8cbdcc7d81b8 75-78
+docs/traceability/2026-09-07-shangan-v2-traceability.md
+  s_8c08f606af75ce::t_ef4168fc6138bc 1-234
+infra/docker/server.Dockerfile
+  s_8c08f606af75ce::t_3d97fb1199a4f4 12
+infra/scripts/restore.sh
+  s_8c08f606af75ce::t_c3ae4da66ced48 18,23,39-40,47,49,55,69,81
+.env.example
+  s_308ed61a16fb88::t_93304d83c8f956 5-6,21-23,25
+apps/admin-web/src/api/client.ts
+  s_e617834d689171::t_d25e335a3c6761 1-17,19-26,29-31,34-35,37,39,41-42,44-48,51-52,54-74,76-80,82-83,85-86,88-107,109-129,132-133,135-136,138-139,141-148,150-156
+apps/admin-web/src/components/EmbyCourseImport.vue
+  s_51f60fa1552b26::t_5278f44ae14195 1-4,6-36,38-41,43-62,64,66-69,71-78,80-83,87-88,90-109,112-116,118-126,128-165,167-174
+apps/admin-web/src/stores/session.ts
+  s_e617834d689171::t_da7120fb025231 1-2,4-10,12-16,18-40,42-59,61,63-74,76-87,89-103
+apps/ios/lib/core/models/course_addition_models.dart
+  s_51f60fa1552b26::t_c2b893bfa62cf2 1-3,5-8,10-17,19-22,25-31,33-48,51-57,59-64,66-71
+apps/ios/lib/core/widgets/shangan_ui.dart
+  s_8c08f606af75ce::t_56a5b273ff39fd 752,758-765,768,820-935,951-955,961
+apps/ios/lib/features/home/presentation/add_todo_sheet.dart
+  s_51f60fa1552b26::t_76f1cea40989df 1,3,5-6,8,10-15,17,19-25,29-32,34-38,40-64,66-80,84,87,89-106,108-112,114-134,136-140,146-147,150-152,154,156,161-166,168-174,176,180-183,189,191-195,197-203,207-209,211-219,222-231,233-235,237-328,333-337,339,343-348,351-353,356-372,375-381,383-406,408-459,463-470,473,479-520,522,524-632,637-644,646-652,654-655,661-689,691-796,798,802,804-826,830-837,840-847,851-855,857-878,883-885,887-895,898,901-916,920-923,927-953,955-958,960-972,974-985,987-1002,1004-1019,1025-1046,1049-1051,1053-1078,1082-1120,1122-1125,1128,1130-1135,1140,1146-1163
+apps/ios/test/core/theme/shangan_theme_test.dart
+  s_308ed61a16fb88::t_e5de2e016ea110 7,14,20,22
+apps/server/src/main/java/com/shangan/archive/domain/ArchivableEntityType.java
+  s_308ed61a16fb88::t_ccc0309a17ed2b 1,3-8
+apps/server/src/main/java/com/shangan/archive/infrastructure/JdbcDeletionAuditRepository.java
+  s_308ed61a16fb88::t_44b09720e89819 1,3-5,10,12,14,16-17,21-36,40-42,44-47,49-60
+apps/server/src/main/java/com/shangan/catalog/domain/ResourceType.java
+  s_308ed61a16fb88::t_8cc8a479681bdf 1-7
+apps/server/src/main/java/com/shangan/common/config/ApplicationConfiguration.java
+  s_308ed61a16fb88::t_43cb53efab629d 3,5,18-28
+apps/server/src/main/java/com/shangan/goal/domain/ExamGoal.java
+  s_308ed61a16fb88::t_77d1cffeb0a2db 1,4,6,8,10-27
+apps/server/src/main/java/com/shangan/goal/domain/GoalUrgency.java
+  s_308ed61a16fb88::t_6a1ee6fe3f827f 1,3-8
+apps/server/src/main/java/com/shangan/goal/infrastructure/ExamGoalRepository.java
+  s_308ed61a16fb88::t_5484b03254977a 1,3,8,11,13,15,17,19-22
+apps/server/src/main/java/com/shangan/goal/infrastructure/JdbcExamGoalRepository.java
+  s_308ed61a16fb88::t_82c9cf5a631b5f 1,3,7,13,15,17-18,20-23,27-29,32,36-37,41-43,45-48,51-56,62-64,66-72,74-77,79,83-85,88-100,103-110
+apps/server/src/main/java/com/shangan/identity/domain/User.java
+  s_308ed61a16fb88::t_9da017b77d3126 3-6,13-29
+apps/server/src/main/java/com/shangan/identity/domain/UserStatus.java
+  s_308ed61a16fb88::t_61c24fe90985f0 1-7
+apps/server/src/main/java/com/shangan/identity/infrastructure/JwtService.java
+  s_308ed61a16fb88::t_4765001fe13f69 4,12,32,40-43,48,51,54-55,59,62-63,77-82
+apps/server/src/main/java/com/shangan/identity/infrastructure/UserRepository.java
+  s_308ed61a16fb88::t_d9ff94aae52d23 4,16,19-21,26-35,37
+apps/server/src/main/java/com/shangan/supervision/domain/Supervision.java
+  s_308ed61a16fb88::t_4618629ef6c3f2 1,5-15,17-18,21-24,26-31
+apps/server/src/main/java/com/shangan/supervision/domain/SupervisionKind.java
+  s_308ed61a16fb88::t_46d44644b3b4b7 1-7
+apps/server/src/main/java/com/shangan/supervision/domain/SupervisionPermission.java
+  s_308ed61a16fb88::t_1e06196ddf1ccb 1-14
+apps/server/src/main/java/com/shangan/todo/domain/FocusState.java
+  s_308ed61a16fb88::t_6b96062f8f17a4 1,3-14,16-26,28-29,32-33
+apps/server/src/main/java/db/migration/V003__focus_stop_and_operation_history.java
+  s_308ed61a16fb88::t_1fcee8a1bbf472 1,4-17,20-24,26-28,31-57
+apps/server/src/test/java/com/shangan/todo/TodoFixtures.java
+  s_308ed61a16fb88::t_d1abd10c7236a2 1-10,12-88,90,92-95,99-101,104-111,114-120,123-125,128-130,133-135,138-140,143-145,148-150,153-155,158-160,163-165,168-170,173-175,178-180,183-185,188-190,193-195,198,200-203,206-230
+apps/server/src/test/java/com/shangan/todo/domain/FocusPolicyTest.java
+  s_308ed61a16fb88::t_4851285efc4b4a 1,5-7,10-11,14-18,20-25,29-69
+apps/server/src/test/java/com/shangan/todo/domain/TodoProgressPolicyTest.java
+  s_308ed61a16fb88::t_fcb577b9a61c0b 1-173
+infra/compose.deploy.yml
+  s_308ed61a16fb88::t_a28ed861e3e1ba 1,13-14,16,21-24
+infra/compose.yml
+  s_308ed61a16fb88::t_747ca177cf9db7 1,10-11,20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "b522fd78e412b1bb4e37c544bd24af7f2c9a0fd5",
+  "prompts": {},
+  "sessions": {
+    "s_213650f39eb226": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a07ea6-4679-7f33-a299-557e24190eda",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    },
+    "s_308ed61a16fb88": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a07b39-9ec5-7ad3-89e0-a22581010ecf",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    },
+    "s_51f60fa1552b26": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08063-2e62-7031-854c-d89eeaab818f",
+        "model": "unknown"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    },
+    "s_8c08f606af75ce": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0805f-aa0e-7953-92a2-bdf8570a1194",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    },
+    "s_e617834d689171": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a07e96-af01-7fb2-92ec-9717369ffa56",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
