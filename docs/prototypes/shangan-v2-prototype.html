@@ -540,7 +540,7 @@ table.wt td b{font-weight:700;}
 /* 画面状态与双击反馈覆盖层不拦截控件操作。 */
 .mobile-video:not([data-playing="true"])::after{content:'▶';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#0009;color:white;border-radius:50%;width:52px;height:52px;text-align:center;line-height:52px;font-size:30px;pointer-events:none}.mobile-video:has(.vspeed-panel:not([hidden]))::after{display:none}.player-action-feedback{position:absolute;top:50%;transform:translate(-50%,-50%);padding:15px;border-radius:50%;background:#000b;color:white;text-align:center;pointer-events:none;z-index:8;animation:player-action .65s forwards}@keyframes player-action{0%{opacity:1;scale:.9}55%{opacity:1}100%{opacity:0;scale:1.1}}
 /* ADR-0045：后台长表限制高度，表头保持可见。 */
-.admin-fixed-table { height: clamp(320px, 78vh, 900px); overflow: auto; }
+.admin-fixed-table { height: clamp(320px, 75vh, 900px); overflow: auto; }
 .admin-fixed-table th { position: sticky; top: 0; z-index: 1; background: white; }
 </style>
 </head>
