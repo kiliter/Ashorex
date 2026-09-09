@@ -1,0 +1,23 @@
+docs/prototypes/shangan-v2-prototype.html
+  s_57cff913090969::t_82cbd8fd4c76de 543
+docs/adr/0045-admin-nag-retry-and-import-progress.md
+  s_57cff913090969::t_82cbd8fd4c76de 55-56
+apps/admin-web/src/pages/CoursesPage.vue
+  s_57cff913090969::t_82cbd8fd4c76de 515
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "367b161828ebe00ba4e77693e86511132e24cf93",
+  "prompts": {},
+  "sessions": {
+    "s_57cff913090969": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a083f9-7ea7-7d93-be7c-654147190e6e",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
