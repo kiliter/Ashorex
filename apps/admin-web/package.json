@@ -1,7 +1,7 @@
 {
   "name": "shangan-admin-web",
   "private": true,
-  "version": "2.2.0",
+  "version": "2.5.0",
   "type": "module",
   "description": "上岸内部管理后台（Vue 3 SPA），构建产物输出到 Spring Boot 静态资源目录。",
   "engines": {
