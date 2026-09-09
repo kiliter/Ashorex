@@ -28,7 +28,7 @@ main 仅推送提交 SHA 镜像，latest 仅跟随正式发布。正式 `vX.Y.Z`
 
 拉取失败旧服务继续运行；备份失败重新启动旧容器；新版本失败先停新容器，恢复完整快照，再启动旧容器。updater 中断后重启，依 operation.json 接续恢复。COMMITTED/RECOVERED 是不可回退的提交点：此后只解除维护、清理，不再次还原数据。NEEDS_ATTENTION 保留维护与原容器，停止自动尝试。
 
-人工处理前先停止 updater，保存 update-state、当前数据卷和备份卷；operation.json 包含部署环境凭据，禁止输出到工单或公共日志。根据记录确认旧容器、快照和阶段；停止所有 server 及升级辅助容器，再按 backup-restore.md 使用对应快照和附件恢复，启动旧镜像，验证健康和数据后才能移除 maintenance。不要直接删除 operation.json 或维护标志来跳过恢复。无法确认阶段时保留现场。
+人工处理前先停止 updater，保存 update-state、当前数据卷和备份卷；operation.json 及每次升级保留的 history-任务 UUID.json 包含旧镜像与部署环境凭据，禁止输出到工单或公共日志。根据记录确认旧容器、快照和阶段；停止所有 server 及升级辅助容器，再按 backup-restore.md 使用对应快照和附件恢复，启动旧镜像，验证健康和数据后才能移除 maintenance。不要直接删除 operation.json 或维护标志来跳过恢复。无法确认阶段时保留现场。
 
 业务开放后出现问题，不允许自动恢复升级前快照，因为会丢弃新增学习记录。先备份当前数据，确认迁移向后兼容时才能仅回退镜像，否则发布修复版或经人工确认恢复。第一版无后台一键数据库回退按钮。
 

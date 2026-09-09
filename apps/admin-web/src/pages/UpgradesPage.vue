@@ -5,7 +5,7 @@ import { api } from '@/api/client';
 /** 原型 8-12：仅管理服务端升级，不提供镜像地址或命令输入。 */
 interface UpgradeStatus {
   enabled: boolean; available: boolean; busy: boolean; maintenance: boolean;
-  currentVersion: string; latestVersion?: string; phase?: string; message?: string; notes?: string; updatedAt?: string;
+  currentVersion: string; previousVersion?: string; latestVersion?: string; phase?: string; message?: string; notes?: string; updatedAt?: string;
   config: { automatic: boolean; time: string; timezone: string };
 }
 const status = ref<UpgradeStatus>();
@@ -65,6 +65,7 @@ onUnmounted(() => { disposed = true; if (timer) clearTimeout(timer); });
         <div><span>当前版本</span><strong>{{ status?.currentVersion ?? '读取中' }}</strong></div>
         <div><span>最新正式版本</span><strong>{{ status?.latestVersion ?? '尚未检查' }}</strong></div>
       </div>
+      <p v-if="status?.previousVersion">上次版本：{{ status.previousVersion }}</p>
       <p v-if="status && !status.enabled" class="warning">当前部署尚未启用升级器，请先按部署手册接入。</p>
       <p v-else-if="status && !status.available" class="warning">升级器暂未就绪或正在执行较长任务，请稍后查看。</p>
       <div class="actions">

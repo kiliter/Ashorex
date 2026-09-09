@@ -57,6 +57,9 @@ class UpgradeTest(unittest.TestCase):
         self.assertEqual(engine.events, ['pull', 'stop', 'backup', 'replace', 'verify-new', 'finish'])
         self.assertFalse((self.root/'maintenance').exists())
         self.assertEqual(worker.read('status')['phase'], 'SUCCEEDED')
+        history = list(self.root.glob('history-*.json'))
+        self.assertEqual(len(history), 1)
+        self.assertEqual(u.json.loads(history[0].read_text())['old']['Image'], 'sha256:old')
 
     def test_pull_failure_never_stops_server(self):
         engine, worker = self.run_upgrade('pull')
@@ -78,7 +81,7 @@ class UpgradeTest(unittest.TestCase):
     def test_restart_after_commit_never_restores_data(self):
         engine = Engine()
         worker = u.Updater(self.root, engine)
-        worker.write('operation', {'phase': 'COMMITTED', 'old': engine.current(), 'release': self.release})
+        worker.write('operation', {'id': 'committed-test', 'phase': 'COMMITTED', 'old': engine.current(), 'release': self.release})
         (self.root/'maintenance').touch()
         worker.recover()
         self.assertNotIn('restore', engine.events)
@@ -87,7 +90,7 @@ class UpgradeTest(unittest.TestCase):
     def test_interrupted_backup_recovers_old_without_snapshot(self):
         engine = Engine()
         worker = u.Updater(self.root, engine)
-        worker.write('operation', {'phase': 'BACKING_UP', 'old': engine.current(), 'release': self.release})
+        worker.write('operation', {'id': 'backup-test', 'phase': 'BACKING_UP', 'old': engine.current(), 'release': self.release})
         (self.root/'maintenance').touch()
         worker.recover()
         self.assertEqual(engine.events, ['restart-old', 'verify-old'])

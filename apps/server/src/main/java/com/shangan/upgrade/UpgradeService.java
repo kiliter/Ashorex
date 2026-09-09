@@ -52,7 +52,14 @@ public class UpgradeService {
     result.put("config", config());
     var status = read("status");
     for (String key :
-        List.of("phase", "message", "updatedAt", "latestVersion", "targetVersion", "notes")) {
+        List.of(
+            "phase",
+            "message",
+            "updatedAt",
+            "latestVersion",
+            "targetVersion",
+            "notes",
+            "previousVersion")) {
       if (status.get(key) instanceof String text) result.put(key, text);
     }
     result.put(

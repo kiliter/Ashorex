@@ -321,7 +321,9 @@ class Updater:
         self.write('current', {'version': release['version'], 'image': release['image']})
         (self.root/'maintenance').unlink(missing_ok=True)
         self.sync_directory()
-        self.status('SUCCEEDED', '升级成功，业务已开放', currentVersion=release['version'])
+        # 独立保留每次升级的恢复元数据；历史文件为 0600，绝不通过后台投影。
+        self.write('history-' + operation['id'], operation)
+        self.status('SUCCEEDED', '升级成功，业务已开放', currentVersion=release['version'], previousVersion=operation['old']['Config']['Labels'].get('org.opencontainers.image.version', 'dev'))
         self.engine.finish(operation['old'])
         (self.root/'operation.json').unlink(missing_ok=True)
         self.sync_directory()
@@ -352,6 +354,7 @@ class Updater:
             self.write('current', {'version': operation['old']['Config']['Labels'].get('org.opencontainers.image.version', 'dev'), 'image': operation['old']['Image']})
             operation['phase'] = 'RECOVERED'
             self.write('operation', operation)
+            self.write('history-' + operation['id'], operation)
             (self.root/'maintenance').unlink(missing_ok=True)
             self.status('ROLLED_BACK' if operation.get('snapshot') else 'FAILED', message + '；旧服务已恢复')
             (self.root/'operation.json').unlink(missing_ok=True)
