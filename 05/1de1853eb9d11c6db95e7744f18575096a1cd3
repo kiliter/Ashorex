@@ -1,0 +1,91 @@
+.github/workflows/server-verify.yml
+  s_4db1592e08aea0::t_12994738f92f87 14,23,54-55,57-65,79,86,90-104,115-126,148-150
+apps/admin-web/src/components/AdminLayout.vue
+  s_779bcf68bc905e::t_cba9ad15f17348 26
+apps/admin-web/src/pages/UpgradesPage.vue
+  s_4db1592e08aea0::t_6277aad1a95062 1-107
+apps/admin-web/src/router/index.ts
+  s_4db1592e08aea0::t_aca9f5d5936c17 76-81
+apps/server/src/main/java/com/shangan/admin/AdminSpaRoutingConfiguration.java
+  s_4db1592e08aea0::t_1894613efd471a 33
+apps/server/src/main/java/com/shangan/admin/UpgradeAdminController.java
+  s_779bcf68bc905e::t_5a657ddfe39b76 1-44
+apps/server/src/main/java/com/shangan/common/integration/SystemAlertService.java
+  s_4db1592e08aea0::t_5f5b88833cef44 75-78,82
+apps/server/src/main/java/com/shangan/nag/application/NagScanScheduler.java
+  s_4db1592e08aea0::t_ee1263b539c866 26-29,32
+apps/server/src/main/java/com/shangan/upgrade/UpgradeMaintenanceFilter.java
+  s_779bcf68bc905e::t_e242c24335cc73 1-44
+apps/server/src/main/java/com/shangan/upgrade/UpgradeReadinessController.java
+  s_779bcf68bc905e::t_1bb2544edd463b 1-20
+apps/server/src/test/java/com/shangan/admin/UpgradeAdminControllerTest.java
+  s_779bcf68bc905e::t_70c2800355e544 1-36
+apps/server/src/test/java/com/shangan/upgrade/UpgradeMaintenanceFilterTest.java
+  s_779bcf68bc905e::t_b25da0bd826e8e 1-33
+apps/server/src/test/java/com/shangan/upgrade/UpgradeServiceTest.java
+  s_779bcf68bc905e::t_14866d5d6c1e95 1-62
+docs/adr/0048-container-server-upgrade.md
+  s_779bcf68bc905e::t_d96632446d97ae 1-30
+docs/plans/2026-09-07-shangan-v2-implementation-plan.md
+  s_4db1592e08aea0::t_88aed1baf5eee7 1228,1238-1240
+docs/prototypes/shangan-v2-prototype.html
+  s_779bcf68bc905e::t_05c64ebc97f12f 3673,3792,3921,4045,4157,4279,4351,4488
+docs/runbooks/server-auto-upgrade.md
+  s_4db1592e08aea0::t_41f646eb67bac8 1-37
+docs/specs/2026-09-07-shangan-v2-design.md
+  s_4db1592e08aea0::t_49b0f6043a5cda 958,968-970
+docs/traceability/2026-09-07-shangan-v2-traceability.md
+  s_4db1592e08aea0::t_3f57cdf39cc0b0 303,313-315
+infra/compose.deploy.yml
+  s_4db1592e08aea0::t_5e0fc2b0759cae 7,18,34,58-86,90
+infra/deploy.env.example
+  s_4db1592e08aea0::t_26ee562eb4fc1c 5-10
+infra/docker/server.Dockerfile
+  s_4db1592e08aea0::t_dc9f7182fc79cb 5,12-17,19
+infra/scripts/deploy.sh
+  s_4db1592e08aea0::t_9b2f1172660715 34,47-50,134-140,155-171,173
+infra/updater/publish_manifest.py
+  s_4db1592e08aea0::t_76f5ab2248b642 1-15
+infra/updater/release-policy.json
+  s_4db1592e08aea0::t_34d2aa4773c18b 1-5
+infra/updater/smoke.py
+  s_4db1592e08aea0::t_335875f23e36c8 1-74
+infra/updater/tests/test_updater.py
+  s_4db1592e08aea0::t_a2726bffbfb4ba 1-153
+apps/server/src/main/java/com/shangan/upgrade/UpgradeService.java
+  s_904811b98b25ad::t_c9b9b37fff13b1 1-164
+infra/updater/updater.py
+  s_904811b98b25ad::t_d3f2b1a5ca2716 1-417
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "051de1853eb9d11c6db95e7744f18575096a1cd3",
+  "prompts": {},
+  "sessions": {
+    "s_4db1592e08aea0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a085b7-dd62-7fe1-9d28-0616c49eea81",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    },
+    "s_779bcf68bc905e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a085af-e5de-7481-b001-f679e45bb5ab",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    },
+    "s_904811b98b25ad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a085be-6645-75f1-a095-731103b31fd5",
+        "model": "unknown"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
