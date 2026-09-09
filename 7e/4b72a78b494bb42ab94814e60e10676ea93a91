@@ -1,0 +1,21 @@
+README.md
+  s_ff636111372d7e::t_af0e89c411030c 216,254-257,306
+infra/compose.deploy.yml
+  s_ff636111372d7e::t_bee8d33abaa54e 8-9,15,34-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "7e4b72a78b494bb42ab94814e60e10676ea93a91",
+  "prompts": {},
+  "sessions": {
+    "s_ff636111372d7e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0815b-9ddd-7440-89c0-6b2d9fe7931d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
