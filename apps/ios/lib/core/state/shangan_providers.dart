@@ -131,43 +131,72 @@ final catalogFacetsProvider = FutureProvider<CatalogFacets>((ref) async {
 });
 
 /// 课程库筛选条件。
+/// 不可变筛选条件：同类标签取并集，三个分类之间取交集。
 final class CatalogFilter {
   const CatalogFilter({
     this.genre,
     this.tag,
     this.person,
+    this.genres = const {},
+    this.tags = const {},
+    this.people = const {},
     this.year,
     this.query,
     this.groupByPerson = false,
   });
-
-  final String? genre;
-  final String? tag;
-  final String? person;
+  // 单值入口保留给既有调用方；展示和匹配统一使用完整选集。
+  final String? genre, tag, person;
+  final Set<String> genres, tags, people;
   final int? year;
   final String? query;
   final bool groupByPerson;
+  Set<String> get selectedGenres => {...genres, ?genre};
+  Set<String> get selectedTags => {...tags, ?tag};
+  Set<String> get selectedPeople => {...people, ?person};
+  bool get hasTags =>
+      selectedGenres.isNotEmpty ||
+      selectedTags.isNotEmpty ||
+      selectedPeople.isNotEmpty;
 
+  /// 两个课程入口共用实际匹配规则，不依赖旧服务端理解多选参数。
+  bool matches(CourseSummary course) {
+    bool overlaps(Set<String> selected, List<String> values) =>
+        selected.isEmpty || values.any(selected.contains);
+    final keyword = (query ?? '').trim().toLowerCase();
+    return overlaps(selectedGenres, course.genres) &&
+        overlaps(selectedTags, course.tags) &&
+        overlaps(selectedPeople, course.people) &&
+        (year == null || course.productionYear == year) &&
+        (keyword.isEmpty ||
+            course.title.toLowerCase().contains(keyword) ||
+            course.people.any((p) => p.toLowerCase().contains(keyword)));
+  }
+
+  /// 替换某类选集时清掉兼容单值，避免删除后旧条件残留。
   CatalogFilter copyWith({
     String? genre,
     String? tag,
     String? person,
+    Set<String>? genres,
+    Set<String>? tags,
+    Set<String>? people,
     int? year,
     String? query,
     bool? groupByPerson,
     bool clearGenre = false,
     bool clearTag = false,
     bool clearPerson = false,
-  }) {
-    return CatalogFilter(
-      genre: clearGenre ? null : (genre ?? this.genre),
-      tag: clearTag ? null : (tag ?? this.tag),
-      person: clearPerson ? null : (person ?? this.person),
-      year: year ?? this.year,
-      query: query ?? this.query,
-      groupByPerson: groupByPerson ?? this.groupByPerson,
-    );
-  }
+  }) => CatalogFilter(
+    genre: clearGenre || genres != null ? null : genre ?? this.genre,
+    tag: clearTag || tags != null ? null : tag ?? this.tag,
+    person: clearPerson || people != null ? null : person ?? this.person,
+    genres: Set.unmodifiable(clearGenre ? <String>{} : genres ?? this.genres),
+    tags: Set.unmodifiable(clearTag ? <String>{} : tags ?? this.tags),
+    people: Set.unmodifiable(clearPerson ? <String>{} : people ?? this.people),
+    year: year ?? this.year,
+    query: query ?? this.query,
+    groupByPerson: groupByPerson ?? this.groupByPerson,
+  );
 }
 
 final class CatalogFilterController extends Notifier<CatalogFilter> {
@@ -206,18 +235,16 @@ final catalogFilterProvider =
       CatalogFilterController.new,
     );
 
-/// 按当前筛选条件加载课程列表。
+/// 完整课程快照与筛选状态分离，应用条件不重新下载或闪回旧结果。
+final libraryCoursesSnapshotProvider = FutureProvider<List<CourseSummary>>(
+  (ref) => ref.watch(shanganRepositoryProvider).loadCourses(),
+);
+
+/// 同类并集、跨类交集作用于完整快照，学习页与今日选课口径一致。
 final coursesProvider = FutureProvider<List<CourseSummary>>((ref) async {
   final filter = ref.watch(catalogFilterProvider);
-  return ref
-      .watch(shanganRepositoryProvider)
-      .loadCourses(
-        genre: filter.genre,
-        tag: filter.tag,
-        person: filter.person,
-        year: filter.year,
-        query: filter.query,
-      );
+  final courses = await ref.watch(libraryCoursesSnapshotProvider.future);
+  return courses.where(filter.matches).toList(growable: false);
 });
 
 /// 添加待办专用课程快照，不依赖课程库的筛选条件。

@@ -1603,6 +1603,8 @@ final class _ChartColumn extends StatelessWidget {
         const SizedBox(height: 5),
         Text(
           column.label,
+          // 周统计允许星期和日期分两行居中显示。
+          textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w600,

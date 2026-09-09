@@ -11,6 +11,17 @@ import '../../support/fixtures.dart';
 /// 「有待办零完成」单独用红底 + 描边表达，重要状态不能只靠颜色，
 /// 因此每格必须带可读的语义标签。
 void main() {
+  testWidgets('日图日期使用服务端返回窗口', (tester) async {
+    await _pump(tester, days: const [], range: HomeRange.day);
+    expect(find.text('今日时段分布（2026-09-01）'), findsOneWidget);
+  });
+
+  testWidgets('周柱下面可见星期和日期', (tester) async {
+    await _pump(tester, days: [_day('2026-09-01')], range: HomeRange.week);
+    expect(find.text('周二\n9/1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('每个热力格都带日期、时长与完成数的语义标签', (tester) async {
     await _pump(
       tester,
@@ -20,6 +31,15 @@ void main() {
       ],
     );
 
+    // 日期必须直接可见，不能仅存在于无障碍标签。
+    expect(
+      find.descendant(of: find.byType(GridView), matching: find.text('1')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: find.byType(GridView), matching: find.text('2')),
+      findsOneWidget,
+    );
     expect(find.bySemanticsLabel('9 月 1 日 · 1:30 · 完成 3/3'), findsOneWidget);
     expect(find.bySemanticsLabel('9 月 2 日 · 0 分 · 完成 0/2'), findsOneWidget);
   });
@@ -93,6 +113,7 @@ Map<String, Object?> _day(
 Future<void> _pump(
   WidgetTester tester, {
   required List<Map<String, Object?>> days,
+  HomeRange range = HomeRange.month,
 }) async {
   final backend = FakeBackend()
     // 统计页从今日接口取得账号日期，测试同时提供该依赖，避免 404 触发重试。
@@ -105,6 +126,9 @@ Future<void> _pump(
         start: '2026-09-01',
         end: '2026-09-30',
         days: days,
+        hours: const [
+          {'hour': 10, 'watchedMs': 60000, 'focusedMs': 0},
+        ],
       ),
     );
   tester.view.physicalSize = const Size(1170, 2532);
@@ -117,7 +141,7 @@ Future<void> _pump(
   );
   addTearDown(container.dispose);
   // 热力图只在月视图渲染（原型 5-3）。
-  container.read(statsRangeProvider.notifier).select(HomeRange.month);
+  container.read(statsRangeProvider.notifier).select(range);
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,

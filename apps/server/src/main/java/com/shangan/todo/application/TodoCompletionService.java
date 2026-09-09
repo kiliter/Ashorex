@@ -2,7 +2,6 @@ package com.shangan.todo.application;
 
 import com.shangan.common.api.BusinessException;
 import com.shangan.identity.application.UserTimeService;
-import com.shangan.identity.domain.User;
 import com.shangan.presence.application.EffectiveActionRecorder;
 import com.shangan.todo.domain.NoteTag;
 import com.shangan.todo.domain.Todo;
@@ -10,14 +9,13 @@ import com.shangan.todo.domain.TodoStatus;
 import com.shangan.todo.infrastructure.TodoRepository;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 完成与补记完成；要求凭证时必须先有附件，补记必须填备注且只允许历史日期。 */
+/** 统一完成入口；历史项保留原日期，要求凭证时必须先有附件。 */
 @Service
 public class TodoCompletionService {
 
@@ -43,21 +41,15 @@ public class TodoCompletionService {
     this.focus = focus;
   }
 
-  /** 标记完成；同时可回填备注与一键标签。 */
+  /** 正常标记完成；同时可回填备注与一键标签，旧补记请求显式拒绝。 */
   @Transactional
   public Todo complete(String userId, String todoId, CompleteCommand command) {
     Todo todo = todoService.requireOwned(userId, todoId);
-    User user = userTime.requireUser(userId);
-    LocalDate today = userTime.today(user);
-    boolean backfill = Boolean.TRUE.equals(command.backfill());
-
-    if (backfill && !todo.localDate().isBefore(today)) {
+    userTime.requireUser(userId);
+    // 旧客户端不能再补记：历史待办通过正常执行在实际完成日记为还债。
+    if (Boolean.TRUE.equals(command.backfill())) {
       throw new BusinessException(
-          HttpStatus.BAD_REQUEST, "TODO_BACKFILL_NOT_HISTORY", "补记完成只适用于历史日期");
-    }
-    if (backfill && (command.note() == null || command.note().trim().length() < 2)) {
-      throw new BusinessException(
-          HttpStatus.BAD_REQUEST, "TODO_BACKFILL_NOTE_REQUIRED", "补记完成必须填写备注");
+          HttpStatus.BAD_REQUEST, "TODO_BACKFILL_REMOVED", "补记已取消，请直接完成历史待办");
     }
     if (todo.requireEvidence() && todos.attachmentsOf(todo.id()).isEmpty()) {
       throw new BusinessException(HttpStatus.BAD_REQUEST, "TODO_EVIDENCE_REQUIRED", "该待办要求先上传完成凭证");
@@ -79,11 +71,7 @@ public class TodoCompletionService {
     if (command.noteTags() != null) {
       todos.replaceNoteTags(todo.id(), normalizeTags(command.noteTags()));
     }
-    if (backfill) {
-      todos.markBackfilled(todo.id(), command.note().trim(), now, now);
-    } else {
-      todos.updateStatus(todo.id(), TodoStatus.DONE.name(), now, now);
-    }
+    todos.updateStatus(todo.id(), TodoStatus.DONE.name(), now, now);
     todoService.snapshotCompletion(todo);
     if (todo.resourceId() != null) {
       todos.upsertWatchState(

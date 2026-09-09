@@ -638,7 +638,7 @@ public class JdbcTodoRepository implements TodoRepository {
     return jdbcClient
         .sql(
             """
-            SELECT occurred_at, delta_watched_ms, delta_focused_ms
+            SELECT occurred_at, delta_watched_ms, delta_focused_ms, todo_local_date
               FROM todo_progress_events
              WHERE user_id = :userId
                AND occurred_at >= :from
@@ -653,7 +653,51 @@ public class JdbcTodoRepository implements TodoRepository {
                 new DurationBucket(
                     Instant.ofEpochMilli(row.getLong("occurred_at")),
                     row.getLong("delta_watched_ms"),
-                    row.getLong("delta_focused_ms")))
+                    row.getLong("delta_focused_ms"),
+                    row.getString("todo_local_date") == null
+                        ? null
+                        : LocalDate.parse(row.getString("todo_local_date"))))
+        .list();
+  }
+
+  /** 历史未完成项可继续执行；本日已完成项保留作还债记录。 */
+  @Override
+  public List<Todo> findRepaymentTodos(String userId, LocalDate date, Instant from, Instant to) {
+    return jdbcClient
+        .sql(
+            SELECT_TODO
+                + """
+        WHERE user_id = :user AND (
+          (local_date < :date AND status <> 'DONE') OR
+          (completed_local_date < :date AND completed_at >= :from AND completed_at < :to))
+        ORDER BY local_date, sort_order, id
+        """)
+        .param("user", userId)
+        .param("date", date.toString())
+        .param("from", from.toEpochMilli())
+        .param("to", to.toEpochMilli())
+        .query(this::mapTodo)
+        .list();
+  }
+
+  /** 完成分类读取快照，不能读取可能已经顺延的当前计划日期。 */
+  @Override
+  public List<CompletionBucket> findCompletions(String userId, Instant from, Instant to) {
+    return jdbcClient
+        .sql(
+            """
+        SELECT completed_at, completed_local_date FROM todos
+        WHERE user_id = :user AND completed_at >= :from AND completed_at < :to
+          AND completed_local_date IS NOT NULL
+        """)
+        .param("user", userId)
+        .param("from", from.toEpochMilli())
+        .param("to", to.toEpochMilli())
+        .query(
+            (row, number) ->
+                new CompletionBucket(
+                    Instant.ofEpochMilli(row.getLong("completed_at")),
+                    LocalDate.parse(row.getString("completed_local_date"))))
         .list();
   }
 

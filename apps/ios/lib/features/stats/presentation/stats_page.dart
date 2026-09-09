@@ -131,10 +131,26 @@ class _StatsBodyState extends State<_StatsBody> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         StatStrip(items: _statItems(view, range)),
+        // 总时长仍为实际学习总量，还债增量单列说明，不增加计划完成数。
+        if (view.repayment.hasActivity)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: ShanganCard(
+              child: Text(
+                '${range == HomeRange.day ? "今日还债" : "本期还债"} · 完成 ${view.repayment.done} 项\n'
+                '观看 ${formatDurationCompact(view.repayment.watchedMs)} · 专注 ${formatDurationCompact(view.repayment.focusedMs)}\n'
+                '还债时长已包含在学习总时长中，完成数不计入今日计划。',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: ShanganColors.mutedInk,
+                ),
+              ),
+            ),
+          ),
         if (range == HomeRange.day && view.hours.isNotEmpty) ...[
           const SizedBox(height: 12),
           _ChartCard(
-            title: '今日时段分布',
+            title: '今日时段分布（${view.start.toIso8601String().substring(0, 10)}）',
             unit: '分钟',
             chart: ShanganBarChart(
               columns: view.hours
@@ -169,7 +185,8 @@ class _StatsBodyState extends State<_StatsBody> {
                     (day) => ShanganBarColumn(
                       value: day.totalMs / 3600000,
                       caption: (day.totalMs / 3600000).toStringAsFixed(1),
-                      label: weekdayLabel(day.date),
+                      label:
+                          '周${weekdayLabel(day.date)}\n${day.date.month}/${day.date.day}',
                       color: day.total > 0 && day.done == 0
                           ? ShanganColors.red
                           : day.totalMs < 3600000
@@ -501,17 +518,30 @@ final class _HeatCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (Color color, Color? border) = _colorFor(day);
-    // 原型热力格只有色块；日期与时长通过语义标签保留给读屏用户。
+    // 格内显示日号；完整日期和时长沿用语义标签，避免读屏重复。
     return Semantics(
       label:
           '${day.date.month} 月 ${day.date.day} 日 · '
           '${formatDurationCompact(day.totalMs)} · '
           '完成 ${day.done}/${day.total}',
       child: Container(
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(5),
           border: border == null ? null : Border.all(color: border),
+        ),
+        child: ExcludeSemantics(
+          child: Text(
+            '${day.date.day}',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color.computeLuminance() < 0.4
+                  ? Colors.white
+                  : ShanganColors.ink,
+            ),
+          ),
         ),
       ),
     );

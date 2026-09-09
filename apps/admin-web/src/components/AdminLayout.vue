@@ -4,6 +4,8 @@ import { useSessionStore } from '@/stores/session';
 
 const router = useRouter();
 const session = useSessionStore();
+/** 与 App 图标同一套；放在 public/，经 Vite base 发布为 /admin/icon-192.png。 */
+const brandMarkSrc = `${import.meta.env.BASE_URL}icon-192.png`;
 
 /**
  * 导航顺序与图标严格照原型 8-1 的 .web-nav：
@@ -32,7 +34,10 @@ async function signOut(): Promise<void> {
 <template>
   <div class="admin-shell">
     <nav class="admin-nav">
-      <div class="brand">上岸 · 管理后台</div>
+      <div class="brand">
+        <img class="brand-mark" :src="brandMarkSrc" width="28" height="28" alt="" />
+        上岸 · 管理后台
+      </div>
 
       <RouterLink
         v-for="item in NAV_ITEMS"

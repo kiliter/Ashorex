@@ -21,7 +21,7 @@ class _PendingSummaryPageState extends ConsumerState<PendingSummaryPage> {
   /// 原型 1-8 的类型筛选：全部 / 课程 / 专注 / 待办。
   TodoType? _typeFilter;
 
-  /// 原型 1-8 右上角「编辑」：进入逐项勾选，底部两个批量动作只作用于所选项。
+  /// 原型 1-8 右上角「编辑」：进入逐项勾选，底部批量删除动作只作用于所选项。
   bool _editing = false;
   final _selected = <String>{};
 
@@ -56,14 +56,6 @@ class _PendingSummaryPageState extends ConsumerState<PendingSummaryPage> {
                       .where((item) => _selected.contains(item.todo.id))
                       .toList(growable: false)
                 : items;
-            // 不可用课程仍在历史汇总保留，只能补记或删除，不能随批量操作顺延。
-            final movableTargets = targets
-                .where(
-                  (item) =>
-                      item.todo.todoType != TodoType.course ||
-                      item.todo.resourceAvailable,
-                )
-                .toList(growable: false);
             return RefreshIndicator(
               onRefresh: () async => ref.invalidate(pendingSummaryProvider),
               child: ListView(
@@ -186,25 +178,6 @@ class _PendingSummaryPageState extends ConsumerState<PendingSummaryPage> {
                       children: [
                         Expanded(
                           child: OutlinedButton.icon(
-                            style: _smallStyle,
-                            onPressed: movableTargets.isEmpty
-                                ? null
-                                : () => _deferAll(movableTargets),
-                            icon: const Icon(Icons.event_outlined, size: 18),
-                            label: Text(
-                              _editing
-                                  ? '顺延 ${movableTargets.length} 项到今天'
-                                  : movableTargets.length == targets.length
-                                  ? '全部顺延今天'
-                                  : '可用项顺延今天',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: OutlinedButton.icon(
                             style: _smallStyle.copyWith(
                               foregroundColor: const WidgetStatePropertyAll(
                                 ShanganColors.red,
@@ -259,18 +232,7 @@ class _PendingSummaryPageState extends ConsumerState<PendingSummaryPage> {
     if (mounted) setState(() => _selected.clear());
     ref.invalidate(pendingSummaryProvider);
     ref.invalidate(dayViewProvider);
-  }
-
-  Future<void> _deferAll(List<PendingItem> items) async {
-    final today = (await ref.read(shanganRepositoryProvider).loadDay()).date;
-    if (!mounted) return;
-    await ref
-        .read(shanganRepositoryProvider)
-        .deferAll(
-          items.map((item) => item.todo.id).toList(growable: false),
-          today,
-        );
-    await _refresh();
+    ref.invalidate(statsProvider);
   }
 
   Future<void> _purge(List<PendingItem> items, int minReasonLength) async {

@@ -15,6 +15,8 @@ import { useSessionStore } from '@/stores/session';
 const route = useRoute();
 const router = useRouter();
 const session = useSessionStore();
+/** 与 App 图标同一套；放在 public/，经 Vite base 发布为 /admin/icon-192.png。 */
+const brandMarkSrc = `${import.meta.env.BASE_URL}icon-192.png`;
 
 const username = ref('');
 const password = ref('');
@@ -39,6 +41,7 @@ async function submit(): Promise<void> {
 <template>
   <div class="login-shell">
     <form class="login-card" @submit.prevent="submit">
+      <img class="brand-mark lg" :src="brandMarkSrc" width="56" height="56" alt="上岸" />
       <h1>上岸 · 管理后台</h1>
       <p class="lead">仅限管理员访问。学习端账号请使用 App 登录。</p>
 

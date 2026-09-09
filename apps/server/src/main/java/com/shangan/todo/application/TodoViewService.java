@@ -53,7 +53,21 @@ public class TodoViewService {
         date.isBefore(today),
         views,
         summarize(views),
-        deletionCount(user, date));
+        deletionCount(user, date),
+        date.equals(today)
+            ? decorate(
+                todos.findRepaymentTodos(
+                    userId,
+                    date,
+                    userTime.startOfDay(user, date),
+                    userTime.endOfDayExclusive(user, date)))
+            : List.of(),
+        RepaymentTotals.summarize(
+            todos.aggregateDurations(
+                userId, userTime.startOfDay(user, date), userTime.endOfDayExclusive(user, date)),
+            todos.findCompletions(
+                userId, userTime.startOfDay(user, date), userTime.endOfDayExclusive(user, date)),
+            instant -> userTime.localDateOf(user, instant)));
   }
 
   /** 周视图：七天摘要 + 本周合计。 */
@@ -296,7 +310,20 @@ public class TodoViewService {
       boolean history,
       List<TodoView> todos,
       DaySummaryTotals totals,
-      int deletionCount) {}
+      int deletionCount,
+      List<TodoView> repaymentTodos,
+      RepaymentTotals repayment) {
+    /** 原日视图构造入口保留，未提供还债数据时为空。 */
+    public DayView(
+        LocalDate date,
+        boolean today,
+        boolean history,
+        List<TodoView> todos,
+        DaySummaryTotals totals,
+        int deletionCount) {
+      this(date, today, history, todos, totals, deletionCount, List.of(), RepaymentTotals.EMPTY);
+    }
+  }
 
   /** 周 / 月视图中的单日摘要。 */
   public record DaySummary(

@@ -2,9 +2,12 @@ package com.shangan.nag.application.channel;
 
 import com.shangan.common.integration.BarkEndpointPolicy;
 import com.shangan.common.integration.BarkPushClient;
+import com.shangan.identity.application.UserTimeService;
 import com.shangan.nag.application.BarkSettingsService;
+import com.shangan.nag.application.NagPolicyResolver;
 import com.shangan.nag.domain.Nag;
 import com.shangan.nag.domain.NagChannelType;
+import com.shangan.nag.domain.NagTrigger;
 import org.springframework.stereotype.Component;
 
 /** 个人催办只读取收件用户的 Bark 配置，绝不使用系统设备 Key。 */
@@ -14,12 +17,20 @@ public class BarkNagChannel implements NagChannel {
 
   private final BarkPushClient client;
   private final BarkEndpointPolicy endpoints;
+  private final NagPolicyResolver policies;
+  private final UserTimeService userTime;
 
   public BarkNagChannel(
-      BarkSettingsService settings, BarkPushClient client, BarkEndpointPolicy endpoints) {
+      BarkSettingsService settings,
+      BarkPushClient client,
+      BarkEndpointPolicy endpoints,
+      NagPolicyResolver policies,
+      UserTimeService userTime) {
     this.settings = settings;
     this.client = client;
     this.endpoints = endpoints;
+    this.policies = policies;
+    this.userTime = userTime;
   }
 
   @Override
@@ -55,12 +66,19 @@ public class BarkNagChannel implements NagChannel {
     var config = settings.get(nag.userId());
     try {
       String endpoint = endpoints.requirePersonalEndpoint(config.baseUrl());
+      // 手动和督学催办仍投递，但在收件用户免打扰期间降为普通通知。
+      boolean important =
+          nag.trigger() == NagTrigger.AUTO
+              || !policies
+                  .resolve(nag.userId())
+                  .inQuietHours(userTime.localTimeNow(userTime.requireUser(nag.userId())));
       return client.send(
               endpoint,
               config.deviceKey(),
               8,
               nag.title() == null ? "上岸催办 · " + recipientDisplayName : nag.title(),
-              nag.message())
+              nag.message(),
+              important)
           ? DeliveryOutcome.sent("Bark 已发送")
           : DeliveryOutcome.failed("Bark 请求失败或返回失败状态");
     } catch (Exception exception) {

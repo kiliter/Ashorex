@@ -28,6 +28,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   Timer? _debounce;
   String _appliedKeyword = '';
   bool _openingFilters = false;
+  double _filterDrag = 0;
 
   /// 搜索只在停止输入 300ms 后生效；清空立即更新。
   void _search(String value) {
@@ -46,6 +47,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     if (_openingFilters) return;
     _openingFilters = true;
     try {
+      // 预取失败时在本次点击重试，不能复用失败缓存。
+      if (ref.read(catalogFacetsProvider).hasError) {
+        ref.invalidate(catalogFacetsProvider);
+      }
       final facets = await ref.read(catalogFacetsProvider.future);
       if (!mounted) return;
       final result = await showCourseFilterPanel(
@@ -61,7 +66,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     } catch (_) {
       // 元数据暂时不可用不影响已展示课程；允许用户主动重试。
       if (!mounted) return;
-      ref.invalidate(catalogFacetsProvider);
       ShanganFeedback.show(context, '筛选条件加载失败，请重试', error: true);
     } finally {
       _openingFilters = false;
@@ -77,6 +81,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 预取只读候选，点击筛选时无需首次等待网络。
+    ref.watch(catalogFacetsProvider);
     final courses = ref.watch(coursesProvider);
     final filter = ref.watch(catalogFilterProvider);
     final keyword = _appliedKeyword;
@@ -92,9 +98,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       onClear: () {
         _keyword.clear();
         _search('');
-        if (filter.genre != null ||
-            filter.tag != null ||
-            filter.person != null ||
+        if (filter.hasTags ||
             filter.year != null ||
             (filter.query?.isNotEmpty ?? false)) {
           ref
@@ -109,8 +113,13 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         final compact =
             constraints.maxHeight < 300 && constraints.maxWidth > 600;
         return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onHorizontalDragStart: (_) => _filterDrag = 0,
+          onHorizontalDragUpdate: (details) => _filterDrag += details.delta.dx,
           onHorizontalDragEnd: (details) {
-            if ((details.primaryVelocity ?? 0) < -150) _openFilters();
+            if (_filterDrag > 60 || (details.primaryVelocity ?? 0) > 150) {
+              _openFilters();
+            }
           },
           child: Padding(
             padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
@@ -159,10 +168,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                     const SizedBox(width: 9),
                     ShanganIconButton(
                       icon: Icons.filter_list,
-                      highlighted:
-                          filter.genre != null ||
-                          filter.person != null ||
-                          filter.tag != null,
+                      highlighted: filter.hasTags,
                       semanticLabel: '展开筛选',
                       onTap: _openFilters,
                     ),
@@ -193,7 +199,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                   child: RefreshIndicator(
                     onRefresh: () async {
                       ref.invalidate(catalogFacetsProvider);
-                      ref.invalidate(coursesProvider);
+                      ref.invalidate(libraryCoursesSnapshotProvider);
                     },
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),

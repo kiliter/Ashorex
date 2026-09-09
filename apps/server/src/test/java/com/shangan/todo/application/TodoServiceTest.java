@@ -294,12 +294,14 @@ class TodoServiceTest {
   void 顺延保留进度() {
     Todo todo =
         TodoFixtures.course()
+            .localDate(TODAY)
             .progressPositionMs(120_000L)
             .watchedMs(120_000L)
             .status(TodoStatus.IN_PROGRESS)
             .build();
     when(todos.findById(todo.id())).thenReturn(Optional.of(todo));
     when(userTime.requireUser(TodoFixtures.USER_ID)).thenReturn(USER);
+    when(userTime.today(USER)).thenReturn(TODAY);
     when(todos.nextSortOrder(TodoFixtures.USER_ID, LocalDate.of(2026, 9, 9))).thenReturn(3);
 
     service.defer(TodoFixtures.USER_ID, todo.id(), "2026-09-09");
@@ -435,7 +437,7 @@ class TodoServiceTest {
   }
 
   @Test
-  void confirmedHistoryMovesOriginalAndPreservesRecords() {
+  void confirmedHistoryKeepsOriginalDateAndRecords() {
     stubCreateWithoutSupervisor();
     var old =
         TodoFixtures.course()
@@ -447,10 +449,11 @@ class TodoServiceTest {
     when(todos.findById("old")).thenReturn(Optional.of(old));
     when(todos.findPendingBefore(TodoFixtures.USER_ID, TODAY)).thenReturn(List.of(old));
     var result = service.addCourses(TodoFixtures.USER_ID, List.of(courseCommand()), List.of("old"));
-    assertThat(result.deferred()).isEqualTo(1);
+    assertThat(result.deferred()).isZero();
+    assertThat(result.reused()).isEqualTo(1);
     assertThat(result.created()).isZero();
     assertThat(result.accepted()).containsExactly(old);
-    verify(todos).updateLocalDate("old", TODAY, 0, NOW);
+    verify(todos, never()).updateLocalDate(anyString(), any(), anyInt(), any());
     verify(todos, never()).insert(any(), any());
     verify(todos, never())
         .updateProgress(
@@ -540,8 +543,7 @@ class TodoServiceTest {
     var request =
         new TodoService.CreateTodoCommand(
             TodoType.COURSE, null, null, null, "resource-1", 500, null, false, null);
-    assertThat(
-            service.addCourses(TodoFixtures.USER_ID, List.of(request), List.of("old")).deferred())
+    assertThat(service.addCourses(TodoFixtures.USER_ID, List.of(request), List.of("old")).reused())
         .isEqualTo(1);
     verify(todos, never())
         .updateEditableFields(
@@ -610,7 +612,7 @@ class TodoServiceTest {
         .hasMessage("课时已下架");
     assertThatThrownBy(() -> service.defer(TodoFixtures.USER_ID, "old", "2026-09-08"))
         .isInstanceOf(BusinessException.class)
-        .hasMessage("课时已下架");
+        .hasMessage("历史待办请在今日还债中继续执行");
     verify(todos, never()).updateLocalDate(anyString(), any(), anyInt(), any());
     verify(effectiveAction, never()).record(anyString());
   }

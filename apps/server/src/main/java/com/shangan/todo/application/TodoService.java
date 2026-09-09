@@ -223,9 +223,11 @@ public class TodoService {
               throw new BusinessException(
                   HttpStatus.CONFLICT, "TODO_ADDITION_STALE", "原待办已变化，请重新预览后确认");
             }
-            // 下架或归档课时只能补记/删除；复用入口不能绕过课程可用性裁决。
+            // 下架或归档课时只能完成/删除；复用入口不能绕过课程可用性裁决。
             catalog.requireVisibleResource(item.resourceId());
-            boolean moving = old.localDate().isBefore(date);
+            // 历史项复用时保留原日期；今日计划仍可调整到未来。
+            boolean moving =
+                old.localDate().isBefore(date) && !old.localDate().isBefore(userTime.today(user));
             if (moving) {
               requireCapacity(current.size());
               todos.updateLocalDate(old.id(), date, todos.nextSortOrder(userId, date), now);
@@ -467,6 +469,11 @@ public class TodoService {
   @Transactional
   public Todo defer(String userId, String todoId, String targetDate) {
     Todo todo = requireOwned(userId, todoId);
+    // 历史任务统一原地执行，禁止旧客户端继续将历史计划挪到今天。
+    if (todo.localDate().isBefore(userTime.today(userTime.requireUser(userId)))) {
+      throw new BusinessException(
+          HttpStatus.BAD_REQUEST, "TODO_HISTORY_DEFER_REMOVED", "历史待办请在今日还债中继续执行");
+    }
     // 顺延是新的学习安排，不允许把已下架课时再次安排到其他日期。
     if (todo.todoType() == TodoType.COURSE) catalog.requireVisibleResource(todo.resourceId());
     User user = userTime.requireUser(userId);

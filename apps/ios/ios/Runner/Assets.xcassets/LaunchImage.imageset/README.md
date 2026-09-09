@@ -1,5 +1,5 @@
 # 启动页资源
 
-替换本目录中的图片即可调整启动页图像。
+本目录是上岸 App 启动标记（浪形对勾），圆角透明边，底色由 `LaunchScreen.storyboard` 的纸色承担。
 
-也可以在 Xcode 中打开 `ios/Runner.xcworkspace`，选择 `Runner/Assets.xcassets` 后拖入所需图片。
+替换时保持正方形、带透明圆角，并同步 Android `drawable-*/launch_image.png`。

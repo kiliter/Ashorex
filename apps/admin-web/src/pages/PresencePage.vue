@@ -64,6 +64,20 @@ const nagMessage = ref('');
 const nagTitle = ref('');
 const nagChannel = ref<'AUTO' | 'SERVERCHAN' | 'FULLSCREEN' | 'BARK'>('AUTO');
 const submitting = ref(false);
+/** 四种渠道共用单选控件；个人 Bark 是渠道选择，不是立即发送按钮。 */
+const nagChannels = [
+  { value: 'AUTO', label: '自动选择' },
+  { value: 'SERVERCHAN', label: 'Server 酱' },
+  { value: 'FULLSCREEN', label: '客户端全屏' },
+  { value: 'BARK', label: '个人 Bark' },
+] as const;
+/** 按所选渠道说明收件范围，不把系统异常通知目的地混入个人催办。 */
+const channelHint = computed(() => {
+  if (nagChannel.value === 'BARK') return '使用该用户在 App 中配置并启用的个人 Bark；其免打扰时段内发送普通通知，其余时间发送重要通知。';
+  if (nagChannel.value === 'SERVERCHAN') return '使用 Server 酱投递本次催办。';
+  if (nagChannel.value === 'FULLSCREEN') return '通过客户端全屏催办提醒该用户。';
+  return '在线时优先客户端全屏；离线或全屏超时后，个人 Bark 已启用则使用 Bark，否则使用 Server 酱。';
+});
 
 async function load(): Promise<void> {
   if (loading) return;
@@ -113,8 +127,9 @@ async function openDetail(row: PresenceRow): Promise<void> {
   }
 }
 
+/** 显式点击立即投递才提交，切换渠道只修改表单草稿。 */
 async function sendNag(): Promise<void> {
-  if (!selected.value) return;
+  if (!selected.value || submitting.value) return;
   submitting.value = true;
   error.value = '';
   try {
@@ -252,7 +267,7 @@ function statusText(todo: TodoItem): { text: string; color: string } {
     </div>
   </div>
 
-  <div v-if="selected" class="wgrid c2 mt16">
+  <div v-if="selected" class="wgrid c2 mt16 nag-detail-grid">
     <div class="wcard">
       <b style="font-size: 14px">{{ selected.username }} · 今日 Todo 明细</b>
       <table class="wt mt10">
@@ -292,47 +307,38 @@ function statusText(todo: TodoItem): { text: string; color: string } {
     <div class="wcard">
       <b style="font-size: 14px">手动催办</b>
       <p class="lead" style="margin: 6px 0 12px">
-        立即向 {{ selected.username }} 投递一次催办。App 在线时优先全屏弹框，离线时改走 Server 酱。
+        收件人：{{ selected.displayName || selected.username }}。选择渠道并填写内容后，点击“立即投递”。
       </p>
 
-      <div class="wlabel">投递渠道</div>
-      <div class="row" style="gap: 8px">
-        <span class="pill" :class="{ on: nagChannel === 'AUTO' }" @click="nagChannel = 'AUTO'">
-          自动选择
-        </span>
-        <span
-          class="pill"
-          :class="{ on: nagChannel === 'SERVERCHAN' }"
-          @click="nagChannel = 'SERVERCHAN'"
-        >
-          Server 酱
-        </span>
-        <span
-          class="pill"
-          :class="{ on: nagChannel === 'FULLSCREEN' }"
-          @click="nagChannel = 'FULLSCREEN'"
-        >
-          客户端全屏
-        </span>
-      </div>
+      <fieldset class="nag-channel-group" :disabled="submitting" aria-describedby="nag-channel-hint">
+        <legend class="wlabel">投递渠道</legend>
+        <div class="nag-channel-options">
+          <label v-for="channel in nagChannels" :key="channel.value" class="pill nag-channel" :class="{ on: nagChannel === channel.value }">
+            <input v-model="nagChannel" type="radio" name="personal-nag-channel" :value="channel.value" />
+            {{ channel.label }}
+          </label>
+        </div>
+      </fieldset>
+      <p id="nag-channel-hint" class="muted nag-channel-hint" aria-live="polite">{{ channelHint }}</p>
 
-      <div class="wlabel" style="margin-top: 14px">催办标题（可选）</div>
-      <input v-model="nagTitle" class="winput" maxlength="80" placeholder="不填写时使用默认标题" />
-      <div class="wlabel" style="margin-top: 14px">附加说明（可选）</div>
+      <label for="personal-nag-title" class="wlabel nag-field-label">催办标题（可选）</label>
+      <input id="personal-nag-title" v-model="nagTitle" :disabled="submitting" class="winput" maxlength="80" placeholder="不填写时使用默认标题" />
+      <label for="personal-nag-message" class="wlabel nag-field-label">附加说明（可选）</label>
       <textarea
+        id="personal-nag-message"
         v-model="nagMessage"
+        :disabled="submitting"
         maxlength="1000"
         class="winput"
         style="min-height: 64px"
         placeholder="今天一项都没开始，先把第一项做完。"
       />
 
-      <div class="row mt12" style="gap: 9px">
+      <div class="wbtn-row mt12">
         <button class="wbtn" :disabled="submitting" @click="sendNag">
           {{ submitting ? '投递中…' : '立即投递' }}
         </button>
-        <button type="button" :class="{ on: nagChannel === 'BARK' }" @click="nagChannel = 'BARK'">个人 Bark</button>
-        <button class="wbtn ghost" @click="selected = null">取消</button>
+        <button class="wbtn ghost" :disabled="submitting" @click="selected = null">取消</button>
       </div>
       <div class="muted mt10" style="font-size: 11.5px">
         手动催办同样写入催办记录，标记 <code>trigger=MANUAL</code> 与操作管理员，并计入每日上限。
@@ -340,3 +346,17 @@ function statusText(todo: TodoItem): { text: string; color: string } {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* 渠道与操作分区，四个选项共享选中态；窄屏允许换行，避免 Bark 挤入操作按钮。 */
+.nag-channel-group { margin: 0; padding: 0; border: 0; min-width: 0; }
+.nag-channel-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.nag-channel { min-height: 44px; gap: 7px; }
+.nag-channel input { margin: 0; width: 15px; height: 15px; accent-color: var(--blue); }
+.nag-channel:focus-within { outline: 2px solid var(--blue); outline-offset: 2px; }
+.nag-channel-group:disabled .nag-channel { cursor: wait; opacity: .65; }
+.nag-channel-hint { font-size: 12px; line-height: 1.6; margin: 10px 0 0; }
+.nag-field-label { display: block; margin-top: 14px; }
+.nag-detail-grid > .wcard { min-width: 0; }
+@media (max-width: 900px) { .nag-detail-grid.wgrid.c2 { grid-template-columns: minmax(0, 1fr); } }
+</style>

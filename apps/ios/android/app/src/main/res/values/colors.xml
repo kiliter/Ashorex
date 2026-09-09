@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 启动页底色与 App 纸色一致（原型 paper #F8FAFC）。V2 只有亮色主题。 -->
+    <color name="launch_background">#F8FAFC</color>
+</resources>

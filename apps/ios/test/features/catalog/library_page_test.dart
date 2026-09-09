@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shangan_ios/core/state/shangan_providers.dart';
@@ -8,6 +9,63 @@ import '../../support/fixtures.dart';
 
 /// 验证用户输入的实际过滤时机及固定区位置，不依赖计时器实现细节。
 void main() {
+  testWidgets('慢速右滑后多选并应用会改变课程结果，清空恢复', (tester) async {
+    final backend = FakeBackend()
+      ..on(
+        'GET',
+        '/api/v1/catalog/courses',
+        json: [
+          courseSummaryJson(id: 'a', title: '法律基础', genres: ['法律']),
+          courseSummaryJson(id: 'b', title: '数学基础', genres: ['数学']),
+          courseSummaryJson(id: 'c', title: '英语基础', genres: ['英语']),
+        ],
+      )
+      ..on(
+        'GET',
+        '/api/v1/catalog/facets',
+        json: {
+          'genres': [
+            for (final v in ['法律', '数学', '英语']) {'value': v, 'courseCount': 1},
+          ],
+          'people': [],
+          'tags': [],
+          'years': [],
+        },
+      );
+    await _pump(tester, backend);
+    await tester.timedDrag(
+      find.text('法律基础'),
+      const Offset(180, 0),
+      const Duration(seconds: 2),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('应用筛选'), findsOneWidget);
+    await tester.tap(find.widgetWithText(ChoiceChip, '法律'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(ChoiceChip, '数学'));
+    await tester.pump();
+    await tester.tap(find.text('应用筛选'));
+    await tester.pumpAndSettle();
+    expect(find.text('法律基础'), findsOneWidget);
+    expect(find.text('数学基础'), findsOneWidget);
+    expect(find.text('英语基础'), findsNothing);
+    await tester.tap(find.bySemanticsLabel('展开筛选'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('清空选择'));
+    await tester.pump();
+    await tester.timedDrag(
+      find.text('全部'),
+      const Offset(-180, 0),
+      const Duration(seconds: 2),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('应用筛选'), findsNothing);
+    expect(find.text('英语基础'), findsNothing);
+    await tester.tap(find.text('一键清空'));
+    await tester.pumpAndSettle();
+    expect(find.text('英语基础'), findsOneWidget);
+  });
+
   testWidgets('课程搜索300ms防抖，清空即时生效，滚动固定头部', (tester) async {
     final backend = FakeBackend()
       ..on(
@@ -93,7 +151,10 @@ Future<void> _pump(WidgetTester tester, FakeBackend backend) async {
       overrides: [
         shanganRepositoryProvider.overrideWithValue(buildRepository(backend)),
       ],
-      child: const MaterialApp(home: Scaffold(body: LibraryPage())),
+      child: MaterialApp(
+        theme: ShanganTheme.light(),
+        home: const Scaffold(body: LibraryPage()),
+      ),
     ),
   );
   await tester.pumpAndSettle();

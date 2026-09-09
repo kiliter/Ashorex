@@ -68,6 +68,7 @@ class HomePageState extends ConsumerState<HomePage> {
   Future<void> _refresh() async {
     ref.invalidate(serverTodayProvider);
     ref.invalidate(dayViewProvider);
+    ref.invalidate(statsProvider);
     ref.invalidate(weekViewProvider);
     ref.invalidate(monthViewProvider);
     ref.invalidate(goalsProvider);
@@ -392,6 +393,7 @@ final class _Header extends ConsumerWidget {
     );
     ref.invalidate(pendingNagProvider);
     ref.invalidate(dayViewProvider);
+    ref.invalidate(statsProvider);
   }
 }
 
@@ -415,6 +417,7 @@ final class _PendingNagStrip extends ConsumerWidget {
           );
           ref.invalidate(pendingNagProvider);
           ref.invalidate(dayViewProvider);
+          ref.invalidate(statsProvider);
         },
         child: ShanganCard(
           padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
@@ -664,7 +667,7 @@ class _DaySectionState extends ConsumerState<_DaySection> {
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '历史日期 · 只能补记或顺延',
+                          '历史日期 · 未完成项可直接继续，计入今日还债',
                           style: TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w700,
@@ -727,7 +730,46 @@ class _DaySectionState extends ConsumerState<_DaySection> {
                 readOnly: view.history,
               ),
             ],
-            if (view.todos.isEmpty)
+            // 今日计划和历史执行分别展示；完成后的历史项由服务端保留到当天结束。
+            if (view.today &&
+                (view.repaymentTodos.isNotEmpty ||
+                    view.repayment.hasActivity)) ...[
+              const SectionTitle(title: '今日还债'),
+              ShanganCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      '今日完成 ${view.repayment.done} 项 · '
+                      '观看 ${formatDurationCompact(view.repayment.watchedMs)} · '
+                      '专注 ${formatDurationCompact(view.repayment.focusedMs)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: ShanganColors.mutedInk,
+                      ),
+                    ),
+                    for (final todo in view.repaymentTodos) ...[
+                      const Divider(height: 20, color: ShanganColors.hair),
+                      Text(
+                        '原计划 ${todo.localDate.toIso8601String().substring(0, 10)}${todo.isDone ? " · 今日已完成" : ""}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: ShanganColors.mutedInk,
+                        ),
+                      ),
+                      _HistoryAwareRow(
+                        todo: todo,
+                        history: true,
+                        onChanged: widget.onRefresh,
+                        minReasonLength: minReasonLength,
+                        supervisorName: supervisorName,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+            if (view.todos.isEmpty && view.repaymentTodos.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 32),
                 child: Column(
@@ -766,7 +808,7 @@ class _DaySectionState extends ConsumerState<_DaySection> {
   }) {
     if (items.isEmpty) return const SizedBox.shrink();
     final collapsed = collapsible && _doneCollapsed;
-    // 历史日只能补记 / 顺延 / 删除单项，不进入批量编辑态。
+    // 历史日保留原日期直接执行，不进入批量改期编辑态。
     final editAction = showEdit && !view.history ? widget.onEdit : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -810,7 +852,7 @@ class _DaySectionState extends ConsumerState<_DaySection> {
   }
 }
 
-/// 历史日期的未完成项额外提供顺延、补记与删除三个动作（原型 1-7）。
+/// 历史日期直接执行未完成项，删除仍需说明原因。
 final class _HistoryAwareRow extends ConsumerWidget {
   const _HistoryAwareRow({
     required this.todo,
@@ -838,7 +880,7 @@ final class _HistoryAwareRow extends ConsumerWidget {
       minReasonLength: minReasonLength,
       supervisorName: supervisorName,
       overdue: overdue,
-      readOnly: readOnly || overdue,
+      readOnly: readOnly,
       showCompletedTime: showCompletedTime,
       onChanged: onChanged,
     );
@@ -853,32 +895,16 @@ final class _HistoryAwareRow extends ConsumerWidget {
             spacing: 7,
             runSpacing: 7,
             children: [
-              if (todo.todoType != TodoType.course || todo.resourceAvailable)
+              // 历史课程和专注仍可正常手动完成；跳过的专注无需重新开启计时。
+              if (todo.todoType != TodoType.task)
                 ShanganFilterChip(
-                  label: '顺延今天',
+                  label: '标记完成',
                   selected: false,
                   onTap: () async {
-                    final today =
-                        (await ref.read(shanganRepositoryProvider).loadDay())
-                            .date;
-                    await ref
-                        .read(shanganRepositoryProvider)
-                        .deferTodo(todo.id, today);
-                    await onChanged();
+                    final done = await CompleteSheet.show(context, todo: todo);
+                    if (done) await onChanged();
                   },
                 ),
-              ShanganFilterChip(
-                label: '补记完成',
-                selected: false,
-                onTap: () async {
-                  final done = await CompleteSheet.show(
-                    context,
-                    todo: todo,
-                    backfill: true,
-                  );
-                  if (done) await onChanged();
-                },
-              ),
               ShanganFilterChip(
                 label: '删除',
                 selected: false,

@@ -401,6 +401,27 @@ final class TodoAttachment {
   }
 }
 
+/// 实际发生窗口内的还债增量，与计划完成率分开。
+final class RepaymentTotals {
+  const RepaymentTotals({
+    this.done = 0,
+    this.watchedMs = 0,
+    this.focusedMs = 0,
+  });
+  final int done;
+  final int watchedMs;
+  final int focusedMs;
+  bool get hasActivity => done > 0 || watchedMs > 0 || focusedMs > 0;
+
+  /// 兼容尚未升级的服务端，缺失还债字段时显示零值。
+  factory RepaymentTotals.fromJson(Map<String, dynamic> json) =>
+      RepaymentTotals(
+        done: (json['done'] as num?)?.toInt() ?? 0,
+        watchedMs: (json['watchedMs'] as num?)?.toInt() ?? 0,
+        focusedMs: (json['focusedMs'] as num?)?.toInt() ?? 0,
+      );
+}
+
 /// 日视图。
 final class DayView {
   const DayView({
@@ -410,6 +431,8 @@ final class DayView {
     required this.todos,
     required this.totals,
     required this.deletionCount,
+    this.repaymentTodos = const [],
+    this.repayment = const RepaymentTotals(),
   });
 
   final DateTime date;
@@ -418,6 +441,8 @@ final class DayView {
   final List<TodoItem> todos;
   final DayTotals totals;
   final int deletionCount;
+  final List<TodoItem> repaymentTodos;
+  final RepaymentTotals repayment;
 
   List<TodoItem> get inProgress => todos
       .where((todo) => todo.status == TodoStatus.inProgress)
@@ -442,6 +467,12 @@ final class DayView {
         (json['totals'] as Map<String, dynamic>?) ?? const {},
       ),
       deletionCount: (json['deletionCount'] as num?)?.toInt() ?? 0,
+      repaymentTodos: (json['repaymentTodos'] as List? ?? const [])
+          .map((item) => TodoItem.fromJson(item as Map<String, dynamic>))
+          .toList(growable: false),
+      repayment: RepaymentTotals.fromJson(
+        (json['repayment'] as Map<String, dynamic>?) ?? const {},
+      ),
     );
   }
 }
@@ -868,6 +899,7 @@ final class StatsView {
     required this.genreRanking,
     required this.noteTagCounts,
     required this.deletionCounts,
+    this.repayment = const RepaymentTotals(),
   });
 
   final String range;
@@ -887,6 +919,7 @@ final class StatsView {
   final List<RankingEntry> genreRanking;
   final Map<NoteTag, int> noteTagCounts;
   final Map<String, int> deletionCounts;
+  final RepaymentTotals repayment;
 
   int get totalMs => watchedMs + focusedMs;
 
@@ -935,6 +968,9 @@ final class StatsView {
       genreRanking: ranking('genres'),
       noteTagCounts: noteTags,
       deletionCounts: deletions,
+      repayment: RepaymentTotals.fromJson(
+        (json['repayment'] as Map<String, dynamic>?) ?? const {},
+      ),
     );
   }
 }

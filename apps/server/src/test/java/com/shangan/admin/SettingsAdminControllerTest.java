@@ -44,15 +44,33 @@ class SettingsAdminControllerTest {
 
   @Mock private RuntimeIntegrationSettingsService settings;
   @Mock private EmbyHealthService embyHealth;
+  @Mock private com.shangan.common.integration.SystemAlertService systemAlerts;
 
   private MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
     mockMvc =
-        MockMvcBuilders.standaloneSetup(new SettingsAdminController(settings, embyHealth))
+        MockMvcBuilders.standaloneSetup(
+                new SettingsAdminController(settings, embyHealth, systemAlerts))
             .setControllerAdvice(new ApiExceptionHandler())
             .build();
+  }
+
+  @Test
+  void 系统测试通知返回发送结果() throws Exception {
+    when(systemAlerts.testNotification())
+        .thenReturn(
+            new com.shangan.common.integration.SystemAlertService.TestNotificationResult(
+                true, "已发送", "请在设备确认"));
+    mockMvc
+        .perform(
+            post("/admin/api/settings/test-bark").contentType("application/json").content("{}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.ok").value(true))
+        .andExpect(jsonPath("$.status").value("已发送"));
+    verify(systemAlerts).testNotification();
+    verify(settings, never()).save(any());
   }
 
   @Test

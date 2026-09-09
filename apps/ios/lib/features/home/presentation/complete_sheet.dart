@@ -11,17 +11,13 @@ import 'package:shangan_ios/features/home/presentation/attachment_editor.dart';
 ///
 /// 任何类型完成后统一弹出；一键标签会写入 `noteTags` 供数据 Tab 聚合。
 final class CompleteSheet extends ConsumerStatefulWidget {
-  const CompleteSheet({required this.todo, this.backfill = false, super.key});
+  const CompleteSheet({required this.todo, super.key});
 
   final TodoItem todo;
-
-  /// 历史日期补记完成时为真，此时备注必填。
-  final bool backfill;
 
   static Future<bool> show(
     BuildContext context, {
     required TodoItem todo,
-    bool backfill = false,
   }) async {
     // 原型 3-4：待办事项走居中对话框，其余类型走 3-3 的底部弹层。
     if (todo.todoType == TodoType.task) {
@@ -29,9 +25,7 @@ final class CompleteSheet extends ConsumerStatefulWidget {
         context: context,
         builder: (context) => Dialog(
           insetPadding: const EdgeInsets.symmetric(horizontal: 18),
-          child: SingleChildScrollView(
-            child: CompleteSheet(todo: todo, backfill: backfill),
-          ),
+          child: SingleChildScrollView(child: CompleteSheet(todo: todo)),
         ),
       );
       return result ?? false;
@@ -39,7 +33,7 @@ final class CompleteSheet extends ConsumerStatefulWidget {
     return showShanganSheet(
       context,
       heightFactor: 0.9,
-      builder: (context) => CompleteSheet(todo: todo, backfill: backfill),
+      builder: (context) => CompleteSheet(todo: todo),
     );
   }
 
@@ -70,9 +64,6 @@ class _CompleteSheetState extends ConsumerState<CompleteSheet> {
     _controller.dispose();
     super.dispose();
   }
-
-  bool get _noteSatisfied =>
-      !widget.backfill || _controller.text.trim().length >= 2;
 
   bool get _evidenceSatisfied =>
       !widget.todo.requireEvidence || _attachmentCount > 0;
@@ -111,11 +102,7 @@ class _CompleteSheetState extends ConsumerState<CompleteSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.backfill
-                            ? '补记完成 · ${todo.title}'
-                            : todo.isDone
-                            ? '已完成 · ${todo.title}'
-                            : todo.title,
+                        todo.isDone ? '已完成 · ${todo.title}' : todo.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -189,9 +176,7 @@ class _CompleteSheetState extends ConsumerState<CompleteSheet> {
               minLines: 2,
               maxLines: 5,
               onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: widget.backfill ? '补记必须说明情况' : '写下这次学习的收获或问题',
-              ),
+              decoration: InputDecoration(hintText: '写下这次学习的收获或问题'),
             ),
             const SizedBox(height: 10),
             Wrap(
@@ -239,8 +224,7 @@ class _CompleteSheetState extends ConsumerState<CompleteSheet> {
                 Expanded(
                   flex: 2,
                   child: FilledButton(
-                    onPressed:
-                        _submitting || !_noteSatisfied || !_evidenceSatisfied
+                    onPressed: _submitting || !_evidenceSatisfied
                         ? null
                         : _submit,
                     child: Text(_submitting ? '保存中…' : '保存并完成'),
@@ -311,7 +295,6 @@ class _CompleteSheetState extends ConsumerState<CompleteSheet> {
             widget.todo.id,
             note: _controller.text.trim(),
             noteTags: _selected.toList(growable: false),
-            backfill: widget.backfill,
           );
       if (mounted) Navigator.of(context).pop(true);
     } catch (error) {

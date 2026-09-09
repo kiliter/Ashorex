@@ -13,6 +13,17 @@ public class BarkPushClient {
   /** 禁止重定向，防止可信源站将包含设备 Key 的请求转交其他主机。 */
   public boolean send(
       String baseUrl, String deviceKey, int timeoutSeconds, String title, String body) {
+    return send(baseUrl, deviceKey, timeoutSeconds, title, body, true);
+  }
+
+  /** 由个人催办决定通知级别；普通通知不使用 critical，其他默认参数保持一致。 */
+  public boolean send(
+      String baseUrl,
+      String deviceKey,
+      int timeoutSeconds,
+      String title,
+      String body,
+      boolean important) {
     try {
       var timeout = Duration.ofSeconds(timeoutSeconds);
       var factory =
@@ -39,7 +50,7 @@ public class BarkPushClient {
                       "group",
                       "上岸",
                       "level",
-                      "critical",
+                      important ? "critical" : "active",
                       "url",
                       "shangan://home"))
               .exchange(
