@@ -5,12 +5,14 @@ name: shangan
 services:
   server:
     image: ghcr.io/kiliter/ashorex-server:latest
+    # 生产 Linux 主机直接共享网络栈，不再使用 bridge 端口映射。
+    network_mode: host
     pull_policy: always
     restart: unless-stopped
     init: true
     environment:
       SERVER_PORT: "18080"
-      # 容器内必须监听所有网卡，否则端口映射和反向代理都无法访问。
+      # host 模式直接监听宿主机所有网卡，供既有 HTTPS 反向代理访问。
       SERVER_ADDRESS: "0.0.0.0"
       DATA_DIR: /data
       ATTACHMENTS_DIR: /data/attachments
@@ -28,12 +30,9 @@ services:
       # Docker 本地卷位于宿主机本地磁盘，避免 SQLite 落到 NAS/NFS。
       - study-data:/data
       - study-backup:/backup
-    ports:
-      # 允许宿主机外部的反向代理访问；请通过防火墙或安全组限制公网直连。
-      - "0.0.0.0:18080:18080"
     extra_hosts:
-      # Emby 运行在 Linux Docker 宿主机时，可使用 http://host.docker.internal:8096 访问。
-      - "host.docker.internal:host-gateway"
+      # 兼容已保存的 Emby 宿主机别名；host 模式下回环地址就是宿主机。
+      - "host.docker.internal:127.0.0.1"
     security_opt:
       - no-new-privileges:true
     stop_grace_period: 30s
