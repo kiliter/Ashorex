@@ -296,6 +296,22 @@ paths:
         '404':
           $ref: '#/components/responses/Problem'
 
+  /api/v1/catalog/courses/{courseId}/cover:
+    get:
+      tags: [catalog]
+      summary: 已认证课程封面
+      parameters:
+        - { name: courseId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: 受大小限制的 Emby 封面，允许私有短期缓存
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        '404':
+          $ref: '#/components/responses/Problem'
+
   /api/v1/todos:
     get:
       tags: [todos]

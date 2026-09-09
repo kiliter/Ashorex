@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'course_filter_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -266,7 +267,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   }
 }
 
-/// 文件夹目录采用 SliverGrid 按需构建；只聚合数据，不预创建全部课程组件。
+/// 双列封面目录按需构建；只聚合数据，不预创建全部课程组件。
 final class _FolderCourses extends ConsumerWidget {
   const _FolderCourses({required this.courses, required this.byPerson});
   final List<CourseSummary> courses;
@@ -287,18 +288,19 @@ final class _FolderCourses extends ConsumerWidget {
       builder: (context, constraints) {
         final scaler = MediaQuery.textScalerOf(context);
         final compact = constraints.maxHeight < 110;
-        // 普通手机三列，窄屏/大字体自动减少，平板按宽度增列。
-        final minWidth = 108 * (scaler.scale(13) / 13).clamp(1.0, 2.0);
-        final columns = ((constraints.maxWidth + 10) / (minWidth + 10))
-            .floor()
-            .clamp(constraints.maxWidth >= 260 ? 2 : 1, 12);
+        // 手机双列、平板按约 180pt 列宽扩展；标题高度随系统字号增长。
+        final columns = constraints.maxWidth < 600
+            ? 2
+            : (constraints.maxWidth / 180).floor().clamp(3, 8);
+        final coverHeight =
+            ((constraints.maxWidth - (columns - 1) * 10) / columns - 16) / 1.6;
         final delegate = SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: columns,
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
           mainAxisExtent:
-              (compact ? 16 : 70) +
-              scaler.scale(13) * 2.6 +
+              (compact ? 20 : coverHeight + 28) +
+              scaler.scale(12) * 2.8 +
               scaler.scale(11) * 1.4,
         );
         final entries = groups.entries.toList(growable: false);
@@ -316,9 +318,10 @@ final class _FolderCourses extends ConsumerWidget {
                 gridDelegate: delegate,
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final entry = entries[index];
-                  return _FolderTile(
+                  return _CoverTile(
                     compact: compact,
                     title: entry.key,
+                    courseId: entry.value.first.id,
                     caption: '${entry.value.length} 门课程',
                     onTap: () {
                       // 进入人物文件夹只查看该人物，避免再次点击反而取消当前条件。
@@ -348,9 +351,10 @@ final class _FolderCourses extends ConsumerWidget {
                   gridDelegate: delegate,
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final course = entry.value[index];
-                    return _FolderTile(
+                    return _CoverTile(
                       compact: compact,
                       title: course.title,
+                      courseId: course.id,
                       caption: course.fullyWatched
                           ? '已看完'
                           : '已完成 ${course.completedCount}/${course.resourceCount}',
@@ -374,21 +378,30 @@ final class _FolderCourses extends ConsumerWidget {
   }
 }
 
-/// 整个文件夹可点击；两行名称控制密度，长按提示和无障碍保留完整名称。
-final class _FolderTile extends StatelessWidget {
-  const _FolderTile({
+/// 封面只在卡片进入构建范围后请求，离开后释放原始字节，图片缓存由 Flutter 管理。
+final _courseCoverProvider = FutureProvider.autoDispose
+    .family<Uint8List, String>(
+      (ref, id) => ref.watch(shanganRepositoryProvider).loadCourseCover(id),
+      retry: (count, error) => null,
+    );
+
+/// 参考片单卡片：横向封面在上，小字号两行标题在下，保留完整无障碍名称。
+final class _CoverTile extends ConsumerWidget {
+  const _CoverTile({
     required this.title,
+    required this.courseId,
     required this.caption,
     required this.onTap,
     this.compact = false,
   });
   final bool compact;
+  final String courseId;
   final String title;
   final String caption;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Semantics(
+  Widget build(BuildContext context, WidgetRef ref) => Semantics(
     button: true,
     label: '$title，$caption',
     onTap: onTap,
@@ -396,7 +409,7 @@ final class _FolderTile extends StatelessWidget {
     child: Tooltip(
       message: title,
       child: Material(
-        color: ShanganColors.surface,
+        color: ShanganColors.inkSoft,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -407,21 +420,35 @@ final class _FolderTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (!compact) ...[
-                  const Icon(
-                    Icons.folder_rounded,
-                    color: ShanganColors.course,
-                    size: 40,
+                  AspectRatio(
+                    aspectRatio: 1.6,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: ref
+                          .watch(_courseCoverProvider(courseId))
+                          .when(
+                            data: (bytes) => Image.memory(
+                              bytes,
+                              fit: BoxFit.cover,
+                              cacheWidth: 480,
+                              errorBuilder: (_, _, _) =>
+                                  _TextCover(title: title),
+                            ),
+                            loading: () => _TextCover(title: title),
+                            error: (_, _) => _TextCover(title: title),
+                          ),
+                    ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
                 ],
                 Text(
                   title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 13,
-                    height: 1.3,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    height: 1.4,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const Spacer(),
@@ -436,6 +463,35 @@ final class _FolderTile extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// 无封面时使用课程名称排版占位，不显示文件夹或应用图标，也不伪造课程照片。
+class _TextCover extends StatelessWidget {
+  const _TextCover({required this.title});
+  final String title;
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: ShanganColors.blueSoft,
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: RichText(
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textScaler: MediaQuery.textScalerOf(context),
+          text: TextSpan(
+            text: title,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: ShanganColors.course,
             ),
           ),
         ),

@@ -24,6 +24,7 @@ void main() {
     );
     expect(find.text('课程0'), findsOneWidget);
     expect(find.text('课程299'), findsNothing);
+    expect(find.byIcon(Icons.folder_rounded), findsNothing);
   });
 
   testWidgets('人物文件夹进入对应课程，未标注人物也可浏览', (tester) async {
@@ -141,7 +142,7 @@ void main() {
     expect(find.text('数学未看完'), findsOneWidget);
   });
 
-  testWidgets('手机三列文件夹且大量课程按需构建', (tester) async {
+  testWidgets('手机双列封面卡片且大量课程按需构建', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -159,10 +160,10 @@ void main() {
     );
     expect(
       tester.getTopLeft(find.text('课程0')).dy,
-      tester.getTopLeft(find.text('课程2')).dy,
+      tester.getTopLeft(find.text('课程1')).dy,
     );
     expect(
-      tester.getTopLeft(find.text('课程3')).dy,
+      tester.getTopLeft(find.text('课程2')).dy,
       greaterThan(tester.getTopLeft(find.text('课程0')).dy),
     );
     expect(find.text('课程299'), findsNothing);
@@ -223,6 +224,14 @@ void main() {
     expect(find.text('英语基础'), findsNothing);
     await tester.tap(find.text('一键清空'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('英语基础'),
+      180,
+      scrollable: find.descendant(
+        of: find.byType(CustomScrollView),
+        matching: find.byType(Scrollable),
+      ),
+    );
     expect(find.text('英语基础'), findsOneWidget);
   });
 
@@ -252,11 +261,26 @@ void main() {
     expect(find.text('民法'), findsOneWidget);
     final header = tester.getTopLeft(find.text('课程库'));
     final filters = tester.getTopLeft(find.text('一键清空'));
-    await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+    await tester.drag(
+      find.descendant(
+        of: find.byType(CustomScrollView),
+        matching: find.byType(Scrollable),
+      ),
+      const Offset(0, -300),
+    );
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(find.text('课程库')), header);
     expect(tester.getTopLeft(find.text('一键清空')), filters);
-    expect(backend.callCount('GET', '/api/v1/catalog/courses'), 1);
+    expect(
+      backend.requests
+          .where(
+            (request) =>
+                request.method == 'GET' &&
+                request.path == '/api/v1/catalog/courses',
+          )
+          .length,
+      1,
+    );
   });
   testWidgets('横屏键盘展开保留固定筛选和课程结果', (tester) async {
     tester.view.physicalSize = const Size(844, 390);

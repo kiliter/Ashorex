@@ -439,6 +439,11 @@ final class ShanganRepository {
     return list.map(CourseSummary.fromJson).toList(growable: false);
   }
 
+  /// 经认证的服务端封面代理，不向客户端暴露 Emby 地址和凭据。
+  Future<Uint8List> loadCourseCover(String courseId) => _api.getBytes(
+    '/api/v1/catalog/courses/${Uri.encodeComponent(courseId)}/cover',
+  );
+
   Future<CourseDetail> loadCourse(String courseId) async {
     return CourseDetail.fromJson(
       await _api.getJson('/api/v1/catalog/courses/$courseId'),
