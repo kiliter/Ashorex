@@ -1,0 +1,65 @@
+apps/server/src/main/java/com/shangan/catalog/application/CourseCoverService.java
+  s_20a06985cb8621::t_835dbbf6bbc4eb 1-31
+apps/ios/test/features/catalog/library_page_test.dart
+  s_20a06985cb8621::t_6cc66b32ba057a 27,145,163,166
+  s_20a06985cb8621::t_e43b7abd5c39e9 227-231,234,264-266,268,270,274-278,280-281,283
+  s_20a06985cb8621::t_05742e2fbe564b 232-233
+  s_20a06985cb8621::t_feb2bf4c99818c 267
+  s_20a06985cb8621::t_f476dcfa2802e8 269
+  s_20a06985cb8621::t_a8fb1482ab16b6 279
+  s_20a06985cb8621::t_0b1216e25eac57 282
+apps/ios/lib/core/data/shangan_repository.dart
+  s_20a06985cb8621::t_835dbbf6bbc4eb 442-446
+apps/server/src/main/java/com/shangan/catalog/api/CourseCoverController.java
+  s_20a06985cb8621::t_835dbbf6bbc4eb 1-30
+apps/ios/lib/features/catalog/presentation/library_page.dart
+  s_20a06985cb8621::t_835dbbf6bbc4eb 2,270,291-296,303,321,324,354,357,381-390,392,398,404,412,423-440,442,449-451,474-493
+  s_20a06985cb8621::t_e43b7abd5c39e9 302
+  s_20a06985cb8621::t_cde3e26db38712 494-502
+apps/server/src/test/java/com/shangan/catalog/application/CourseCoverServiceTest.java
+  s_20a06985cb8621::t_835dbbf6bbc4eb 1-50
+docs/prototypes/shangan-v2-prototype.html
+  s_57cff913090969::t_1f5e4c56141fbd 550-551,556,568-569
+docs/adr/0044-study-folder-layout.md
+  s_21b6bcbad4a5d4::t_8689b12158e94b 42-46
+docs/api/openapi.yaml
+  s_21b6bcbad4a5d4::t_e7bc04c7a1391a 299-314
+docs/plans/2026-09-07-shangan-v2-implementation-plan.md
+  s_21b6bcbad4a5d4::t_9f5ac78959fef7 1209-1213
+docs/specs/2026-09-07-shangan-v2-design.md
+  s_21b6bcbad4a5d4::t_770aaf4813f481 939-943
+docs/traceability/2026-09-07-shangan-v2-traceability.md
+  s_21b6bcbad4a5d4::t_8563320686651b 284-288
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "756cab6f49041a6466694bf33273476e78cd25a0",
+  "prompts": {},
+  "sessions": {
+    "s_20a06985cb8621": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a083e1-0cae-7fe2-8173-681e7283a6c4",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    },
+    "s_21b6bcbad4a5d4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a083e5-b244-76a1-958d-4b7ccecd453a",
+        "model": "unknown"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    },
+    "s_57cff913090969": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a083f9-7ea7-7d93-be7c-654147190e6e",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
