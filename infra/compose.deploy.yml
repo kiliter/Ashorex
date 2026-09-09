@@ -4,7 +4,7 @@ name: shangan
 
 services:
   server:
-    image: ghcr.io/kiliter/ashorex-server:latest
+    image: ${SHANGAN_SERVER_IMAGE:-ghcr.io/kiliter/ashorex-server:latest}
     # 生产 Linux 主机直接共享网络栈，不再使用 bridge 端口映射。
     network_mode: host
     pull_policy: always
@@ -15,6 +15,7 @@ services:
       # host 模式直接监听宿主机所有网卡，供既有 HTTPS 反向代理访问。
       SERVER_ADDRESS: "0.0.0.0"
       DATA_DIR: /data
+      UPDATES_DIR: /updates
       ATTACHMENTS_DIR: /data/attachments
       SESSION_COOKIE_SECURE: "true"
       JWT_SECRET: ${JWT_SECRET:?请配置至少 32 字节的 JWT_SECRET}
@@ -30,6 +31,7 @@ services:
       # Docker 本地卷位于宿主机本地磁盘，避免 SQLite 落到 NAS/NFS。
       - study-data:/data
       - study-backup:/backup
+      - update-state:/updates
     extra_hosts:
       # 兼容已保存的 Emby 宿主机别名；host 模式下回环地址就是宿主机。
       - "host.docker.internal:127.0.0.1"
@@ -53,6 +55,36 @@ services:
         max-size: 20m
         max-file: "5"
 
+  # 升级器独立存活，不自动替换自身；非 root UID 仅通过附加组访问 socket。
+  updater:
+    image: ${SHANGAN_UPDATER_IMAGE:-ghcr.io/kiliter/ashorex-server:latest}
+    network_mode: host
+    user: "10001:10001"
+    group_add:
+      - "${DOCKER_GID:-0}"
+    restart: unless-stopped
+    init: true
+    entrypoint: ["python3", "/app/infra/updater/updater.py"]
+    environment:
+      UPDATES_DIR: /updates
+      # 仅影响版本源；镜像拉取仍使用 Docker daemon 自身代理。
+      HTTP_PROXY: ${UPDATER_HTTP_PROXY:-}
+      HTTPS_PROXY: ${UPDATER_HTTPS_PROXY:-}
+      NO_PROXY: ${UPDATER_NO_PROXY:-localhost,127.0.0.1}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - update-state:/updates
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      disable: true
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "3"
+
 volumes:
   study-data:
   study-backup:
+  update-state:

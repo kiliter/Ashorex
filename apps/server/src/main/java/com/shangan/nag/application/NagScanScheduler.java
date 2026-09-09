@@ -23,8 +23,13 @@ public class NagScanScheduler {
     this.clock = clock;
   }
 
+  /** 维护时不扫描或投递催办，避免验收前产生外部副作用。 */
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.shangan.upgrade.UpgradeService upgrades;
+
   @Scheduled(fixedDelayString = "PT60S", initialDelayString = "PT30S")
   public void tick() {
+    if (upgrades != null && upgrades.maintenance()) return;
     int intervalMinutes = policies.global().scanIntervalMinutes();
     java.time.Instant now = clock.instant();
     java.time.Instant previous = lastScanAt.get();

@@ -72,9 +72,14 @@ public class SystemAlertService {
     }
   }
 
+  /** 新版本验收期间不发送外部通知。 */
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.shangan.upgrade.UpgradeService upgrades;
+
   /** 备份脚本只写状态标志，服务端统一读取系统配置发送，脚本无需接触密钥。 */
   @Scheduled(fixedDelay = 60000)
   public void inspectBackup() {
+    if (upgrades != null && upgrades.maintenance()) return;
     if (!Files.isRegularFile(backupState)) return;
     try {
       String state = Files.readString(backupState).trim();

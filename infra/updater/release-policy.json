@@ -1,0 +1,5 @@
+{
+  "protocol": 1,
+  "automatic": false,
+  "notes": "新增独立容器自动升级。首次需手动更新 Compose 和部署脚本，接入共享卷与维护协议。旧 App 无需升级。"
+}
