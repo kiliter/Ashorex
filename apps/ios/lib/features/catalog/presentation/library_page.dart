@@ -27,6 +27,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   /// 原型 4-1 右上角两个 iconbtn：搜索框与筛选区都可收起。
   bool _searchOpen = false;
   bool _hideFullyWatched = false;
+
+  /// 横向分类只用于当前浏览，不覆盖筛选面板的多选条件。
+  String? _browseCategory;
   Timer? _debounce;
   String _appliedKeyword = '';
   bool _openingFilters = false;
@@ -91,8 +94,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     final grouping = ShanganSegmented(
       labels: const ['按流派', '按人物'],
       selectedIndex: filter.groupByPerson ? 1 : 0,
-      onChanged: (index) =>
-          ref.read(catalogFilterProvider.notifier).setGroupByPerson(index == 1),
+      onChanged: (index) {
+        setState(() => _browseCategory = null);
+        ref.read(catalogFilterProvider.notifier).setGroupByPerson(index == 1);
+      },
     );
     final selectedFilters = SelectedCourseFilters(
       filter: filter,
@@ -100,7 +105,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       onClear: () {
         _keyword.clear();
         _search('');
-        setState(() => _hideFullyWatched = false);
+        setState(() {
+          _hideFullyWatched = false;
+          _browseCategory = null;
+        });
         if (filter.hasTags ||
             filter.year != null ||
             (filter.query?.isNotEmpty ?? false)) {
@@ -110,6 +118,14 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         }
       },
     );
+    // 标签取自当前筛选结果的完整元数据；点击分类不反过来缩减标签候选。
+    final categories = <String>{
+      for (final course in courses.asData?.value ?? <CourseSummary>[])
+        ..._courseCategories(course, filter.groupByPerson),
+    }.toList();
+    final selectedCategory = categories.contains(_browseCategory)
+        ? _browseCategory
+        : null;
     return LayoutBuilder(
       builder: (context, constraints) {
         // 横屏键盘展开后固定区压为两行，仍保留标题与所有筛选入口。
@@ -130,23 +146,24 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               children: [
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'LIBRARY',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.6,
-                              color: ShanganColors.mutedInk,
+                          if (!compact)
+                            const Text(
+                              'LIBRARY',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.6,
+                                color: ShanganColors.mutedInk,
+                              ),
                             ),
-                          ),
                           Text(
                             '课程库',
                             style: TextStyle(
-                              fontSize: 26,
+                              fontSize: compact ? 20 : 26,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.8,
                             ),
@@ -186,7 +203,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: compact ? 4 : 12),
                 if (_searchOpen && !compact) ...[
                   ShanganSearchField(
                     controller: _keyword,
@@ -218,6 +235,13 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                   ),
                   selectedFilters,
                 ],
+                _CategoryRail(
+                  key: ValueKey(filter.groupByPerson),
+                  categories: categories,
+                  selected: selectedCategory,
+                  onSelected: (value) =>
+                      setState(() => _browseCategory = value),
+                ),
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: () async {
@@ -241,6 +265,11 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                         final visible = list
                             .where(
                               (course) =>
+                                  (selectedCategory == null ||
+                                      _courseCategories(
+                                        course,
+                                        filter.groupByPerson,
+                                      ).contains(selectedCategory)) &&
                                   (!_hideFullyWatched ||
                                       !course.fullyWatched) &&
                                   (keyword.isEmpty ||
@@ -250,10 +279,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                                       )),
                             )
                             .toList(growable: false);
-                        return _FolderCourses(
-                          courses: visible,
-                          byPerson: filter.groupByPerson,
-                        );
+                        return _FolderCourses(courses: visible);
                       },
                     ),
                   ),
@@ -267,115 +293,107 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   }
 }
 
-/// 双列封面目录按需构建；只聚合数据，不预创建全部课程组件。
-final class _FolderCourses extends ConsumerWidget {
-  const _FolderCourses({required this.courses, required this.byPerson});
-  final List<CourseSummary> courses;
-  final bool byPerson;
+/// 分类来自 Emby，空元数据仅使用可读的本地兜底分组。
+List<String> _courseCategories(CourseSummary course, bool byPerson) => byPerson
+    ? (course.people.isEmpty ? ['未标注人物'] : course.people)
+    : (course.genres.isEmpty ? ['未分类'] : course.genres);
+
+/// 分类栏独立横向滚动，优先接管左右拖动，避免误打开外层筛选抽屉。
+class _CategoryRail extends StatelessWidget {
+  const _CategoryRail({
+    super.key,
+    required this.categories,
+    required this.selected,
+    required this.onSelected,
+  });
+  final List<String> categories;
+  final String? selected;
+  final ValueChanged<String?> onSelected;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final groups = <String, List<CourseSummary>>{};
-    for (final course in courses) {
-      final names = byPerson
-          ? (course.people.isEmpty ? ['未标注人物'] : course.people)
-          : [course.primaryGenre];
-      for (final name in names) {
-        groups.putIfAbsent(name, () => []).add(course);
-      }
-    }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final scaler = MediaQuery.textScalerOf(context);
-        final compact = constraints.maxHeight < 110;
-        // 手机双列、平板按约 180pt 列宽扩展；标题高度随系统字号增长。
-        final columns = constraints.maxWidth < 600
-            ? 2
-            : (constraints.maxWidth / 180).floor().clamp(3, 8);
-        final coverHeight =
-            ((constraints.maxWidth - (columns - 1) * 10) / columns - 16) / 1.6;
-        final delegate = SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: columns,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          mainAxisExtent:
-              (compact ? 20 : coverHeight + 28) +
-              scaler.scale(12) * 2.8 +
-              scaler.scale(11) * 1.4,
-        );
-        final entries = groups.entries.toList(growable: false);
-        return CustomScrollView(
-          key: const PageStorageKey('library-folders'),
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            if (courses.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(child: Text('没有符合条件的课程')),
-              )
-            else if (byPerson)
-              SliverGrid(
-                gridDelegate: delegate,
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final entry = entries[index];
-                  return _CoverTile(
-                    compact: compact,
-                    title: entry.key,
-                    courseId: entry.value.first.id,
-                    caption: '${entry.value.length} 门课程',
-                    onTap: () {
-                      // 进入人物文件夹只查看该人物，避免再次点击反而取消当前条件。
-                      ref
-                          .read(catalogFilterProvider.notifier)
-                          .apply(
-                            ref
-                                .read(catalogFilterProvider)
-                                .copyWith(
-                                  people: {entry.key},
-                                  groupByPerson: false,
-                                ),
-                          );
-                    },
-                  );
-                }, childCount: entries.length),
-              )
-            else
-              for (final entry in entries) ...[
-                if (!compact)
-                  SliverToBoxAdapter(
-                    child: ShanganGroupLabel(
-                      '${entry.key} · ${entry.value.length} 门',
-                    ),
-                  ),
-                SliverGrid(
-                  gridDelegate: delegate,
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final course = entry.value[index];
-                    return _CoverTile(
-                      compact: compact,
-                      title: course.title,
-                      courseId: course.id,
-                      caption: course.fullyWatched
-                          ? '已看完'
-                          : '已完成 ${course.completedCount}/${course.resourceCount}',
-                      onTap: () async {
-                        // 每次进入读取最新累计位置，返回后刷新隐藏已看完的结果。
-                        ref.invalidate(courseDetailProvider(course.id));
-                        await context.push('/courses/${course.id}');
-                        if (context.mounted) {
-                          ref.invalidate(libraryCoursesSnapshotProvider);
-                        }
-                      },
-                    );
-                  }, childCount: entry.value.length),
-                ),
-              ],
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-          ],
+  Widget build(BuildContext context) => SizedBox(
+    height: MediaQuery.textScalerOf(context).scale(12) + 32,
+    child: ListView.separated(
+      key: const ValueKey('category-rail'),
+      scrollDirection: Axis.horizontal,
+      itemCount: categories.length + 1,
+      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      itemBuilder: (context, index) {
+        final name = index == 0 ? null : categories[index - 1];
+        return Center(
+          child: ChoiceChip(
+            key: ValueKey(index == 0 ? 'category-all' : 'category-$name'),
+            label: Text(name ?? '全部', style: const TextStyle(fontSize: 12)),
+            selected: selected == name,
+            showCheckmark: false,
+            onSelected: (_) => onSelected(name),
+          ),
         );
       },
-    );
-  }
+    ),
+  );
+}
+
+/// 双列封面目录按需构建；分类由固定横向栏完成，不再占用课程区重复展示分组标题。
+final class _FolderCourses extends ConsumerWidget {
+  const _FolderCourses({required this.courses});
+  final List<CourseSummary> courses;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => LayoutBuilder(
+    builder: (context, constraints) {
+      final scaler = MediaQuery.textScalerOf(context);
+      final compact = constraints.maxHeight < 110;
+      final columns = constraints.maxWidth < 600
+          ? 2
+          : (constraints.maxWidth / 180).floor().clamp(3, 8);
+      final coverHeight =
+          ((constraints.maxWidth - (columns - 1) * 10) / columns - 16) / 1.6;
+      return CustomScrollView(
+        key: const PageStorageKey('library-folders'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          if (courses.isEmpty)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(child: Text('没有符合条件的课程')),
+            )
+          else
+            SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                mainAxisExtent:
+                    (compact ? 20 : coverHeight + 28) +
+                    scaler.scale(12) * 2.8 +
+                    scaler.scale(11) * 1.4,
+              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final course = courses[index];
+                return _CoverTile(
+                  compact: compact,
+                  title: course.title,
+                  courseId: course.id,
+                  caption: course.fullyWatched
+                      ? '已看完'
+                      : '已完成 ${course.completedCount}/${course.resourceCount}',
+                  onTap: () async {
+                    // 进入和返回时刷新进度，避免看完筛选继续使用旧快照。
+                    ref.invalidate(courseDetailProvider(course.id));
+                    await context.push('/courses/${course.id}');
+                    if (context.mounted) {
+                      ref.invalidate(libraryCoursesSnapshotProvider);
+                    }
+                  },
+                );
+              }, childCount: courses.length),
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
+      );
+    },
+  );
 }
 
 /// 封面只在卡片进入构建范围后请求，离开后释放原始字节，图片缓存由 Flutter 管理。
@@ -471,33 +489,114 @@ final class _CoverTile extends ConsumerWidget {
   );
 }
 
-/// 无封面时使用课程名称排版占位，不显示文件夹或应用图标，也不伪造课程照片。
+/// 文字书封：稳定配色、书脊和低对比暗纹；纯代码绘制，不生成或伪造课程图片。
 class _TextCover extends StatelessWidget {
   const _TextCover({required this.title});
   final String title;
+  static const _palettes = [
+    [Color(0xFF182E49), Color(0xFF304966)],
+    [Color(0xFF173D38), Color(0xFF34574D)],
+    [Color(0xFF453243), Color(0xFF675065)],
+    [Color(0xFF493B2D), Color(0xFF6B5640)],
+  ];
+
   @override
-  Widget build(BuildContext context) => ColoredBox(
-    color: ShanganColors.blueSoft,
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: RichText(
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          textScaler: MediaQuery.textScalerOf(context),
-          text: TextSpan(
-            text: title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: ShanganColors.course,
-            ),
-          ),
+  Widget build(BuildContext context) {
+    // 标题相同始终使用同一配色，滚动和重建不会随机变色。
+    final index = title.runes.fold<int>(
+      0,
+      (value, rune) => (value * 31 + rune) % _palettes.length,
+    );
+    final largeText = MediaQuery.textScalerOf(context).scale(12) > 16;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: _palettes[index],
         ),
       ),
-    ),
-  );
+      child: CustomPaint(
+        painter: const _BookCoverLines(),
+        child: Stack(
+          children: [
+            if (!largeText)
+              const Positioned(
+                left: 16,
+                top: 10,
+                child: Text(
+                  '学习课程',
+                  style: TextStyle(
+                    fontSize: 8,
+                    letterSpacing: 2,
+                    color: Color(0xFFD6C29A),
+                  ),
+                ),
+              ),
+            Positioned.fill(
+              left: 16,
+              right: 12,
+              top: largeText ? 10 : 28,
+              bottom: 12,
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: RichText(
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textScaler: MediaQuery.textScalerOf(context),
+                  text: TextSpan(
+                    text: title,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      height: 1.45,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFFFF6E7),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 细金线模拟书脊，斜向暗纹形成材质层次；不依赖图片加载或动画。
+class _BookCoverLines extends CustomPainter {
+  const _BookCoverLines();
+  @override
+  void paint(Canvas canvas, Size size) {
+    final texture = Paint()
+      ..color = const Color(0x0CFFFFFF)
+      ..strokeWidth = 0.5;
+    for (double x = -size.height; x < size.width; x += 7) {
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x + size.height, size.height),
+        texture,
+      );
+    }
+    final spine = Paint()
+      ..color = const Color(0x70D6C29A)
+      ..strokeWidth = 0.8;
+    canvas.drawLine(const Offset(6, 0), Offset(6, size.height), spine);
+    final border = Paint()
+      ..color = const Color(0x24FFFFFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.7;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(0.5, 0.5, size.width - 1, size.height - 1),
+        const Radius.circular(8),
+      ),
+      border,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _BookCoverLines oldDelegate) => false;
 }
 
 /// 课程详情：固定课程摘要与操作，仅剩余空间中的课时列表滚动（ADR-0044）。

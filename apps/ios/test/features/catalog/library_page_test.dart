@@ -10,6 +10,92 @@ import '../../support/fixtures.dart';
 
 /// 验证用户输入的实际过滤时机及固定区位置，不依赖计时器实现细节。
 void main() {
+  testWidgets('横向分类栏按流派和人物切换，分类内直接显示课程', (tester) async {
+    await _pump(
+      tester,
+      FakeBackend()..on(
+        'GET',
+        '/api/v1/catalog/courses',
+        json: [
+          courseSummaryJson(
+            id: 'a',
+            title: '法律课程',
+            genres: ['法律'],
+            people: ['张老师'],
+          ),
+          courseSummaryJson(
+            id: 'b',
+            title: '数学课程',
+            genres: ['数学'],
+            people: ['李老师'],
+          ),
+          courseSummaryJson(
+            id: 'c',
+            title: '交叉课程',
+            genres: ['法律', '数学'],
+            people: ['李老师'],
+          ),
+        ],
+      ),
+    );
+    expect(find.byKey(const ValueKey('category-rail')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('category-数学')));
+    await tester.pumpAndSettle();
+    expect(find.text('法律课程'), findsNothing);
+    expect(find.text('数学课程'), findsOneWidget);
+    expect(find.text('交叉课程'), findsOneWidget);
+    await tester.tap(find.text('按人物'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('category-张老师')), findsOneWidget);
+    expect(find.byKey(const ValueKey('category-数学')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('category-张老师')));
+    await tester.pumpAndSettle();
+    expect(find.text('法律课程'), findsOneWidget);
+    expect(find.text('数学课程'), findsNothing);
+    await tester.tap(find.text('一键清空'));
+    await tester.pumpAndSettle();
+    expect(find.text('数学课程'), findsOneWidget);
+  });
+
+  testWidgets('分类过多时左右滑动分类栏，不触发筛选抽屉', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await _pump(
+      tester,
+      FakeBackend()..on(
+        'GET',
+        '/api/v1/catalog/courses',
+        json: [
+          for (var i = 0; i < 25; i++)
+            courseSummaryJson(id: 'c$i', title: '课程$i', genres: ['分类$i']),
+        ],
+      ),
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('category-分类24')),
+      180,
+      scrollable: find.descendant(
+        of: find.byKey(const ValueKey('category-rail')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('category-分类24')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('category-分类24')));
+    await tester.pumpAndSettle();
+    expect(find.text('课程24'), findsOneWidget);
+    expect(find.text('课程0'), findsNothing);
+    await tester.drag(
+      find.byKey(const ValueKey('category-rail')),
+      const Offset(180, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('应用筛选'), findsNothing);
+  });
+
   testWidgets('大量不同流派也只构建可视区域', (tester) async {
     await _pump(
       tester,
@@ -27,7 +113,7 @@ void main() {
     expect(find.byIcon(Icons.folder_rounded), findsNothing);
   });
 
-  testWidgets('人物文件夹进入对应课程，未标注人物也可浏览', (tester) async {
+  testWidgets('人物分类显示对应课程，未标注人物也可浏览', (tester) async {
     await _pump(
       tester,
       FakeBackend()..on(
@@ -201,9 +287,9 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('应用筛选'), findsOneWidget);
-    await tester.tap(find.widgetWithText(ChoiceChip, '法律'));
+    await tester.tap(find.widgetWithText(ChoiceChip, '法律').hitTestable());
     await tester.pump();
-    await tester.tap(find.widgetWithText(ChoiceChip, '数学'));
+    await tester.tap(find.widgetWithText(ChoiceChip, '数学').hitTestable());
     await tester.pump();
     await tester.tap(find.text('应用筛选'));
     await tester.pumpAndSettle();
@@ -215,7 +301,7 @@ void main() {
     await tester.tap(find.text('清空选择'));
     await tester.pump();
     await tester.timedDrag(
-      find.text('全部'),
+      find.text('全部').hitTestable(),
       const Offset(-180, 0),
       const Duration(seconds: 2),
     );
