@@ -81,9 +81,10 @@ public class TodoService {
       }
       items.add(
           classifyCourse(
-              command,
-              todos.findByUserAndDate(userId, date),
-              todos.findPendingBefore(userId, date)));
+                  command,
+                  todos.findByUserAndDate(userId, date),
+                  todos.findPendingBefore(userId, date))
+              .withReviewAvailable(todos.hasCourseHistory(userId, resourceId)));
     }
     return new CourseAdditionPreview(List.copyOf(items));
   }
@@ -94,6 +95,51 @@ public class TodoService {
       String userId, List<CreateTodoCommand> commands, List<String> reuseTodoIds) {
     validateCommands(commands, true);
     return applyAdditions(userId, commands, reuseTodoIds == null ? List.of() : reuseTodoIds);
+  }
+
+  /** 新版添加显式选择复习，整个批次用稳定请求标识重放，旧请求保持原去重行为。 */
+  @Transactional
+  public CourseAdditionResult addCourses(
+      String userId,
+      List<CreateTodoCommand> commands,
+      List<String> reuseTodoIds,
+      List<String> reviewResourceIds,
+      String requestId) {
+    List<String> reviews = reviewResourceIds == null ? List.of() : reviewResourceIds;
+    List<String> reuse = reuseTodoIds == null ? List.of() : reuseTodoIds;
+    if (requestId == null && reviews.isEmpty()) return addCourses(userId, commands, reuse);
+    validateCommands(commands, true);
+    if (requestId == null
+        || !requestId.matches("[A-Za-z0-9-]{8,100}")
+        || reviews.stream()
+            .anyMatch(
+                id -> id == null || commands.stream().noneMatch(c -> id.equals(c.resourceId())))) {
+      throw new BusinessException(HttpStatus.BAD_REQUEST, "TODO_BATCH_INVALID", "复习添加请求无效，请重新选择课时");
+    }
+    try {
+      // 回执只存响应和内容摘要，不保存备注等请求明文；先写占位取得 SQLite 写锁。
+      var json = new com.fasterxml.jackson.databind.ObjectMapper();
+      String fingerprint =
+          java.util.HexFormat.of()
+              .formatHex(
+                  java.security.MessageDigest.getInstance("SHA-256")
+                      .digest(json.writeValueAsBytes(List.of(commands, reuse, reviews))));
+      todos.reserveCourseAddition(userId, requestId, fingerprint);
+      var receipt = todos.courseAdditionReceipt(userId, requestId);
+      if (receipt.isPresent()) {
+        if (!fingerprint.equals(receipt.get().fingerprint())) {
+          throw new BusinessException(HttpStatus.CONFLICT, "TODO_ADDITION_STALE", "添加内容已变化，请重新确认");
+        }
+        if (receipt.get().resultJson() != null)
+          return json.readValue(receipt.get().resultJson(), CourseAdditionResult.class);
+      }
+      var result = applyAdditions(userId, commands, reuse, Set.copyOf(reviews), true);
+      todos.completeCourseAddition(userId, requestId, json.writeValueAsString(result));
+      return result;
+    } catch (com.fasterxml.jackson.core.JsonProcessingException
+        | java.security.NoSuchAlgorithmException error) {
+      throw new IllegalStateException("课程添加回执处理失败", error);
+    }
   }
 
   /** 原入口允许三类 Todo，新入口仅接受课程；禁止空请求或超过合理批量上限。 */
@@ -164,6 +210,16 @@ public class TodoService {
   /** 提交采用事务内最新列表，批内重复也会命中已处理项；不会重复累计单日数量。 */
   private CourseAdditionResult applyAdditions(
       String userId, List<CreateTodoCommand> commands, List<String> reuseIds) {
+    return applyAdditions(userId, commands, reuseIds, Set.of(), false);
+  }
+
+  /** 主动复习只新建所选资源，批内重复仍按日期和课时折叠。 */
+  private CourseAdditionResult applyAdditions(
+      String userId,
+      List<CreateTodoCommand> commands,
+      List<String> reuseIds,
+      Set<String> reviewIds,
+      boolean modern) {
     validateCommands(commands, false);
     User user = userTime.requireUser(userId);
     Instant now = clock.instant();
@@ -173,6 +229,10 @@ public class TodoService {
     // 不接受跨用户、已完成、日期已变或与本批课时无关的确认 ID。
     for (String id : new java.util.LinkedHashSet<>(reuseIds)) {
       Todo old = requireOwned(userId, id);
+      if (reviewIds.contains(old.resourceId())) {
+        throw new BusinessException(
+            HttpStatus.BAD_REQUEST, "TODO_BATCH_INVALID", "同一课时不能同时复用和新增复习");
+      }
       var targets =
           commands.stream()
               .filter(
@@ -214,7 +274,16 @@ public class TodoService {
       if (command.todoType() == TodoType.COURSE) {
         CourseAdditionItem item =
             classifyCourse(command, current, todos.findPendingBefore(userId, date));
-        if (!"NEW".equals(item.status())) {
+        // 跨日已完成项在旧预览中仍是 NEW；新版选择跳过时不能偷偷新建。
+        if (modern
+            && "NEW".equals(item.status())
+            && !reviewIds.contains(item.resourceId())
+            && todos.hasCourseHistory(userId, item.resourceId())) {
+          outcomes.add(
+              new CourseAdditionOutcome(item.resourceId(), item.title(), "SKIPPED_EXISTING", null));
+          continue;
+        }
+        if (!"NEW".equals(item.status()) && !reviewIds.contains(item.resourceId())) {
           Todo old = confirmed.get(item.resourceId());
           if (("HISTORY".equals(item.status()) || "TARGET_CONFLICT".equals(item.status()))
               && old != null) {
@@ -263,7 +332,12 @@ public class TodoService {
         }
       }
       requireCapacity(current.size());
+      boolean review =
+          modern
+              && command.todoType() == TodoType.COURSE
+              && todos.hasCourseHistory(userId, command.resourceId());
       Todo added = buildAndInsert(user, command, date, supervisor, now);
+      if (review) todos.markReview(added.id());
       current.add(added);
       accepted.add(added);
       outcomes.add(
@@ -323,7 +397,21 @@ public class TodoService {
       long watchedMs) {}
 
   public record CourseAdditionItem(
-      String resourceId, String title, String status, List<HistoryCourseTodo> history) {}
+      String resourceId,
+      String title,
+      String status,
+      List<HistoryCourseTodo> history,
+      boolean reviewAvailable) {
+    /** 旧分类不变，复习能力作为旧客户端可忽略的增量字段。 */
+    public CourseAdditionItem(
+        String resourceId, String title, String status, List<HistoryCourseTodo> history) {
+      this(resourceId, title, status, history, false);
+    }
+
+    CourseAdditionItem withReviewAvailable(boolean available) {
+      return new CourseAdditionItem(resourceId, title, status, history, available);
+    }
+  }
 
   public record CourseAdditionPreview(List<CourseAdditionItem> items) {}
 

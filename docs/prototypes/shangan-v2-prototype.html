@@ -2490,9 +2490,10 @@ for(let index=1;index<=40;index++){
   <!-- 2-2 选课时 -->
   <div class="frame-wrap">
     <p class="frame-cap">2-2 课程 Todo · 第二步选课时
-      <small>多选课时一次加入今日；今日已有课时标注并跳过，历史已完成可跨日复看。历史未完成先弹窗确认顺延，目标取较高值，保留进度、备注和附件。</small>
-      <!-- ADR-0038：提交前弹出预览，取消不写入；每个历史课时单选或跳过。 -->
-      <details><summary>添加确认弹窗示例</summary><div class="wcard"><b>确认添加课时</b><p>新增 7 个；今日重复 2 个将跳过。</p><p>第一讲 · 昨日未完成 · 原目标 100% · 已看 10 分钟</p><label><input type="radio" name="defer-prototype" checked>顺延原待办（目标取较高值，保留进度、备注与附件）</label><label><input type="radio" name="defer-prototype">跳过此课时</label><p>目标不同的未完成课时先确认复用，目标取两者较高值；已看进度不回退。</p><button>取消</button><button>确认添加与复用</button></div></details>
+      <small>多选课时一次加入今日；重复课时默认新增独立复习，从零记录本轮进度。普通课时正常创建；同批重复只建一条，重试不多建。</small>
+      <!-- ADR-0047：新增复习与复用原项二选一，取消不写入。 -->
+      <details open><summary>添加确认弹窗示例</summary><div class="wcard"><b>确认添加课时</b><p>普通课时 1 个；可新增复习 2 个。</p><p>第一讲</p><select><option>新增复习待办（从零开始）</option><option>跳过此课时</option></select><p>第二讲</p><select><option>新增复习待办（从零开始）</option><option>复用原待办 · 目标 100% · 已看 10 分钟</option><option>跳过此课时</option></select><p>新增复习从零记录本轮进度，原待办保留；复用保留原日期、进度、备注和附件。</p><button>取消</button><button>确认添加</button></div></details>
+      <details open><summary>今日待办复习与回放</summary><div class="wcard"><p><span class="badge">复习</span> 第一讲 · 待开始 · 本轮 0%</p><p>第二讲 · 已完成 <button style="min-width:44px;min-height:44px" aria-label="回放">↻ 回放</button> <button style="min-width:44px;min-height:44px">查看详情 ›</button></p><p>回放从头播放，保留完成状态与时间，仅累计实际观看时长；不可用来源展示提示。</p></div></details>
 
     </p>
     <div class="phone">

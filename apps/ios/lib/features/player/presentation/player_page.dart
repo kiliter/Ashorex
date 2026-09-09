@@ -172,7 +172,8 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       setState(() {});
       await WidgetsBinding.instance.endOfFrame;
       if (!active()) return;
-      if (todo.progressPositionMs > 0) {
+      // 已完成项从头回放；服务端保留 DONE 与最远位置，仅新增真实观看时长。
+      if (!todo.isDone && todo.progressPositionMs > 0) {
         await player
             .seek(todo.progressPositionMs)
             .timeout(const Duration(seconds: 8));

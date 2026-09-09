@@ -132,6 +132,10 @@ public class JdbcCascadeRepository implements CascadeRepository {
         """,
             userId));
     counts.put(
+        "course_addition_receipts",
+        countByUser(
+            "SELECT count(*) FROM course_addition_receipts WHERE user_id = :userId", userId));
+    counts.put(
         "user_presence",
         countByUser("SELECT count(*) FROM user_presence WHERE user_id = :userId", userId));
     // 个人推送密钥也列入用户删除预览与审计，不能只依赖隐式级联。
@@ -311,6 +315,9 @@ public class JdbcCascadeRepository implements CascadeRepository {
         updateByUser(
             "DELETE FROM supervisions WHERE learner_user_id = :userId OR supervisor_user_id = :userId",
             userId));
+    deleted.put(
+        "course_addition_receipts",
+        updateByUser("DELETE FROM course_addition_receipts WHERE user_id = :userId", userId));
     deleted.put(
         "user_presence", updateByUser("DELETE FROM user_presence WHERE user_id = :userId", userId));
     deleted.put(

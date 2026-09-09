@@ -1284,6 +1284,7 @@ components:
     TodoView:
       type: object
       properties:
+        review: { type: boolean, default: false, description: 独立复习待办标记，旧客户端可忽略 }
         id: { type: string }
         localDate: { type: string, format: date }
         todoType: { $ref: '#/components/schemas/TodoType' }
@@ -1421,6 +1422,13 @@ components:
           maxItems: 500
           description: 本接口仅接受 COURSE 类型。
           items: { $ref: '#/components/schemas/CreateTodoCommand' }
+        requestId:
+          type: string
+          description: 新版主动添加的稳定批次标识，8–100 位字母数字或连字符；重试使用同一值，缺省保持旧版去重。
+        reviewResourceIds:
+          type: array
+          description: 明确选择新增复习的课时 ID；使用时必须提供 requestId，与复用同一课时互斥。
+          items: { type: string }
         reuseTodoIds:
           type: array
           description: 仅提交接口使用；用户确认要复用或顺延的原待办 ID，未选择的课时跳过。
@@ -1436,6 +1444,7 @@ components:
             type: object
             required: [resourceId, title, status, history]
             properties:
+              reviewAvailable: { type: boolean, default: false, description: 当前用户已安排或观看过该课时，可新增复习 }
               resourceId: { type: string }
               title: { type: string }
               status: { type: string, enum: [NEW, EXISTING, TARGET_CONFLICT, HISTORY, DUPLICATE] }

@@ -27,6 +27,19 @@ void main() {
     adapter.dispose();
   });
 
+  testWidgets('已完成视频从零回放且完成按钮保持禁用', (tester) async {
+    final playback = _FakePlayback();
+    await _pump(
+      tester,
+      _backend(completed: true),
+      _RecordingWakeLock(),
+      playback: playback,
+    );
+    expect(playback.positionMs, 0);
+    expect(find.text('已完成'), findsOneWidget);
+    await _dispose(tester);
+  });
+
   testWidgets('历史课时按原日期加载，跨今日不会查错待办', (tester) async {
     final backend = _backend();
     final date = DateTime(2026, 9, 1);
@@ -334,7 +347,10 @@ Future<void> _dispose(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-FakeBackend _backend({Map<String, Object?>? progressJson}) {
+FakeBackend _backend({
+  Map<String, Object?>? progressJson,
+  bool completed = false,
+}) {
   return FakeBackend()
     ..on('GET', '/api/v1/me', json: meJson())
     ..on(
@@ -344,11 +360,12 @@ FakeBackend _backend({Map<String, Object?>? progressJson}) {
         todos: [
           todoJson(
             id: 't-1',
+            status: completed ? 'DONE' : 'TODO',
             title: '行政法第 1 讲',
             targetProgressPermille: 300,
             resourceId: 'r-1',
             resourceDurationMs: 1800000,
-          ),
+          )..['progressPositionMs'] = completed ? 1800000 : 0,
         ],
       ),
     )

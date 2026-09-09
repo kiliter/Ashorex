@@ -160,6 +160,7 @@ public class TodoViewService {
     List<String> ids = items.stream().map(Todo::id).toList();
     Map<String, Integer> attachmentCounts = todos.attachmentCounts(ids);
     Map<String, Set<NoteTag>> noteTags = todos.noteTagsOf(ids);
+    Set<String> reviewIds = todos.reviewTodoIds(ids);
     List<TodoView> views = new ArrayList<>(items.size());
     for (Todo todo : items) {
       Optional<LearningResource> resource =
@@ -200,7 +201,8 @@ public class TodoViewService {
               todo.backfilled(),
               todo.supervisorUserIdSnapshot(),
               attachmentCounts.getOrDefault(todo.id(), 0),
-              List.copyOf(noteTags.getOrDefault(todo.id(), Set.of()))));
+              List.copyOf(noteTags.getOrDefault(todo.id(), Set.of())),
+              reviewIds.contains(todo.id())));
     }
     return List.copyOf(views);
   }
@@ -297,7 +299,8 @@ public class TodoViewService {
       boolean backfilled,
       String supervisorUserIdSnapshot,
       int attachmentCount,
-      List<NoteTag> noteTags) {}
+      List<NoteTag> noteTags,
+      boolean review) {}
 
   /** 当日指标。 */
   public record DaySummaryTotals(

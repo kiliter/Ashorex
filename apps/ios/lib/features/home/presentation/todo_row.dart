@@ -62,7 +62,11 @@ final class TodoRow extends ConsumerWidget {
       todo: todo,
       compact: compact,
       showCompletedTime: showCompletedTime,
-      extraBadges: extraBadges,
+      extraBadges: [
+        if (todo.review)
+          const ShanganBadge(label: '复习', tone: ShanganBadgeTone.ochre),
+        ...extraBadges,
+      ],
     );
     return Padding(
       padding: EdgeInsets.symmetric(vertical: compact ? 11 : 12),
@@ -105,6 +109,25 @@ final class TodoRow extends ConsumerWidget {
                 : body,
           ),
           const SizedBox(width: 8),
+          // 已完成课程保留详情箭头，独立回放按钮不影响完成与附件入口。
+          if (!selectable &&
+              !readOnly &&
+              todo.isDone &&
+              todo.todoType == TodoType.course)
+            IconButton(
+              tooltip: '回放',
+              icon: const Icon(Icons.replay_rounded),
+              onPressed: () async {
+                if (!todo.resourceAvailable) {
+                  _showUnavailable(context, ref);
+                  return;
+                }
+                await context.push<bool>(
+                  '/player/${todo.id}?date=${todo.localDate.toIso8601String().substring(0, 10)}',
+                );
+                await onChanged();
+              },
+            ),
           if (!selectable && !readOnly)
             Padding(
               padding: const EdgeInsets.only(top: 2),

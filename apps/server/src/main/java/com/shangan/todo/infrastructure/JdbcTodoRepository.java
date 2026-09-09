@@ -39,6 +39,76 @@ public class JdbcTodoRepository implements TodoRepository {
     this.jdbcClient = jdbcClient;
   }
 
+  /** 历史 Todo、删除台账和累计观看状态均只按当前用户的稳定资源 ID 判断。 */
+  @Override
+  public boolean hasCourseHistory(String userId, String resourceId) {
+    return jdbcClient
+        .sql(
+            """
+        SELECT EXISTS(SELECT 1 FROM todos WHERE user_id = :user AND resource_id = :resource)
+            OR EXISTS(SELECT 1 FROM lesson_watch_states WHERE user_id = :user AND resource_id = :resource)
+            OR EXISTS(SELECT 1 FROM todo_deletions WHERE user_id = :user AND resource_id = :resource)
+        """)
+        .param("user", userId)
+        .param("resource", resourceId)
+        .query(Boolean.class)
+        .single();
+  }
+
+  /** 标记只用于展示，课程类型与状态协议保持兼容。 */
+  @Override
+  public void markReview(String todoId) {
+    jdbcClient.sql("UPDATE todos SET is_review = 1 WHERE id = :id").param("id", todoId).update();
+  }
+
+  @Override
+  public Set<String> reviewTodoIds(List<String> todoIds) {
+    if (todoIds.isEmpty()) return Set.of();
+    return Set.copyOf(
+        jdbcClient
+            .sql("SELECT id FROM todos WHERE id IN (:ids) AND is_review = 1")
+            .param("ids", todoIds)
+            .query(String.class)
+            .list());
+  }
+
+  /** 占位和最终结果都随应用事务提交；失败回滚不会留下空回执。 */
+  @Override
+  public void reserveCourseAddition(String userId, String requestId, String fingerprint) {
+    jdbcClient
+        .sql(
+            """
+        INSERT INTO course_addition_receipts(user_id, request_id, fingerprint)
+        VALUES (:user, :request, :fingerprint) ON CONFLICT(user_id, request_id) DO NOTHING
+        """)
+        .param("user", userId)
+        .param("request", requestId)
+        .param("fingerprint", fingerprint)
+        .update();
+  }
+
+  @Override
+  public Optional<CourseAdditionReceipt> courseAdditionReceipt(String userId, String requestId) {
+    return jdbcClient
+        .sql(
+            "SELECT fingerprint, result_json FROM course_addition_receipts WHERE user_id = :user AND request_id = :request")
+        .param("user", userId)
+        .param("request", requestId)
+        .query((rs, row) -> new CourseAdditionReceipt(rs.getString(1), rs.getString(2)))
+        .optional();
+  }
+
+  @Override
+  public void completeCourseAddition(String userId, String requestId, String resultJson) {
+    jdbcClient
+        .sql(
+            "UPDATE course_addition_receipts SET result_json = :result WHERE user_id = :user AND request_id = :request")
+        .param("result", resultJson)
+        .param("user", userId)
+        .param("request", requestId)
+        .update();
+  }
+
   /** 幂等标识只在所属 Todo 内查询，归属由应用层先校验。 */
   @Override
   public Optional<String> focusRequestAction(String todoId, String requestId) {

@@ -19,6 +19,49 @@ void main() {
     history: [old],
   );
 
+  testWidgets('批量重复课时默认各新增一条复习', (tester) async {
+    List<String>? answer;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              answer = await confirmCourseAdditions(context, [
+                const CourseAdditionItem(
+                  resourceId: 'a',
+                  title: '第一讲',
+                  status: 'EXISTING',
+                  history: [],
+                  reviewAvailable: true,
+                ),
+                const CourseAdditionItem(
+                  resourceId: 'b',
+                  title: '第二讲',
+                  status: 'NEW',
+                  history: [],
+                  reviewAvailable: true,
+                ),
+                const CourseAdditionItem(
+                  resourceId: 'c',
+                  title: '第三讲',
+                  status: 'NEW',
+                  history: [],
+                ),
+              ]);
+            },
+            child: const Text('打开'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('打开'));
+    await tester.pumpAndSettle();
+    expect(find.text('普通课时 1 个；可新增复习 2 个。'), findsOneWidget);
+    await tester.tap(find.text('确认添加'));
+    await tester.pumpAndSettle();
+    expect(answer, ['review:a', 'review:b']);
+  });
+
   testWidgets('取消历史顺延返回 null，不形成写操作确认', (tester) async {
     List<String>? answer = ['not-returned'];
     await tester.pumpWidget(
@@ -57,7 +100,7 @@ void main() {
     );
     await tester.tap(find.text('打开'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('确认添加与复用'));
+    await tester.tap(find.text('确认添加'));
     await tester.pumpAndSettle();
     expect(answer, ['old']);
   });
@@ -93,7 +136,7 @@ void main() {
     );
     await tester.tap(find.text('打开'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('确认添加与复用'));
+    await tester.tap(find.text('确认添加'));
     await tester.pumpAndSettle();
     expect(answer, isEmpty);
   });

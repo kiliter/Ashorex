@@ -10,6 +10,59 @@ import '../../support/fixtures.dart';
 
 /// 验证共用加入课时弹窗的滚动边界，完成标准和提交始终可见。
 void main() {
+  testWidgets('提交响应丢失后重试原批次，不重新预览或多建复习', (tester) async {
+    final backend = FakeBackend()
+      ..on(
+        'POST',
+        '/api/v1/todos/course-additions/preview',
+        json: {
+          'items': [
+            {
+              'resourceId': 'r0',
+              'title': '课时0',
+              'status': 'EXISTING',
+              'history': [],
+              'reviewAvailable': true,
+            },
+          ],
+        },
+      )
+      ..on(
+        'POST',
+        '/api/v1/todos/course-additions',
+        status: 503,
+        json: {'detail': '响应暂不可用'},
+      );
+    await openPicker(tester, const Size(390, 844), suppliedBackend: backend);
+    await tester.tap(find.text('课时0'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('加入待办'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('确认添加'));
+    await tester.pumpAndSettle();
+    final first = backend
+        .lastRequest('POST', '/api/v1/todos/course-additions')
+        .json;
+    expect(first['reviewResourceIds'], ['r0']);
+    expect(first['requestId'], matches(RegExp(r'^[a-f0-9]{32}$')));
+    backend.on(
+      'POST',
+      '/api/v1/todos/course-additions',
+      json: {'created': 1, 'deferred': 0, 'reused': 0, 'skipped': 0},
+    );
+    await tester.tap(find.text('加入待办'));
+    await tester.pumpAndSettle();
+    expect(
+      backend.lastRequest('POST', '/api/v1/todos/course-additions').json,
+      first,
+    );
+    expect(
+      backend.callCount('POST', '/api/v1/todos/course-additions/preview'),
+      1,
+    );
+    expect(find.text('课时0'), findsNothing);
+  });
+
   testWidgets('长列表滚动不移动完成标准与加入按钮，目标可直接修改', (tester) async {
     await openPicker(tester, const Size(390, 844));
     expect(find.text('课时99'), findsNothing);
@@ -99,7 +152,11 @@ void main() {
 }
 
 /// 仅替换协议数据；使用真实弹层、主题和选择逻辑。
-Future<void> openPicker(WidgetTester tester, Size size) async {
+Future<void> openPicker(
+  WidgetTester tester,
+  Size size, {
+  FakeBackend? suppliedBackend,
+}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -114,7 +171,7 @@ Future<void> openPicker(WidgetTester tester, Size size) async {
       ],
     ),
   );
-  final backend = FakeBackend()
+  final backend = (suppliedBackend ?? FakeBackend())
     ..on('GET', '/api/v1/todos', json: dayViewJson());
   await tester.pumpWidget(
     ProviderScope(

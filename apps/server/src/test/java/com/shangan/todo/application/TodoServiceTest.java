@@ -630,6 +630,136 @@ class TodoServiceTest {
     verify(todos, never()).updateLocalDate(anyString(), any(), anyInt(), any());
   }
 
+  /** 同批重复只生成一轮复习，旧记录及其完成状态不变。 */
+  @Test
+  void reviewBatchStartsFromZeroAndDeduplicates() {
+    stubCreateWithoutSupervisor();
+    when(catalog.requireVisibleResource("resource-1")).thenReturn(video(60000L));
+    when(todos.hasCourseHistory(TodoFixtures.USER_ID, "resource-1")).thenReturn(true);
+    var result =
+        service.addCourses(
+            TodoFixtures.USER_ID,
+            List.of(courseCommand(), courseCommand()),
+            List.of(),
+            List.of("resource-1"),
+            "request-review");
+    assertThat(result.created()).isEqualTo(1);
+    assertThat(result.skipped()).isEqualTo(1);
+    assertThat(result.accepted().getFirst().progressPositionMs()).isZero();
+    assertThat(result.accepted().getFirst().watchedMs()).isZero();
+    assertThat(result.accepted().getFirst().status()).isEqualTo(TodoStatus.TODO);
+    verify(todos).markReview("todo-new");
+  }
+
+  /** 已完成的重复项可新建复习，原身份和完成状态不受影响。 */
+  @Test
+  void completedCourseCreatesIndependentReview() {
+    stubCreateWithoutSupervisor();
+    var ids = new java.util.concurrent.atomic.AtomicInteger();
+    service =
+        new TodoService(
+            todos,
+            catalog,
+            userTime,
+            supervisions,
+            effectiveAction,
+            () -> "new-" + ids.incrementAndGet(),
+            Clock.fixed(NOW, ZoneOffset.UTC));
+    when(catalog.requireVisibleResource("resource-1")).thenReturn(video(60000L));
+    var old = TodoFixtures.course().status(TodoStatus.DONE).localDate(TODAY).build();
+    when(todos.findByUserAndDate(TodoFixtures.USER_ID, TODAY)).thenReturn(List.of(old));
+    when(todos.hasCourseHistory(TodoFixtures.USER_ID, "resource-1")).thenReturn(true);
+    var result =
+        service.addCourses(
+            TodoFixtures.USER_ID,
+            List.of(courseCommand()),
+            List.of(),
+            List.of("resource-1"),
+            "review-done-1");
+    assertThat(result.created()).isEqualTo(1);
+    assertThat(result.accepted().getFirst().id()).isEqualTo("new-1");
+    verify(todos).markReview("new-1");
+    verify(todos, never()).updateStatus(anyString(), anyString(), any(), any());
+    verify(todos, never()).updateLocalDate(anyString(), any(), anyInt(), any());
+  }
+
+  /** 响应丢失后用同一标识重试，返回原回执，不能再插入或累计操作。 */
+  @Test
+  void reviewRequestReplayReturnsOriginalResult() {
+    stubCreateWithoutSupervisor();
+    when(catalog.requireVisibleResource("resource-1")).thenReturn(video(60000L));
+    var saved =
+        new java.util.concurrent.atomic.AtomicReference<TodoRepository.CourseAdditionReceipt>();
+    org.mockito.Mockito.doAnswer(
+            call -> {
+              if (saved.get() == null)
+                saved.set(new TodoRepository.CourseAdditionReceipt(call.getArgument(2), null));
+              return null;
+            })
+        .when(todos)
+        .reserveCourseAddition(anyString(), anyString(), anyString());
+    when(todos.courseAdditionReceipt(anyString(), anyString()))
+        .thenAnswer(call -> Optional.ofNullable(saved.get()));
+    org.mockito.Mockito.doAnswer(
+            call -> {
+              saved.set(
+                  new TodoRepository.CourseAdditionReceipt(
+                      saved.get().fingerprint(), call.getArgument(2)));
+              return null;
+            })
+        .when(todos)
+        .completeCourseAddition(anyString(), anyString(), anyString());
+    var first =
+        service.addCourses(
+            TodoFixtures.USER_ID, List.of(courseCommand()), List.of(), List.of(), "retry-batch-1");
+    var retry =
+        service.addCourses(
+            TodoFixtures.USER_ID, List.of(courseCommand()), List.of(), List.of(), "retry-batch-1");
+    assertThat(retry.created()).isEqualTo(1);
+    assertThat(retry.items()).isEqualTo(first.items());
+    verify(todos).insert(any(), any());
+    verify(effectiveAction).record(TodoFixtures.USER_ID);
+    assertThatThrownBy(
+            () ->
+                service.addCourses(
+                    TodoFixtures.USER_ID,
+                    List.of(courseCommand()),
+                    List.of(),
+                    List.of("resource-1"),
+                    "retry-batch-1"))
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("添加内容已变化，请重新确认");
+  }
+
+  /** 无稳定批次标识的复习写入必须在任何持久化前被拒绝。 */
+  @Test
+  void reviewRequiresRequestId() {
+    assertThatThrownBy(
+            () ->
+                service.addCourses(
+                    TodoFixtures.USER_ID,
+                    List.of(courseCommand()),
+                    List.of(),
+                    List.of("resource-1"),
+                    null))
+        .isInstanceOf(BusinessException.class);
+    org.mockito.Mockito.verifyNoInteractions(todos);
+  }
+
+  /** 跨日历史已完成课时选择跳过时，不因旧分类 NEW 而误建复习。 */
+  @Test
+  void historicalReviewCanBeSkipped() {
+    stubCreateWithoutSupervisor();
+    when(catalog.requireVisibleResource("resource-1")).thenReturn(video(60000L));
+    when(todos.hasCourseHistory(TodoFixtures.USER_ID, "resource-1")).thenReturn(true);
+    var result =
+        service.addCourses(
+            TodoFixtures.USER_ID, List.of(courseCommand()), List.of(), List.of(), "skip-review-1");
+    assertThat(result.created()).isZero();
+    assertThat(result.skipped()).isEqualTo(1);
+    verify(todos, never()).insert(any(), any());
+  }
+
   /** 课程添加请求固定默认目标，便于只关注去重与顺延边界。 */
   private TodoService.CreateTodoCommand courseCommand() {
     return new TodoService.CreateTodoCommand(

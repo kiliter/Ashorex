@@ -122,11 +122,16 @@ public class TodoController {
     return todoService.previewCourseAdditions(user.userId(), request.items());
   }
 
-  /** 仅顺延明确确认的历史 ID，其余重复项逐条跳过。 */
+  /** 按明确选择复用原项或新增复习；新版请求用批次标识保证幂等。 */
   @PostMapping("/course-additions")
   TodoService.CourseAdditionResult addCourses(
       CurrentUser user, @Valid @RequestBody CourseAdditionsRequest request) {
-    return todoService.addCourses(user.userId(), request.items(), request.reuseTodoIds());
+    return todoService.addCourses(
+        user.userId(),
+        request.items(),
+        request.reuseTodoIds(),
+        request.reviewResourceIds(),
+        request.requestId());
   }
 
   @PatchMapping("/{todoId}")
@@ -335,7 +340,10 @@ public class TodoController {
   }
 
   record CourseAdditionsRequest(
-      @NotEmpty List<CreateTodoCommand> items, List<String> reuseTodoIds) {}
+      @NotEmpty List<CreateTodoCommand> items,
+      List<String> reuseTodoIds,
+      List<String> reviewResourceIds,
+      String requestId) {}
 
   record CreateTodosRequest(@NotEmpty List<CreateTodoCommand> items) {}
 

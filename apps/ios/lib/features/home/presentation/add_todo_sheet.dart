@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:math';
 import 'dart:async';
 import 'package:shangan_ios/features/catalog/presentation/course_filter_panel.dart';
 import 'package:shangan_ios/core/widgets/shangan_feedback.dart';
@@ -858,7 +860,13 @@ class _ResourcePickerSheetState extends ConsumerState<_ResourcePickerSheet> {
     return total;
   }
 
-  /// 对已选课时先预览再提交，取消确认不会调用写接口。
+  String? _additionRequestId;
+  String? _additionPayload;
+  String? _additionItems;
+  List<String> _additionReviews = [];
+  List<String> _additionReuse = [];
+
+  /// 对已选课时先预览再提交；失败重试保留批次 ID，取消不写入。
   Future<void> _submit() async {
     if (_submitting || _selected.isEmpty) return;
     setState(() => _submitting = true);
@@ -873,10 +881,23 @@ class _ResourcePickerSheetState extends ConsumerState<_ResourcePickerSheet> {
         )
         .toList(growable: false);
     try {
+      // 响应丢失后的重试必须提交原批次，不能因重新预览看到新建记录而变成第二轮。
+      if (_additionRequestId != null && _additionItems == jsonEncode(items)) {
+        final result = await repository.addCourses(
+          items,
+          _additionReuse,
+          reviewResourceIds: _additionReviews,
+          requestId: _additionRequestId,
+        );
+        if (!mounted) return;
+        ShanganFeedback.show(context, result.message);
+        Navigator.of(context).pop(true);
+        return;
+      }
       final preview = await repository.previewCourseAdditions(items);
       if (!mounted) return;
       List<String> confirmed = [];
-      if (preview.any((item) => item.status != 'NEW')) {
+      if (preview.any((item) => item.status != 'NEW' || item.reviewAvailable)) {
         final choice = await confirmCourseAdditions(
           context,
           preview,
@@ -885,7 +906,32 @@ class _ResourcePickerSheetState extends ConsumerState<_ResourcePickerSheet> {
         if (!mounted || choice == null) return;
         confirmed = choice;
       }
-      final result = await repository.addCourses(items, confirmed);
+      final reviewIds =
+          confirmed
+              .where((id) => id.startsWith('review:'))
+              .map((id) => id.substring(7))
+              .toList()
+            ..sort();
+      final reuseIds =
+          confirmed.where((id) => !id.startsWith('review:')).toList()..sort();
+      final payload = jsonEncode([items, reuseIds, reviewIds]);
+      // 同一内容的失败重试复用标识；成功关闭弹窗，下一次主动添加生成新标识。
+      if (_additionPayload != payload) {
+        _additionPayload = payload;
+        _additionRequestId = List.generate(
+          16,
+          (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0'),
+        ).join();
+      }
+      _additionItems = jsonEncode(items);
+      _additionReuse = reuseIds;
+      _additionReviews = reviewIds;
+      final result = await repository.addCourses(
+        items,
+        reuseIds,
+        reviewResourceIds: reviewIds,
+        requestId: _additionRequestId,
+      );
       if (!mounted) return;
       ShanganFeedback.show(context, result.message);
       Navigator.of(context).pop(true);

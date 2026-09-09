@@ -29,12 +29,14 @@ final class CourseAdditionItem {
     required this.title,
     required this.status,
     required this.history,
+    this.reviewAvailable = false,
   });
   factory CourseAdditionItem.fromJson(Map<String, dynamic> json) =>
       CourseAdditionItem(
         resourceId: json['resourceId'] as String,
         title: json['title'] as String,
         status: json['status'] as String,
+        reviewAvailable: json['reviewAvailable'] as bool? ?? false,
         history: (json['history'] as List<dynamic>)
             .map(
               (item) =>
@@ -46,6 +48,7 @@ final class CourseAdditionItem {
   final String title;
   final String status;
   final List<HistoryCourseTodo> history;
+  final bool reviewAvailable;
 }
 
 /// 汇总采用实际提交结果，提交前的预览数量不能代替最终状态。

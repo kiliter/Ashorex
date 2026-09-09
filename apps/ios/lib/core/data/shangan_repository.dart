@@ -161,12 +161,20 @@ final class ShanganRepository {
   /// 仅提交用户确认的原待办 ID，服务端在事务内再次判断并返回真实计数。
   Future<CourseAdditionResult> addCourses(
     List<Map<String, Object?>> items,
-    List<String> reuseTodoIds,
-  ) async {
+    List<String> reuseTodoIds, {
+    List<String> reviewResourceIds = const [],
+    String? requestId,
+  }) async {
     return CourseAdditionResult.fromJson(
       await _api.postJson(
         '/api/v1/todos/course-additions',
-        data: {'items': items, 'reuseTodoIds': reuseTodoIds},
+        data: {
+          'items': items,
+          'reuseTodoIds': reuseTodoIds,
+          'requestId': ?requestId,
+          if (reviewResourceIds.isNotEmpty)
+            'reviewResourceIds': reviewResourceIds,
+        },
       ),
     );
   }

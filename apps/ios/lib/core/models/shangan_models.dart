@@ -236,6 +236,7 @@ final class TodoItem {
     this.plannedSeconds,
     this.focusStartedAt,
     this.focusAttemptBaseMs = 0,
+    this.review = false,
     this.completedAt,
   });
 
@@ -259,6 +260,9 @@ final class TodoItem {
   final int? plannedSeconds;
   final FocusState focusState;
   final DateTime? focusStartedAt;
+
+  /// 服务端持久化的复习标记；旧响应缺省为普通课程。
+  final bool review;
   final int focusAttemptBaseMs;
   int get focusAttemptMs =>
       (focusedMs - focusAttemptBaseMs).clamp(0, focusedMs);
@@ -303,6 +307,7 @@ final class TodoItem {
       watchedMs: (json['watchedMs'] as num?)?.toInt() ?? 0,
       plannedSeconds: (json['plannedSeconds'] as num?)?.toInt(),
       focusState: FocusState.parse(json['focusState'] as String? ?? 'IDLE'),
+      review: json['review'] as bool? ?? false,
       focusAttemptBaseMs: (json['focusAttemptBaseMs'] as num?)?.toInt() ?? 0,
       focusStartedAt: DateTime.tryParse(
         json['focusStartedAt'] as String? ?? '',

@@ -20,6 +20,24 @@ public interface TodoRepository {
   /** 与状态变更处于同一事务，复用现有流水的统计和级联生命周期。 */
   void recordFocusAction(Todo before, Todo after, String action, String requestId, Instant now);
 
+  /** 已安排或观看过的课时可标记复习，查询始终限定当前用户。 */
+  boolean hasCourseHistory(String userId, String resourceId);
+
+  /** 批量读取持久复习标记，避免列表逐行查库。 */
+  Set<String> reviewTodoIds(List<String> todoIds);
+
+  /** 新建后在同一事务中标记复习，不重写历史项。 */
+  void markReview(String todoId);
+
+  /** 先取得写锁再读取幂等结果，防止并发请求重复生成一批待办。 */
+  void reserveCourseAddition(String userId, String requestId, String fingerprint);
+
+  Optional<CourseAdditionReceipt> courseAdditionReceipt(String userId, String requestId);
+
+  void completeCourseAddition(String userId, String requestId, String resultJson);
+
+  record CourseAdditionReceipt(String fingerprint, String resultJson) {}
+
   // ---------- Todo 行 ----------
 
   Optional<Todo> findById(String id);
