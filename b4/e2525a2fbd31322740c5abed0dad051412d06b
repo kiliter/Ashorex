@@ -1,0 +1,24 @@
+docs/adr/0045-admin-nag-retry-and-import-progress.md
+  s_57cff913090969::t_e643aa4b04d30c 49-50
+  s_57cff913090969::t_1febe38f01c39f 45-48
+apps/server/src/main/resources/db/support/nag_cancel_v8.sql
+  s_57cff913090969::t_1febe38f01c39f 36
+apps/server/src/test/java/db/migration/V008ChecksumTest.java
+  s_57cff913090969::t_1febe38f01c39f 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "b4e2525a2fbd31322740c5abed0dad051412d06b",
+  "prompts": {},
+  "sessions": {
+    "s_57cff913090969": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a083f9-7ea7-7d93-be7c-654147190e6e",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
