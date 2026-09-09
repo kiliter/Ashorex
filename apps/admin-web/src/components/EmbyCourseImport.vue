@@ -25,6 +25,13 @@ const loading = ref(false);
 const importing = ref(false);
 const error = ref('');
 const results = ref<ResultRow[]>([]);
+const resultsPanel = ref<HTMLDivElement | null>(null);
+// 只反转展示顺序，原结果仍按执行顺序保存，避免改变失败重试队列。
+const newestResults = computed(() => [...results.value].reverse());
+// 新结果渲染后回到顶部，避免浏览器滚动锚定把最新日志留在可视区外。
+watch(() => results.value.length, () => {
+  if (resultsPanel.value) resultsPanel.value.scrollTop = 0;
+}, { flush: 'post' });
 const progress = ref('');
 const progressDialog = ref<HTMLDialogElement | null>(null);
 const total = ref(0);
@@ -182,9 +189,9 @@ onBeforeUnmount(() => { disposed = true; generation++; });
         <b>已处理 {{ results.length }} / {{ total }} 门</b>
         <p role="status" aria-live="polite">{{ progress }}</p>
       </div>
-      <div class="import-results" aria-label="逐项导入结果">
+      <div ref="resultsPanel" class="import-results" aria-label="逐项导入结果，最新在前">
         <p v-if="!results.length" class="muted">正在等待首门课程导入完成…</p>
-        <p v-for="row in results" :key="row.id" :class="{ 'field-error': !row.ok }"><b>{{ row.name }}</b>：{{ row.message }}</p>
+        <p v-for="row in newestResults" :key="row.id" :class="{ 'field-error': !row.ok }"><b>{{ row.name }}</b>：{{ row.message }}</p>
       </div>
       <footer class="between mt12"><span>成功或已存在 {{ results.length - failures.length }} 门 · 失败 {{ failures.length }} 门</span>
         <button v-if="failures.length" class="wbtn ghost" :disabled="importing" @click="runImport(failures.map(row => row.id))">重试失败项（{{ failures.length }}）</button>
