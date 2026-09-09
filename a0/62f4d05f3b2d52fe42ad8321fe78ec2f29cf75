@@ -1,0 +1,33 @@
+apps/ios/lib/features/catalog/presentation/library_page.dart
+  s_20a06985cb8621::t_7661db3bfebfec 30-32,97-100,108-111,121-125,149,166,206,238,240-241,244,296-302,309-311,314-322,333-346,352-356,361-363,371-374,381-384,388-396,492,496-502,504-505,510-511,562-570,574,580,584,596,598-599
+  s_20a06985cb8621::t_16a64da16540e3 126-128,153-161,239,242-243,268-272,282,303-308,323-330,347-351,357-360,364-370,375-380,386,506-509,512-557,559,571-573,575-579,581-583,585-595,597
+  s_20a06985cb8621::t_240ef1b0770af4 385
+  s_20a06985cb8621::t_6e5380f3c26c44 387
+apps/ios/test/features/catalog/library_page_test.dart
+  s_20a06985cb8621::t_1daf2c4285872e 13,41-60,62-64,87-90,95-98
+  s_20a06985cb8621::t_16a64da16540e3 14-40,61,65-86,91-94,290,292,304
+docs/plans/2026-09-07-shangan-v2-implementation-plan.md
+  s_20a06985cb8621::t_66da263988acff 1214-1220
+docs/prototypes/shangan-v2-prototype.html
+  s_20a06985cb8621::t_a244ce034848d9 555,570
+docs/specs/2026-09-07-shangan-v2-design.md
+  s_20a06985cb8621::t_71fe610708bb25 944-950
+docs/traceability/2026-09-07-shangan-v2-traceability.md
+  s_20a06985cb8621::t_460149e2f89c0c 289-295
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "a062f4d05f3b2d52fe42ad8321fe78ec2f29cf75",
+  "prompts": {},
+  "sessions": {
+    "s_20a06985cb8621": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a083e1-0cae-7fe2-8173-681e7283a6c4",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
