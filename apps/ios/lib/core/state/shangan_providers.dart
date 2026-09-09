@@ -165,7 +165,11 @@ final class CatalogFilter {
     final keyword = (query ?? '').trim().toLowerCase();
     return overlaps(selectedGenres, course.genres) &&
         overlaps(selectedTags, course.tags) &&
-        overlaps(selectedPeople, course.people) &&
+        // 人物文件夹的兜底分组对应空元数据，不向 Emby 写入虚构人物。
+        overlaps(
+          selectedPeople,
+          course.people.isEmpty ? ['未标注人物'] : course.people,
+        ) &&
         (year == null || course.productionYear == year) &&
         (keyword.isEmpty ||
             course.title.toLowerCase().contains(keyword) ||

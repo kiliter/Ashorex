@@ -25,6 +25,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
   /// 原型 4-1 右上角两个 iconbtn：搜索框与筛选区都可收起。
   bool _searchOpen = false;
+  bool _hideFullyWatched = false;
   Timer? _debounce;
   String _appliedKeyword = '';
   bool _openingFilters = false;
@@ -98,6 +99,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       onClear: () {
         _keyword.clear();
         _search('');
+        setState(() => _hideFullyWatched = false);
         if (filter.hasTags ||
             filter.year != null ||
             (filter.query?.isNotEmpty ?? false)) {
@@ -151,6 +153,15 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                         ],
                       ),
                     ),
+                    if (compact)
+                      ShanganIconButton(
+                        icon: Icons.visibility_off_outlined,
+                        highlighted: _hideFullyWatched,
+                        semanticLabel: '隐藏已看完',
+                        onTap: () => setState(
+                          () => _hideFullyWatched = !_hideFullyWatched,
+                        ),
+                      ),
                     if (compact && _searchOpen)
                       Expanded(
                         child: ShanganSearchField(
@@ -192,7 +203,18 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                     ],
                   )
                 else ...[
-                  grouping,
+                  Row(
+                    children: [
+                      Expanded(child: grouping),
+                      const SizedBox(width: 8),
+                      FilterChip(
+                        label: const Text('隐藏已看完'),
+                        selected: _hideFullyWatched,
+                        onSelected: (value) =>
+                            setState(() => _hideFullyWatched = value),
+                      ),
+                    ],
+                  ),
                   selectedFilters,
                 ],
                 Expanded(
@@ -201,48 +223,37 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                       ref.invalidate(catalogFacetsProvider);
                       ref.invalidate(libraryCoursesSnapshotProvider);
                     },
-                    child: ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.only(bottom: 110),
-                      children: [
-                        courses.when(
-                          loading: () => const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 40),
-                            child: Center(child: CircularProgressIndicator()),
+                    child: courses.when(
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (error, _) => CustomScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        slivers: const [
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(child: Text('课程列表加载失败，请下拉重试')),
                           ),
-                          error: (error, _) => Text('课程列表加载失败：$error'),
-                          data: (list) {
-                            final visible = keyword.isEmpty
-                                ? list
-                                : list
-                                      .where(
-                                        (course) =>
-                                            course.title.contains(keyword) ||
-                                            course.people.any(
-                                              (person) =>
-                                                  person.contains(keyword),
-                                            ),
-                                      )
-                                      .toList(growable: false);
-                            if (visible.isEmpty) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 40),
-                                child: Center(
-                                  child: Text(
-                                    '没有符合条件的课程',
-                                    style: TextStyle(
-                                      color: ShanganColors.mutedInk,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
-                            return filter.groupByPerson
-                                ? _PeopleList(courses: visible)
-                                : _GenreGroups(courses: visible);
-                          },
-                        ),
-                      ],
+                        ],
+                      ),
+                      data: (list) {
+                        // 只消费服务端看完结论；空课程与旧服务端响应不会被误隐藏。
+                        final visible = list
+                            .where(
+                              (course) =>
+                                  (!_hideFullyWatched ||
+                                      !course.fullyWatched) &&
+                                  (keyword.isEmpty ||
+                                      course.title.contains(keyword) ||
+                                      course.people.any(
+                                        (person) => person.contains(keyword),
+                                      )),
+                            )
+                            .toList(growable: false);
+                        return _FolderCourses(
+                          courses: visible,
+                          byPerson: filter.groupByPerson,
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -255,235 +266,185 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   }
 }
 
-/// 原型 4-1：按流派分组，组标题用 grouplabel。
-final class _GenreGroups extends StatelessWidget {
-  const _GenreGroups({required this.courses});
-
+/// 文件夹目录采用 SliverGrid 按需构建；只聚合数据，不预创建全部课程组件。
+final class _FolderCourses extends ConsumerWidget {
+  const _FolderCourses({required this.courses, required this.byPerson});
   final List<CourseSummary> courses;
-
-  @override
-  Widget build(BuildContext context) {
-    final groups = <String, List<CourseSummary>>{};
-    for (final course in courses) {
-      groups.putIfAbsent(course.primaryGenre, () => []).add(course);
-    }
-    var index = 0;
-    final children = <Widget>[];
-    for (final entry in groups.entries) {
-      children.add(ShanganGroupLabel('${entry.key} · ${entry.value.length} 门'));
-      for (final course in entry.value) {
-        children.add(
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _CourseCard(course: course, index: index++),
-          ),
-        );
-      }
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: children,
-    );
-  }
-}
-
-/// 原型 4-2：按人物聚合，本地不存人物主表，只按人物名聚合课程与我的时长。
-final class _PeopleList extends ConsumerWidget {
-  const _PeopleList({required this.courses});
-
-  final List<CourseSummary> courses;
+  final bool byPerson;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final grouped = <String, List<CourseSummary>>{};
+    final groups = <String, List<CourseSummary>>{};
     for (final course in courses) {
-      final people = course.people.isEmpty ? ['未标注人物'] : course.people;
-      for (final person in people) {
-        grouped.putIfAbsent(person, () => []).add(course);
+      final names = byPerson
+          ? (course.people.isEmpty ? ['未标注人物'] : course.people)
+          : [course.primaryGenre];
+      for (final name in names) {
+        groups.putIfAbsent(name, () => []).add(course);
       }
     }
-    final entries = grouped.entries.toList(growable: false);
-    return ShanganCard(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Column(
-        children: [
-          for (var index = 0; index < entries.length; index++) ...[
-            if (index > 0) const Divider(height: 1, color: ShanganColors.hair),
-            _PersonRow(
-              name: entries[index].key,
-              courses: entries[index].value,
-              index: index,
-              onTap: () {
-                ref
-                    .read(catalogFilterProvider.notifier)
-                    .togglePerson(entries[index].key);
-                ref
-                    .read(catalogFilterProvider.notifier)
-                    .setGroupByPerson(false);
-              },
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scaler = MediaQuery.textScalerOf(context);
+        final compact = constraints.maxHeight < 110;
+        // 普通手机三列，窄屏/大字体自动减少，平板按宽度增列。
+        final minWidth = 108 * (scaler.scale(13) / 13).clamp(1.0, 2.0);
+        final columns = ((constraints.maxWidth + 10) / (minWidth + 10))
+            .floor()
+            .clamp(constraints.maxWidth >= 260 ? 2 : 1, 12);
+        final delegate = SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columns,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          mainAxisExtent:
+              (compact ? 16 : 70) +
+              scaler.scale(13) * 2.6 +
+              scaler.scale(11) * 1.4,
+        );
+        final entries = groups.entries.toList(growable: false);
+        return CustomScrollView(
+          key: const PageStorageKey('library-folders'),
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            if (courses.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: Text('没有符合条件的课程')),
+              )
+            else if (byPerson)
+              SliverGrid(
+                gridDelegate: delegate,
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final entry = entries[index];
+                  return _FolderTile(
+                    compact: compact,
+                    title: entry.key,
+                    caption: '${entry.value.length} 门课程',
+                    onTap: () {
+                      // 进入人物文件夹只查看该人物，避免再次点击反而取消当前条件。
+                      ref
+                          .read(catalogFilterProvider.notifier)
+                          .apply(
+                            ref
+                                .read(catalogFilterProvider)
+                                .copyWith(
+                                  people: {entry.key},
+                                  groupByPerson: false,
+                                ),
+                          );
+                    },
+                  );
+                }, childCount: entries.length),
+              )
+            else
+              for (final entry in entries) ...[
+                if (!compact)
+                  SliverToBoxAdapter(
+                    child: ShanganGroupLabel(
+                      '${entry.key} · ${entry.value.length} 门',
+                    ),
+                  ),
+                SliverGrid(
+                  gridDelegate: delegate,
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final course = entry.value[index];
+                    return _FolderTile(
+                      compact: compact,
+                      title: course.title,
+                      caption: course.fullyWatched
+                          ? '已看完'
+                          : '已完成 ${course.completedCount}/${course.resourceCount}',
+                      onTap: () async {
+                        // 每次进入读取最新累计位置，返回后刷新隐藏已看完的结果。
+                        ref.invalidate(courseDetailProvider(course.id));
+                        await context.push('/courses/${course.id}');
+                        if (context.mounted) {
+                          ref.invalidate(libraryCoursesSnapshotProvider);
+                        }
+                      },
+                    );
+                  }, childCount: entry.value.length),
+                ),
+              ],
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
-final class _PersonRow extends StatelessWidget {
-  const _PersonRow({
-    required this.name,
-    required this.courses,
-    required this.index,
+/// 整个文件夹可点击；两行名称控制密度，长按提示和无障碍保留完整名称。
+final class _FolderTile extends StatelessWidget {
+  const _FolderTile({
+    required this.title,
+    required this.caption,
     required this.onTap,
+    this.compact = false,
   });
-
-  final String name;
-  final List<CourseSummary> courses;
-  final int index;
+  final bool compact;
+  final String title;
+  final String caption;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final lessons = courses.fold<int>(
-      0,
-      (previous, course) => previous + course.resourceCount,
-    );
-    final watchedMs = courses.fold<int>(
-      0,
-      (previous, course) => previous + course.watchedMs,
-    );
-    final genres = <String>{for (final course in courses) course.primaryGenre};
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 11),
-        child: Row(
-          children: [
-            ShanganAvatar(letter: name.substring(0, 1), index: index),
-            const SizedBox(width: 11),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${genres.join('、')} · ${courses.length} 门课程 · $lessons 课时',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: ShanganColors.mutedInk,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    watchedMs == 0
-                        ? '尚未开始'
-                        : '我已学 ${formatDurationCompact(watchedMs)}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: ShanganColors.mutedInk,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: ShanganColors.mutedInk),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 原型 `.course-card`：封面 + 名称 + 两行元数据 + 进度条 + 已看统计。
-final class _CourseCard extends StatelessWidget {
-  const _CourseCard({required this.course, required this.index});
-
-  final CourseSummary course;
-  final int index;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push('/courses/${course.id}'),
-      child: ShanganCard(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ShanganCover(
-              letter: course.primaryGenre.isEmpty
-                  ? '课'
-                  : course.primaryGenre.substring(0, 1),
-              caption: course.tags.isEmpty ? '课程' : course.tags.first,
-              index: index,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    course.title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      height: 1.3,
-                      fontWeight: FontWeight.w800,
-                      color: ShanganColors.course,
-                    ),
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: '$title，$caption',
+    onTap: onTap,
+    excludeSemantics: true,
+    child: Tooltip(
+      message: title,
+      child: Material(
+        color: ShanganColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!compact) ...[
+                  const Icon(
+                    Icons.folder_rounded,
+                    color: ShanganColors.course,
+                    size: 40,
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '${course.people.isEmpty ? '未标注人物' : course.people.join('、')}'
-                    ' · ${course.resourceCount} 课时'
-                    ' · ${formatDurationCompact(course.totalDurationMs)}',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: ShanganColors.mutedInk,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 5,
-                    runSpacing: 4,
-                    children: [
-                      if (course.productionYear != null)
-                        ShanganBadge(
-                          label: '${course.productionYear}',
-                          tone: ShanganBadgeTone.blue,
-                        ),
-                      for (final tag in course.tags.take(2))
-                        ShanganBadge(label: tag),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  TargetProgressBar(value: course.completedPercent / 100),
-                  const SizedBox(height: 6),
-                  Text(
-                    '已看 ${course.completedCount} / ${course.resourceCount}'
-                    ' · ${formatDurationCompact(course.watchedMs)}',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: ShanganColors.mutedInk,
-                    ),
-                  ),
                 ],
-              ),
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.3,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    height: 1.4,
+                    color: ShanganColors.mutedInk,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
-/// 课程详情：封面头 + 课时列表（原型 4-3）。
+/// 课程详情：固定课程摘要与操作，仅剩余空间中的课时列表滚动（ADR-0044）。
 final class CourseDetailPage extends ConsumerStatefulWidget {
   const CourseDetailPage({required this.courseId, super.key});
 
@@ -523,163 +484,171 @@ class _CourseDetailPageState extends ConsumerState<CourseDetailPage> {
                   (item) => item.measurable && item.progressPermille < 1000,
                 )
                 .firstOrNull;
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
-              children: [
-                Row(
-                  children: [
-                    ShanganIconButton(
-                      icon: Icons.chevron_right,
-                      quarterTurns: 2,
-                      semanticLabel: '返回',
-                      onTap: () => Navigator.of(context).pop(),
-                    ),
-                    const Spacer(),
-                    ShanganIconButton(
-                      icon: Icons.search,
-                      highlighted: _searchOpen,
-                      semanticLabel: '搜索课时',
-                      onTap: () => setState(() => _searchOpen = !_searchOpen),
-                    ),
-                  ],
-                ),
-                if (_searchOpen) ...[
-                  const SizedBox(height: 12),
-                  ShanganSearchField(
-                    controller: _keyword,
-                    hint: '搜索课时',
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ShanganCover(
-                      letter: data.genres.isEmpty
-                          ? '课'
-                          : data.genres.first.substring(0, 1),
-                      caption: data.tags.isEmpty ? '课程' : data.tags.first,
-                      index: 0,
-                      width: 88,
-                      height: 118,
-                    ),
-                    const SizedBox(width: 13),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+            // 列表占用剩余高度；横屏和键盘下收起摘要，操作区仍保持固定。
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final compact =
+                    constraints.maxHeight < 460 ||
+                    MediaQuery.textScalerOf(context).scale(14) > 22;
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+                  child: Column(
+                    children: [
+                      Row(
                         children: [
-                          Text(
-                            data.summary.title,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              height: 1.28,
-                              fontWeight: FontWeight.w800,
-                              color: ShanganColors.course,
-                            ),
+                          ShanganIconButton(
+                            icon: Icons.chevron_right,
+                            quarterTurns: 2,
+                            semanticLabel: '返回',
+                            onTap: () => Navigator.of(context).pop(),
                           ),
-                          const SizedBox(height: 6),
-                          Wrap(
-                            spacing: 5,
-                            runSpacing: 4,
-                            children: [
-                              for (final genre in data.genres)
-                                ShanganBadge(label: genre),
-                              for (final tag in data.tags)
-                                ShanganBadge(label: tag),
-                              if (data.summary.productionYear != null)
-                                ShanganBadge(
-                                  label: '${data.summary.productionYear}',
-                                ),
-                            ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: compact && _searchOpen
+                                ? ShanganSearchField(
+                                    controller: _keyword,
+                                    hint: '搜索课时',
+                                    onChanged: (_) => setState(() {}),
+                                  )
+                                : Tooltip(
+                                    message: data.summary.title,
+                                    child: Text(
+                                      data.summary.title,
+                                      key: const ValueKey(
+                                        'course-detail-title',
+                                      ),
+                                      maxLines: compact ? 1 : 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '人物：${data.people.isEmpty ? '未标注' : data.people.join('、')}'
-                            ' · 来自 Emby 元数据',
+                          ShanganIconButton(
+                            icon: Icons.search,
+                            highlighted: _searchOpen,
+                            semanticLabel: '搜索课时',
+                            onTap: () =>
+                                setState(() => _searchOpen = !_searchOpen),
+                          ),
+                        ],
+                      ),
+                      if (!compact) ...[
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '${data.resources.length} 课时 · ${formatDurationCompact(data.summary.totalDurationMs)}'
+                            ' · 已完成 ${data.summary.completedCount}/${data.resources.length}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 12,
                               color: ShanganColors.mutedInk,
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '${data.resources.length} 课时 · '
-                            '${formatDurationCompact(data.summary.totalDurationMs)}',
+                        ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            [
+                              ...data.people,
+                              ...data.genres,
+                              ...data.tags,
+                            ].join(' · '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 12,
                               color: ShanganColors.mutedInk,
                             ),
                           ),
+                        ),
+                        const SizedBox(height: 8),
+                        TargetProgressBar(
+                          value: data.summary.completedPercent / 100,
+                        ),
+                        if (_searchOpen) ...[
                           const SizedBox(height: 8),
-                          TargetProgressBar(
-                            value: data.summary.completedPercent / 100,
+                          ShanganSearchField(
+                            controller: _keyword,
+                            hint: '搜索课时',
+                            onChanged: (_) => setState(() {}),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '已看 ${data.summary.completedCount} / ${data.resources.length}'
-                            ' · 累计 ${formatDurationCompact(data.summary.watchedMs)}',
-                            style: const TextStyle(
-                              fontSize: 11.5,
-                              color: ShanganColors.mutedInk,
+                        ],
+                      ],
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: FilledButton.icon(
+                              style: _smallFilledStyle,
+                              onPressed: next == null
+                                  ? null
+                                  : () => _addToToday(data.summary),
+                              icon: const Icon(
+                                Icons.play_arrow_rounded,
+                                size: 18,
+                              ),
+                              label: Text(
+                                data.summary.fullyWatched
+                                    ? '已全部看完'
+                                    : next == null
+                                    ? '暂无可学课时'
+                                    : '继续${next.title}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 9),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              style: _smallOutlinedStyle,
+                              onPressed: () => _addToToday(data.summary),
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text(
+                                '批量加入',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 13,
-                      child: FilledButton.icon(
-                        style: _smallFilledStyle,
-                        onPressed: next == null
-                            ? null
-                            : () => _addToToday(data.summary),
-                        icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                        label: Text(
-                          next == null ? '已全部看完' : '继续${next.title}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 6),
+                          child: Text(
+                            '课时',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      flex: 10,
-                      child: OutlinedButton.icon(
-                        style: _smallOutlinedStyle,
-                        onPressed: () => _addToToday(data.summary),
-                        icon: const Icon(Icons.add, size: 18),
-                        label: const Text('批量加入'),
+                      Expanded(
+                        child: resources.isEmpty
+                            ? const Center(child: Text('没有符合条件的课时'))
+                            : ListView.separated(
+                                key: const ValueKey('course-lessons'),
+                                padding: const EdgeInsets.only(bottom: 24),
+                                itemCount: resources.length,
+                                separatorBuilder: (_, _) => const Divider(
+                                  height: 1,
+                                  color: ShanganColors.hair,
+                                ),
+                                itemBuilder: (context, index) => _ResourceRow(
+                                  resource: resources[index],
+                                  onAdd: () => _addToToday(data.summary),
+                                ),
+                              ),
                       ),
-                    ),
-                  ],
-                ),
-                const ShanganGroupLabel('课时'),
-                ShanganCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 13),
-                  child: Column(
-                    children: [
-                      for (
-                        var index = 0;
-                        index < resources.length;
-                        index++
-                      ) ...[
-                        if (index > 0)
-                          const Divider(height: 1, color: ShanganColors.hair),
-                        _ResourceRow(
-                          resource: resources[index],
-                          onAdd: () => _addToToday(data.summary),
-                        ),
-                      ],
                     ],
                   ),
-                ),
-              ],
+                );
+              },
             );
           },
         ),
@@ -688,13 +657,13 @@ class _CourseDetailPageState extends ConsumerState<CourseDetailPage> {
   }
 
   static final _smallFilledStyle = FilledButton.styleFrom(
-    minimumSize: const Size.fromHeight(40),
+    minimumSize: const Size.fromHeight(44),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
   );
 
   static final _smallOutlinedStyle = OutlinedButton.styleFrom(
-    minimumSize: const Size.fromHeight(40),
+    minimumSize: const Size.fromHeight(44),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
   );

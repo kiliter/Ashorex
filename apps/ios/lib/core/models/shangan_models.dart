@@ -695,6 +695,7 @@ final class CourseSummary {
     required this.completedCount,
     required this.watchedMs,
     required this.completedPercent,
+    this.fullyWatched = false,
     this.productionYear,
   });
 
@@ -710,6 +711,9 @@ final class CourseSummary {
   final int completedCount;
   final int watchedMs;
   final int completedPercent;
+
+  /// 服务端按累计观看位置判定全部看完，旧服务端缺失时保留课程可见。
+  final bool fullyWatched;
 
   String get primaryGenre => genres.isEmpty ? '未分类' : genres.first;
 
@@ -727,6 +731,7 @@ final class CourseSummary {
       completedCount: (json['completedCount'] as num?)?.toInt() ?? 0,
       watchedMs: (json['watchedMs'] as num?)?.toInt() ?? 0,
       completedPercent: (json['completedPercent'] as num?)?.toInt() ?? 0,
+      fullyWatched: json['fullyWatched'] as bool? ?? false,
     );
   }
 }

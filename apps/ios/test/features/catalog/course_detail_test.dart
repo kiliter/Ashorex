@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import 'package:shangan_ios/core/theme/shangan_theme.dart';
+import 'package:shangan_ios/features/catalog/presentation/library_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shangan_ios/core/api/api_exception.dart';
@@ -10,6 +13,73 @@ import '../../support/fixtures.dart';
 /// 课程详情：课时按 `sortIndex` 呈现，进度与「以前看过」都由服务端给出，
 /// 时长缺失的课时标记为不可度量，不能参与目标进度设定。
 void main() {
+  testWidgets('长课时列表按需构建且滚动不移动课程头部和操作', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await _pumpDetail(tester);
+    final title = tester.getTopLeft(
+      find.byKey(const ValueKey('course-detail-title')),
+    );
+    final action = tester.getTopLeft(find.text('批量加入'));
+    expect(find.text('课时999'), findsNothing);
+    await tester.drag(
+      find.byKey(const ValueKey('course-lessons')),
+      const Offset(0, -500),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('course-detail-title'))),
+      title,
+    );
+    expect(tester.getTopLeft(find.text('批量加入')), action);
+    expect(find.text('课时0').hitTestable(), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('课程详情横屏键盘下可搜索且课时区域仍可操作', (tester) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    await _pumpDetail(tester);
+    await tester.tap(find.bySemanticsLabel('搜索课时'));
+    await tester.pumpAndSettle();
+    tester.view.viewInsets = const FakeViewPadding(bottom: 220);
+    await tester.enterText(find.byType(TextField), '课时99');
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('course-lessons'))).height,
+      greaterThan(0),
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('course-lessons')),
+        matching: find.text('课时99'),
+      ),
+      findsOneWidget,
+    );
+    await tester.enterText(find.byType(TextField), '无此课时');
+    await tester.pumpAndSettle();
+    expect(find.text('没有符合条件的课时'), findsOneWidget);
+  });
+
+  testWidgets('课程详情大字体长名称不挤出课时区域', (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await _pumpDetail(tester, textScale: 2);
+    expect(tester.takeException(), isNull);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('course-lessons'))).height,
+      greaterThan(100),
+    );
+  });
+
   test('课时列表按服务端顺序解析，并带出已看进度', () async {
     final backend = FakeBackend()
       ..on(
@@ -162,4 +232,42 @@ ProviderContainer _container(FakeBackend backend) {
       shanganRepositoryProvider.overrideWithValue(buildRepository(backend)),
     ],
   );
+}
+
+/// 使用真实主题验证固定区和课时滚动边界，后端仅提供协议数据。
+Future<void> _pumpDetail(WidgetTester tester, {double textScale = 1}) async {
+  final backend = FakeBackend()
+    ..on(
+      'GET',
+      '/api/v1/catalog/courses/c-1',
+      json: courseDetailJson(
+        id: 'c-1',
+        resources: [
+          for (var i = 0; i < 1000; i++)
+            courseResourceJson(id: 'r$i', title: '课时$i', sortIndex: i),
+        ],
+      ),
+    );
+  final container = _container(backend);
+  addTearDown(container.dispose);
+  // 保留真实解析链路，但在真实异步区等待大响应的 isolate 解码完成。
+  await tester.runAsync(
+    () => container.read(courseDetailProvider('c-1').future),
+  );
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        theme: ShanganTheme.light(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
+        home: const CourseDetailPage(courseId: 'c-1'),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }

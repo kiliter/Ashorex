@@ -542,6 +542,38 @@ table.wt td b{font-weight:700;}
 </style>
 </head>
 <body>
+<!-- ADR-0044 已批准增量：以下替代 4-1 / 4-2 / 4-3 的布局；旧屏仅留作历史参考。 -->
+<section id="study-folder-draft" class="sect">
+<h2>学习页文件夹布局 · 已批准</h2>
+<p>手机三列；窄屏与大字体两列，平板增加列数。横屏键盘下空间极小时省略组标题和图标，优先保留名称。按人物沿用同样文件夹样式。以下为布局示例数据。</p>
+<div style="display:flex;gap:24px;flex-wrap:wrap">
+<div style="width:390px;max-width:100%;height:540px;display:flex;flex-direction:column;border:1px solid var(--hair);padding:16px;border-radius:20px;background:var(--paper)">
+<h3>课程库</h3><p>搜索课程　 ·　筛选　 ·　按流派 / 按人物</p>
+<label style="min-height:44px;display:flex;align-items:center;gap:8px"><input type="checkbox" onchange="document.querySelectorAll('#study-folder-draft [data-watched]').forEach(item=>item.hidden=this.checked)">隐藏已看完</label>
+<div style="overflow:auto;flex:1;min-height:0"><p>公考 · 课程</p><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px" id="folder-draft-items"></div></div>
+</div>
+<div style="width:390px;max-width:100%;height:540px;display:flex;flex-direction:column;border:1px solid var(--hair);padding:16px;border-radius:20px;background:var(--paper)">
+<h3>〈 课程详情</h3><p><b>行政能力测验 · 基础精讲</b></p><p>搜索课时　 ·　继续学习　 ·　批量加入</p><h3>课时</h3>
+<div id="lesson-draft-items" style="overflow:auto;flex:1;min-height:0;border-top:1px solid var(--hair)"></div>
+</div></div>
+<script>
+// 仅构造原型示例；开关演示排除全部看完，详情示例展示局部滚动。
+const folderDraft = document.getElementById('folder-draft-items');
+['行政能力测验','申论基础精讲','数量关系专项','判断推理提升','资料分析训练','言语理解专题','常识判断','时政热点','面试系统课程','申论作文','法律基础','经济知识'].forEach((title,index)=>{
+ const item=document.createElement('div');
+ if(index===1)item.dataset.watched='true';
+ item.style.cssText='min-width:0;padding:8px 2px;line-height:1.5';
+ item.innerHTML='<div style="color:var(--course);font-size:36px;line-height:1.2">📁</div><b style="font-size:13px;display:block;height:40px;overflow:hidden">'+title+'</b><small style="color:var(--muted)">'+(index===1?'已看完':'已完成 2/24')+'</small>';
+ folderDraft.appendChild(item);
+});
+for(let index=1;index<=40;index++){
+ const lesson=document.createElement('div');
+ lesson.style.cssText='padding:16px 0;border-bottom:1px solid var(--hair)';
+ lesson.textContent='第 '+index+' 讲 · 基础知识与例题　＋';
+ document.getElementById('lesson-draft-items').appendChild(lesson);
+}
+</script></section>
+
 <!-- ADR-0041/0042 已批准增量原型：下方历史屏保留业务数据示例，以本段交互覆盖旧筛选布局。 -->
 <section style="padding:24px;background:#f7f4ee" id="approved-filter-update">
 <h2>课程筛选与推送设置 · 已批准增量</h2>

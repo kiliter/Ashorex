@@ -1206,6 +1206,9 @@ components:
         completedCount: { type: integer }
         watchedMs: { type: integer }
         completedPercent: { type: integer }
+        fullyWatched:
+          type: boolean
+          description: 当前可见视频课时非空且全部累计最远位置达到有效总时长；无有效时长时为 false，与待办目标完成无关。
 
     ResourceView:
       type: object

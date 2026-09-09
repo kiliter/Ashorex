@@ -128,16 +128,24 @@ public class CatalogQueryService {
     return settings.current().features().documentResources();
   }
 
+  /** 汇总课程统计；全部看完仅按可见视频的有效时长与累计最远位置裁决。 */
   private CourseSummary summarize(String userId, Course course) {
     List<LearningResource> resources = visibleResources(course.id());
     Map<String, ResourceProgress> states = progress.progressOfCourse(userId, course.id());
     long totalDurationMs = 0;
     long watchedMs = 0;
     int completed = 0;
+    int videoCount = 0;
+    boolean allVideosWatched = true;
     for (LearningResource resource : resources) {
       totalDurationMs += resource.durationMs() == null ? 0 : resource.durationMs();
       ResourceProgress state = states.getOrDefault(resource.id(), ResourceProgress.empty());
       watchedMs += state.totalWatchedMs();
+      // 完成过低目标 Todo 不等于看完；直接比较毫秒，避免百分比取整误判。
+      if (resource.resourceType() == ResourceType.VIDEO) {
+        videoCount++;
+        allVideosWatched &= resource.measurable() && state.maxPositionMs() >= resource.durationMs();
+      }
       if (state.completedAtLeastOnce()) {
         completed++;
       }
@@ -155,7 +163,8 @@ public class CatalogQueryService {
         totalDurationMs,
         completed,
         watchedMs,
-        percent);
+        percent,
+        videoCount > 0 && allVideosWatched);
   }
 
   /** 筛选条件；空值表示不限制。 */
@@ -186,7 +195,8 @@ public class CatalogQueryService {
       long totalDurationMs,
       int completedCount,
       long watchedMs,
-      int completedPercent) {}
+      int completedPercent,
+      boolean fullyWatched) {}
 
   /** 课程详情视图。 */
   public record CourseDetail(
