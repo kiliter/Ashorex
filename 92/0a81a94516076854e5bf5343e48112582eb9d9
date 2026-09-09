@@ -1,0 +1,19 @@
+infra/updater/updater.py
+  s_4db1592e08aea0::t_5b5a6cab30a84a 121,211-218
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "920a81a94516076854e5bf5343e48112582eb9d9",
+  "prompts": {},
+  "sessions": {
+    "s_4db1592e08aea0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a085b7-dd62-7fe1-9d28-0616c49eea81",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
