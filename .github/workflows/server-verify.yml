@@ -91,7 +91,7 @@ jobs:
             docker tag ashorex-server:${{ github.sha }} ghcr.io/${{ github.repository_owner }}/ashorex-server:"${GITHUB_REF_NAME#v}"
             docker push ghcr.io/${{ github.repository_owner }}/ashorex-server:"${GITHUB_REF_NAME#v}"
             docker inspect --format '{{index .RepoDigests 0}}' ghcr.io/${{ github.repository_owner }}/ashorex-server:"${GITHUB_REF_NAME#v}" > /tmp/server-image-digest.txt
-          else
+            # latest 仅跟随正式发布，首次部署也不会安装 main 的开发构建。
             docker tag ashorex-server:${{ github.sha }} ghcr.io/${{ github.repository_owner }}/ashorex-server:latest
             docker push ghcr.io/${{ github.repository_owner }}/ashorex-server:latest
           fi

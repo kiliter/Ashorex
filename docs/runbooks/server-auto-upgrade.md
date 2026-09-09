@@ -14,7 +14,7 @@ updater 使用 host 网络；`UPDATER_HTTP_PROXY`、`UPDATER_HTTPS_PROXY`、`UPD
 
 ## 发布
 
-正式 `vX.Y.Z` 标签触发服务端全量 CI、Docker Smoke、镜像推送和 Release 产物。`server-update.json` 最后公布，包含版本、提交、固定 digest、协议号、自动资格及中文说明。修改 `infra/updater/release-policy.json` 决定本版本是否允许无人值守；默认 false。所有自动版本必须兼容旧 App、当前部署环境和协议 1。JRE、数据卷、启动配置不兼容的版本不得自动放行。
+main 仅推送提交 SHA 镜像，latest 仅跟随正式发布。正式 `vX.Y.Z` 标签触发服务端全量 CI、Docker Smoke、镜像推送和 Release 产物。`server-update.json` 最后公布，包含版本、提交、固定 digest、协议号、自动资格及中文说明。修改 `infra/updater/release-policy.json` 决定本版本是否允许无人值守；默认 false。所有自动版本必须兼容旧 App、当前部署环境和协议 1。JRE、数据卷、启动配置不兼容的版本不得自动放行。
 
 后台只接受 CHECK、DOWNLOAD、APPLY 和开关/时间/时区，不接受任意镜像、URL 或命令。升级器从现有 server inspect 继承环境、卷、host 网络，启动命令及构建信息跟随新镜像。不要在手动 Compose up 中强行覆盖镜像；deploy.sh deploy 会保持已有协议容器的实际镜像，update 提交安全升级任务。
 

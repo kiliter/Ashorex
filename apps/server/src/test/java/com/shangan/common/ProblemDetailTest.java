@@ -24,6 +24,10 @@ class ProblemDetailTest {
 
   @Autowired MockMvc mockMvc;
 
+  /** Web 切片只验证错误映射，升级业务由独立窄测试覆盖。 */
+  @org.springframework.test.context.bean.override.mockito.MockitoBean
+  com.shangan.upgrade.UpgradeService upgrades;
+
   @Test
   void returnsStableBusinessErrorCode() throws Exception {
     mockMvc
