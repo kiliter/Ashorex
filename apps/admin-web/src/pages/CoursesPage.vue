@@ -512,6 +512,6 @@ function personLabel(person: CoursePerson): string {
 
 <style scoped>
 /* 主表与课时明细均独立滚动，课程数量不再撑长页面。 */
-.course-table { height: clamp(240px, 52vh, 560px); overflow: auto; overscroll-behavior: contain; }
+.course-table { height: clamp(320px, 68vh, 760px); overflow: auto; overscroll-behavior: contain; }
 .course-table th { position: sticky; top: 0; z-index: 1; background: var(--paper, #fff); }
 </style>
