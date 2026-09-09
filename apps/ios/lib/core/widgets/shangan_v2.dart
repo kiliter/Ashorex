@@ -2290,10 +2290,13 @@ Future<bool> showShanganSheet(
   BuildContext context, {
   required Widget Function(BuildContext context) builder,
   double heightFactor = 0.86,
+  // 带固定关闭按钮的密集弹窗可省略拖拽柄，给键盘下内容留出高度。
+  bool? showDragHandle,
 }) async {
   final result = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
+    showDragHandle: showDragHandle,
     constraints: BoxConstraints(
       maxHeight: MediaQuery.of(context).size.height * heightFactor,
     ),

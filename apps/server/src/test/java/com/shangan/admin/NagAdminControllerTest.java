@@ -58,6 +58,7 @@ class NagAdminControllerTest {
   @Mock private NagRepository nags;
   @Mock private TodoDeletionService deletions;
   @Mock private AuthService users;
+  @Mock private com.shangan.nag.application.NagManagementService management;
 
   private MockMvc mockMvc;
 
@@ -66,9 +67,25 @@ class NagAdminControllerTest {
     mockMvc =
         MockMvcBuilders.standaloneSetup(
                 new NagAdminController(
-                    policies, nags, deletions, users, Clock.fixed(NOW, ZoneOffset.UTC)))
+                    policies, nags, deletions, users, Clock.fixed(NOW, ZoneOffset.UTC), management))
             .setControllerAdvice(new ApiExceptionHandler())
             .build();
+  }
+
+  @Test
+  void 管理操作只使用会话身份和最后尝试版本() throws Exception {
+    for (String action : List.of("cancel", "retry")) {
+      mockMvc
+          .perform(
+              org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
+                      "/admin/api/nags/nag-1/" + action)
+                  .principal(() -> "admin-session")
+                  .contentType("application/json")
+                  .content("{\"latestAttemptId\":\"d-1\",\"actor\":\"forged\"}"))
+          .andExpect(status().isNoContent());
+    }
+    Mockito.verify(management).cancel("nag-1", "d-1", "admin-session");
+    Mockito.verify(management).retry("nag-1", "d-1", "admin-session");
   }
 
   @Test

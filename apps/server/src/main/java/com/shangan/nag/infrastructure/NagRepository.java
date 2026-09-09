@@ -44,6 +44,18 @@ public interface NagRepository {
 
   void markExpired(String nagId);
 
+  /** 仅在待投递且所有尝试失败时取消；返回是否成功转换。 */
+  boolean cancelFailed(String nagId);
+
+  /** 操作流水嵌入催办行，随既有归档级联保留或清理。 */
+  void recordAdminAction(String nagId, String action, String actor, Instant now);
+
+  /** 批量读取后台操作历史，避免逐行查询。 */
+  List<AdminAction> adminActionsOfAll(List<String> nagIds);
+
+  /** 管理员操作与渠道流水分别展示。 */
+  record AdminAction(String nagId, String action, String actor, Instant createdAt) {}
+
   /** 按学员本地日期结束旧催办，已回应历史保持不变。 */
   void expireBefore(String userId, LocalDate today);
 

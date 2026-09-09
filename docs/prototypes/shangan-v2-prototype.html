@@ -539,9 +539,46 @@ table.wt td b{font-weight:700;}
 .mobile-video .vspeed-panel{background:#0b0b0bf2;display:flex;flex-wrap:nowrap;gap:0}.mobile-video .vspeed-panel[hidden]{display:none}.mobile-video .vspeed-panel>b,.mobile-video .vspeed-panel>button:last-child{display:none}.mobile-video .vspeed-panel>button{flex:1;min-width:0;min-height:44px;background:none;border:0;border-radius:0;color:white;padding:0;font-size:14px}.mobile-video.wide .vspeed-panel{flex-direction:column;justify-content:center}.mobile-video.wide .vspeed-panel>button{flex:0 0 44px}
 /* 画面状态与双击反馈覆盖层不拦截控件操作。 */
 .mobile-video:not([data-playing="true"])::after{content:'▶';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#0009;color:white;border-radius:50%;width:52px;height:52px;text-align:center;line-height:52px;font-size:30px;pointer-events:none}.mobile-video:has(.vspeed-panel:not([hidden]))::after{display:none}.player-action-feedback{position:absolute;top:50%;transform:translate(-50%,-50%);padding:15px;border-radius:50%;background:#000b;color:white;text-align:center;pointer-events:none;z-index:8;animation:player-action .65s forwards}@keyframes player-action{0%{opacity:1;scale:.9}55%{opacity:1}100%{opacity:0;scale:1.1}}
+/* ADR-0045：后台长表限制高度，表头保持可见。 */
+.admin-fixed-table { height: clamp(320px, 75vh, 900px); overflow: auto; }
+.admin-fixed-table th { position: sticky; top: 0; z-index: 1; background: white; }
 </style>
 </head>
 <body>
+<!-- ADR-0044 已批准增量：以下替代 4-1 / 4-2 / 4-3 的布局；旧屏仅留作历史参考。 -->
+<section id="study-folder-draft" class="sect">
+<h2>学习页双列封面卡片 · 已批准</h2>
+<p>加入课时（原型 2-2）：标题和课时筛选固定，中央课时列表独立滚动，右侧常显细圆角蓝色滚动条与浅灰轨道，可拖动定位；完成标准、自定义目标、已选汇总和加入按钮固定在底部。横屏左右分栏，左侧课时、右侧标准和提交。</p>
+<p>手机双列封面卡片，平板增加列数；标题 12pt，最多两行。横屏键盘下空间极小时省略组标题和图标，优先保留名称。按人物沿用同样文件夹样式。以下为布局示例数据。</p>
+<div style="display:flex;gap:24px;flex-wrap:wrap">
+<div style="width:390px;max-width:100%;height:540px;display:flex;flex-direction:column;border:1px solid var(--hair);padding:16px;border-radius:20px;background:var(--paper)">
+<h3>课程库</h3><p>搜索课程　 ·　筛选　 ·　按流派 / 按人物</p>
+<p>全部课程 · 一键清空</p><div style="display:flex;gap:8px;overflow-x:auto;min-height:44px;align-items:center"><button>全部</button><button>申论</button><button>行测</button><button>法律</button><button>数学</button><button>时政</button></div>
+<label style="min-height:44px;display:flex;align-items:center;gap:8px"><input type="checkbox" onchange="document.querySelectorAll('#study-folder-draft [data-watched]').forEach(item=>item.hidden=this.checked)">隐藏已看完</label>
+<div style="overflow:auto;flex:1;min-height:0"><p>公考 · 课程</p><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px" id="folder-draft-items"></div></div>
+</div>
+<div style="width:390px;max-width:100%;height:540px;display:flex;flex-direction:column;border:1px solid var(--hair);padding:16px;border-radius:20px;background:var(--paper)">
+<h3>〈 课程详情</h3><p><b>行政能力测验 · 基础精讲</b></p><p>搜索课时　 ·　继续学习　 ·　批量加入</p><h3>课时</h3>
+<div id="lesson-draft-items" style="overflow:auto;flex:1;min-height:0;border-top:1px solid var(--hair)"></div>
+</div></div>
+<script>
+// 仅构造原型示例；开关演示排除全部看完，详情示例展示局部滚动。
+const folderDraft = document.getElementById('folder-draft-items');
+['行政能力测验','申论基础精讲','数量关系专项','判断推理提升','资料分析训练','言语理解专题','常识判断','时政热点','面试系统课程','申论作文','法律基础','经济知识'].forEach((title,index)=>{
+ const item=document.createElement('div');
+ if(index===1)item.dataset.watched='true';
+ item.style.cssText='min-width:0;padding:8px;line-height:1.4;border-radius:12px;background:var(--ink-soft)';
+ item.innerHTML='<div style="aspect-ratio:1.6;border-radius:8px;background:repeating-linear-gradient(45deg,transparent,transparent 6px,#ffffff08 7px),linear-gradient(135deg,#182E49,#304966);border-left:3px solid #B9A17A;display:flex;align-items:center;justify-content:center;color:#FFF6E7;margin-bottom:8px;font-size:12px">文字书封</div><b style="font-size:12px;font-weight:500;display:block;height:34px;overflow:hidden">'+title+'</b><small style="color:var(--muted)">'+(index===1?'已看完':'已完成 2/24')+'</small>';
+ folderDraft.appendChild(item);
+});
+for(let index=1;index<=40;index++){
+ const lesson=document.createElement('div');
+ lesson.style.cssText='padding:16px 0;border-bottom:1px solid var(--hair)';
+ lesson.textContent='第 '+index+' 讲 · 基础知识与例题　＋';
+ document.getElementById('lesson-draft-items').appendChild(lesson);
+}
+</script></section>
+
 <!-- ADR-0041/0042 已批准增量原型：下方历史屏保留业务数据示例，以本段交互覆盖旧筛选布局。 -->
 <section style="padding:24px;background:#f7f4ee" id="approved-filter-update">
 <h2>课程筛选与推送设置 · 已批准增量</h2>
@@ -3125,6 +3162,7 @@ table.wt td b{font-weight:700;}
               </tr>
             </table>
           </div>
+          <div class="wcard mt12"><b>投递失败 · 学员 lisi</b><p class="muted">Server 酱：失败（渠道未配置）。历史尝试保留。</p><div class="row"><button class="wbtn ghost">重新投递</button><button class="wbtn ghost" onclick="if(confirm('取消后不再投递，历史记录保留。确认取消？')) this.parentElement.parentElement.innerHTML='已取消 · 管理员操作已留痕'">取消投递</button></div></div>
           <div class="muted mt10" style="font-size:11.5px">幂等键 <code>(user_id, local_date, threshold_level)</code>，同一天同一档不会重复生成；渠道降级会在同一条记录上追加投递流水。</div>
         </div>
       </div>
@@ -3163,14 +3201,26 @@ table.wt td b{font-weight:700;}
             <div style="padding:16px">
             <div class="between"><b>从媒体库导入课程</b><button class="wbtn ghost">刷新课程</button></div>
             <p class="lead">展示已保存媒体库内的课程。勾选后导入，已导入课程在课程库同步更新。</p>
-            <div class="row"><input class="winput" placeholder="搜索课程名称" aria-label="搜索课程名称"><button class="wbtn ghost">全选未导入课程</button><button class="wbtn ghost">清空选择</button><button class="wbtn">导入所选（2）</button></div>
-            <table class="wt mt10"><tr><th>选择</th><th>封面</th><th>课程</th><th>课时</th><th>状态</th></tr>
+            <div class="row"><input class="winput" placeholder="搜索课程名称" aria-label="搜索课程名称"><button class="wbtn ghost">全选未导入课程</button><button class="wbtn ghost">清空选择</button><button class="wbtn" onclick="document.getElementById('emby-progress-prototype').showModal()">导入所选（2）</button></div>
+            <div class="admin-fixed-table mt10" style="height:38vh"><table class="wt"><tr><th>选择</th><th>封面</th><th>课程</th><th>课时</th><th>状态</th></tr>
               <tr><td><input type="checkbox" checked aria-label="选择经济法"></td><td>暂无封面</td><td>经济法 2026 精讲班</td><td>32</td><td>未导入</td></tr>
               <tr><td><input type="checkbox" checked aria-label="选择税法"></td><td>暂无封面</td><td>税法 2026 精讲班</td><td>28</td><td>未导入</td></tr>
-              <tr><td><input type="checkbox" disabled aria-label="会计已导入"></td><td>暂无封面</td><td>会计 2026 精讲班</td><td>40</td><td>已导入</td></tr></table>
+              <tr><td><input type="checkbox" disabled aria-label="会计已导入"></td><td>暂无封面</td><td>会计 2026 精讲班</td><td>40</td><td>已导入</td></tr></table></div>
             <div class="between mt10"><span>共 3 门 · 已选 2 门 · 第 1 / 1 页</span><span>上一页　下一页</span></div>
-            <p class="muted">逐门导入并显示进度；结果区逐项显示成功、已存在或失败原因，可重试失败项。归档课程请前往归档区恢复。</p>
+            <p class="muted">逐门导入，圆形进度和日志在独立弹窗显示，最新日志在顶部，可重试失败项。归档课程请前往归档区恢复。</p>
             </div>
+          </dialog>
+
+          <!-- ADR-0045：独立进度弹窗，示例状态不触发实际导入。 -->
+          <dialog id="emby-progress-prototype" style="width:min(640px,92vw);max-height:90vh;border:1px solid #ddd;border-radius:16px;padding:20px">
+            <div class="between"><h3>课程导入结果</h3><button class="wbtn ghost" onclick="document.getElementById('emby-progress-prototype').close()">关闭</button></div>
+            <div style="text-align:center;padding:20px">
+              <div style="width:120px;height:120px;margin:auto;position:relative;display:grid;place-items:center">
+                <svg viewBox="0 0 120 120" style="position:absolute;inset:0;width:120px;height:120px;transform:rotate(-90deg)"><circle cx="60" cy="60" r="52" fill="none" stroke="#e2e6e3" stroke-width="8"/><circle cx="60" cy="60" r="52" fill="none" stroke="var(--green)" stroke-width="8"/></svg><b style="font-size:24px">100%</b>
+              </div><p>已处理 2 / 2 门 · 成功 1 门 · 失败 1 门</p>
+            </div>
+            <div style="height:180px;overflow:auto;background:#f6f7f6;border:1px solid #ddd;border-radius:8px;padding:12px"><p style="color:var(--red)">税法 2026 精讲班：读取超时，请重试</p><p>经济法 2026 精讲班：导入成功</p></div>
+            <div class="between mt12"><span>导入期间不可关闭；进度按实际已处理课程计算</span><button class="wbtn ghost">重试失败项（1）</button></div>
           </dialog>
 
           <div class="wgrid c4">
@@ -3331,7 +3381,7 @@ table.wt td b{font-weight:700;}
             </div>
           </div>
 
-          <div class="wcard mt14" style="padding:0">
+          <div class="wcard mt14 admin-fixed-table" style="padding:0">
             <table class="wt">
               <tr>
                 <th style="padding-left:18px">课程</th><th>流派</th><th>人物</th><th>标签</th><th>年份</th>

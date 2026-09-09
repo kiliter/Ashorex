@@ -502,6 +502,7 @@ final class _ResourcePickerSheet extends ConsumerStatefulWidget {
     return showShanganSheet(
       context,
       heightFactor: 0.93,
+      showDragHandle: false,
       builder: (context) => _ResourcePickerSheet(course: course, date: date),
     );
   }
@@ -512,6 +513,8 @@ final class _ResourcePickerSheet extends ConsumerStatefulWidget {
 }
 
 class _ResourcePickerSheetState extends ConsumerState<_ResourcePickerSheet> {
+  // 控制器同时绑定课时列表和常显滚动条，拖动滑块可精确定位长列表。
+  final _lessonScroll = ScrollController();
   final _selected = <String>{};
   final _existingResourceIds = <String>{};
 
@@ -549,6 +552,7 @@ class _ResourcePickerSheetState extends ConsumerState<_ResourcePickerSheet> {
 
   @override
   void dispose() {
+    _lessonScroll.dispose();
     _customPercent.dispose();
     super.dispose();
   }
@@ -575,165 +579,264 @@ class _ResourcePickerSheetState extends ConsumerState<_ResourcePickerSheet> {
             final picked = data.resources
                 .where((resource) => _selected.contains(resource.id))
                 .toList(growable: false);
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ShanganSheetHeader(
-                  title: widget.course.title,
-                  subtitle:
-                      '${widget.course.people.isEmpty ? '未标注人物' : widget.course.people.join('、')}'
-                      ' · ${widget.course.resourceCount} 课时'
-                      ' · 共 ${formatDurationCompact(widget.course.totalDurationMs)}',
-                  step: '第 2 / 2 步',
-                ),
-                const SizedBox(height: 12),
-                _FilterRow(
-                  labels: const ['全部', '未看', '看过一半', '已看完'],
-                  selectedIndex: _progressFilter,
-                  onSelected: (index) =>
-                      setState(() => _progressFilter = index),
-                ),
-                const SizedBox(height: 12),
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+            // 课时只占剩余高度；目标标准与提交区不进入任何纵向滚动容器。
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final compact =
+                    constraints.maxHeight < 620 ||
+                    MediaQuery.textScalerOf(context).scale(13) > 20;
+                final landscape = constraints.maxWidth > 600;
+                final controls = _completionControls(
+                  picked,
+                  compact: compact,
+                  inlineCustom: landscape,
+                  tight: constraints.maxHeight < 200,
+                );
+                final lessons = Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
                       children: [
-                        ShanganCard(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Column(
-                            children: [
-                              for (
-                                var index = 0;
-                                index < resources.length;
-                                index++
-                              ) ...[
-                                if (index > 0)
-                                  const Divider(
-                                    height: 1,
-                                    color: ShanganColors.hair,
-                                  ),
-                                _ResourcePickRow(
-                                  resource: resources[index],
-                                  alreadyAdded: _existingResourceIds.contains(
-                                    resources[index].id,
-                                  ),
-                                  selected: _selected.contains(
-                                    resources[index].id,
-                                  ),
-                                  onToggle: (value) => setState(() {
-                                    if (value) {
-                                      _selected.add(resources[index].id);
-                                    } else {
-                                      _selected.remove(resources[index].id);
-                                    }
-                                  }),
-                                ),
-                              ],
-                              if (resources.isEmpty)
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 28),
-                                  child: Text(
-                                    '这个筛选下没有课时',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: ShanganColors.mutedInk,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          child: Divider(height: 1, color: ShanganColors.hair),
-                        ),
-                        const Row(
-                          children: [
-                            Text(
-                              '完成标准',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                              ),
+                        Expanded(
+                          child: Text(
+                            widget.course.title,
+                            maxLines: compact ? 1 : 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
                             ),
-                            Spacer(),
-                            Text(
-                              '达到即算今日完成',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: ShanganColors.mutedInk,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        _TargetRow(
-                          targetPermille: _targetPermille,
-                          custom: _customTarget,
-                          onSelect: (permille) => setState(() {
-                            _customTarget = false;
-                            _targetPermille = permille;
-                          }),
-                          onCustom: () => setState(() => _customTarget = true),
-                        ),
-                        if (_customTarget) ...[
-                          const SizedBox(height: 10),
-                          ShanganField(
-                            label: '自定义目标（百分比，1 – 100）',
-                            controller: _customPercent,
-                            hint: '例如 35',
-                            keyboardType: TextInputType.number,
-                            onChanged: (value) {
-                              final parsed = int.tryParse(value);
-                              if (parsed != null &&
-                                  parsed >= 1 &&
-                                  parsed <= 100) {
-                                setState(() => _targetPermille = parsed * 10);
-                              }
-                            },
-                          ),
-                        ],
-                        if (picked.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          _TargetPreviewCard(
-                            resource: picked.first,
-                            targetPermille: _targetPermille,
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-                        const Text(
-                          '长视频只想看一部分时用它。目标进度按每条 Todo 保存，之后可在播放页单独调整。',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: ShanganColors.mutedInk,
-                          ),
+                        IconButton(
+                          tooltip: '关闭',
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(context).pop(false),
                         ),
                       ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  '已选 ${picked.length} 课时 · 目标合计 '
-                  '${formatPosition(_targetTotalMs(picked))}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                FilledButton.icon(
-                  onPressed: _selected.isEmpty || _submitting ? null : _submit,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: Text(_submitting ? '添加中…' : '加入待办'),
-                ),
-              ],
+                    if (!compact)
+                      Text(
+                        '${widget.course.people.isEmpty ? '未标注人物' : widget.course.people.join('、')} · ${widget.course.resourceCount} 课时',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: ShanganColors.mutedInk,
+                        ),
+                      ),
+                    const SizedBox(height: 4),
+                    _FilterRow(
+                      labels: const ['全部', '未看', '看过一半', '已看完'],
+                      selectedIndex: _progressFilter,
+                      onSelected: (index) =>
+                          setState(() => _progressFilter = index),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: RawScrollbar(
+                        key: const ValueKey('resource-picker-scrollbar'),
+                        controller: _lessonScroll,
+                        thumbVisibility: true,
+                        trackVisibility: true,
+                        interactive: true,
+                        thickness: 4,
+                        radius: const Radius.circular(6),
+                        trackRadius: const Radius.circular(6),
+                        thumbColor: ShanganColors.course.withValues(
+                          alpha: 0.55,
+                        ),
+                        trackColor: ShanganColors.hair.withValues(alpha: 0.55),
+                        trackBorderColor: Colors.transparent,
+                        mainAxisMargin: 4,
+                        child: ListView.separated(
+                          controller: _lessonScroll,
+                          key: const ValueKey('resource-picker-list'),
+                          padding: const EdgeInsets.only(right: 12),
+                          itemCount: resources.isEmpty ? 1 : resources.length,
+                          separatorBuilder: (_, _) => const Divider(
+                            height: 1,
+                            color: ShanganColors.hair,
+                          ),
+                          itemBuilder: (context, index) {
+                            if (resources.isEmpty) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 28),
+                                child: Text(
+                                  '这个筛选下没有课时',
+                                  textAlign: TextAlign.center,
+                                ),
+                              );
+                            }
+                            final resource = resources[index];
+                            return _ResourcePickRow(
+                              resource: resource,
+                              alreadyAdded: _existingResourceIds.contains(
+                                resource.id,
+                              ),
+                              selected: _selected.contains(resource.id),
+                              onToggle: (value) => setState(() {
+                                if (value) {
+                                  _selected.add(resource.id);
+                                } else {
+                                  _selected.remove(resource.id);
+                                }
+                              }),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+                if (landscape) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(flex: 6, child: lessons),
+                      const VerticalDivider(
+                        width: 24,
+                        color: ShanganColors.hair,
+                      ),
+                      Expanded(
+                        flex: 5,
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: controls,
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: lessons),
+                    const Divider(height: 16, color: ShanganColors.hair),
+                    controls,
+                  ],
+                );
+              },
             );
           },
         ),
       ),
+    );
+  }
+
+  /// 固定完成标准；小空间合并输入行，避免键盘将课时与提交挤出屏幕。
+  Widget _completionControls(
+    List<CourseResource> picked, {
+    required bool compact,
+    required bool inlineCustom,
+    required bool tight,
+  }) {
+    final customField = TextField(
+      key: const ValueKey('resource-target-input'),
+      controller: _customPercent,
+      keyboardType: TextInputType.number,
+      decoration: const InputDecoration(
+        labelText: '目标 1–100%',
+        hintText: '例如 35',
+        isDense: true,
+      ),
+      onChanged: (value) {
+        final parsed = int.tryParse(value);
+        if (parsed != null && parsed >= 1 && parsed <= 100) {
+          setState(() => _targetPermille = parsed * 10);
+        }
+      },
+    );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (compact)
+          Row(
+            children: [
+              const Text(
+                '完成标准',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButton<int>(
+                  isExpanded: true,
+                  value: _customTarget ? -1 : _targetPermille,
+                  items: [
+                    for (final value in [300, 500, 800, 1000, -1])
+                      DropdownMenuItem(
+                        value: value,
+                        child: Text(
+                          value == -1
+                              ? '自定义'
+                              : value == 1000
+                              ? '全部看完'
+                              : '看到 ${value ~/ 10}%',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _customTarget = value == -1;
+                      if (value != -1) _targetPermille = value;
+                    });
+                  },
+                ),
+              ),
+              if (_customTarget && inlineCustom) ...[
+                const SizedBox(width: 8),
+                Expanded(child: customField),
+              ],
+            ],
+          )
+        else ...[
+          const Text(
+            '完成标准',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          _TargetRow(
+            targetPermille: _targetPermille,
+            custom: _customTarget,
+            onSelect: (permille) => setState(() {
+              _customTarget = false;
+              _targetPermille = permille;
+            }),
+            onCustom: () => setState(() => _customTarget = true),
+          ),
+        ],
+        if (_customTarget && (!compact || !inlineCustom)) ...[
+          const SizedBox(height: 8),
+          customField,
+        ],
+        if (!compact && picked.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _TargetPreviewCard(
+            resource: picked.first,
+            targetPermille: _targetPermille,
+          ),
+        ],
+        if (!tight) ...[
+          const SizedBox(height: 8),
+          Text(
+            '已选 ${picked.length} 课时 · 目标合计 ${formatPosition(_targetTotalMs(picked))}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          ),
+        ],
+        const SizedBox(height: 8),
+        FilledButton.icon(
+          onPressed: _selected.isEmpty || _submitting ? null : _submit,
+          icon: const Icon(Icons.add, size: 18),
+          label: Text(_submitting ? '添加中…' : '加入待办'),
+        ),
+      ],
     );
   }
 

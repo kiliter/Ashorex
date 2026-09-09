@@ -238,9 +238,66 @@ public class JdbcNagRepository implements NagRepository {
   @Override
   public void markExpired(String nagId) {
     jdbcClient
-        .sql("UPDATE nags SET status = 'EXPIRED' WHERE id = :id AND status <> 'RESPONDED'")
+        .sql(
+            "UPDATE nags SET status = 'EXPIRED' WHERE id = :id AND status IN ('PENDING', 'DELIVERED')")
         .param("id", nagId)
         .update();
+  }
+
+  /** 条件更新兜底状态竞争，不覆盖已经结束或成功投递的记录。 */
+  @Override
+  public boolean cancelFailed(String nagId) {
+    return jdbcClient
+            .sql(
+                """
+        UPDATE nags SET status = 'CANCELLED'
+         WHERE id = :id AND status = 'PENDING'
+           AND EXISTS (SELECT 1 FROM nag_deliveries WHERE nag_id = :id)
+           AND NOT EXISTS (SELECT 1 FROM nag_deliveries WHERE nag_id = :id AND status <> 'FAILED')
+        """)
+            .param("id", nagId)
+            .update()
+        == 1;
+  }
+
+  /** JSON 数组只保存管理员动作，SQLite 参数绑定避免内容进入 SQL。 */
+  @Override
+  public void recordAdminAction(String nagId, String action, String actor, Instant now) {
+    jdbcClient
+        .sql(
+            """
+        UPDATE nags SET admin_actions = json_insert(admin_actions, '$[#]',
+            json_object('action', :action, 'actor', :actor, 'createdAt', :at)) WHERE id = :id
+        """)
+        .param("id", nagId)
+        .param("action", action)
+        .param("actor", actor)
+        .param("at", now.toEpochMilli())
+        .update();
+  }
+
+  /** 操作历史与催办同生命周期，无额外孤儿表。 */
+  @Override
+  public List<AdminAction> adminActionsOfAll(List<String> nagIds) {
+    if (nagIds.isEmpty()) return List.of();
+    return jdbcClient
+        .sql(
+            """
+        SELECT n.id, json_extract(a.value, '$.action') AS action,
+               json_extract(a.value, '$.actor') AS actor,
+               json_extract(a.value, '$.createdAt') AS created_at
+          FROM nags n, json_each(n.admin_actions) a
+         WHERE n.id IN (:ids) ORDER BY n.id, a.key
+        """)
+        .param("ids", nagIds)
+        .query(
+            (row, index) ->
+                new AdminAction(
+                    row.getString("id"),
+                    row.getString("action"),
+                    row.getString("actor"),
+                    Instant.ofEpochMilli(row.getLong("created_at"))))
+        .list();
   }
 
   @Override
@@ -264,7 +321,7 @@ public class JdbcNagRepository implements NagRepository {
   @Override
   public List<Delivery> deliveriesOf(String nagId) {
     return jdbcClient
-        .sql(SELECT_DELIVERY + " WHERE nag_id = :nagId ORDER BY created_at")
+        .sql(SELECT_DELIVERY + " WHERE nag_id = :nagId ORDER BY created_at, rowid")
         .param("nagId", nagId)
         .query(this::mapDelivery)
         .list();
@@ -276,7 +333,7 @@ public class JdbcNagRepository implements NagRepository {
       return List.of();
     }
     return jdbcClient
-        .sql(SELECT_DELIVERY + " WHERE nag_id IN (:ids) ORDER BY nag_id, created_at")
+        .sql(SELECT_DELIVERY + " WHERE nag_id IN (:ids) ORDER BY nag_id, created_at, rowid")
         .param("ids", nagIds)
         .query(this::mapDelivery)
         .list();

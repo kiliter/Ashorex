@@ -92,6 +92,37 @@ class NagResponseServiceTest {
   }
 
   @Test
+  void 已取消催办不能回应或刷新有效操作() {
+    Nag old = nag(true);
+    Nag cancelled =
+        new Nag(
+            old.id(),
+            old.userId(),
+            old.localDate(),
+            old.thresholdLevel(),
+            old.trigger(),
+            old.triggeredByUserId(),
+            old.idleMinutes(),
+            old.pendingCount(),
+            old.message(),
+            old.requireReason(),
+            NagStatus.CANCELLED,
+            null,
+            null,
+            null,
+            null,
+            old.supervisorUserIdSnapshot(),
+            old.createdAt());
+    when(nags.findById("nag-1")).thenReturn(Optional.of(cancelled));
+    assertThatThrownBy(() -> service.respond(USER_ID, "nag-1", "TEMP_BUSY", "今天回来填写"))
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).errorCode())
+        .isEqualTo("NAG_CANCELLED");
+    verify(nags, never()).markResponded(anyString(), anyString(), anyString(), any());
+    verifyNoInteractions(effectiveAction);
+  }
+
+  @Test
   @DisplayName("跨日催办不得从旧页面继续回应")
   void 过期回应拒绝() {
     when(nags.findById("nag-1")).thenReturn(Optional.of(nag(true)));

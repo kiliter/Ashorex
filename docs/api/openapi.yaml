@@ -296,6 +296,22 @@ paths:
         '404':
           $ref: '#/components/responses/Problem'
 
+  /api/v1/catalog/courses/{courseId}/cover:
+    get:
+      tags: [catalog]
+      summary: 已认证课程封面
+      parameters:
+        - { name: courseId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: 受大小限制的 Emby 封面，允许私有短期缓存
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        '404':
+          $ref: '#/components/responses/Problem'
+
   /api/v1/todos:
     get:
       tags: [todos]
@@ -876,7 +892,7 @@ paths:
           description: 原因缺失或过短（errorCode = NAG_REASON_REQUIRED）
           $ref: '#/components/responses/Problem'
         '409':
-          description: 催办已过期，不再接受回应（errorCode = NAG_EXPIRED）
+          description: 催办已过期或已取消，不再接受回应（errorCode = NAG_EXPIRED / NAG_CANCELLED）
           $ref: '#/components/responses/Problem'
 
   /api/v1/supervisor/learners:
@@ -1052,7 +1068,7 @@ components:
             TODO_BACKFILL_NOT_HISTORY、TODO_BACKFILL_NOTE_REQUIRED、TODO_TARGET_INVALID、
             TODO_PLANNED_INVALID、TODO_DAILY_LIMIT、FOCUS_ILLEGAL_TRANSITION、
             FOCUS_ALREADY_RUNNING、ATTACHMENT_TOO_LARGE、ATTACHMENT_LIMIT_REACHED、
-            ATTACHMENT_TYPE_UNSUPPORTED、NAG_REASON_REQUIRED、NAG_EXPIRED、NAG_DAILY_LIMIT_REACHED、
+            ATTACHMENT_TYPE_UNSUPPORTED、NAG_REASON_REQUIRED、NAG_EXPIRED、NAG_CANCELLED、NAG_DAILY_LIMIT_REACHED、
             SUPERVISION_FORBIDDEN、SUPERVISION_PRIMARY_EXISTS、RESOURCE_UNAVAILABLE、
             RESOURCE_NOT_MEASURABLE、CATALOG_MAPPING_AMBIGUOUS、ARCHIVE_LABEL_MISMATCH、ARCHIVE_REQUIRED、
             EMBY_STREAM_UNAVAILABLE、
@@ -1206,6 +1222,9 @@ components:
         completedCount: { type: integer }
         watchedMs: { type: integer }
         completedPercent: { type: integer }
+        fullyWatched:
+          type: boolean
+          description: 当前可见视频课时非空且全部累计最远位置达到有效总时长；无有效时长时为 false，与待办目标完成无关。
 
     ResourceView:
       type: object
@@ -1598,7 +1617,7 @@ components:
         title: { type: string, nullable: true }
         message: { type: string }
         requireReason: { type: boolean }
-        status: { type: string, enum: [PENDING, DELIVERED, RESPONDED, EXPIRED] }
+        status: { type: string, enum: [PENDING, DELIVERED, RESPONDED, EXPIRED, CANCELLED] }
         deliveredAt: { type: string, format: date-time, nullable: true }
         respondedAt: { type: string, format: date-time, nullable: true }
         reasonTag: { type: string, nullable: true }

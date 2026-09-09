@@ -58,12 +58,15 @@ interface StatusCount {
  * `detail` 是渠道写入的脱敏原因，不含 SendKey、目标地址与堆栈，可直接展示。
  */
 interface DeliveryAttempt {
+  id: string;
   channel: string;
   status: string;
   detail: string;
   createdAt: string;
 }
 
+/** 管理员取消与重投历史，操作人与时间取服务端。 */
+interface AdminAction { nagId: string; action: string; actor: string; createdAt: string }
 interface NagRecordsResponse {
   nags: NagRecord[];
   usernames: Record<string, string>;
@@ -71,6 +74,7 @@ interface NagRecordsResponse {
   reasonCounts: Record<string, number>;
   statusCounts: StatusCount[];
   deliveryAttempts: Record<string, DeliveryAttempt[]>;
+  adminActions: AdminAction[];
 }
 
 /** 删除时进度快照，由服务端写入 todo_deletions.progress_snapshot_json。 */
@@ -98,7 +102,7 @@ const REASON_LABELS: Record<string, string> = {
   GAVE_UP: '不想学了',
 };
 
-const STATUS_ORDER = ['PENDING', 'DELIVERED', 'RESPONDED', 'EXPIRED'];
+const STATUS_ORDER = ['PENDING', 'DELIVERED', 'RESPONDED', 'EXPIRED', 'CANCELLED'];
 
 const CHANNEL_LABELS: Record<string, string> = {
   FULLSCREEN: '全屏',
@@ -121,6 +125,33 @@ const statusCounts = ref<StatusCount[]>([]);
 const deliveryAttempts = ref<Record<string, DeliveryAttempt[]>>({});
 const loading = ref(true);
 const error = ref('');
+const notice = ref('');
+const operationId = ref('');
+const adminActions = ref<AdminAction[]>([]);
+
+/** 只有全部失败的待投递项可操作，服务端仍会重新裁决。 */
+function canManage(nag: NagRecord): boolean {
+  const attempts = attemptsOf(nag);
+  return nag.status === 'PENDING' && attempts.length > 0 && attempts.every(row => row.status === 'FAILED');
+}
+
+/** 使用最后一次流水作为版本，避免刷新前重复发送同一轮请求。 */
+async function manage(nag: NagRecord, action: 'cancel' | 'retry'): Promise<void> {
+  if (operationId.value || !canManage(nag)) return;
+  if (action === 'cancel' && !window.confirm('确认取消这条失败催办的投递？取消后不再投递，历史记录保留。')) return;
+  operationId.value = nag.id;
+  notice.value = '';
+  try {
+    await api.post(`/nags/${encodeURIComponent(nag.id)}/${action}`, { latestAttemptId: attemptsOf(nag).at(-1)?.id });
+    await load();
+    const current = nags.value.find(row => row.id === nag.id);
+    notice.value = action === 'cancel' ? '已取消投递，历史记录已保留' : current?.status === 'DELIVERED' ? '重新投递成功' : '重新投递仍未成功，请查看最新失败原因';
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : '操作失败';
+    await load();
+    error.value = message;
+  } finally { operationId.value = ''; }
+}
 
 const tab = ref<'NAGS' | 'DELETIONS'>('NAGS');
 const nagUserFilter = ref('ALL');
@@ -138,6 +169,7 @@ async function load(): Promise<void> {
     reasonCounts.value = data.reasonCounts;
     statusCounts.value = data.statusCounts;
     deliveryAttempts.value = data.deliveryAttempts ?? {};
+    adminActions.value = data.adminActions ?? [];
     error.value = '';
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '加载失败';
@@ -221,6 +253,7 @@ function deliveryDot(nag: NagRecord): { cls: string; text: string } {
     }
     return { cls: 'idle', text: '待投递' };
   }
+  if (nag.status === 'CANCELLED') return { cls: 'off', text: '已取消' };
   if (nag.status === 'EXPIRED') {
     return { cls: 'off', text: '已过期' };
   }
@@ -296,10 +329,9 @@ function statusBarClass(status: string): string {
 /**
  * 分布卡里「待投递」有多少条其实是「渠道全试过且都失败」。
  *
- * 口径说明：Nag 状态机只有 PENDING → DELIVERED → RESPONDED | EXPIRED，没有 FAILED 终态，
+ * 口径说明：投递失败没有 FAILED 终态，管理员取消才进入 CANCELLED，
  * 所以投递失败的催办在 `nags.status` 上仍然是 PENDING。分布卡按状态聚合、流水行按投递尝试
- * 判定，两处口径不同会让管理员看到「待投递 6 · 100%」却每行都是「投递失败」。这里不改状态机
- * （冻结文档范围），而是把失败条数标注在分布卡上，让两个数字可互相解释。
+ * 判定，两处口径不同，因此在分布卡标注失败条数；取消后从待投递数量中移除。
  *
  * 数据来源与流水表一致（服务端返回的近期催办 + deliveryAttempts），因此可能少于分布卡按全量
  * 状态聚合出的 PENDING 总数，标注文案里点明「其中」而不是等号。
@@ -433,6 +465,7 @@ function reasonBadgeClass(tag: string): string {
 </script>
 
 <template>
+  <p v-if="notice" class="notice success" role="status">{{ notice }}</p>
   <div class="page-head">
     <h1>催办与删除</h1>
     <p class="lead">
@@ -507,7 +540,7 @@ function reasonBadgeClass(tag: string): string {
               class="muted mt6"
               style="font-size: 11.5px"
             >
-              其中 {{ pendingAllFailedCount }} 条已尝试投递但全部失败，流水表显示为「投递失败」；催办状态机没有失败终态，所以仍计入待投递。
+              其中 {{ pendingAllFailedCount }} 条已尝试投递但全部失败，流水表显示为「投递失败」；催办状态机没有失败终态，所以仍计入待投递；可在记录中取消或重新投递。
             </div>
           </div>
         </div>
@@ -576,6 +609,13 @@ function reasonBadgeClass(tag: string): string {
                     {{ attemptText(attempt) }}
                   </div>
                   <div v-if="attemptsOf(nag).length === 0" class="cell-sub muted">尚无投递尝试</div>
+                  <div v-for="(entry, index) in adminActions.filter(row => row.nagId === nag.id)" :key="index" class="cell-sub">
+                    {{ entry.action === 'CANCEL' ? '取消投递' : '重新投递' }} · {{ entry.actor }} · {{ formatInstant(entry.createdAt) }}
+                  </div>
+                  <div v-if="canManage(nag)" class="row mt8" style="gap: 8px; flex-wrap: wrap">
+                    <button class="wbtn ghost sm" :disabled="!!operationId" @click="manage(nag, 'retry')">{{ operationId === nag.id ? '处理中…' : '重新投递' }}</button>
+                    <button class="wbtn ghost sm" :disabled="!!operationId" @click="manage(nag, 'cancel')">取消投递</button>
+                  </div>
                 </td>
                 <td>
                   <span v-if="awaiting(nag)" style="color: var(--red); font-weight: 700">未回应</span>

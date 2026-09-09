@@ -913,6 +913,8 @@ final class _FeedCard extends StatelessWidget {
     'PENDING' => '待投递',
     'DELIVERED' => '已送达',
     'EXPIRED' => '已过期',
+    // 管理员取消只结束投递，历史催办继续可见。
+    'CANCELLED' => '已取消',
     _ => status,
   };
 }

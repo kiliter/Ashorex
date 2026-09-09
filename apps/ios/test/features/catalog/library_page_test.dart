@@ -1,3 +1,4 @@
+import 'dart:ui' show SemanticsAction;
 import 'package:flutter/material.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,252 @@ import '../../support/fixtures.dart';
 
 /// 验证用户输入的实际过滤时机及固定区位置，不依赖计时器实现细节。
 void main() {
+  testWidgets('横向分类栏按流派和人物切换，分类内直接显示课程', (tester) async {
+    await _pump(
+      tester,
+      FakeBackend()..on(
+        'GET',
+        '/api/v1/catalog/courses',
+        json: [
+          courseSummaryJson(
+            id: 'a',
+            title: '法律课程',
+            genres: ['法律'],
+            people: ['张老师'],
+          ),
+          courseSummaryJson(
+            id: 'b',
+            title: '数学课程',
+            genres: ['数学'],
+            people: ['李老师'],
+          ),
+          courseSummaryJson(
+            id: 'c',
+            title: '交叉课程',
+            genres: ['法律', '数学'],
+            people: ['李老师'],
+          ),
+        ],
+      ),
+    );
+    expect(find.byKey(const ValueKey('category-rail')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('category-数学')));
+    await tester.pumpAndSettle();
+    expect(find.text('法律课程'), findsNothing);
+    expect(find.text('数学课程'), findsOneWidget);
+    expect(find.text('交叉课程'), findsOneWidget);
+    await tester.tap(find.text('按人物'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('category-张老师')), findsOneWidget);
+    expect(find.byKey(const ValueKey('category-数学')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('category-张老师')));
+    await tester.pumpAndSettle();
+    expect(find.text('法律课程'), findsOneWidget);
+    expect(find.text('数学课程'), findsNothing);
+    await tester.tap(find.text('一键清空'));
+    await tester.pumpAndSettle();
+    expect(find.text('数学课程'), findsOneWidget);
+  });
+
+  testWidgets('分类过多时左右滑动分类栏，不触发筛选抽屉', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await _pump(
+      tester,
+      FakeBackend()..on(
+        'GET',
+        '/api/v1/catalog/courses',
+        json: [
+          for (var i = 0; i < 25; i++)
+            courseSummaryJson(id: 'c$i', title: '课程$i', genres: ['分类$i']),
+        ],
+      ),
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('category-分类24')),
+      180,
+      scrollable: find.descendant(
+        of: find.byKey(const ValueKey('category-rail')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('category-分类24')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('category-分类24')));
+    await tester.pumpAndSettle();
+    expect(find.text('课程24'), findsOneWidget);
+    expect(find.text('课程0'), findsNothing);
+    await tester.drag(
+      find.byKey(const ValueKey('category-rail')),
+      const Offset(180, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('应用筛选'), findsNothing);
+  });
+
+  testWidgets('大量不同流派也只构建可视区域', (tester) async {
+    await _pump(
+      tester,
+      FakeBackend()..on(
+        'GET',
+        '/api/v1/catalog/courses',
+        json: [
+          for (var i = 0; i < 300; i++)
+            courseSummaryJson(id: 'c$i', title: '课程$i', genres: ['流派$i']),
+        ],
+      ),
+    );
+    expect(find.text('课程0'), findsOneWidget);
+    expect(find.text('课程299'), findsNothing);
+    expect(find.byIcon(Icons.folder_rounded), findsNothing);
+  });
+
+  testWidgets('人物分类显示对应课程，未标注人物也可浏览', (tester) async {
+    await _pump(
+      tester,
+      FakeBackend()..on(
+        'GET',
+        '/api/v1/catalog/courses',
+        json: [
+          courseSummaryJson(id: 'a', title: '人物甲课程', people: ['人物甲']),
+          courseSummaryJson(id: 'b', title: '无人物课程', people: []),
+        ],
+      ),
+    );
+    await tester.tap(find.text('按人物'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('人物甲'));
+    await tester.pumpAndSettle();
+    expect(find.text('人物甲课程'), findsOneWidget);
+    expect(find.text('无人物课程'), findsNothing);
+    await tester.tap(find.text('一键清空'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('按人物'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('未标注人物'));
+    await tester.pumpAndSettle();
+    expect(find.text('无人物课程'), findsOneWidget);
+    expect(find.text('人物甲课程'), findsNothing);
+  });
+
+  testWidgets('大字体窄屏减少列数且保留筛选和完整名称语义', (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await _pump(
+      tester,
+      FakeBackend()..on(
+        'GET',
+        '/api/v1/catalog/courses',
+        json: [
+          courseSummaryJson(id: 'a', title: '这是一个很长的课程名称用于验证大字体布局'),
+          courseSummaryJson(id: 'b', title: '第二门课'),
+        ],
+      ),
+      textScale: 2,
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('隐藏已看完'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('这是一个很长的课程名称用于验证大字体布局')).dy,
+      tester.getTopLeft(find.text('第二门课')).dy,
+    );
+    expect(
+      find.bySemanticsLabel(RegExp('这是一个很长的课程名称用于验证大字体布局')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel(RegExp('这是一个很长的课程名称用于验证大字体布局')))
+          .getSemanticsData()
+          .hasAction(SemanticsAction.tap),
+      isTrue,
+    );
+  });
+
+  testWidgets('全部被隐藏后可关闭筛选恢复', (tester) async {
+    await _pump(
+      tester,
+      FakeBackend()..on(
+        'GET',
+        '/api/v1/catalog/courses',
+        json: [
+          {...courseSummaryJson(id: 'a', title: '看完课程'), 'fullyWatched': true},
+        ],
+      ),
+    );
+    await tester.tap(find.text('隐藏已看完'));
+    await tester.pumpAndSettle();
+    expect(find.text('没有符合条件的课程'), findsOneWidget);
+    await tester.tap(find.text('隐藏已看完'));
+    await tester.pumpAndSettle();
+    expect(find.text('看完课程'), findsOneWidget);
+  });
+
+  testWidgets('隐藏已看完使用服务端结论并与搜索叠加，清空恢复', (tester) async {
+    final backend = FakeBackend()
+      ..on(
+        'GET',
+        '/api/v1/catalog/courses',
+        json: [
+          {...courseSummaryJson(id: 'a', title: '法律已看完'), 'fullyWatched': true},
+          {
+            ...courseSummaryJson(id: 'b', title: '法律低目标完成'),
+            'completedCount': 24,
+            'completedPercent': 100,
+          },
+          courseSummaryJson(id: 'c', title: '数学未看完'),
+        ],
+      );
+    await _pump(tester, backend);
+    await tester.tap(find.text('隐藏已看完'));
+    await tester.pumpAndSettle();
+    expect(find.text('法律已看完'), findsNothing);
+    expect(find.text('法律低目标完成'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('搜索课程'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '法律');
+    await tester.pumpAndSettle();
+    expect(find.text('数学未看完'), findsNothing);
+    expect(find.text('法律低目标完成'), findsOneWidget);
+    await tester.tap(find.text('一键清空'));
+    await tester.pumpAndSettle();
+    expect(find.text('法律已看完'), findsOneWidget);
+    expect(find.text('数学未看完'), findsOneWidget);
+  });
+
+  testWidgets('手机双列封面卡片且大量课程按需构建', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await _pump(
+      tester,
+      FakeBackend()..on(
+        'GET',
+        '/api/v1/catalog/courses',
+        json: [
+          for (var i = 0; i < 300; i++)
+            courseSummaryJson(id: 'c$i', title: '课程$i'),
+        ],
+      ),
+    );
+    expect(
+      tester.getTopLeft(find.text('课程0')).dy,
+      tester.getTopLeft(find.text('课程1')).dy,
+    );
+    expect(
+      tester.getTopLeft(find.text('课程2')).dy,
+      greaterThan(tester.getTopLeft(find.text('课程0')).dy),
+    );
+    expect(find.text('课程299'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('慢速右滑后多选并应用会改变课程结果，清空恢复', (tester) async {
     final backend = FakeBackend()
       ..on(
@@ -40,9 +287,9 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('应用筛选'), findsOneWidget);
-    await tester.tap(find.widgetWithText(ChoiceChip, '法律'));
+    await tester.tap(find.widgetWithText(ChoiceChip, '法律').hitTestable());
     await tester.pump();
-    await tester.tap(find.widgetWithText(ChoiceChip, '数学'));
+    await tester.tap(find.widgetWithText(ChoiceChip, '数学').hitTestable());
     await tester.pump();
     await tester.tap(find.text('应用筛选'));
     await tester.pumpAndSettle();
@@ -54,7 +301,7 @@ void main() {
     await tester.tap(find.text('清空选择'));
     await tester.pump();
     await tester.timedDrag(
-      find.text('全部'),
+      find.text('全部').hitTestable(),
       const Offset(-180, 0),
       const Duration(seconds: 2),
     );
@@ -63,6 +310,14 @@ void main() {
     expect(find.text('英语基础'), findsNothing);
     await tester.tap(find.text('一键清空'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('英语基础'),
+      180,
+      scrollable: find.descendant(
+        of: find.byType(CustomScrollView),
+        matching: find.byType(Scrollable),
+      ),
+    );
     expect(find.text('英语基础'), findsOneWidget);
   });
 
@@ -92,11 +347,26 @@ void main() {
     expect(find.text('民法'), findsOneWidget);
     final header = tester.getTopLeft(find.text('课程库'));
     final filters = tester.getTopLeft(find.text('一键清空'));
-    await tester.drag(find.byType(ListView).first, const Offset(0, -300));
+    await tester.drag(
+      find.descendant(
+        of: find.byType(CustomScrollView),
+        matching: find.byType(Scrollable),
+      ),
+      const Offset(0, -300),
+    );
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(find.text('课程库')), header);
     expect(tester.getTopLeft(find.text('一键清空')), filters);
-    expect(backend.callCount('GET', '/api/v1/catalog/courses'), 1);
+    expect(
+      backend.requests
+          .where(
+            (request) =>
+                request.method == 'GET' &&
+                request.path == '/api/v1/catalog/courses',
+          )
+          .length,
+      1,
+    );
   });
   testWidgets('横屏键盘展开保留固定筛选和课程结果', (tester) async {
     tester.view.physicalSize = const Size(844, 390);
@@ -144,15 +414,29 @@ void main() {
   });
 }
 
-Future<void> _pump(WidgetTester tester, FakeBackend backend) async {
+Future<void> _pump(
+  WidgetTester tester,
+  FakeBackend backend, {
+  double textScale = 1,
+}) async {
+  final repository = buildRepository(backend);
+  // 大响应在真实异步区完成协议解码；UI 测试注入数据快照，筛选仍执行真实 provider。
+  final snapshot = await tester.runAsync(repository.loadCourses);
   await tester.pumpWidget(
     ProviderScope(
       retry: (count, error) => null,
       overrides: [
-        shanganRepositoryProvider.overrideWithValue(buildRepository(backend)),
+        shanganRepositoryProvider.overrideWithValue(repository),
+        libraryCoursesSnapshotProvider.overrideWith((ref) async => snapshot!),
       ],
       child: MaterialApp(
         theme: ShanganTheme.light(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         home: const Scaffold(body: LibraryPage()),
       ),
     ),
