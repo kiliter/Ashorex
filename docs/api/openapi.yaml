@@ -843,7 +843,7 @@ paths:
   /api/v1/nags/pending:
     get:
       tags: [nags]
-      summary: 拉取待回应催办
+      summary: 拉取最新待回应催办
       responses:
         '200':
           description: 有待回应催办
@@ -884,7 +884,7 @@ paths:
                 reasonText: { type: string }
       responses:
         '200':
-          description: 已回应
+          description: 已回应；被最新催办替代的旧页兼容返回原记录，不写虚假回应，客户端可继续查询最新项
           content:
             application/json:
               schema: { $ref: '#/components/schemas/NagView' }
@@ -1617,6 +1617,7 @@ components:
         title: { type: string, nullable: true }
         message: { type: string }
         requireReason: { type: boolean }
+        appSuperseded: { type: boolean, description: 已被更新的同日催办替代，仅影响 App 回应，不影响外部通知 }
         status: { type: string, enum: [PENDING, DELIVERED, RESPONDED, EXPIRED, CANCELLED] }
         deliveredAt: { type: string, format: date-time, nullable: true }
         respondedAt: { type: string, format: date-time, nullable: true }

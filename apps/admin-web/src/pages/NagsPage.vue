@@ -24,6 +24,7 @@ interface NagRecord {
   message: string;
   requireReason: boolean;
   status: string;
+  appSuperseded?: boolean;
   deliveredAt: string | null;
   respondedAt: string | null;
   reasonTag: string | null;
@@ -201,7 +202,7 @@ function reasonLabel(tag: string | null): string {
 
 /** 未回应 = 状态仍为 PENDING 或 DELIVERED，与后端 Nag.awaitingResponse() 同口径。 */
 function awaiting(nag: NagRecord): boolean {
-  return nag.status === 'PENDING' || nag.status === 'DELIVERED';
+  return !nag.appSuperseded && nag.status === 'DELIVERED';
 }
 
 /** 回应时延取「创建 → 回应」间隔，格式 `M:SS`；未回应显示破折号。 */
@@ -465,6 +466,8 @@ function reasonBadgeClass(tag: string): string {
 </script>
 
 <template>
+  <!-- 标题和操作固定，长内容在工作区内滚动。 -->
+  <section class="workspace-page">
   <p v-if="notice" class="notice success" role="status">{{ notice }}</p>
   <div class="page-head">
     <h1>催办与删除</h1>
@@ -477,14 +480,14 @@ function reasonBadgeClass(tag: string): string {
   <p v-if="loading" class="loading">加载中…</p>
 
   <template v-if="!loading">
-    <div class="wtabs">
-      <span :class="{ on: tab === 'NAGS' }" @click="tab = 'NAGS'">催办记录 {{ nags.length }}</span>
-      <span :class="{ on: tab === 'DELETIONS' }" @click="tab = 'DELETIONS'">
+    <nav class="workspace-tabs" aria-label="记录类型">
+      <button type="button" :class="{ on: tab === 'NAGS' }" @click="tab = 'NAGS'">催办记录 {{ nags.length }}</button>
+      <button type="button" :class="{ on: tab === 'DELETIONS' }" @click="tab = 'DELETIONS'">
         删除台账 {{ deletions.length }}
-      </span>
-    </div>
+      </button>
+    </nav>
 
-    <template v-if="tab === 'NAGS'">
+    <div v-if="tab === 'NAGS'" class="records-panel">
       <p class="lead" style="margin: 0 0 16px">
         共 {{ nags.length }} 条 · 未回应 {{ awaitingCount }} 条 · 已回应 {{ respondedNags.length }} 条 ·
         平均回应时延 {{ averageLatency }}。
@@ -524,8 +527,8 @@ function reasonBadgeClass(tag: string): string {
         </div>
       </div>
 
-      <div class="wcard mt16">
-        <b style="font-size: 14px">状态分布</b>
+      <details class="record-distribution">
+        <summary>状态分布 · {{ statusTotal }} 条<span v-if="pendingAllFailedCount"> · {{ pendingAllFailedCount }} 条投递失败，可重试</span></summary>
         <div class="mt12">
           <div v-for="item in statusDistribution" :key="item.status" class="mt10">
             <div class="between" style="font-size: 12.5px; font-weight: 700">
@@ -545,9 +548,9 @@ function reasonBadgeClass(tag: string): string {
           </div>
         </div>
         <div v-if="statusTotal === 0" class="empty mt10">还没有任何催办记录</div>
-      </div>
+      </details>
 
-      <div class="wcard flush mt16">
+      <div class="wcard flush records-table">
         <div class="table-wrap">
           <table class="wt">
             <thead>
@@ -618,7 +621,8 @@ function reasonBadgeClass(tag: string): string {
                   </div>
                 </td>
                 <td>
-                  <span v-if="awaiting(nag)" style="color: var(--red); font-weight: 700">未回应</span>
+                  <span v-if="nag.appSuperseded" class="muted">已被最新催办替代</span>
+                  <span v-else-if="awaiting(nag)" style="color: var(--red); font-weight: 700">未回应</span>
                   <span v-else-if="nag.status === 'RESPONDED'" style="color: var(--green); font-weight: 700">
                     已回应
                   </span>
@@ -645,9 +649,9 @@ function reasonBadgeClass(tag: string): string {
       <div class="muted mt10" style="font-size: 11.5px">
         自动催办幂等键 <code>(user_id, local_date, threshold_level)</code>，同一天同一档不会重复生成；手动与督学催办不参与幂等键，但同样计入每日上限。
       </div>
-    </template>
+    </div>
 
-    <template v-else>
+    <div v-else class="workspace-scroll">
       <p class="lead" style="margin: 0 0 16px">
         删除是硬操作，Todo 行会被移除，但删除记录与当时的进度快照永久保留，可用于复盘与督学。以下展示最近 100 条删除。
       </p>
@@ -813,6 +817,7 @@ function reasonBadgeClass(tag: string): string {
       <div class="muted mt10" style="font-size: 11.5px">
         原因用于识别「排太多」还是「不想学」：删除记录与进度快照永久保留，Todo 行本身已被物理删除。
       </div>
-    </template>
+    </div>
   </template>
+  </section>
 </template>

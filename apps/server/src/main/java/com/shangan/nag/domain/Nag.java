@@ -22,7 +22,50 @@ public record Nag(
     String reasonText,
     String supervisorUserIdSnapshot,
     Instant createdAt,
-    String title) {
+    String title,
+    boolean appSuperseded) {
+  /** 兼容既有创建入口；App 替代标记由成功投递后的短事务维护。 */
+  public Nag(
+      String id,
+      String userId,
+      LocalDate localDate,
+      int thresholdLevel,
+      NagTrigger trigger,
+      String triggeredByUserId,
+      long idleMinutes,
+      int pendingCount,
+      String message,
+      boolean requireReason,
+      NagStatus status,
+      Instant deliveredAt,
+      Instant respondedAt,
+      String reasonTag,
+      String reasonText,
+      String supervisorUserIdSnapshot,
+      Instant createdAt,
+      String title) {
+    this(
+        id,
+        userId,
+        localDate,
+        thresholdLevel,
+        trigger,
+        triggeredByUserId,
+        idleMinutes,
+        pendingCount,
+        message,
+        requireReason,
+        status,
+        deliveredAt,
+        respondedAt,
+        reasonTag,
+        reasonText,
+        supervisorUserIdSnapshot,
+        createdAt,
+        title,
+        false);
+  }
+
   /** 历史记录和自动催办不含自定义标题，继续采用各渠道原展示。 */
   public Nag(
       String id,
@@ -96,10 +139,12 @@ public record Nag(
         reasonText,
         supervisorUserIdSnapshot,
         createdAt,
-        title);
+        title,
+        appSuperseded);
   }
 
+  /** 未成功投递及被最新催办替代的记录都不再计入 App 待回应数量。 */
   public boolean awaitingResponse() {
-    return status == NagStatus.PENDING || status == NagStatus.DELIVERED;
+    return !appSuperseded && status == NagStatus.DELIVERED;
   }
 }

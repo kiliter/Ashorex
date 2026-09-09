@@ -55,6 +55,38 @@ class NagDeliveryServiceTest {
             org.mockito.ArgumentMatchers.eq(NOW));
     assertThat(serverchan.deliveries).isEmpty();
     verify(nags, never()).markDelivered(anyString(), any());
+    verify(nags, never()).supersedeOlderAppNags(anyString());
+  }
+
+  @Test
+  void App已被替代不阻止Bark逐条投递() {
+    Nag old = nag();
+    Nag replaced =
+        new Nag(
+            old.id(),
+            old.userId(),
+            old.localDate(),
+            old.thresholdLevel(),
+            old.trigger(),
+            old.triggeredByUserId(),
+            old.idleMinutes(),
+            old.pendingCount(),
+            old.message(),
+            old.requireReason(),
+            old.status(),
+            old.deliveredAt(),
+            old.respondedAt(),
+            old.reasonTag(),
+            old.reasonText(),
+            old.supervisorUserIdSnapshot(),
+            old.createdAt(),
+            old.title(),
+            true);
+    RecordingChannel bark = new RecordingChannel(NagChannelType.BARK, true, true);
+    var service = service(List.of(bark));
+    service.deliver(replaced, "旧催办", offline(), policy(true, true), NagChannelType.BARK);
+    service.deliver(nag(), "新催办", offline(), policy(true, true), NagChannelType.BARK);
+    assertThat(bark.deliveries).containsExactly("旧催办", "新催办");
   }
 
   @Test
@@ -119,6 +151,7 @@ class NagDeliveryServiceTest {
     verify(nags)
         .insertDelivery("delivery-1", "nag-1", NagChannelType.FULLSCREEN, "SENT", "已投递", NOW);
     verify(nags).markDelivered("nag-1", NOW);
+    verify(nags).supersedeOlderAppNags(USER_ID);
   }
 
   @Test

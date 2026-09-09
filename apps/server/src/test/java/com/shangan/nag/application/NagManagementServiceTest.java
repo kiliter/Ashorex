@@ -66,6 +66,30 @@ class NagManagementServiceTest {
   }
 
   @Test
+  void Bark失败后重投仍走个人通知而不是在线全屏() {
+    when(nags.deliveriesOf("n"))
+        .thenReturn(
+            List.of(
+                new NagRepository.Delivery("d", "n", NagChannelType.BARK, "FAILED", "失败", now)));
+    when(delivery.personalBarkEnabled("u")).thenReturn(true);
+    service.retry("n", "d", "admin");
+    verify(delivery)
+        .deliver(
+            eq(nag(NagStatus.PENDING)), eq("学员"), isNull(), eq(policy), eq(NagChannelType.BARK));
+  }
+
+  @Test
+  void 用户关闭Bark后重投恢复当前策略() {
+    when(nags.deliveriesOf("n"))
+        .thenReturn(
+            List.of(
+                new NagRepository.Delivery("d", "n", NagChannelType.BARK, "FAILED", "失败", now)));
+    when(delivery.personalBarkEnabled("u")).thenReturn(false);
+    service.retry("n", "d", "admin");
+    verify(delivery).deliver(eq(nag(NagStatus.PENDING)), eq("学员"), isNull(), eq(policy), isNull());
+  }
+
+  @Test
   void 终态不能取消或重投() {
     for (NagStatus state :
         List.of(NagStatus.DELIVERED, NagStatus.RESPONDED, NagStatus.EXPIRED, NagStatus.CANCELLED)) {

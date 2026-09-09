@@ -38,6 +38,9 @@ public interface NagRepository {
 
   void insert(Nag nag);
 
+  /** 合并同日本用户较早的 App 待回应项，不修改外部投递状态和流水。 */
+  void supersedeOlderAppNags(String userId);
+
   void markDelivered(String nagId, Instant deliveredAt);
 
   void markResponded(String nagId, String reasonTag, String reasonText, Instant respondedAt);

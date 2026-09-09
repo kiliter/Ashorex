@@ -543,6 +543,953 @@ table.wt td b{font-weight:700;}
 .admin-fixed-table { height: clamp(320px, 75vh, 900px); overflow: auto; }
 .admin-fixed-table th { position: sticky; top: 0; z-index: 1; background: white; }
 </style>
+<style>
+/*
+ * 上岸管理后台样式令牌。
+ *
+ * 全部取自 docs/prototypes/shangan-v2-prototype.html：
+ * 颜色沿用移动端 :root 变量，组件尺寸沿用第八章 .web-* / .w* 规则。
+ * 后台与 App 共用同一套令牌，只在密度上更紧。新增取值必须先改原型。
+ */
+.admin-prototype {
+  --paper: #f8fafc;
+  --surface: #feffff;
+  --ink: #263b60;
+  --muted: #66758e;
+  --rule: #9aaac1;
+  --hair: #dce3ec;
+  --red: #c84235;
+  --blue: #2c68b7;
+  --course: #1f5ec8;
+  --green: #2d7957;
+  --ochre: #80672c;
+
+  --blue-soft: #eaf1fb;
+  --red-soft: #fbecea;
+  --green-soft: #e9f4ee;
+  --ochre-soft: #f8f1de;
+  --ink-soft: #f0f3f7;
+
+  --blue-line: #b9cdeb;
+  --red-line: #efc7c1;
+  --green-line: #bcdcc9;
+  --ochre-line: #e2d3a8;
+  --ink-line: #cfd8e4;
+  --placeholder: #a7b2c4;
+
+  --r-card: 12px;
+  --r-field: 8px;
+  --r-chip: 999px;
+  --bw: 1.5px;
+
+  --nav-width: 196px;
+  --font-body: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.admin-prototype * {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+}
+
+.admin-prototype html,
+.admin-prototype,
+.admin-prototype #app {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+.admin-prototype {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.admin-prototype a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.admin-prototype .mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.admin-prototype .muted {
+  color: var(--muted);
+}
+
+.admin-prototype .right {
+  text-align: right;
+}
+
+/* ---------- 骨架：左侧导航 + 右侧内容 ---------- */
+.admin-prototype .admin-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.admin-prototype .admin-nav {
+  width: var(--nav-width);
+  flex: 0 0 var(--nav-width);
+  border-right: 1px solid var(--hair);
+  background: #fafcfe;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-prototype .admin-nav .brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 4px 8px 12px;
+}
+
+/* 与 App 图标同一套浪形对勾；圆角由 CSS 裁切，源图保持正方形。 */
+.admin-prototype .brand-mark {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  object-fit: cover;
+  background: var(--blue);
+}
+
+.admin-prototype .brand-mark.lg {
+  display: block;
+  width: 56px;
+  height: 56px;
+  border-radius: 13px;
+  margin-bottom: 14px;
+}
+
+.admin-prototype .admin-nav .brand small {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 3px;
+  letter-spacing: 0.4px;
+}
+
+.admin-prototype .admin-nav .group-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  padding: 12px 10px 5px;
+}
+
+.admin-prototype .admin-nav a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 9px 10px;
+  border-radius: 9px;
+  margin-bottom: 2px;
+}
+
+.admin-prototype .admin-nav a:hover {
+  background: var(--ink-soft);
+  color: var(--ink);
+}
+
+.admin-prototype .admin-nav a.on {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.admin-prototype .admin-nav .nav-foot {
+  margin-top: auto;
+  padding: 10px 10px 2px;
+  border-top: 1px solid var(--hair);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.admin-prototype .admin-main {
+  flex: 1;
+  padding: 20px 24px 48px;
+  min-width: 0;
+}
+
+.admin-prototype .page-head {
+  margin-bottom: 18px;
+}
+
+.admin-prototype .page-head h1 {
+  font-size: 19px;
+  font-weight: 800;
+  margin: 0 0 4px;
+}
+
+.admin-prototype .page-head .lead {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.7;
+}
+
+.admin-prototype .page-head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* ---------- 卡片与栅格 ---------- */
+.admin-prototype .wcard {
+  border: 1px solid var(--hair);
+  border-radius: var(--r-card);
+  padding: 16px 18px;
+  background: var(--surface);
+}
+
+/* 仅在纵向堆叠时补间距；栅格内的相邻卡片由 gap 控制，不能再加 margin。 */
+.admin-prototype .admin-main > .wcard + .wcard {
+  margin-top: 14px;
+}
+
+.admin-prototype .wcard-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.admin-prototype .wcard-head h2 {
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.admin-prototype .wgrid {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-prototype .wgrid.c2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.admin-prototype .wgrid.c3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.admin-prototype .wgrid.c4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 1100px) {
+  .admin-prototype .wgrid.c3,
+  .admin-prototype .wgrid.c4 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.admin-prototype .wlabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+}
+
+/* ---------- 表单控件 ---------- */
+.admin-prototype .winput,
+.admin-prototype select.winput,
+.admin-prototype textarea.winput {
+  width: 100%;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-field);
+  padding: 8px 11px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.admin-prototype .winput:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+.admin-prototype .winput::placeholder {
+  color: var(--placeholder);
+}
+
+/*
+ * 禁用态输入控件必须一眼可辨：只读配置项与外部依赖未就绪时的输入框此前与可编辑框完全同色，
+ * 用户无从判断能不能填。灰底 + not-allowed 光标不依赖颜色单独传达状态。
+ */
+.admin-prototype .winput:disabled,
+.admin-prototype select.winput:disabled,
+.admin-prototype textarea.winput:disabled {
+  background: var(--ink-soft);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.admin-prototype textarea.winput {
+  min-height: 78px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.admin-prototype .winput-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-prototype .winput-row .unit {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.admin-prototype .wcheck {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.admin-prototype .wcheck input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--blue);
+}
+
+.admin-prototype .field-error {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--red);
+  margin-top: 5px;
+}
+
+/* ---------- 按钮 ---------- */
+.admin-prototype .wbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  padding: 6px 12px;
+  border-radius: var(--r-field);
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--surface);
+  cursor: pointer;
+}
+
+.admin-prototype .wbtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-prototype .wbtn.ghost {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.admin-prototype .wbtn.red {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+
+.admin-prototype .wbtn.sm {
+  padding: 4px 9px;
+  font-size: 11.5px;
+}
+
+.admin-prototype .wbtn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ---------- 表格 ---------- */
+.admin-prototype .table-wrap {
+  overflow-x: auto;
+}
+
+.admin-prototype table.wt {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.admin-prototype table.wt th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.4px;
+  padding: 9px 10px;
+  border-bottom: var(--bw) solid var(--rule);
+  white-space: nowrap;
+}
+
+.admin-prototype table.wt td {
+  padding: 11px 10px;
+  border-bottom: 1px solid var(--hair);
+  vertical-align: middle;
+}
+
+.admin-prototype table.wt tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-prototype table.wt td b {
+  font-weight: 700;
+}
+
+.admin-prototype .cell-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* ---------- 状态与标记 ---------- */
+.admin-prototype .dotstate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-prototype .dotstate i {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  display: block;
+}
+
+.admin-prototype .dotstate.on {
+  color: var(--green);
+}
+.admin-prototype .dotstate.on i {
+  background: var(--green);
+}
+.admin-prototype .dotstate.off {
+  color: var(--red);
+}
+.admin-prototype .dotstate.off i {
+  background: var(--red);
+}
+.admin-prototype .dotstate.idle {
+  color: var(--ochre);
+}
+.admin-prototype .dotstate.idle i {
+  background: var(--ochre);
+}
+
+.admin-prototype .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.admin-prototype .badge.b-course {
+  color: var(--course);
+  background: var(--blue-soft);
+  border-color: var(--blue-line);
+}
+.admin-prototype .badge.b-focus {
+  color: var(--ochre);
+  background: var(--ochre-soft);
+  border-color: var(--ochre-line);
+}
+.admin-prototype .badge.b-task {
+  color: var(--green);
+  background: var(--green-soft);
+  border-color: var(--green-line);
+}
+.admin-prototype .badge.b-red {
+  color: var(--red);
+  background: var(--red-soft);
+  border-color: var(--red-line);
+}
+.admin-prototype .badge.b-ink {
+  color: var(--muted);
+  background: var(--ink-soft);
+  border-color: var(--ink-line);
+}
+
+/* ---------- 提示条 ---------- */
+.admin-prototype .notice {
+  border-radius: var(--r-field);
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  border: 1px solid;
+  margin-bottom: 14px;
+}
+
+.admin-prototype .notice.info {
+  background: var(--blue-soft);
+  border-color: var(--blue-line);
+  color: var(--course);
+}
+.admin-prototype .notice.warn {
+  background: var(--ochre-soft);
+  border-color: var(--ochre-line);
+  color: #6e5824;
+}
+.admin-prototype .notice.danger {
+  background: var(--red-soft);
+  border-color: var(--red-line);
+  color: var(--red);
+}
+.admin-prototype .notice.success {
+  background: var(--green-soft);
+  border-color: var(--green-line);
+  color: var(--green);
+}
+
+.admin-prototype .empty {
+  padding: 28px 12px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* 摘要指标格：对应移动端 stat-strip，后台密度更紧。 */
+.admin-prototype .summary-strip {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.admin-prototype .summary-item {
+  border: 1px solid var(--hair);
+  border-radius: var(--r-card);
+  padding: 12px 14px;
+  background: var(--surface);
+}
+
+.admin-prototype .summary-item.hl {
+  background: var(--blue-soft);
+  border-color: var(--blue-line);
+}
+
+.admin-prototype .summary-value {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-prototype .summary-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ---------- 弹层 ---------- */
+.admin-prototype .modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(38, 59, 96, 0.42);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.admin-prototype .modal {
+  background: var(--surface);
+  border: 2px solid var(--blue);
+  border-radius: 14px;
+  padding: 20px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 86vh;
+  overflow-y: auto;
+}
+
+.admin-prototype .modal.danger {
+  border-color: var(--red);
+}
+
+.admin-prototype .modal h3 {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0 0 4px;
+}
+
+.admin-prototype .modal .sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 14px;
+  line-height: 1.6;
+}
+
+.admin-prototype .modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+/* ---------- 登录页 ---------- */
+.admin-prototype .login-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper);
+  padding: 24px;
+}
+
+.admin-prototype .login-card {
+  width: 100%;
+  max-width: 372px;
+  background: var(--surface);
+  border: var(--bw) solid var(--rule);
+  border-radius: 18px;
+  padding: 26px 24px;
+}
+
+.admin-prototype .login-card h1 {
+  font-size: 21px;
+  font-weight: 800;
+  margin: 0 0 4px;
+}
+
+.admin-prototype .login-card .lead {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0 0 20px;
+  line-height: 1.6;
+}
+
+.admin-prototype .login-card .wlabel {
+  margin-top: 14px;
+}
+
+.admin-prototype .login-card .wbtn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 10px;
+  font-size: 13.5px;
+}
+
+/* 全局加载与错误态 */
+.admin-prototype .loading {
+  padding: 32px 12px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* ---------- 原型通用工具类（第八章后台复用移动端定义） ---------- */
+.admin-prototype .row {
+  display: flex;
+  align-items: center;
+}
+
+.admin-prototype .between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-prototype .mt6 { margin-top: 6px; }
+.admin-prototype .mt8 { margin-top: 8px; }
+.admin-prototype .mt10 { margin-top: 10px; }
+.admin-prototype .mt12 { margin-top: 12px; }
+.admin-prototype .mt16 { margin-top: 16px; }
+
+/* 进度条：与移动端 .bar 同源。 */
+.admin-prototype .bar {
+  height: 7px;
+  border-radius: 99px;
+  background: var(--ink-soft);
+  overflow: hidden;
+}
+
+.admin-prototype .bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--blue);
+}
+
+.admin-prototype .bar > i.green { background: var(--green); }
+.admin-prototype .bar > i.ochre { background: var(--ochre); }
+.admin-prototype .bar > i.red { background: var(--red); }
+.admin-prototype .bar.thin { height: 5px; }
+
+/* 柱状图：与移动端数据 Tab 同源，后台高度更矮。 */
+.admin-prototype .chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  height: 118px;
+  padding-top: 8px;
+}
+
+.admin-prototype .chart .col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.admin-prototype .chart .col > i {
+  width: 100%;
+  max-width: 26px;
+  border-radius: 6px 6px 3px 3px;
+  background: var(--blue);
+  display: block;
+}
+
+.admin-prototype .chart .col > i.soft { background: var(--blue-line); }
+.admin-prototype .chart .col > i.ochre { background: var(--ochre); }
+
+.admin-prototype .chart .col span {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.admin-prototype .chart .col em {
+  font-size: 9.5px;
+  font-style: normal;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 指标卡内的大号数字。 */
+.admin-prototype .metric {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 危险态指标卡。 */
+.admin-prototype .wcard.danger {
+  border-color: var(--red-line);
+  background: var(--red-soft);
+}
+
+.admin-prototype .wcard.danger .wlabel,
+.admin-prototype .wcard.danger .metric {
+  color: var(--red);
+}
+
+/* 导航图标 */
+.admin-prototype .admin-nav a svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-prototype .icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-prototype .icon.s14 { width: 14px; height: 14px; }
+.admin-prototype .icon.s18 { width: 18px; height: 18px; }
+.admin-prototype .icon.s20 { width: 20px; height: 20px; }
+
+/* 页内筛选 Tab（原型 .wtabs）。 */
+.admin-prototype .wtabs {
+  display: flex;
+  gap: 18px;
+  border-bottom: var(--bw) solid var(--rule);
+  margin-bottom: 18px;
+}
+
+.admin-prototype .wtabs span {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 0 0 9px;
+  cursor: pointer;
+}
+
+.admin-prototype .wtabs span.on {
+  color: var(--ink);
+  box-shadow: inset 0 -2.5px 0 var(--ink);
+}
+
+/* 胶囊选项（原型 .pill）。 */
+.admin-prototype .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--r-chip);
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.admin-prototype .pill.on {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.admin-prototype .pill.on-blue {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+/* 表格贴边卡片：原型用 .wcard[style="padding:0"] + 首尾单元格 18px 内缩。 */
+.admin-prototype .wcard.flush {
+  padding: 0;
+}
+
+.admin-prototype .wcard.flush table.wt th:first-child,
+.admin-prototype .wcard.flush table.wt td:first-child {
+  padding-left: 18px;
+}
+
+.admin-prototype .wcard.flush table.wt th:last-child,
+.admin-prototype .wcard.flush table.wt td:last-child {
+  padding-right: 18px;
+}
+
+.admin-prototype .lead code {
+  background: var(--ink-soft);
+  border: 1px solid var(--hair);
+  border-radius: 5px;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--course);
+}
+
+/* ADR-0046：四个管理工作区锁定可视高度，滚动仅发生在内容或导航中。 */
+.admin-prototype .bounded-shell { height: 100dvh; min-height: 0; overflow: hidden; }
+.admin-prototype .bounded-shell .admin-nav { overflow-y: auto; flex-shrink: 0; }
+.admin-prototype .bounded-shell .admin-main { height: 100%; min-height: 0; padding: 18px 24px; overflow: hidden; }
+.admin-prototype .workspace-page { height: 100%; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.admin-prototype .workspace-page > * { flex-shrink: 0; min-width: 0; }
+.admin-prototype .workspace-page .page-head { margin-bottom: 0; }
+.admin-prototype .workspace-page > .notice, .admin-prototype .workspace-page > .loading { margin: 0; }
+.admin-prototype .workspace-tabs { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--hair); padding-bottom: 8px; }
+.admin-prototype .workspace-tabs button { appearance: none; border: 0; border-radius: var(--r-field); padding: 10px 16px; min-height: 44px; background: transparent; color: var(--muted); font: inherit; font-weight: 700; cursor: pointer; }
+.admin-prototype .workspace-tabs button.on { background: var(--blue-soft); color: var(--blue); }
+.admin-prototype .workspace-tabs button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.admin-prototype .workspace-page > .workspace-scroll, .admin-prototype .workspace-page .records-panel { flex: 1 1 0; min-height: 0; overflow: auto; scrollbar-gutter: stable; overscroll-behavior: contain; }
+.admin-prototype .workspace-scroll { padding-right: 4px; }
+.admin-prototype .workspace-actions { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 10px; padding: 12px 0 0; border-top: 1px solid var(--hair); background: var(--paper); }
+.admin-prototype .workspace-actions .muted { margin-right: auto; }
+.admin-prototype .workspace-page .wgrid > *, .admin-prototype .workspace-page .winput-row, .admin-prototype .workspace-page .winput { min-width: 0; }
+.admin-prototype .workspace-page .between, .admin-prototype .workspace-page .row { flex-wrap: wrap; gap: 8px; }
+.admin-prototype .workspace-page .wt th { position: sticky; top: 0; z-index: 1; background: var(--ink-soft); }
+.admin-prototype .workspace-page .wt td { overflow-wrap: anywhere; }
+.admin-prototype .workspace-card-head { position: sticky; top: -1px; background: var(--surface); z-index: 2; padding: 8px 0; }
+.admin-prototype .workspace-summary .wcard { padding: 10px 14px; }
+.admin-prototype .workspace-summary .wcard > .muted { display: none; }
+/* 流水占满剩余高度，筛选与汇总不随表格滚走。 */
+.admin-prototype .workspace-page .records-panel { display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+.admin-prototype .records-panel > * { flex-shrink: 0; }
+.admin-prototype .records-panel > .wgrid.c3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.admin-prototype .records-panel > .lead { margin: 0 !important; }
+.admin-prototype .record-distribution { flex-shrink: 1; min-height: 44px; border: 1px solid var(--hair); border-radius: var(--r-field); padding: 10px 14px; max-height: min(140px, 20vh); overflow: auto; }
+.admin-prototype .record-distribution summary { cursor: pointer; font-weight: 700; }
+.admin-prototype .record-distribution > .mt12 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.admin-prototype .records-panel .records-table { flex: 1 1 0; min-height: 100px; display: flex; overflow: hidden; }
+.admin-prototype .records-table > .table-wrap { flex: 1; overflow: auto; scrollbar-gutter: stable; overscroll-behavior: contain; }
+.admin-prototype .records-table .wt { min-width: 850px; }
+@media (max-width: 1100px) {
+  .admin-prototype .workspace-page .wgrid.c4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .admin-prototype .bounded-shell .admin-nav { width: 64px; flex-basis: 64px; padding: 8px 4px; }
+  .admin-prototype .bounded-shell .admin-nav .brand { font-size: 0; padding: 6px 10px 14px; }
+  .admin-prototype .bounded-shell .admin-nav a { font-size: 10px; flex-direction: column; gap: 4px; text-align: center; padding: 8px 2px; }
+  .admin-prototype .bounded-shell .admin-nav .nav-foot { overflow-wrap: anywhere; padding: 8px 2px; }
+  .admin-prototype .bounded-shell .admin-main { padding: 12px; }
+  .admin-prototype .workspace-page .page-head .lead { display: none; }
+  .admin-prototype .workspace-tabs { gap: 2px; }
+  .admin-prototype .workspace-tabs button { padding: 8px 10px; }
+  .admin-prototype .workspace-page .wgrid.c2, .admin-prototype .workspace-page .wgrid.c3, .admin-prototype .workspace-page .wgrid.c4 { grid-template-columns: minmax(0, 1fr); }
+  .admin-prototype .workspace-page .workspace-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-prototype .workspace-page .wcard { padding: 12px; }
+  .admin-prototype .workspace-page .wcard.flush { padding: 0; }
+  .admin-prototype .record-distribution > .mt12 { grid-template-columns: minmax(0, 1fr); }
+  .admin-prototype .workspace-page .records-panel { overflow: auto; }
+  .admin-prototype .workspace-page .records-panel > .wgrid.c3 { grid-template-columns: minmax(0, 1fr); }
+  .admin-prototype .records-panel .records-table { flex-basis: 280px; }
+}
+@media (max-height: 650px) and (min-width: 761px) {
+  .admin-prototype .workspace-page { gap: 8px; }
+  .admin-prototype .workspace-page .page-head .lead { display: none; }
+}
+
+
+/* 仅约束系统 Bark 卡片，不影响其他任务正在调整的全局后台样式。 */
+.admin-prototype .bark-description { margin: 0 0 16px; line-height: 1.6; }
+.admin-prototype .bark-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--rule); border-radius: var(--r-field); background: var(--bg); }
+.admin-prototype .bark-fields > div { min-width: 0; }
+.admin-prototype .bark-fields .wlabel { display: block; }
+.admin-prototype .bark-fields .muted, .admin-prototype .bark-settings .wbtn-row .muted { font-size: 11.5px; line-height: 1.6; }
+.admin-prototype .bark-modes { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+@media (max-width: 760px) { .admin-prototype .bark-fields.wgrid.c2 { grid-template-columns: minmax(0, 1fr); } }
+
+/* 原型中的浏览器高度固定，实际后台使用 100dvh；不影响其他原型屏幕。 */
+.frame-wrap:has(.admin-prototype) .web { width: 100%; height: auto; min-height: 0; }
+.admin-prototype { font-family: var(--font-body); font-size: 13px; color: var(--ink); text-align: left; }
+.admin-prototype .bounded-shell { height: 720px; min-height: 0; }
+.admin-prototype .prototype-stage { height: 720px; }
+.admin-prototype .admin-main { width: auto; }
+
+</style>
 </head>
 <body>
 <!-- ADR-0044 已批准增量：以下替代 4-1 / 4-2 / 4-3 的布局；旧屏仅留作历史参考。 -->
@@ -602,7 +1549,7 @@ for(let index=1;index<=40;index++){
 <div style="padding:14px;border:1px solid #ddd;border-radius:12px">启用个人 Bark <input type="checkbox" aria-label="启用个人 Bark"><p>启用后替代 Server 酱</p></div>
 <h4>接收设备</h4><p>服务地址</p><input value="https://api.day.app"><small style="display:block;margin:6px 0 16px">默认使用 Bark 官方服务；自建地址需由管理员允许。</small>
 <p>设备 Key</p><input type="password" placeholder="已配置，留空保持原值"><p>通知方式</p><p>上岸分组 · 重要通知 · 点击打开 App</p><button>保存</button></div>
-<h3>后台系统 Bark</h3><p>运行配置页内独立卡片，位于页面标题、状态提示及 Emby / Server 酱卡片之后，功能开关之前。统一后台表单样式；启用开关独立一行并显示状态。服务地址、设备 Key、请求超时（1–60 秒）与默认通知方式按双列排列，窄屏改为单列。字段错误在输入框下显示；保存提交本页全部配置。另设“发送测试通知”按钮，使用已保存的系统配置并展示发送结果；草稿修改后需先保存，发送中禁用重复点击。用于同步和备份异常，与个人催办隔离。</p>
+<h3>后台系统 Bark</h3><p>按 ADR-0046，运行配置以独立分区展示系统 Bark，底部统一保存。统一后台表单样式；启用开关独立一行并显示状态。服务地址、设备 Key、请求超时（1–60 秒）与默认通知方式按双列排列，窄屏改为单列。字段错误在输入框下显示；保存提交本页全部配置。另设“发送测试通知”按钮，使用已保存的系统配置并展示发送结果；草稿修改后需先保存，发送中禁用重复点击。用于同步和备份异常，与个人催办隔离。</p>
 <script>let filterStart=0;document.getElementById('filter-demo').addEventListener('touchstart',e=>filterStart=e.touches[0].clientX);document.getElementById('filter-demo').addEventListener('touchend',e=>{if(e.changedTouches[0].clientX<filterStart-60)document.getElementById('filter-drawer').showModal()});</script>
 </section>
 
@@ -2926,422 +3873,30 @@ for(let index=1;index<=40;index++){
   </div>
 
   <!-- 8-3 催办策略 -->
-  <div class="frame-wrap" style="width:1180px">
-    <p class="frame-cap">8-3 催办策略配置
-      <small>全局默认 + 按用户覆盖。所有阈值、渠道与免打扰只在此维护，App 端只读展示。</small>
-    </p>
-    <div class="web">
-      <div class="web-bar"><i></i><i></i><i></i><div class="url">https://shangan.example.com/admin/nag-policy</div></div>
-      <div class="web-body">
-        <div class="web-nav">
-          <div class="brand">上岸 · 管理后台</div>
-          <a><svg class="icon s18"><use href="#i-chart"/></svg>概览</a>
-          <a><svg class="icon s18"><use href="#i-pulse"/></svg>在线与进度</a>
-          <a class="on"><svg class="icon s18"><use href="#i-bell"/></svg>催办策略</a>
-          <a><svg class="icon s18"><use href="#i-alert"/></svg>催办记录</a>
-          <a><svg class="icon s18"><use href="#i-book"/></svg>课程库</a>
-          <a><svg class="icon s18"><use href="#i-user"/></svg>Emby 同步</a>
-          <a><svg class="icon s18"><use href="#i-star"/></svg>督学关系</a>
-          <a><svg class="icon s18"><use href="#i-lock"/></svg>用户</a>
-          <a><svg class="icon s18"><use href="#i-archive"/></svg>归档区</a>
-          <a><svg class="icon s18"><use href="#i-server"/></svg>运行配置</a>
-        </div>
-        <div class="web-main">
-          <h3>催办策略</h3>
-          <p class="lead">服务端定时扫描每日待办完成情况。触发条件：当日仍有未完成 Todo，且「最近一次有效上报」距今超过无操作阈值，且不在免打扰时段内。</p>
-
-          <div class="wcard">
-            <div class="wlabel">客户端催办通知方式（全局）</div>
-            <select class="winput"><option selected>SSE 实时通知（默认）</option><option>心跳轮询（原方式）</option></select>
-            <p class="muted">SSE 收到通知后立即查询催办；心跳轮询等待下一次心跳。两种方式都保留心跳在线判定。</p>
-            <button class="wbtn">保存通知方式</button>
-          </div>
-
-          <div class="wcard">
-            <b style="font-size:14px">全局默认</b>
-            <div class="wgrid c4 mt12">
-              <div>
-                <div class="wlabel">扫描周期（分钟）</div>
-                <div class="winput"><span class="mono">5</span><span class="u">1 – 60</span></div>
-              </div>
-              <div>
-                <div class="wlabel">在线宽限期（秒）</div>
-                <div class="winput"><span class="mono">150</span><span class="u">心跳 60s × 2.5</span></div>
-              </div>
-              <div>
-                <div class="wlabel">心跳间隔（秒）· 下发给 App</div>
-                <div class="winput on"><span class="mono">60</span><span class="u">30 – 300</span></div>
-              </div>
-              <div>
-                <div class="wlabel">空闲判定依据</div>
-                <div class="winput"><span>最近有效上报</span><span class="u">▾</span></div>
-              </div>
-            </div>
-            <div class="hr"></div>
-            <div class="wgrid c4">
-              <div>
-                <div class="wlabel">首次催办阈值（分钟）</div>
-                <div class="winput on"><span class="mono">90</span><span class="u">10 – 720</span></div>
-              </div>
-              <div>
-                <div class="wlabel">重复催办间隔（分钟）</div>
-                <div class="winput"><span class="mono">60</span><span class="u">0 = 关闭</span></div>
-              </div>
-              <div>
-                <div class="wlabel">每日最多催办次数</div>
-                <div class="winput"><span class="mono">3</span><span class="u">1 – 10</span></div>
-              </div>
-              <div>
-                <div class="wlabel">全屏未响应转推延迟（分钟）</div>
-                <div class="winput"><span class="mono">10</span><span class="u">1 – 60</span></div>
-              </div>
-            </div>
-            <div class="hr"></div>
-            <div class="wgrid c3">
-              <div>
-                <div class="wlabel">免打扰时段</div>
-                <div class="row" style="gap:8px">
-                  <div class="winput" style="flex:1"><span class="mono">23:30</span></div>
-                  <span class="muted">—</span>
-                  <div class="winput" style="flex:1"><span class="mono">07:00</span></div>
-                </div>
-              </div>
-              <div>
-                <div class="wlabel">最少未完成项才触发</div>
-                <div class="winput"><span class="mono">1</span><span class="u">项</span></div>
-              </div>
-              <div>
-                <div class="wlabel">原因最少字数</div>
-                <div class="winput"><span class="mono">5</span><span class="u">字</span></div>
-              </div>
-            </div>
-            <div class="hr"></div>
-            <div class="wgrid c2">
-              <div>
-                <div class="wlabel">启用渠道</div>
-                <table class="wt">
-                  <tr>
-                    <td style="width:34px"><div class="switch on" style="width:38px;height:22px"></div></td>
-                    <td><b>客户端全屏提醒</b><div class="muted" style="font-size:11px">App 在线时投递，必须填写原因才能关闭</div></td>
-                  </tr>
-                  <tr>
-                    <td><div class="switch on" style="width:38px;height:22px"></div></td>
-                    <td><b>Server 酱</b><div class="muted" style="font-size:11px">App 离线或全屏超时未回应时投递</div></td>
-                  </tr>
-                </table>
-              </div>
-              <div>
-                <div class="wlabel">催办文案模板</div>
-                <div class="winput" style="height:86px;align-items:flex-start;font-size:12px;line-height:1.7">
-                  {{user}} 今天还有 {{pending}} 项未完成，已经 {{idleMinutes}} 分钟没有任何操作。
-                </div>
-                <div class="muted mt6" style="font-size:11px">可用变量：user / pending / idleMinutes / date / firstPendingTitle</div>
-              </div>
-            </div>
-            <div class="row mt16" style="gap:9px"><span class="wbtn">保存全局默认</span><span class="wbtn ghost">恢复出厂值</span></div>
-          </div>
-
-          <div class="wcard mt16">
-            <div class="between"><b style="font-size:14px">按用户覆盖</b><span class="wbtn ghost sm">新增覆盖</span></div>
-            <table class="wt mt10">
-              <tr><th>用户</th><th>首次阈值</th><th>重复间隔</th><th>每日上限</th><th>渠道</th><th>免打扰</th><th style="text-align:right">操作</th></tr>
-              <tr>
-                <td><b>lisi</b></td>
-                <td class="mono">45 分</td><td class="mono">30 分</td><td class="mono">6</td>
-                <td><span class="badge b-ink">全屏</span> <span class="badge b-ink">Server 酱</span></td>
-                <td class="mono muted">00:30 – 06:30</td>
-                <td style="text-align:right"><span class="wbtn ghost sm">编辑</span> <span class="wbtn ghost sm">删除</span></td>
-              </tr>
-              <tr>
-                <td><b>zhaoliu</b></td>
-                <td class="mono">120 分</td><td class="muted">关闭</td><td class="mono">1</td>
-                <td><span class="badge b-ink">全屏</span></td>
-                <td class="mono muted">22:00 – 08:00</td>
-                <td style="text-align:right"><span class="wbtn ghost sm">编辑</span> <span class="wbtn ghost sm">删除</span></td>
-              </tr>
-            </table>
-            <div class="muted mt10" style="font-size:11.5px">未列出的用户使用全局默认。覆盖只影响阈值与渠道，不改变扫描周期与在线宽限期。</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div class="frame-wrap" style="width:1280px" id="prototype-nag-policy">
+<p class="frame-cap">8-3 催办策略 · 可视区域布局（ADR-0046）<small>全局默认 / 通知方式 / 用户覆盖分区切换，保存操作固定底部；编辑覆盖在同一内容区替换列表，保存与取消同样固定。</small></p>
+<div class="web"><div class="web-bar"><i></i><i></i><i></i><div class="url">https://shangan.example.com/admin/nag-policy</div></div>
+<div class="admin-prototype"><div class="prototype-stage"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class=""><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class=""><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class=""><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>催办策略</h1><p class="lead"> 服务端定时扫描每日待办完成情况。触发条件：当日仍有未完成 Todo，且「最近一次有效上报」距今超过无操作阈值，且不在免打扰时段内。所有阈值、渠道与免打扰只在此维护，App 端只读展示。 </p></div><nav class="workspace-tabs" aria-label="页面分区"><button type="button" class="on" aria-pressed="true" data-prototype-tab="0">全局默认</button><button type="button" class="" aria-pressed="false" data-prototype-tab="1">通知方式</button><button type="button" class="" aria-pressed="false" data-prototype-tab="2">用户覆盖</button></nav><div class="workspace-scroll"><div class="wcard"><b style="font-size: 14px;">全局默认</b><div class="wgrid c4 mt12"><div><div class="wlabel">扫描周期（分钟）</div><div class="winput-row"><input class="winput mono" type="number" min="1" max="60" value="5"><span class="unit">1 – 60</span></div></div><div><div class="wlabel">在线宽限期（秒）</div><div class="winput-row"><input class="winput mono" type="number" min="30" max="900" value="150"><span class="unit">心跳 × 2.5</span></div></div><div><div class="wlabel">心跳间隔（秒）· 下发给 App</div><div class="winput-row"><input class="winput mono" type="number" min="30" max="300" value="60"><span class="unit">30 – 300</span></div></div><div><div class="wlabel">空闲判定依据</div><select class="winput" disabled=""><option selected="">最近有效上报</option></select></div></div><div class="wgrid c4 mt16" style="border-top: 1px solid var(--hair); padding-top: 16px;"><div><div class="wlabel">首次催办阈值（分钟）</div><div class="winput-row"><input class="winput mono" type="number" min="10" max="720" value="90"><span class="unit">10 – 720</span></div></div><div><div class="wlabel">重复催办间隔（分钟）</div><div class="winput-row"><input class="winput mono" type="number" min="0" max="720" value="30"><span class="unit">0 = 关闭</span></div></div><div><div class="wlabel">每日最多催办次数</div><div class="winput-row"><input class="winput mono" type="number" min="1" max="10" value="3"><span class="unit">1 – 10</span></div></div><div><div class="wlabel">全屏未响应转推延迟（分钟）</div><div class="winput-row"><input class="winput mono" type="number" min="1" max="60" value="10"><span class="unit">1 – 60</span></div></div></div><div class="wgrid c3 mt16" style="border-top: 1px solid var(--hair); padding-top: 16px;"><div><div class="wlabel">免打扰时段</div><div class="row" style="gap: 8px;"><input class="winput mono" type="time" style="flex: 1 1 0%;" value="23:30"><span class="muted">—</span><input class="winput mono" type="time" style="flex: 1 1 0%;" value="07:00"></div></div><div><div class="wlabel">最少未完成项才触发</div><div class="winput-row"><input class="winput mono" type="number" min="1" max="20" value="1"><span class="unit">项</span></div></div><div><div class="wlabel">原因最少字数</div><div class="winput-row"><input class="winput mono" type="number" min="0" max="100" value="5"><span class="unit">字</span></div></div></div><div class="wgrid c2 mt16" style="border-top: 1px solid var(--hair); padding-top: 16px;"><div><div class="wlabel">启用渠道</div><table class="wt"><tbody><tr><td style="width: 34px;"><label class="wcheck"><input type="checkbox" value="on" checked=""></label></td><td><b>客户端全屏提醒</b><div class="muted" style="font-size: 11px;">App 在线时投递，必须填写原因才能关闭</div></td></tr><tr><td><label class="wcheck"><input type="checkbox" value="on" checked=""></label></td><td><b>Server 酱</b><div class="muted" style="font-size: 11px;">App 离线或全屏超时未回应时投递</div></td></tr></tbody></table></div><div><div class="wlabel">催办文案模板</div><textarea class="winput" style="min-height: 86px;">{{user}} 请回来学习</textarea><div class="muted mt6" style="font-size: 11px;"> 可用变量：user / pending / idleMinutes / date </div></div></div><div class="mt16" style="border-top: 1px solid var(--hair); padding-top: 16px;"><div class="wlabel">触发督学提醒的规则</div><table class="wt"><tbody><tr><td style="width: 34px;"><label class="wcheck"><input type="checkbox" value="on"></label></td><td><b>单日删除 ≥ 3 条</b><div class="muted" style="font-size: 11px;">通知主督学人</div></td></tr><tr><td><label class="wcheck"><input type="checkbox" value="on"></label></td><td><b>原因含「不想学」类标签</b><div class="muted" style="font-size: 11px;">立即通知主督学人</div></td></tr><tr><td><label class="wcheck"><input type="checkbox" value="on"></label></td><td><b>删除已完成 50% 以上的课程 Todo</b><div class="muted" style="font-size: 11px;">计入删除台账异常项</div></td></tr></tbody></table></div></div></div><footer class="workspace-actions"><button class="wbtn">保存全局默认</button><button class="wbtn ghost">恢复出厂值</button></footer></section></main></div></div><template data-prototype-index="0"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class=""><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class=""><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class=""><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>催办策略</h1><p class="lead"> 服务端定时扫描每日待办完成情况。触发条件：当日仍有未完成 Todo，且「最近一次有效上报」距今超过无操作阈值，且不在免打扰时段内。所有阈值、渠道与免打扰只在此维护，App 端只读展示。 </p></div><nav class="workspace-tabs" aria-label="页面分区"><button type="button" class="on" aria-pressed="true" data-prototype-tab="0">全局默认</button><button type="button" class="" aria-pressed="false" data-prototype-tab="1">通知方式</button><button type="button" class="" aria-pressed="false" data-prototype-tab="2">用户覆盖</button></nav><div class="workspace-scroll"><div class="wcard"><b style="font-size: 14px;">全局默认</b><div class="wgrid c4 mt12"><div><div class="wlabel">扫描周期（分钟）</div><div class="winput-row"><input class="winput mono" type="number" min="1" max="60" value="5"><span class="unit">1 – 60</span></div></div><div><div class="wlabel">在线宽限期（秒）</div><div class="winput-row"><input class="winput mono" type="number" min="30" max="900" value="150"><span class="unit">心跳 × 2.5</span></div></div><div><div class="wlabel">心跳间隔（秒）· 下发给 App</div><div class="winput-row"><input class="winput mono" type="number" min="30" max="300" value="60"><span class="unit">30 – 300</span></div></div><div><div class="wlabel">空闲判定依据</div><select class="winput" disabled=""><option selected="">最近有效上报</option></select></div></div><div class="wgrid c4 mt16" style="border-top: 1px solid var(--hair); padding-top: 16px;"><div><div class="wlabel">首次催办阈值（分钟）</div><div class="winput-row"><input class="winput mono" type="number" min="10" max="720" value="90"><span class="unit">10 – 720</span></div></div><div><div class="wlabel">重复催办间隔（分钟）</div><div class="winput-row"><input class="winput mono" type="number" min="0" max="720" value="30"><span class="unit">0 = 关闭</span></div></div><div><div class="wlabel">每日最多催办次数</div><div class="winput-row"><input class="winput mono" type="number" min="1" max="10" value="3"><span class="unit">1 – 10</span></div></div><div><div class="wlabel">全屏未响应转推延迟（分钟）</div><div class="winput-row"><input class="winput mono" type="number" min="1" max="60" value="10"><span class="unit">1 – 60</span></div></div></div><div class="wgrid c3 mt16" style="border-top: 1px solid var(--hair); padding-top: 16px;"><div><div class="wlabel">免打扰时段</div><div class="row" style="gap: 8px;"><input class="winput mono" type="time" style="flex: 1 1 0%;" value="23:30"><span class="muted">—</span><input class="winput mono" type="time" style="flex: 1 1 0%;" value="07:00"></div></div><div><div class="wlabel">最少未完成项才触发</div><div class="winput-row"><input class="winput mono" type="number" min="1" max="20" value="1"><span class="unit">项</span></div></div><div><div class="wlabel">原因最少字数</div><div class="winput-row"><input class="winput mono" type="number" min="0" max="100" value="5"><span class="unit">字</span></div></div></div><div class="wgrid c2 mt16" style="border-top: 1px solid var(--hair); padding-top: 16px;"><div><div class="wlabel">启用渠道</div><table class="wt"><tbody><tr><td style="width: 34px;"><label class="wcheck"><input type="checkbox" value="on" checked=""></label></td><td><b>客户端全屏提醒</b><div class="muted" style="font-size: 11px;">App 在线时投递，必须填写原因才能关闭</div></td></tr><tr><td><label class="wcheck"><input type="checkbox" value="on" checked=""></label></td><td><b>Server 酱</b><div class="muted" style="font-size: 11px;">App 离线或全屏超时未回应时投递</div></td></tr></tbody></table></div><div><div class="wlabel">催办文案模板</div><textarea class="winput" style="min-height: 86px;">{{user}} 请回来学习</textarea><div class="muted mt6" style="font-size: 11px;"> 可用变量：user / pending / idleMinutes / date </div></div></div><div class="mt16" style="border-top: 1px solid var(--hair); padding-top: 16px;"><div class="wlabel">触发督学提醒的规则</div><table class="wt"><tbody><tr><td style="width: 34px;"><label class="wcheck"><input type="checkbox" value="on"></label></td><td><b>单日删除 ≥ 3 条</b><div class="muted" style="font-size: 11px;">通知主督学人</div></td></tr><tr><td><label class="wcheck"><input type="checkbox" value="on"></label></td><td><b>原因含「不想学」类标签</b><div class="muted" style="font-size: 11px;">立即通知主督学人</div></td></tr><tr><td><label class="wcheck"><input type="checkbox" value="on"></label></td><td><b>删除已完成 50% 以上的课程 Todo</b><div class="muted" style="font-size: 11px;">计入删除台账异常项</div></td></tr></tbody></table></div></div></div><footer class="workspace-actions"><button class="wbtn">保存全局默认</button><button class="wbtn ghost">恢复出厂值</button></footer></section></main></div></template>
+<template data-prototype-index="1"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class=""><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class=""><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class=""><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>催办策略</h1><p class="lead"> 服务端定时扫描每日待办完成情况。触发条件：当日仍有未完成 Todo，且「最近一次有效上报」距今超过无操作阈值，且不在免打扰时段内。所有阈值、渠道与免打扰只在此维护，App 端只读展示。 </p></div><nav class="workspace-tabs" aria-label="页面分区"><button type="button" class="" aria-pressed="false" data-prototype-tab="0">全局默认</button><button type="button" class="on" aria-pressed="true" data-prototype-tab="1">通知方式</button><button type="button" class="" aria-pressed="false" data-prototype-tab="2">用户覆盖</button></nav><div class="workspace-scroll"><div class="wcard" style=""><label class="wlabel" for="nag-transport">客户端催办通知方式（全局）</label><select id="nag-transport" class="winput"><option value="SSE" selected="">SSE 实时通知（默认）</option><option value="HEARTBEAT">心跳轮询（原方式）</option></select><p class="muted">SSE 收到通知后立即查询催办；心跳轮询等待下一次心跳。两种方式都保留心跳在线判定。</p><button class="wbtn">保存通知方式</button></div></div></section></main></div></template>
+<template data-prototype-index="2"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class=""><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class=""><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class=""><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>催办策略</h1><p class="lead"> 服务端定时扫描每日待办完成情况。触发条件：当日仍有未完成 Todo，且「最近一次有效上报」距今超过无操作阈值，且不在免打扰时段内。所有阈值、渠道与免打扰只在此维护，App 端只读展示。 </p></div><nav class="workspace-tabs" aria-label="页面分区"><button type="button" class="" aria-pressed="false" data-prototype-tab="0">全局默认</button><button type="button" class="" aria-pressed="false" data-prototype-tab="1">通知方式</button><button type="button" class="on" aria-pressed="true" data-prototype-tab="2">用户覆盖</button></nav><div class="workspace-scroll"><div class="wcard" style=""><div class="between"><b style="font-size: 14px;">按用户覆盖</b><button class="wbtn ghost sm">新增覆盖</button></div><div class="table-wrap mt10"><table class="wt"><thead><tr><th>用户</th><th>首次阈值</th><th>重复间隔</th><th>每日上限</th><th>渠道</th><th>免打扰</th><th style="text-align: right;">操作</th></tr></thead><tbody><tr><td colspan="7" class="empty">还没有任何用户覆盖，全部用户使用全局默认</td></tr></tbody></table></div><div class="muted mt10" style="font-size: 11.5px;"> 未列出的用户使用全局默认。覆盖只影响阈值与渠道，不改变扫描周期与在线宽限期。 </div></div></div></section></main></div></template></div></div>
+</div>
 
   <!-- 8-4 催办记录 -->
-  <div class="frame-wrap" style="width:1180px">
-    <p class="frame-cap">8-4 催办记录
-      <small>每条催办的触发条件、渠道、投递结果、用户原因与回应时延；支持按用户、日期、渠道、是否回应筛选。</small>
-    </p>
-    <div class="web">
-      <div class="web-bar"><i></i><i></i><i></i><div class="url">https://shangan.example.com/admin/nags</div></div>
-      <div class="web-body">
-        <div class="web-nav">
-          <div class="brand">上岸 · 管理后台</div>
-          <a><svg class="icon s18"><use href="#i-chart"/></svg>概览</a>
-          <a><svg class="icon s18"><use href="#i-pulse"/></svg>在线与进度</a>
-          <a><svg class="icon s18"><use href="#i-bell"/></svg>催办策略</a>
-          <a class="on"><svg class="icon s18"><use href="#i-alert"/></svg>催办记录</a>
-          <a><svg class="icon s18"><use href="#i-book"/></svg>课程库</a>
-          <a><svg class="icon s18"><use href="#i-user"/></svg>Emby 同步</a>
-          <a><svg class="icon s18"><use href="#i-star"/></svg>督学关系</a>
-          <a><svg class="icon s18"><use href="#i-lock"/></svg>用户</a>
-          <a><svg class="icon s18"><use href="#i-archive"/></svg>归档区</a>
-          <a><svg class="icon s18"><use href="#i-server"/></svg>运行配置</a>
-        </div>
-        <div class="web-main">
-          <h3>催办记录</h3>
-          <p class="lead">共 42 条 · 本月 7 条 · 未回应 2 条 · 平均回应时延 6 分 12 秒。</p>
-
-          <div class="wgrid c4">
-            <div><div class="wlabel">用户</div><div class="winput"><span>全部</span><span class="u">▾</span></div></div>
-            <div><div class="wlabel">日期范围</div><div class="winput"><span class="mono">2026-09-01 → 09-07</span></div></div>
-            <div><div class="wlabel">渠道</div><div class="winput"><span>全部</span><span class="u">▾</span></div></div>
-            <div><div class="wlabel">回应状态</div><div class="winput on"><span>全部</span><span class="u">▾</span></div></div>
-          </div>
-
-          <div class="wcard mt14" style="padding:0">
-            <table class="wt">
-              <tr>
-                <th style="padding-left:18px">触发时间</th><th>用户</th><th>触发</th><th>触发条件</th>
-                <th>渠道</th><th>投递</th><th>回应</th><th>原因</th><th style="text-align:right;padding-right:18px">时延</th>
-              </tr>
-              <tr>
-                <td style="padding-left:18px" class="mono">09-07 09:40</td>
-                <td><b>lisi</b></td>
-                <td><span class="badge b-ink">自动</span></td>
-                <td>无操作 192 分<div class="muted" style="font-size:11px">未完成 4 项</div></td>
-                <td><span class="badge b-blue">全屏</span></td>
-                <td><span class="dotstate off"><i></i>App 离线</span></td>
-                <td><span style="color:var(--red);font-weight:700">未回应</span></td>
-                <td class="muted">—</td>
-                <td style="text-align:right;padding-right:18px" class="muted">—</td>
-              </tr>
-              <tr>
-                <td style="padding-left:18px" class="mono">09-06 21:40</td>
-                <td><b>zhangjialin</b></td>
-                <td><span class="badge b-ink">自动</span></td>
-                <td>无操作 112 分<div class="muted" style="font-size:11px">未完成 2 项</div></td>
-                <td><span class="badge b-blue">全屏</span></td>
-                <td><span class="dotstate on"><i></i>已展示</span></td>
-                <td><span style="color:var(--green);font-weight:700">已回应</span></td>
-                <td>临时加班，晚上补 2 讲</td>
-                <td style="text-align:right;padding-right:18px" class="mono">4:12</td>
-              </tr>
-              <tr>
-                <td style="padding-left:18px" class="mono">09-06 22:05</td>
-                <td><b>wangwu</b></td>
-                <td><span class="badge b-focus">手动</span><div class="muted" style="font-size:11px">by admin</div></td>
-                <td>管理员发起</td>
-                <td><span class="badge b-ink">Server 酱</span></td>
-                <td><span class="dotstate on"><i></i>已发送</span></td>
-                <td><span style="color:var(--green);font-weight:700">已回应</span></td>
-                <td>在通勤路上，到家就学</td>
-                <td style="text-align:right;padding-right:18px" class="mono">18:40</td>
-              </tr>
-              <tr>
-                <td style="padding-left:18px" class="mono">09-04 22:10</td>
-                <td><b>lisi</b></td>
-                <td><span class="badge b-ink">自动</span></td>
-                <td>无操作 186 分<div class="muted" style="font-size:11px">未完成 4 项</div></td>
-                <td><span class="badge b-ink">Server 酱</span></td>
-                <td><span class="dotstate on"><i></i>已发送</span></td>
-                <td><span style="color:var(--red);font-weight:700">未回应</span></td>
-                <td class="muted">当日零完成</td>
-                <td style="text-align:right;padding-right:18px" class="muted">—</td>
-              </tr>
-              <tr>
-                <td style="padding-left:18px" class="mono">09-03 20:15</td>
-                <td><b>zhangjialin</b></td>
-                <td><span class="badge b-ink">自动</span></td>
-                <td>无操作 95 分<div class="muted" style="font-size:11px">未完成 1 项</div></td>
-                <td><span class="badge b-blue">全屏</span></td>
-                <td><span class="dotstate on"><i></i>已展示</span></td>
-                <td><span style="color:var(--green);font-weight:700">已回应</span></td>
-                <td>身体不适，明早补</td>
-                <td style="text-align:right;padding-right:18px" class="mono">2:31</td>
-              </tr>
-            </table>
-          </div>
-          <div class="wcard mt12"><b>投递失败 · 学员 lisi</b><p class="muted">Server 酱：失败（渠道未配置）。历史尝试保留。</p><div class="row"><button class="wbtn ghost">重新投递</button><button class="wbtn ghost" onclick="if(confirm('取消后不再投递，历史记录保留。确认取消？')) this.parentElement.parentElement.innerHTML='已取消 · 管理员操作已留痕'">取消投递</button></div></div>
-          <div class="muted mt10" style="font-size:11.5px">幂等键 <code>(user_id, local_date, threshold_level)</code>，同一天同一档不会重复生成；渠道降级会在同一条记录上追加投递流水。</div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div class="frame-wrap" style="width:1280px" id="prototype-nags">
+<p class="frame-cap">8-4 催办记录 · 可视区域布局（ADR-0046）<small>标题、页签、筛选固定；状态分布默认收起，流水表头固定且表体独立滚动。App 只回应最新催办，旧项显示已被替代；失败项可重新投递。</small></p>
+<div class="web"><div class="web-bar"><i></i><i></i><i></i><div class="url">https://shangan.example.com/admin/nags</div></div>
+<div class="admin-prototype"><div class="prototype-stage"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class=""><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class=""><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class=""><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>催办与删除</h1><p class="lead"> 催办记录保留每条催办的触发条件、投递结果、用户原因与回应时延；删除台账保留被删 Todo 的进度快照与必填说明。两者都是永久留痕，用于复盘与督学。 </p></div><nav class="workspace-tabs" aria-label="记录类型"><button type="button" class="on" data-prototype-tab="0">催办记录 100</button><button type="button" class="" data-prototype-tab="1"> 删除台账 0</button></nav><div class="records-panel"><p class="lead" style="margin: 0px 0px 16px;"> 共 100 条 · 未回应 1 条 · 已回应 0 条 · 平均回应时延 —。  其中 <b style="color: var(--red);">50 条所有渠道都投递失败</b> ，请检查学员在线状态与 Server 酱配置。 </p><div class="wgrid c3"><div><div class="wlabel">用户</div><select class="winput"><option value="ALL" selected="">全部</option><option value="u">学员</option></select></div><div><div class="wlabel">触发方式</div><select class="winput"><option value="ALL" selected="">全部</option><option value="AUTO">自动</option><option value="MANUAL">手动</option><option value="SUPERVISOR">督学</option></select></div><div><div class="wlabel">回应状态</div><select class="winput"><option value="ALL" selected="">全部</option><option value="ANSWERED">已回应</option><option value="UNANSWERED">未回应</option></select></div></div><details class="record-distribution"><summary>状态分布 · 100 条<span> · 50 条投递失败，可重试</span></summary><div class="mt12"><div class="mt10"><div class="between" style="font-size: 12.5px; font-weight: 700;"><span>待投递</span><span class="mono">50 · 50%</span></div><div class="bar thin mt6"><i class="ochre" style="width: 50%;"></i></div><div class="muted mt6" style="font-size: 11.5px;"> 其中 50 条已尝试投递但全部失败，流水表显示为「投递失败」；催办状态机没有失败终态，所以仍计入待投递；可在记录中取消或重新投递。 </div></div><div class="mt10"><div class="between" style="font-size: 12.5px; font-weight: 700;"><span>已投递</span><span class="mono">50 · 50%</span></div><div class="bar thin mt6"><i class="" style="width: 50%;"></i></div></div><div class="mt10"><div class="between" style="font-size: 12.5px; font-weight: 700;"><span>已回应</span><span class="mono">0 · 0%</span></div><div class="bar thin mt6"><i class="green" style="width: 0%;"></i></div></div><div class="mt10"><div class="between" style="font-size: 12.5px; font-weight: 700;"><span>已过期</span><span class="mono">0 · 0%</span></div><div class="bar thin mt6"><i class="red" style="width: 0%;"></i></div></div><div class="mt10"><div class="between" style="font-size: 12.5px; font-weight: 700;"><span>已取消</span><span class="mono">0 · 0%</span></div><div class="bar thin mt6"><i class="" style="width: 0%;"></i></div></div></div></details><div class="wcard flush records-table"><div class="table-wrap"><table class="wt"><thead><tr><th>触发时间</th><th>用户</th><th>触发</th><th>触发条件</th><th>投递</th><th>回应</th><th>原因</th><th style="text-align: right;">时延</th></tr></thead><tbody><tr><td class="mono">09-09 14:00 <div class="cell-sub mono">2026-09-09</div></td><td><b>学员</b></td><td><span class="badge b-focus">手动</span></td><td>学习提醒 0 <div class="cell-sub">请尽快处理今天未完成的学习任务。</div><div class="cell-sub">未完成 3 项</div></td><td><span class="dotstate off"><i></i>投递失败（1 次）</span><!-- 逐次渠道尝试直接摊开在同一格里：新增独立列会把这张八列表挤到横向滚动 --><div class="cell-sub" title="09-09 14:00 个人 Bark：失败（网络请求失败）" style="color: var(--red);">个人 Bark：失败（网络请求失败）</div><div class="row mt8" style="gap: 8px; flex-wrap: wrap;"><button class="wbtn ghost sm">重新投递</button><button class="wbtn ghost sm">取消投递</button></div></td><td><span class="muted" style="font-weight: 700;">待投递</span></td><td><span class="muted">—</span></td><td class="mono muted" style="text-align: right;">—</td></tr><tr><td class="mono">09-09 14:00 <div class="cell-sub mono">2026-09-09</div></td><td><b>学员</b></td><td><span class="badge b-focus">手动</span></td><td>学习提醒 1 <div class="cell-sub">请尽快处理今天未完成的学习任务。</div><div class="cell-sub">未完成 3 项</div></td><td><span class="dotstate on"><i></i>已投递</span><!-- 逐次渠道尝试直接摊开在同一格里：新增独立列会把这张八列表挤到横向滚动 --><div class="cell-sub" title="09-09 14:00 个人 Bark：已发出">个人 Bark：已发出</div></td><td><span style="color: var(--red); font-weight: 700;">未回应</span></td><td><span class="muted">—</span></td><td class="mono muted" style="text-align: right;">—</td></tr><tr><td class="mono">09-09 14:00 <div class="cell-sub mono">2026-09-09</div></td><td><b>学员</b></td><td><span class="badge b-focus">手动</span></td><td>学习提醒 2 <div class="cell-sub">请尽快处理今天未完成的学习任务。</div><div class="cell-sub">未完成 3 项</div></td><td><span class="dotstate off"><i></i>投递失败（1 次）</span><!-- 逐次渠道尝试直接摊开在同一格里：新增独立列会把这张八列表挤到横向滚动 --><div class="cell-sub" title="09-09 14:00 个人 Bark：失败（网络请求失败）" style="color: var(--red);">个人 Bark：失败（网络请求失败）</div><div class="row mt8" style="gap: 8px; flex-wrap: wrap;"><button class="wbtn ghost sm">重新投递</button><button class="wbtn ghost sm">取消投递</button></div></td><td><span class="muted" style="font-weight: 700;">待投递</span></td><td><span class="muted">—</span></td><td class="mono muted" style="text-align: right;">—</td></tr><tr><td class="mono">09-09 14:00 <div class="cell-sub mono">2026-09-09</div></td><td><b>学员</b></td><td><span class="badge b-focus">手动</span></td><td>学习提醒 3 <div class="cell-sub">请尽快处理今天未完成的学习任务。</div><div class="cell-sub">未完成 3 项</div></td><td><span class="dotstate on"><i></i>已投递</span><!-- 逐次渠道尝试直接摊开在同一格里：新增独立列会把这张八列表挤到横向滚动 --><div class="cell-sub" title="09-09 14:00 个人 Bark：已发出">个人 Bark：已发出</div></td><td><span class="muted">已被最新催办替代</span></td><td><span class="muted">—</span></td><td class="mono muted" style="text-align: right;">—</td></tr><tr><td class="mono">09-09 14:00 <div class="cell-sub mono">2026-09-09</div></td><td><b>学员</b></td><td><span class="badge b-focus">手动</span></td><td>学习提醒 4 <div class="cell-sub">请尽快处理今天未完成的学习任务。</div><div class="cell-sub">未完成 3 项</div></td><td><span class="dotstate off"><i></i>投递失败（1 次）</span><!-- 逐次渠道尝试直接摊开在同一格里：新增独立列会把这张八列表挤到横向滚动 --><div class="cell-sub" title="09-09 14:00 个人 Bark：失败（网络请求失败）" style="color: var(--red);">个人 Bark：失败（网络请求失败）</div><div class="row mt8" style="gap: 8px; flex-wrap: wrap;"><button class="wbtn ghost sm">重新投递</button><button class="wbtn ghost sm">取消投递</button></div></td><td><span class="muted" style="font-weight: 700;">待投递</span></td><td><span class="muted">—</span></td><td class="mono muted" style="text-align: right;">—</td></tr><tr><td class="mono">09-09 14:00 <div class="cell-sub mono">2026-09-09</div></td><td><b>学员</b></td><td><span class="badge b-focus">手动</span></td><td>学习提醒 5 <div class="cell-sub">请尽快处理今天未完成的学习任务。</div><div class="cell-sub">未完成 3 项</div></td><td><span class="dotstate on"><i></i>已投递</span><!-- 逐次渠道尝试直接摊开在同一格里：新增独立列会把这张八列表挤到横向滚动 --><div class="cell-sub" title="09-09 14:00 个人 Bark：已发出">个人 Bark：已发出</div></td><td><span class="muted">已被最新催办替代</span></td><td><span class="muted">—</span></td><td class="mono muted" style="text-align: right;">—</td></tr></tbody></table></div></div><div class="muted mt10" style="font-size: 11.5px;"> 自动催办幂等键 <code>(user_id, local_date, threshold_level)</code>，同一天同一档不会重复生成；手动与督学催办不参与幂等键，但同样计入每日上限。 </div></div></section></main></div></div><template data-prototype-index="0"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class=""><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class=""><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class=""><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>催办与删除</h1><p class="lead"> 催办记录保留每条催办的触发条件、投递结果、用户原因与回应时延；删除台账保留被删 Todo 的进度快照与必填说明。两者都是永久留痕，用于复盘与督学。 </p></div><nav class="workspace-tabs" aria-label="记录类型"><button type="button" class="on" data-prototype-tab="0">催办记录 100</button><button type="button" class="" data-prototype-tab="1"> 删除台账 0</button></nav><div class="records-panel"><p class="lead" style="margin: 0px 0px 16px;"> 共 100 条 · 未回应 1 条 · 已回应 0 条 · 平均回应时延 —。  其中 <b style="color: var(--red);">50 条所有渠道都投递失败</b> ，请检查学员在线状态与 Server 酱配置。 </p><div class="wgrid c3"><div><div class="wlabel">用户</div><select class="winput"><option value="ALL" selected="">全部</option><option value="u">学员</option></select></div><div><div class="wlabel">触发方式</div><select class="winput"><option value="ALL" selected="">全部</option><option value="AUTO">自动</option><option value="MANUAL">手动</option><option value="SUPERVISOR">督学</option></select></div><div><div class="wlabel">回应状态</div><select class="winput"><option value="ALL" selected="">全部</option><option value="ANSWERED">已回应</option><option value="UNANSWERED">未回应</option></select></div></div><details class="record-distribution"><summary>状态分布 · 100 条<span> · 50 条投递失败，可重试</span></summary><div class="mt12"><div class="mt10"><div class="between" style="font-size: 12.5px; font-weight: 700;"><span>待投递</span><span class="mono">50 · 50%</span></div><div class="bar thin mt6"><i class="ochre" style="width: 50%;"></i></div><div class="muted mt6" style="font-size: 11.5px;"> 其中 50 条已尝试投递但全部失败，流水表显示为「投递失败」；催办状态机没有失败终态，所以仍计入待投递；可在记录中取消或重新投递。 </div></div><div class="mt10"><div class="between" style="font-size: 12.5px; font-weight: 700;"><span>已投递</span><span class="mono">50 · 50%</span></div><div class="bar thin mt6"><i class="" style="width: 50%;"></i></div></div><div class="mt10"><div class="between" style="font-size: 12.5px; font-weight: 700;"><span>已回应</span><span class="mono">0 · 0%</span></div><div class="bar thin mt6"><i class="green" style="width: 0%;"></i></div></div><div class="mt10"><div class="between" style="font-size: 12.5px; font-weight: 700;"><span>已过期</span><span class="mono">0 · 0%</span></div><div class="bar thin mt6"><i class="red" style="width: 0%;"></i></div></div><div class="mt10"><div class="between" style="font-size: 12.5px; font-weight: 700;"><span>已取消</span><span class="mono">0 · 0%</span></div><div class="bar thin mt6"><i class="" style="width: 0%;"></i></div></div></div></details><div class="wcard flush records-table"><div class="table-wrap"><table class="wt"><thead><tr><th>触发时间</th><th>用户</th><th>触发</th><th>触发条件</th><th>投递</th><th>回应</th><th>原因</th><th style="text-align: right;">时延</th></tr></thead><tbody><tr><td class="mono">09-09 14:00 <div class="cell-sub mono">2026-09-09</div></td><td><b>学员</b></td><td><span class="badge b-focus">手动</span></td><td>学习提醒 0 <div class="cell-sub">请尽快处理今天未完成的学习任务。</div><div class="cell-sub">未完成 3 项</div></td><td><span class="dotstate off"><i></i>投递失败（1 次）</span><!-- 逐次渠道尝试直接摊开在同一格里：新增独立列会把这张八列表挤到横向滚动 --><div class="cell-sub" title="09-09 14:00 个人 Bark：失败（网络请求失败）" style="color: var(--red);">个人 Bark：失败（网络请求失败）</div><div class="row mt8" style="gap: 8px; flex-wrap: wrap;"><button class="wbtn ghost sm">重新投递</button><button class="wbtn ghost sm">取消投递</button></div></td><td><span class="muted" style="font-weight: 700;">待投递</span></td><td><span class="muted">—</span></td><td class="mono muted" style="text-align: right;">—</td></tr><tr><td class="mono">09-09 14:00 <div class="cell-sub mono">2026-09-09</div></td><td><b>学员</b></td><td><span class="badge b-focus">手动</span></td><td>学习提醒 1 <div class="cell-sub">请尽快处理今天未完成的学习任务。</div><div class="cell-sub">未完成 3 项</div></td><td><span class="dotstate on"><i></i>已投递</span><!-- 逐次渠道尝试直接摊开在同一格里：新增独立列会把这张八列表挤到横向滚动 --><div class="cell-sub" title="09-09 14:00 个人 Bark：已发出">个人 Bark：已发出</div></td><td><span style="color: var(--red); font-weight: 700;">未回应</span></td><td><span class="muted">—</span></td><td class="mono muted" style="text-align: right;">—</td></tr><tr><td class="mono">09-09 14:00 <div class="cell-sub mono">2026-09-09</div></td><td><b>学员</b></td><td><span class="badge b-focus">手动</span></td><td>学习提醒 2 <div class="cell-sub">请尽快处理今天未完成的学习任务。</div><div class="cell-sub">未完成 3 项</div></td><td><span class="dotstate off"><i></i>投递失败（1 次）</span><!-- 逐次渠道尝试直接摊开在同一格里：新增独立列会把这张八列表挤到横向滚动 --><div class="cell-sub" title="09-09 14:00 个人 Bark：失败（网络请求失败）" style="color: var(--red);">个人 Bark：失败（网络请求失败）</div><div class="row mt8" style="gap: 8px; flex-wrap: wrap;"><button class="wbtn ghost sm">重新投递</button><button class="wbtn ghost sm">取消投递</button></div></td><td><span class="muted" style="font-weight: 700;">待投递</span></td><td><span class="muted">—</span></td><td class="mono muted" style="text-align: right;">—</td></tr><tr><td class="mono">09-09 14:00 <div class="cell-sub mono">2026-09-09</div></td><td><b>学员</b></td><td><span class="badge b-focus">手动</span></td><td>学习提醒 3 <div class="cell-sub">请尽快处理今天未完成的学习任务。</div><div class="cell-sub">未完成 3 项</div></td><td><span class="dotstate on"><i></i>已投递</span><!-- 逐次渠道尝试直接摊开在同一格里：新增独立列会把这张八列表挤到横向滚动 --><div class="cell-sub" title="09-09 14:00 个人 Bark：已发出">个人 Bark：已发出</div></td><td><span class="muted">已被最新催办替代</span></td><td><span class="muted">—</span></td><td class="mono muted" style="text-align: right;">—</td></tr><tr><td class="mono">09-09 14:00 <div class="cell-sub mono">2026-09-09</div></td><td><b>学员</b></td><td><span class="badge b-focus">手动</span></td><td>学习提醒 4 <div class="cell-sub">请尽快处理今天未完成的学习任务。</div><div class="cell-sub">未完成 3 项</div></td><td><span class="dotstate off"><i></i>投递失败（1 次）</span><!-- 逐次渠道尝试直接摊开在同一格里：新增独立列会把这张八列表挤到横向滚动 --><div class="cell-sub" title="09-09 14:00 个人 Bark：失败（网络请求失败）" style="color: var(--red);">个人 Bark：失败（网络请求失败）</div><div class="row mt8" style="gap: 8px; flex-wrap: wrap;"><button class="wbtn ghost sm">重新投递</button><button class="wbtn ghost sm">取消投递</button></div></td><td><span class="muted" style="font-weight: 700;">待投递</span></td><td><span class="muted">—</span></td><td class="mono muted" style="text-align: right;">—</td></tr><tr><td class="mono">09-09 14:00 <div class="cell-sub mono">2026-09-09</div></td><td><b>学员</b></td><td><span class="badge b-focus">手动</span></td><td>学习提醒 5 <div class="cell-sub">请尽快处理今天未完成的学习任务。</div><div class="cell-sub">未完成 3 项</div></td><td><span class="dotstate on"><i></i>已投递</span><!-- 逐次渠道尝试直接摊开在同一格里：新增独立列会把这张八列表挤到横向滚动 --><div class="cell-sub" title="09-09 14:00 个人 Bark：已发出">个人 Bark：已发出</div></td><td><span class="muted">已被最新催办替代</span></td><td><span class="muted">—</span></td><td class="mono muted" style="text-align: right;">—</td></tr></tbody></table></div></div><div class="muted mt10" style="font-size: 11.5px;"> 自动催办幂等键 <code>(user_id, local_date, threshold_level)</code>，同一天同一档不会重复生成；手动与督学催办不参与幂等键，但同样计入每日上限。 </div></div></section></main></div></template>
+<template data-prototype-index="1"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class=""><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class=""><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class=""><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>催办与删除</h1><p class="lead"> 催办记录保留每条催办的触发条件、投递结果、用户原因与回应时延；删除台账保留被删 Todo 的进度快照与必填说明。两者都是永久留痕，用于复盘与督学。 </p></div><nav class="workspace-tabs" aria-label="记录类型"><button type="button" class="" data-prototype-tab="0">催办记录 100</button><button type="button" class="on" data-prototype-tab="1"> 删除台账 0</button></nav><div class="workspace-scroll"><p class="lead" style="margin: 0px 0px 16px;"> 删除是硬操作，Todo 行会被移除，但删除记录与当时的进度快照永久保留，可用于复盘与督学。以下展示最近 100 条删除。 </p><div class="wgrid c4"><div class="wcard"><div class="wlabel">删除记录</div><div class="mono" style="font-size: 22px; font-weight: 800;">0</div><div class="muted mt8" style="font-size: 11.5px;"> 课程 0 · 专注 0 · 待办 0</div></div><!-- 只有真的出现「不想学了」才上红：0 条却常驻红卡会让管理员对告警色失去敏感度 --><div class="wcard"><div class="wlabel">「不想学了」</div><div class="mono" style="font-size: 22px; font-weight: 800;">0</div><div class="muted mt8" style="font-size: 11.5px;">暂无此类删除</div></div><div class="wcard"><div class="wlabel">涉及学员</div><div class="mono" style="font-size: 22px; font-weight: 800;">0</div><div class="muted mt8" style="font-size: 11.5px;">按学员聚合见右侧</div></div><div class="wcard"><div class="wlabel">最近一次删除</div><div class="mono" style="font-size: 22px; font-weight: 800;">—</div><div class="muted mt8" style="font-size: 11.5px;">删除必须填标签与说明</div></div></div><div class="wgrid c2 mt16"><div class="wcard"><b style="font-size: 14px;">原因分布</b><div class="mt12"></div><div class="empty mt10">还没有删除记录</div><div class="muted mt12" style="font-size: 11.5px;"> 触发督学提醒的规则（单日删除 ≥ 3 条、原因含「不想学」、删除已完成 50% 以上的课程 Todo）在「催办策略」页维护。 </div></div><div class="wcard"><b style="font-size: 14px;">按学员</b><div class="table-wrap mt10"><table class="wt"><thead><tr><th>学员</th><th>删除数</th><th>最多原因</th><th style="text-align: right;">「不想学了」</th></tr></thead><tbody><tr><td colspan="4" class="empty">还没有学员产生删除记录</td></tr></tbody></table></div></div></div><div class="wcard mt16"><div class="between"><b style="font-size: 14px;">删除流水</b><div class="row" style="gap: 8px;"><select class="winput" style="width: auto;"><option value="ALL" selected="">全部学员</option></select><select class="winput" style="width: auto;"><option value="ALL" selected="">全部原因</option></select></div></div><div class="table-wrap mt10"><table class="wt"><thead><tr><th>删除时间</th><th>学员</th><th>类型</th><th>Todo</th><th>删除时进度</th><th>原因标签</th><th>说明</th><th style="text-align: right;">督学人</th></tr></thead><tbody><tr><td colspan="8" class="empty">没有符合条件的删除记录</td></tr></tbody></table></div></div><div class="muted mt10" style="font-size: 11.5px;"> 原因用于识别「排太多」还是「不想学」：删除记录与进度快照永久保留，Todo 行本身已被物理删除。 </div></div></section></main></div></template></div></div>
+</div>
 
   <!-- 8-5 Emby 元数据同步与迁移 -->
-  <div class="frame-wrap" style="width:1180px">
-    <p class="frame-cap">8-5 Emby 同步 · 元数据刷新与失联迁移
-      <small>本项目不维护分类/讲师主数据，只从 Emby 拉只读快照。这一页处理三件事：元数据变更、课时 Item 变化、课程或课时下架后的迁移。</small>
-    </p>
-    <div class="web">
-      <div class="web-bar"><i></i><i></i><i></i><div class="url">https://shangan.example.com/admin/emby-sync</div></div>
-      <div class="web-body">
-        <div class="web-nav">
-          <div class="brand">上岸 · 管理后台</div>
-          <a><svg class="icon s18"><use href="#i-chart"/></svg>概览</a>
-          <a><svg class="icon s18"><use href="#i-pulse"/></svg>在线与进度</a>
-          <a><svg class="icon s18"><use href="#i-bell"/></svg>催办策略</a>
-          <a><svg class="icon s18"><use href="#i-alert"/></svg>催办记录</a>
-          <a><svg class="icon s18"><use href="#i-book"/></svg>课程库</a>
-          <a class="on"><svg class="icon s18"><use href="#i-user"/></svg>Emby 同步</a>
-          <a><svg class="icon s18"><use href="#i-star"/></svg>督学关系</a>
-          <a><svg class="icon s18"><use href="#i-lock"/></svg>用户</a>
-          <a><svg class="icon s18"><use href="#i-archive"/></svg>归档区</a>
-          <a><svg class="icon s18"><use href="#i-server"/></svg>运行配置</a>
-        </div>
-        <div class="web-main">
-          <h3>Emby 同步</h3>
-          <p class="lead">同步只写三类数据：课程基本信息、元数据只读快照（Genres / Tags / People / Year）、课时映射。<b>本地课时 ID 永不重建</b>，因此观看进度、Todo、附件、备注与统计始终跟随原课时。</p>
-
-          <!-- ADR-0037：页面只显示入口，候选与导入结果在弹窗内。 -->
-          <div class="between mt16"><b>媒体库绑定</b><button class="wbtn" onclick="document.getElementById('emby-import-prototype').showModal()">导入课程</button></div>
-          <dialog id="emby-import-prototype" style="width:min(1080px,95vw);max-height:85vh;border:1px solid #ddd;border-radius:16px;padding:0">
-            <div class="between" style="padding:16px;position:sticky;top:0;background:white;z-index:1"><b>从 Emby 导入课程</b><button class="wbtn ghost" onclick="document.getElementById('emby-import-prototype').close()">关闭</button></div>
-            <div style="padding:16px">
-            <div class="between"><b>从媒体库导入课程</b><button class="wbtn ghost">刷新课程</button></div>
-            <p class="lead">展示已保存媒体库内的课程。勾选后导入，已导入课程在课程库同步更新。</p>
-            <div class="row"><input class="winput" placeholder="搜索课程名称" aria-label="搜索课程名称"><button class="wbtn ghost">全选未导入课程</button><button class="wbtn ghost">清空选择</button><button class="wbtn" onclick="document.getElementById('emby-progress-prototype').showModal()">导入所选（2）</button></div>
-            <div class="admin-fixed-table mt10" style="height:38vh"><table class="wt"><tr><th>选择</th><th>封面</th><th>课程</th><th>课时</th><th>状态</th></tr>
-              <tr><td><input type="checkbox" checked aria-label="选择经济法"></td><td>暂无封面</td><td>经济法 2026 精讲班</td><td>32</td><td>未导入</td></tr>
-              <tr><td><input type="checkbox" checked aria-label="选择税法"></td><td>暂无封面</td><td>税法 2026 精讲班</td><td>28</td><td>未导入</td></tr>
-              <tr><td><input type="checkbox" disabled aria-label="会计已导入"></td><td>暂无封面</td><td>会计 2026 精讲班</td><td>40</td><td>已导入</td></tr></table></div>
-            <div class="between mt10"><span>共 3 门 · 已选 2 门 · 第 1 / 1 页</span><span>上一页　下一页</span></div>
-            <p class="muted">逐门导入，圆形进度和日志在独立弹窗显示，最新日志在顶部，可重试失败项。归档课程请前往归档区恢复。</p>
-            </div>
-          </dialog>
-
-          <!-- ADR-0045：独立进度弹窗，示例状态不触发实际导入。 -->
-          <dialog id="emby-progress-prototype" style="width:min(640px,92vw);max-height:90vh;border:1px solid #ddd;border-radius:16px;padding:20px">
-            <div class="between"><h3>课程导入结果</h3><button class="wbtn ghost" onclick="document.getElementById('emby-progress-prototype').close()">关闭</button></div>
-            <div style="text-align:center;padding:20px">
-              <div style="width:120px;height:120px;margin:auto;position:relative;display:grid;place-items:center">
-                <svg viewBox="0 0 120 120" style="position:absolute;inset:0;width:120px;height:120px;transform:rotate(-90deg)"><circle cx="60" cy="60" r="52" fill="none" stroke="#e2e6e3" stroke-width="8"/><circle cx="60" cy="60" r="52" fill="none" stroke="var(--green)" stroke-width="8"/></svg><b style="font-size:24px">100%</b>
-              </div><p>已处理 2 / 2 门 · 成功 1 门 · 失败 1 门</p>
-            </div>
-            <div style="height:180px;overflow:auto;background:#f6f7f6;border:1px solid #ddd;border-radius:8px;padding:12px"><p style="color:var(--red)">税法 2026 精讲班：读取超时，请重试</p><p>经济法 2026 精讲班：导入成功</p></div>
-            <div class="between mt12"><span>导入期间不可关闭；进度按实际已处理课程计算</span><button class="wbtn ghost">重试失败项（1）</button></div>
-          </dialog>
-
-          <div class="wgrid c4">
-            <div class="wcard"><div class="wlabel">上次全量同步</div><div class="mono" style="font-size:15px;font-weight:800">09-06 02:00</div><div class="dotstate on mt8"><i></i>成功</div></div>
-            <div class="wcard"><div class="wlabel">元数据变更</div><div class="mono" style="font-size:22px;font-weight:800">14</div><div class="muted mt8" style="font-size:11.5px">流派 3 · 标签 8 · 人物 3</div></div>
-            <div class="wcard" style="border-color:#E2D3A8;background:var(--ochre-soft)"><div class="wlabel" style="color:var(--ochre)">待人工确认</div><div class="mono" style="font-size:22px;font-weight:800;color:var(--ochre)">2</div><div class="muted mt8" style="font-size:11.5px">课时映射歧义</div></div>
-            <div class="wcard" style="border-color:#EFC7C1;background:var(--red-soft)"><div class="wlabel" style="color:var(--red)">失联</div><div class="mono" style="font-size:17px;font-weight:800;color:var(--red)">1 门 · 3 课时</div><div class="muted mt8" style="font-size:11.5px">需迁移或归档</div></div>
-          </div>
-
-          <div class="wcard mt16">
-            <div class="between"><b style="font-size:14px">元数据变更预览（只读快照整表重写）</b>
-              <div class="row" style="gap:8px"><span class="wbtn ghost sm">重新拉取</span><span class="wbtn sm">应用全部</span></div></div>
-            <table class="wt mt10">
-              <tr><th>课程</th><th>字段</th><th>Emby 当前值</th><th>本地快照</th><th>处理</th></tr>
-              <tr>
-                <td><b>经济法 2026 精讲班</b></td><td>Genres</td>
-                <td><span class="badge b-blue">经济法</span> <span class="badge b-blue">注会</span></td>
-                <td><span class="badge b-ink">经济法</span></td>
-                <td><span class="dotstate on"><i></i>整表重写，新增「注会」</span></td>
-              </tr>
-              <tr>
-                <td><b>税法 2026 精讲班</b></td><td>People</td>
-                <td>刘敏，<b>赵强</b></td><td>刘敏</td>
-                <td><span class="dotstate on"><i></i>新增人物，历史时长按课程归并</span></td>
-              </tr>
-              <tr>
-                <td><b>会计 2026 精讲班</b></td><td>Tags</td>
-                <td>精讲班，2026，<b>已更新</b></td><td>精讲班，2026</td>
-                <td><span class="dotstate on"><i></i>标签快照替换</span></td>
-              </tr>
-              <tr>
-                <td><b>审计 习题强化</b></td><td>Name</td>
-                <td>审计 2026 习题强化</td><td>审计 习题强化</td>
-                <td><span class="dotstate on"><i></i>仅改显示名，ID 与记录不变</span></td>
-              </tr>
-            </table>
-            <div class="muted mt10" style="font-size:11.5px">元数据是纯展示与筛选维度，改名或重打标签<b>不触发任何数据迁移</b>；统计按课程与课时 ID 聚合，历史结果不会变化。</div>
-          </div>
-
-          <div class="wgrid c2 mt16">
-            <div class="wcard" style="border-color:#E2D3A8">
-              <b style="font-size:14px">课时映射待确认</b>
-              <p class="lead" style="margin:6px 0 12px">Item ID 变了且指纹无法唯一匹配时不自动合并，必须逐项确认。</p>
-              <table class="wt">
-                <tr><th>远端课时</th><th>候选本地课时</th><th>依据</th><th style="text-align:right">操作</th></tr>
-                <tr>
-                  <td><b>第22讲 · 政府补助</b><div class="muted" style="font-size:11px">42:10 · 新 ID d19a…</div></td>
-                  <td>第22讲 · 政府补助<div class="muted" style="font-size:11px">已看 64% · 26 分</div></td>
-                  <td><span class="badge b-focus">标题+时长</span></td>
-                  <td style="text-align:right"><span class="wbtn sm">确认同一课时</span></td>
-                </tr>
-                <tr>
-                  <td><b>第23讲 · 债务重组</b><div class="muted" style="font-size:11px">38:40 · 新 ID 7b02…</div></td>
-                  <td><span class="muted">无匹配</span></td>
-                  <td><span class="badge b-ink">无指纹</span></td>
-                  <td style="text-align:right"><span class="wbtn ghost sm">作为新课时</span></td>
-                </tr>
-              </table>
-              <div class="muted mt10" style="font-size:11.5px">匹配优先级：当前 Item ID → 课程内唯一来源指纹 → 唯一标题且时长差 ≤2 秒 → 管理员确认。一对多或多对一一律人工处理。</div>
-            </div>
-
-            <div class="wcard" style="border-color:#EFC7C1">
-              <b style="font-size:14px">失联处理与迁移</b>
-              <p class="lead" style="margin:6px 0 12px">远端删除只标记不可用，本地行与学习记录一律保留。</p>
-              <table class="wt">
-                <tr><th>对象</th><th>情况</th><th>影响</th><th style="text-align:right">处理</th></tr>
-                <tr>
-                  <td><b>会计 2025 精讲班</b><div class="muted" style="font-size:11px">父节点 404</div></td>
-                  <td><span class="dotstate off"><i></i>课程失联</span></td>
-                  <td>学习 Tab 隐藏<div class="muted" style="font-size:11px">历史统计保留</div></td>
-                  <td style="text-align:right"><span class="wbtn sm">重新绑定</span> <span class="wbtn ghost sm">归档</span></td>
-                </tr>
-                <tr>
-                  <td><b>会计 第18讲</b><div class="muted" style="font-size:11px">远端已删除</div></td>
-                  <td><span class="dotstate off"><i></i>课时下架</span></td>
-                  <td>不可播放<div class="muted" style="font-size:11px">已看 100% 记录保留</div></td>
-                  <td style="text-align:right"><span class="wbtn ghost sm">保留</span></td>
-                </tr>
-                <tr>
-                  <td><b>会计 第19–20讲</b><div class="muted" style="font-size:11px">远端已删除</div></td>
-                  <td><span class="dotstate off"><i></i>课时下架</span></td>
-                  <td>2 条今日 Todo 受影响</td>
-                  <td style="text-align:right"><span class="wbtn sm">通知学员改选</span></td>
-                </tr>
-              </table>
-              <div class="muted mt10" style="font-size:11.5px">课时下架后，引用它的 Todo 在 App 内显示「课时已下架」，学员可标记完成或删除（删除仍需填原因）。</div>
-            </div>
-          </div>
-
-          <div class="wcard mt16">
-            <b style="font-size:14px">重新绑定向导 · 会计 2025 精讲班</b>
-            <div class="wgrid c3 mt12">
-              <div><div class="wlabel">① 选择新父节点</div><div class="winput on"><span>会计 2026 全程班</span><span class="u">▾</span></div></div>
-              <div><div class="wlabel">② 读取远端快照</div><div class="winput"><span class="mono">68 项</span><span class="dotstate on"><i></i>完整</span></div></div>
-              <div><div class="wlabel">③ 匹配结果</div><div class="winput"><span class="mono">原位 64 · 新增 4 · 下架 0</span></div></div>
-            </div>
-            <table class="wt mt12">
-              <tr><th>本地课时</th><th>历史记录</th><th>匹配到远端</th><th>依据</th><th>迁移结果</th></tr>
-              <tr>
-                <td>第01讲 · 总论</td><td class="muted">已看 100% · 46 分</td>
-                <td>第01讲 · 总论</td><td><span class="badge b-blue">指纹一致</span></td>
-                <td><span class="dotstate on"><i></i>仅换 Item ID，记录保留</span></td>
-              </tr>
-              <tr>
-                <td>第02讲 · 存货</td><td class="muted">已看 62% · 28 分</td>
-                <td>第02讲 · 存货计量</td><td><span class="badge b-focus">标题+时长</span></td>
-                <td><span class="dotstate on"><i></i>仅换 Item ID，记录保留</span></td>
-              </tr>
-              <tr>
-                <td><span class="muted">—</span></td><td class="muted">—</td>
-                <td>第69讲 · 新增专题</td><td><span class="badge b-ink">新课时</span></td>
-                <td><span class="dotstate on"><i></i>创建新本地 ID</span></td>
-              </tr>
-            </table>
-            <div class="row mt12" style="gap:9px;flex-wrap:wrap"><span class="wbtn">在单个事务内提交迁移</span><span class="wbtn ghost">取消</span></div>
-            <div class="muted mt10" style="font-size:11.5px">提交在一个短事务内完成：更新父绑定 → 原位改写 <code>emby_item_id</code> → 创建新课时 → 标记下架 → 写审计。任一步失败整体回滚，保留上一次可用快照。</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div class="frame-wrap" style="width:1280px" id="prototype-emby-sync">
+<p class="frame-cap">8-5 Emby 同步 · 可视区域布局（ADR-0046）<small>媒体库绑定 / 映射与失联 / 重新绑定分区切换；绑定操作固定在卡片顶部，迁移预览和提交固定在页面底部。</small></p>
+<div class="web"><div class="web-bar"><i></i><i></i><i></i><div class="url">https://shangan.example.com/admin/emby-sync</div></div>
+<div class="admin-prototype"><div class="prototype-stage"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class=""><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class=""><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class=""><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>Emby 同步</h1><p class="lead"> 同步只写三类数据：课程基本信息、元数据只读快照（Genres / Tags / People / Year）、课时映射。<b>本地课时 ID 永不重建</b>，因此观看进度、Todo、附件、备注与统计始终跟随原课时。Emby 原始路径只在服务端内存中用于生成来源指纹，不入库、不展示、不写日志。 </p></div><nav class="workspace-tabs" aria-label="页面分区"><button type="button" class="on" aria-pressed="true" data-prototype-tab="0">媒体库绑定</button><button type="button" class="" aria-pressed="false" data-prototype-tab="1">映射与失联</button><button type="button" class="" aria-pressed="false" data-prototype-tab="2">重新绑定</button></nav><div class="workspace-scroll"><div class="wgrid c4 workspace-summary"><div class="wcard"><div class="wlabel">Emby 连接</div><div class="dotstate mt8 on"><i></i>已配置</div></div><div class="wcard"><div class="wlabel">已绑定媒体库</div><div class="mono" style="font-size: 22px; font-weight: 800;">30</div></div><div class="wcard" style="border-color: var(--ochre-line); background: var(--ochre-soft);"><div class="wlabel" style="color: var(--ochre);"> 下架课时 </div><div class="mono" style="font-size: 22px; font-weight: 800; color: var(--ochre);">30</div></div><div class="wcard" style="border-color: var(--red-line); background: var(--red-soft);"><div class="wlabel" style="color: var(--red);">失联</div><div class="mono" style="font-size: 17px; font-weight: 800; color: var(--red);">30 门 · 900 课时 </div></div></div><div class="wcard mt16"><div class="between workspace-card-head"><b style="font-size: 14px;">媒体库绑定</b><div class="row" style="gap: 8px;"><button class="wbtn ghost sm"> 从 Emby 读取 </button><button class="wbtn sm">保存绑定</button><button class="wbtn sm">导入课程</button></div></div><p class="lead" style="margin: 6px 0px 12px;"> 绑定决定同步扫描范围。书籍库按 ADR-0030 只落枚举值，V2 不参与同步。 </p><div class="table-wrap"><table class="wt"><thead><tr><th>媒体库</th><th>Item ID</th><th>内容类型</th><th style="text-align: right;">操作</th></tr></thead><tbody><tr><td><b>公务员学习媒体库 0</b></td><td class="mono muted">l0</td><td><select class="winput" aria-label="内容类型" style="width: auto;"><option value="SERIES" selected="">剧集库</option><option value="MOVIE">电影库</option><option value="MIXED">混合库</option><option value="BOOK">书籍库</option></select></td><td style="text-align: right;"><button class="wbtn ghost sm"> 移除 </button></td></tr><tr><td><b>公务员学习媒体库 1</b></td><td class="mono muted">l1</td><td><select class="winput" aria-label="内容类型" style="width: auto;"><option value="SERIES" selected="">剧集库</option><option value="MOVIE">电影库</option><option value="MIXED">混合库</option><option value="BOOK">书籍库</option></select></td><td style="text-align: right;"><button class="wbtn ghost sm"> 移除 </button></td></tr><tr><td><b>公务员学习媒体库 2</b></td><td class="mono muted">l2</td><td><select class="winput" aria-label="内容类型" style="width: auto;"><option value="SERIES" selected="">剧集库</option><option value="MOVIE">电影库</option><option value="MIXED">混合库</option><option value="BOOK">书籍库</option></select></td><td style="text-align: right;"><button class="wbtn ghost sm"> 移除 </button></td></tr><tr><td><b>公务员学习媒体库 3</b></td><td class="mono muted">l3</td><td><select class="winput" aria-label="内容类型" style="width: auto;"><option value="SERIES" selected="">剧集库</option><option value="MOVIE">电影库</option><option value="MIXED">混合库</option><option value="BOOK">书籍库</option></select></td><td style="text-align: right;"><button class="wbtn ghost sm"> 移除 </button></td></tr><tr><td><b>公务员学习媒体库 4</b></td><td class="mono muted">l4</td><td><select class="winput" aria-label="内容类型" style="width: auto;"><option value="SERIES" selected="">剧集库</option><option value="MOVIE">电影库</option><option value="MIXED">混合库</option><option value="BOOK">书籍库</option></select></td><td style="text-align: right;"><button class="wbtn ghost sm"> 移除 </button></td></tr><tr><td><b>公务员学习媒体库 5</b></td><td class="mono muted">l5</td><td><select class="winput" aria-label="内容类型" style="width: auto;"><option value="SERIES" selected="">剧集库</option><option value="MOVIE">电影库</option><option value="MIXED">混合库</option><option value="BOOK">书籍库</option></select></td><td style="text-align: right;"><button class="wbtn ghost sm"> 移除 </button></td></tr></tbody></table></div></div></div></section></main></div></div><template data-prototype-index="0"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class=""><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class=""><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class=""><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>Emby 同步</h1><p class="lead"> 同步只写三类数据：课程基本信息、元数据只读快照（Genres / Tags / People / Year）、课时映射。<b>本地课时 ID 永不重建</b>，因此观看进度、Todo、附件、备注与统计始终跟随原课时。Emby 原始路径只在服务端内存中用于生成来源指纹，不入库、不展示、不写日志。 </p></div><nav class="workspace-tabs" aria-label="页面分区"><button type="button" class="on" aria-pressed="true" data-prototype-tab="0">媒体库绑定</button><button type="button" class="" aria-pressed="false" data-prototype-tab="1">映射与失联</button><button type="button" class="" aria-pressed="false" data-prototype-tab="2">重新绑定</button></nav><div class="workspace-scroll"><div class="wgrid c4 workspace-summary"><div class="wcard"><div class="wlabel">Emby 连接</div><div class="dotstate mt8 on"><i></i>已配置</div></div><div class="wcard"><div class="wlabel">已绑定媒体库</div><div class="mono" style="font-size: 22px; font-weight: 800;">30</div></div><div class="wcard" style="border-color: var(--ochre-line); background: var(--ochre-soft);"><div class="wlabel" style="color: var(--ochre);"> 下架课时 </div><div class="mono" style="font-size: 22px; font-weight: 800; color: var(--ochre);">30</div></div><div class="wcard" style="border-color: var(--red-line); background: var(--red-soft);"><div class="wlabel" style="color: var(--red);">失联</div><div class="mono" style="font-size: 17px; font-weight: 800; color: var(--red);">30 门 · 900 课时 </div></div></div><div class="wcard mt16"><div class="between workspace-card-head"><b style="font-size: 14px;">媒体库绑定</b><div class="row" style="gap: 8px;"><button class="wbtn ghost sm"> 从 Emby 读取 </button><button class="wbtn sm">保存绑定</button><button class="wbtn sm">导入课程</button></div></div><p class="lead" style="margin: 6px 0px 12px;"> 绑定决定同步扫描范围。书籍库按 ADR-0030 只落枚举值，V2 不参与同步。 </p><div class="table-wrap"><table class="wt"><thead><tr><th>媒体库</th><th>Item ID</th><th>内容类型</th><th style="text-align: right;">操作</th></tr></thead><tbody><tr><td><b>公务员学习媒体库 0</b></td><td class="mono muted">l0</td><td><select class="winput" aria-label="内容类型" style="width: auto;"><option value="SERIES" selected="">剧集库</option><option value="MOVIE">电影库</option><option value="MIXED">混合库</option><option value="BOOK">书籍库</option></select></td><td style="text-align: right;"><button class="wbtn ghost sm"> 移除 </button></td></tr><tr><td><b>公务员学习媒体库 1</b></td><td class="mono muted">l1</td><td><select class="winput" aria-label="内容类型" style="width: auto;"><option value="SERIES" selected="">剧集库</option><option value="MOVIE">电影库</option><option value="MIXED">混合库</option><option value="BOOK">书籍库</option></select></td><td style="text-align: right;"><button class="wbtn ghost sm"> 移除 </button></td></tr><tr><td><b>公务员学习媒体库 2</b></td><td class="mono muted">l2</td><td><select class="winput" aria-label="内容类型" style="width: auto;"><option value="SERIES" selected="">剧集库</option><option value="MOVIE">电影库</option><option value="MIXED">混合库</option><option value="BOOK">书籍库</option></select></td><td style="text-align: right;"><button class="wbtn ghost sm"> 移除 </button></td></tr><tr><td><b>公务员学习媒体库 3</b></td><td class="mono muted">l3</td><td><select class="winput" aria-label="内容类型" style="width: auto;"><option value="SERIES" selected="">剧集库</option><option value="MOVIE">电影库</option><option value="MIXED">混合库</option><option value="BOOK">书籍库</option></select></td><td style="text-align: right;"><button class="wbtn ghost sm"> 移除 </button></td></tr><tr><td><b>公务员学习媒体库 4</b></td><td class="mono muted">l4</td><td><select class="winput" aria-label="内容类型" style="width: auto;"><option value="SERIES" selected="">剧集库</option><option value="MOVIE">电影库</option><option value="MIXED">混合库</option><option value="BOOK">书籍库</option></select></td><td style="text-align: right;"><button class="wbtn ghost sm"> 移除 </button></td></tr><tr><td><b>公务员学习媒体库 5</b></td><td class="mono muted">l5</td><td><select class="winput" aria-label="内容类型" style="width: auto;"><option value="SERIES" selected="">剧集库</option><option value="MOVIE">电影库</option><option value="MIXED">混合库</option><option value="BOOK">书籍库</option></select></td><td style="text-align: right;"><button class="wbtn ghost sm"> 移除 </button></td></tr></tbody></table></div></div></div></section></main></div></template>
+<template data-prototype-index="1"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class=""><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class=""><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class=""><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>Emby 同步</h1><p class="lead"> 同步只写三类数据：课程基本信息、元数据只读快照（Genres / Tags / People / Year）、课时映射。<b>本地课时 ID 永不重建</b>，因此观看进度、Todo、附件、备注与统计始终跟随原课时。Emby 原始路径只在服务端内存中用于生成来源指纹，不入库、不展示、不写日志。 </p></div><nav class="workspace-tabs" aria-label="页面分区"><button type="button" class="" aria-pressed="false" data-prototype-tab="0">媒体库绑定</button><button type="button" class="on" aria-pressed="true" data-prototype-tab="1">映射与失联</button><button type="button" class="" aria-pressed="false" data-prototype-tab="2">重新绑定</button></nav><div class="workspace-scroll"><div class="wgrid c2 mt16" style=""><div class="wcard" style="border-color: var(--ochre-line);"><b style="font-size: 14px;">课时映射待确认</b><p class="lead" style="margin: 6px 0px 12px;"> Item ID 变了且指纹无法唯一匹配时不自动合并，必须逐项确认。匹配优先级：当前 Item ID → 课程内唯一来源指纹 → 唯一标题且时长差 ≤2 秒 → 管理员确认。一对多或多对一一律人工处理。 </p><div class="wlabel">选择需要处理的课程</div><select class="winput" aria-label="选择需要处理映射的课程"><option value="" selected="">请选择课程</option><option value="c0">行测基础与强化课程 0 · 来源失联</option><option value="c1">行测基础与强化课程 1 · 来源失联</option><option value="c2">行测基础与强化课程 2 · 来源失联</option><option value="c3">行测基础与强化课程 3 · 来源失联</option><option value="c4">行测基础与强化课程 4 · 来源失联</option><option value="c5">行测基础与强化课程 5 · 来源失联</option><option value="c6">行测基础与强化课程 6 · 来源失联</option><option value="c7">行测基础与强化课程 7 · 来源失联</option><option value="c8">行测基础与强化课程 8 · 来源失联</option><option value="c9">行测基础与强化课程 9 · 来源失联</option><option value="c10">行测基础与强化课程 10 · 来源失联</option><option value="c11">行测基础与强化课程 11 · 来源失联</option><option value="c12">行测基础与强化课程 12 · 来源失联</option><option value="c13">行测基础与强化课程 13 · 来源失联</option><option value="c14">行测基础与强化课程 14 · 来源失联</option><option value="c15">行测基础与强化课程 15 · 来源失联</option><option value="c16">行测基础与强化课程 16 · 来源失联</option><option value="c17">行测基础与强化课程 17 · 来源失联</option><option value="c18">行测基础与强化课程 18 · 来源失联</option><option value="c19">行测基础与强化课程 19 · 来源失联</option><option value="c20">行测基础与强化课程 20 · 来源失联</option><option value="c21">行测基础与强化课程 21 · 来源失联</option><option value="c22">行测基础与强化课程 22 · 来源失联</option><option value="c23">行测基础与强化课程 23 · 来源失联</option><option value="c24">行测基础与强化课程 24 · 来源失联</option><option value="c25">行测基础与强化课程 25 · 来源失联</option><option value="c26">行测基础与强化课程 26 · 来源失联</option><option value="c27">行测基础与强化课程 27 · 来源失联</option><option value="c28">行测基础与强化课程 28 · 来源失联</option><option value="c29">行测基础与强化课程 29 · 来源失联</option></select><div class="table-wrap mt12"><table class="wt"><thead><tr><th>本地课时</th><th>新远端 Item ID</th><th style="text-align: right;">操作</th></tr></thead><tbody><tr><td colspan="3" class="empty">先在上方选择一门课程</td></tr></tbody></table></div></div><div class="wcard" style="border-color: var(--red-line);"><b style="font-size: 14px;">失联处理与迁移</b><p class="lead" style="margin: 6px 0px 12px;"> 远端删除只标记不可用，本地行与学习记录一律保留。课程失联后在学习端隐藏，历史统计不变。 </p><div class="table-wrap"><table class="wt"><thead><tr><th>对象</th><th>情况</th><th>影响</th><th style="text-align: right;">处理</th></tr></thead><tbody><tr><td><b>行测基础与强化课程 0</b><div class="cell-sub">30 课时</div></td><td><span class="dotstate off"><i></i>课程失联</span></td><td>学习 Tab 隐藏 <div class="cell-sub">历史统计保留</div></td><td style="text-align: right;"><button class="wbtn sm" style="white-space: nowrap;"> 重新绑定 </button></td></tr><tr><td><b>行测基础与强化课程 1</b><div class="cell-sub">30 课时</div></td><td><span class="dotstate off"><i></i>课程失联</span></td><td>学习 Tab 隐藏 <div class="cell-sub">历史统计保留</div></td><td style="text-align: right;"><button class="wbtn sm" style="white-space: nowrap;"> 重新绑定 </button></td></tr><tr><td><b>行测基础与强化课程 2</b><div class="cell-sub">30 课时</div></td><td><span class="dotstate off"><i></i>课程失联</span></td><td>学习 Tab 隐藏 <div class="cell-sub">历史统计保留</div></td><td style="text-align: right;"><button class="wbtn sm" style="white-space: nowrap;"> 重新绑定 </button></td></tr><tr><td><b>行测基础与强化课程 3</b><div class="cell-sub">30 课时</div></td><td><span class="dotstate off"><i></i>课程失联</span></td><td>学习 Tab 隐藏 <div class="cell-sub">历史统计保留</div></td><td style="text-align: right;"><button class="wbtn sm" style="white-space: nowrap;"> 重新绑定 </button></td></tr><tr><td><b>行测基础与强化课程 4</b><div class="cell-sub">30 课时</div></td><td><span class="dotstate off"><i></i>课程失联</span></td><td>学习 Tab 隐藏 <div class="cell-sub">历史统计保留</div></td><td style="text-align: right;"><button class="wbtn sm" style="white-space: nowrap;"> 重新绑定 </button></td></tr><tr><td><b>行测基础与强化课程 5</b><div class="cell-sub">30 课时</div></td><td><span class="dotstate off"><i></i>课程失联</span></td><td>学习 Tab 隐藏 <div class="cell-sub">历史统计保留</div></td><td style="text-align: right;"><button class="wbtn sm" style="white-space: nowrap;"> 重新绑定 </button></td></tr></tbody></table></div><div class="muted mt10" style="font-size: 11.5px;"> 课时下架后，引用它的 Todo 在 App 内显示「课时已下架」，学员只能补记完成或删除（删除仍需填原因）。课程需要下架时到课程库页归档。 </div></div></div></div></section></main></div></template>
+<template data-prototype-index="2"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class=""><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class=""><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class=""><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>Emby 同步</h1><p class="lead"> 同步只写三类数据：课程基本信息、元数据只读快照（Genres / Tags / People / Year）、课时映射。<b>本地课时 ID 永不重建</b>，因此观看进度、Todo、附件、备注与统计始终跟随原课时。Emby 原始路径只在服务端内存中用于生成来源指纹，不入库、不展示、不写日志。 </p></div><nav class="workspace-tabs" aria-label="页面分区"><button type="button" class="" aria-pressed="false" data-prototype-tab="0">媒体库绑定</button><button type="button" class="" aria-pressed="false" data-prototype-tab="1">映射与失联</button><button type="button" class="on" aria-pressed="true" data-prototype-tab="2">重新绑定</button></nav><div class="workspace-scroll"><div class="wcard mt16" style=""><b style="font-size: 14px;"> 重新绑定向导</b><p class="lead" style="margin: 6px 0px 12px;"> 先预览映射方案，确认四个数字符合预期后再提交。提交在一个短事务内完成：更新父绑定 → 原位改写来源标识 → 创建新课时 → 标记下架 → 写审计。任一步失败整体回滚，保留上一次可用快照。 </p><div class="wgrid c3"><div><div class="wlabel">① 选择课程</div><select class="winput" aria-label="选择要重新绑定的课程"><option value="" selected="">请选择课程</option><option value="c0">行测基础与强化课程 0 · 失联</option><option value="c1">行测基础与强化课程 1 · 失联</option><option value="c2">行测基础与强化课程 2 · 失联</option><option value="c3">行测基础与强化课程 3 · 失联</option><option value="c4">行测基础与强化课程 4 · 失联</option><option value="c5">行测基础与强化课程 5 · 失联</option><option value="c6">行测基础与强化课程 6 · 失联</option><option value="c7">行测基础与强化课程 7 · 失联</option><option value="c8">行测基础与强化课程 8 · 失联</option><option value="c9">行测基础与强化课程 9 · 失联</option><option value="c10">行测基础与强化课程 10 · 失联</option><option value="c11">行测基础与强化课程 11 · 失联</option><option value="c12">行测基础与强化课程 12 · 失联</option><option value="c13">行测基础与强化课程 13 · 失联</option><option value="c14">行测基础与强化课程 14 · 失联</option><option value="c15">行测基础与强化课程 15 · 失联</option><option value="c16">行测基础与强化课程 16 · 失联</option><option value="c17">行测基础与强化课程 17 · 失联</option><option value="c18">行测基础与强化课程 18 · 失联</option><option value="c19">行测基础与强化课程 19 · 失联</option><option value="c20">行测基础与强化课程 20 · 失联</option><option value="c21">行测基础与强化课程 21 · 失联</option><option value="c22">行测基础与强化课程 22 · 失联</option><option value="c23">行测基础与强化课程 23 · 失联</option><option value="c24">行测基础与强化课程 24 · 失联</option><option value="c25">行测基础与强化课程 25 · 失联</option><option value="c26">行测基础与强化课程 26 · 失联</option><option value="c27">行测基础与强化课程 27 · 失联</option><option value="c28">行测基础与强化课程 28 · 失联</option><option value="c29">行测基础与强化课程 29 · 失联</option></select></div><div><div class="wlabel">② 新父节点 Item ID</div><input class="winput mono" placeholder="例如 8f21c4d0e5b34a7f9c12" aria-label="新父节点 Item ID" value=""></div><div><div class="wlabel">③ 匹配结果</div><div class="winput mono" style="background: var(--ink-soft);">尚未预览</div></div></div><div class="wlabel" style="margin-top: 14px;">按关键字联想 Emby 来源</div><div class="winput-row"><input class="winput" placeholder="输入课程名关键字" aria-label="Emby 来源关键字" value=""><button class="wbtn ghost" style="flex: 0 0 auto; white-space: nowrap;"><svg class="icon s14"><use href="#i-search"></use></svg> 联想 </button></div><div class="muted mt10" style="font-size: 11.5px;"> 元数据是纯展示与筛选维度，改名或重打标签<b>不触发任何数据迁移</b>；统计按课程与课时 ID 聚合，历史结果不会变化。 </div></div></div><footer class="workspace-actions"><button class="wbtn ghost" disabled=""> 预览映射方案 </button><button class="wbtn" disabled=""> 在单个事务内提交迁移 </button><button class="wbtn ghost" disabled="">取消</button></footer></section></main></div></template></div></div>
+</div>
 
   <!-- 8-6 课程库 -->
   <div class="frame-wrap" style="width:1180px">
@@ -3703,8 +4258,8 @@ for(let index=1;index<=40;index++){
 
   <!-- 8-9 用户与运行配置 -->
   <div class="frame-wrap" style="width:1180px">
-    <p class="frame-cap">8-9 用户管理与运行配置
-      <small>用户只能「归档」，彻底删除在归档区完成（8-10 有完整级联清单）。运行配置只保留 Emby 与 Server 酱，删除 ASR / LLM / OpenRouter 全部配置项。</small>
+    <p class="frame-cap">8-9 用户管理
+      <small>用户只能「归档」，彻底删除在归档区完成（8-10 有完整级联清单）。运行配置另见 8-9b。</small>
     </p>
     <div class="web">
       <div class="web-bar"><i></i><i></i><i></i><div class="url">https://shangan.example.com/admin/users</div></div>
@@ -3758,38 +4313,20 @@ for(let index=1;index<=40;index++){
             </table>
           </div>
 
-          <div class="wgrid c2 mt16">
-            <div class="wcard">
-              <b style="font-size:14px">运行配置 · Emby</b>
-              <div class="wgrid c2 mt12">
-                <div><div class="wlabel">Base URL</div><div class="winput mono" style="font-size:12px"><span>http://host.docker.internal:8096</span></div></div>
-                <div><div class="wlabel">API Key</div><div class="winput"><span class="mono">••••••••••••</span><span class="wbtn ghost sm">更新</span></div></div>
-                <div><div class="wlabel">User ID</div><div class="winput mono" style="font-size:12px"><span>a91f…c204</span></div></div>
-                <div><div class="wlabel">连接超时（秒）</div><div class="winput"><span class="mono">10</span></div></div>
-              </div>
-              <div class="row mt12" style="gap:9px;flex-wrap:wrap"><span class="wbtn ghost sm">测试连接</span><span class="wbtn sm">保存</span>
-                <span class="dotstate on" style="margin-left:6px"><i></i>128ms 正常</span></div>
-            </div>
-            <div class="wcard">
-              <b style="font-size:14px">运行配置 · Server 酱</b>
-              <div class="wgrid c2 mt12">
-                <div><div class="wlabel">SendKey</div><div class="winput"><span class="mono">••••••••••••</span><span class="wbtn ghost sm">更新</span></div></div>
-                <div><div class="wlabel">超时（秒）</div><div class="winput"><span class="mono">8</span></div></div>
-              </div>
-              <div class="wlabel" style="margin-top:12px">用途</div>
-              <table class="wt">
-                <tr><td style="width:34px"><div class="switch on" style="width:38px;height:22px"></div></td><td><b>催办推送</b></td></tr>
-                <tr><td><div class="switch" style="width:38px;height:22px"></div></td><td><b>每日汇总</b><div class="muted" style="font-size:11px">V2 暂不启用</div></td></tr>
-              </table>
-              <div class="row mt12" style="gap:9px;flex-wrap:wrap"><span class="wbtn ghost sm">发送测试</span><span class="wbtn sm">保存</span>
-                <span class="dotstate on" style="margin-left:6px"><i></i>今日已发 1 条</span></div>
-              <div class="muted mt10" style="font-size:11.5px">密钥只在服务端保存与使用，不下发给 App，日志中脱敏。</div>
-            </div>
-          </div>
+          <p class="note">运行配置已拆为独立工作区，见下方 8-9b；用户操作保持原有规则。</p>
         </div>
       </div>
     </div>
   </div>
+
+<div class="frame-wrap" style="width:1280px" id="prototype-settings">
+<p class="frame-cap">8-9b 运行配置 · 可视区域布局（ADR-0046）<small>Emby / Server 酱 / 系统 Bark / 功能开关分区切换；草稿保留，底部统一保存全部配置。隐藏分区的校验错误会自动定位。</small></p>
+<div class="web"><div class="web-bar"><i></i><i></i><i></i><div class="url">https://shangan.example.com/admin/settings</div></div>
+<div class="admin-prototype"><div class="prototype-stage"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class=""><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class=""><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class=""><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>运行配置</h1><p class="lead"> 管理 Emby、Server 酱、系统 Bark 异常通知及材料资源开关。密钥只在服务端保存与使用，<b>不下发给 App</b>，日志与错误响应中一律脱敏；页面只能看到「是否已配置」。 </p></div><nav class="workspace-tabs" aria-label="页面分区"><button type="button" class="on" aria-pressed="true" data-prototype-tab="0">Emby</button><button type="button" class="" aria-pressed="false" data-prototype-tab="1">Server 酱</button><button type="button" class="" aria-pressed="false" data-prototype-tab="2">系统 Bark</button><button type="button" class="" aria-pressed="false" data-prototype-tab="3">功能开关</button></nav><div class="workspace-scroll"><div><div class="wcard"><b style="font-size: 14px;">运行配置 · Emby</b><div class="wgrid c2 mt12"><div><div class="wlabel">Base URL</div><input class="winput mono" placeholder="http://host.docker.internal:8096" style="font-size: 12px;" value="http://example.test"></div><div><div class="wlabel">API Key</div><input class="winput mono" type="password" autocomplete="new-password" placeholder="已配置 · 留空保持原值" style="font-size: 12px;" value=""><div class="muted mt6" style="font-size: 11px;"><span class="dotstate on"><i></i>已配置</span> · 留空表示保持原值 </div></div><div><div class="wlabel">User ID</div><input class="winput mono" placeholder="Emby 用户 ID" style="font-size: 12px;" value="sample"></div><div><div class="wlabel">连接超时（秒）</div><div class="winput-row"><input class="winput mono" type="number" min="1" max="120" value="10"><span class="unit">1–120</span></div></div></div><div class="wbtn-row mt12"><button class="wbtn ghost sm">测试连接</button><span class="dotstate on" style="margin-left: 6px;"><i></i>可用</span></div><div class="muted mt10" style="font-size: 11.5px;"> 「测试连接」探测的是<b>已保存</b>的配置；刚改过输入框请先保存再测。 </div><div class="muted mt10" style="font-size: 11.5px;"> Emby 是唯一媒体源与元数据来源。目标主机由本项配置固定，代理会拒绝其他主机与路径穿越；原始 <code>Path</code> 只在内存中用于生成来源指纹，不落库、不上页面。 </div></div></div><!-- 系统目的地独立成卡；沿用后台表单组件，避免原生控件挤成一行。 --></div><footer class="workspace-actions"><span class="muted">切换分区保留输入，保存全部配置</span><button type="button" class="wbtn">保存运行配置</button></footer></section></main></div></div><template data-prototype-index="0"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class=""><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class=""><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class=""><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>运行配置</h1><p class="lead"> 管理 Emby、Server 酱、系统 Bark 异常通知及材料资源开关。密钥只在服务端保存与使用，<b>不下发给 App</b>，日志与错误响应中一律脱敏；页面只能看到「是否已配置」。 </p></div><nav class="workspace-tabs" aria-label="页面分区"><button type="button" class="on" aria-pressed="true" data-prototype-tab="0">Emby</button><button type="button" class="" aria-pressed="false" data-prototype-tab="1">Server 酱</button><button type="button" class="" aria-pressed="false" data-prototype-tab="2">系统 Bark</button><button type="button" class="" aria-pressed="false" data-prototype-tab="3">功能开关</button></nav><div class="workspace-scroll"><div><div class="wcard"><b style="font-size: 14px;">运行配置 · Emby</b><div class="wgrid c2 mt12"><div><div class="wlabel">Base URL</div><input class="winput mono" placeholder="http://host.docker.internal:8096" style="font-size: 12px;" value="http://example.test"></div><div><div class="wlabel">API Key</div><input class="winput mono" type="password" autocomplete="new-password" placeholder="已配置 · 留空保持原值" style="font-size: 12px;" value=""><div class="muted mt6" style="font-size: 11px;"><span class="dotstate on"><i></i>已配置</span> · 留空表示保持原值 </div></div><div><div class="wlabel">User ID</div><input class="winput mono" placeholder="Emby 用户 ID" style="font-size: 12px;" value="sample"></div><div><div class="wlabel">连接超时（秒）</div><div class="winput-row"><input class="winput mono" type="number" min="1" max="120" value="10"><span class="unit">1–120</span></div></div></div><div class="wbtn-row mt12"><button class="wbtn ghost sm">测试连接</button><span class="dotstate on" style="margin-left: 6px;"><i></i>可用</span></div><div class="muted mt10" style="font-size: 11.5px;"> 「测试连接」探测的是<b>已保存</b>的配置；刚改过输入框请先保存再测。 </div><div class="muted mt10" style="font-size: 11.5px;"> Emby 是唯一媒体源与元数据来源。目标主机由本项配置固定，代理会拒绝其他主机与路径穿越；原始 <code>Path</code> 只在内存中用于生成来源指纹，不落库、不上页面。 </div></div></div><!-- 系统目的地独立成卡；沿用后台表单组件，避免原生控件挤成一行。 --></div><footer class="workspace-actions"><span class="muted">切换分区保留输入，保存全部配置</span><button type="button" class="wbtn">保存运行配置</button></footer></section></main></div></template>
+<template data-prototype-index="1"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class=""><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class=""><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class=""><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>运行配置</h1><p class="lead"> 管理 Emby、Server 酱、系统 Bark 异常通知及材料资源开关。密钥只在服务端保存与使用，<b>不下发给 App</b>，日志与错误响应中一律脱敏；页面只能看到「是否已配置」。 </p></div><nav class="workspace-tabs" aria-label="页面分区"><button type="button" class="" aria-pressed="false" data-prototype-tab="0">Emby</button><button type="button" class="on" aria-pressed="true" data-prototype-tab="1">Server 酱</button><button type="button" class="" aria-pressed="false" data-prototype-tab="2">系统 Bark</button><button type="button" class="" aria-pressed="false" data-prototype-tab="3">功能开关</button></nav><div class="workspace-scroll"><div><div class="wcard" style=""><b style="font-size: 14px;">运行配置 · Server 酱</b><div class="wgrid c2 mt12"><div><div class="wlabel">SendKey</div><input class="winput mono" type="password" autocomplete="new-password" placeholder="已配置 · 留空保持原值" style="font-size: 12px;" value=""><div class="muted mt6" style="font-size: 11px;"><span class="dotstate on"><i></i>已配置</span> · 留空表示保持原值 </div></div><div><div class="wlabel">超时（秒）</div><div class="winput-row"><input class="winput mono" type="number" min="1" max="60" value="10"><span class="unit">1–60</span></div></div></div><div class="wlabel" style="margin-top: 14px;">用途</div><table class="wt"><tbody><tr><td style="width: 42px;"><label class="wcheck"><input type="checkbox" value="on" checked=""></label></td><td><b>催办推送</b><div class="muted" style="font-size: 11px;"> 离线或全屏超时未回应时的降级渠道 </div></td></tr><tr><td><label class="wcheck"><input type="checkbox" value="on"></label></td><td><b>每日汇总</b><div class="muted" style="font-size: 11px;">V2 暂不启用</div></td></tr></tbody></table><div class="wbtn-row mt12"></div><div class="muted mt10" style="font-size: 11.5px;"> 密钥只在服务端保存与使用，不下发给 App，日志中脱敏。当前没有「发送测试」端点，可在「在线与进度」页用手动催办验证投递链路。 </div></div></div><!-- 系统目的地独立成卡；沿用后台表单组件，避免原生控件挤成一行。 --></div><footer class="workspace-actions"><span class="muted">切换分区保留输入，保存全部配置</span><button type="button" class="wbtn">保存运行配置</button></footer></section></main></div></template>
+<template data-prototype-index="2"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class=""><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class=""><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class=""><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>运行配置</h1><p class="lead"> 管理 Emby、Server 酱、系统 Bark 异常通知及材料资源开关。密钥只在服务端保存与使用，<b>不下发给 App</b>，日志与错误响应中一律脱敏；页面只能看到「是否已配置」。 </p></div><nav class="workspace-tabs" aria-label="页面分区"><button type="button" class="" aria-pressed="false" data-prototype-tab="0">Emby</button><button type="button" class="" aria-pressed="false" data-prototype-tab="1">Server 酱</button><button type="button" class="on" aria-pressed="true" data-prototype-tab="2">系统 Bark</button><button type="button" class="" aria-pressed="false" data-prototype-tab="3">功能开关</button></nav><div class="workspace-scroll"><div></div><!-- 系统目的地独立成卡；沿用后台表单组件，避免原生控件挤成一行。 --><section class="wcard bark-settings" aria-labelledby="system-bark-title" style=""><div class="wcard-head"><h2 id="system-bark-title">系统 Bark 异常通知</h2><span class="badge b-ink">系统专用</span></div><p class="muted bark-description">接收 Emby 同步、备份和完整性检查异常。个人催办使用用户自己的 Bark 配置。</p><div class="bark-switch-row"><label class="wcheck" for="system-bark-enabled"><input id="system-bark-enabled" type="checkbox" value="on" checked=""><b>启用系统异常通知</b></label><span class="dotstate on"><i></i>已启用</span></div><div class="wgrid c2 bark-fields mt16"><div><label class="wlabel" for="system-bark-url">服务地址</label><input id="system-bark-url" class="winput mono" type="url" placeholder="https://api.day.app" aria-invalid="false" aria-describedby="system-bark-url-help" value="https://api.day.app"><div id="system-bark-url-help" class="muted mt6">默认使用 Bark 官方服务，也可填写系统通知专用的自建服务地址。</div></div><div><label class="wlabel" for="system-bark-key">设备 Key</label><input id="system-bark-key" class="winput mono" type="password" placeholder="已配置 · 留空保持原值" autocomplete="new-password" aria-invalid="false" value=""><div class="muted mt6"><span class="dotstate on"><i></i>已配置</span> · 密钥不回显，留空保持原值</div></div><div><label class="wlabel" for="system-bark-timeout">请求超时（秒）</label><div class="winput-row"><input id="system-bark-timeout" class="winput mono" type="number" min="1" max="60" aria-invalid="false" value="10"><span class="unit">1–60</span></div></div><div><div class="wlabel">默认通知方式</div><div class="bark-modes"><span class="badge b-ink">上岸分组</span><span class="badge b-ink">重要通知</span><span class="badge b-ink">点击打开 App</span></div></div></div><div class="wbtn-row mt16"><button type="button" class="wbtn ghost sm">发送测试通知</button><span class="muted">保存本页全部配置后生效</span></div><p class="muted mt10 bark-test-help">测试使用已保存的系统配置；异常通知开关关闭时也可手动测试。</p></section></div><footer class="workspace-actions"><span class="muted">切换分区保留输入，保存全部配置</span><button type="button" class="wbtn">保存运行配置</button></footer></section></main></div></template>
+<template data-prototype-index="3"><div class="admin-shell bounded-shell"><nav class="admin-nav"><div class="brand"> 上岸 · 管理后台 </div><a class="router-link-active"><svg class="icon s18"><use href="#i-chart"></use></svg> 概览</a><a class=""><svg class="icon s18"><use href="#i-pulse"></use></svg> 在线与进度</a><a class=""><svg class="icon s18"><use href="#i-bell"></use></svg> 催办策略</a><a class=""><svg class="icon s18"><use href="#i-alert"></use></svg> 催办记录</a><a class=""><svg class="icon s18"><use href="#i-book"></use></svg> 课程库</a><a class=""><svg class="icon s18"><use href="#i-user"></use></svg> Emby 同步</a><a class=""><svg class="icon s18"><use href="#i-star"></use></svg> 督学关系</a><a class=""><svg class="icon s18"><use href="#i-lock"></use></svg> 用户</a><a class=""><svg class="icon s18"><use href="#i-archive"></use></svg> 归档区</a><a class="router-link-active router-link-exact-active on"><svg class="icon s18"><use href="#i-server"></use></svg> 运行配置</a><div class="nav-foot"><div>测试管理员</div><button class="wbtn ghost sm" style="margin-top: 8px;">退出登录</button></div></nav><main class="admin-main"><!-- 标题和操作固定，长内容在工作区内滚动。 --><section class="workspace-page"><div class="page-head"><h1>运行配置</h1><p class="lead"> 管理 Emby、Server 酱、系统 Bark 异常通知及材料资源开关。密钥只在服务端保存与使用，<b>不下发给 App</b>，日志与错误响应中一律脱敏；页面只能看到「是否已配置」。 </p></div><nav class="workspace-tabs" aria-label="页面分区"><button type="button" class="" aria-pressed="false" data-prototype-tab="0">Emby</button><button type="button" class="" aria-pressed="false" data-prototype-tab="1">Server 酱</button><button type="button" class="" aria-pressed="false" data-prototype-tab="2">系统 Bark</button><button type="button" class="on" aria-pressed="true" data-prototype-tab="3">功能开关</button></nav><div class="workspace-scroll"><div></div><!-- 系统目的地独立成卡；沿用后台表单组件，避免原生控件挤成一行。 --><div class="wcard" style=""><div class="wcard-head"><h2>功能开关</h2><span class="badge b-ink">ADR-0030</span></div><div class="wgrid c2"><div><div class="wlabel">材料（PDF）资源</div><label class="wcheck"><input type="checkbox" value="on"> 启用 DOCUMENT 类型学习资源 </label><div class="muted mt6" style="font-size: 11.5px;"> 预留能力，V2 <b>不启用</b>阅读页与书籍库同步；只保留数据模型与本开关，默认关闭。 </div></div><div><div class="wlabel">材料单文件上限（MB）</div><div class="winput-row"><input class="winput mono" type="number" min="1" max="2048" value="100"><span class="unit">1–2048</span></div><div class="muted mt6" style="font-size: 11.5px;"> 材料开关关闭时该上限不生效，仅作为后续接入的预设值保存。 </div></div></div><div class="wbtn-row mt12"></div><div class="muted mt10" style="font-size: 11.5px;"> 服务端只有一个保存端点，底部「保存运行配置」会提交全部分区的配置。 </div></div></div><footer class="workspace-actions"><span class="muted">切换分区保留输入，保存全部配置</span><button type="button" class="wbtn">保存运行配置</button></footer></section></main></div></template></div></div>
+</div>
 
   <!-- 8-10 归档区与级联删除 -->
   <div class="frame-wrap" style="width:1180px">
@@ -4512,6 +5049,18 @@ function playerPictureDoubleTap(event, video) {
   video.appendChild(feedback);
   setTimeout(()=>feedback.remove(),650);
 }
+</script>
+
+<script>
+// 四页分区仅在本地替换静态样例，不执行保存、推送、同步或外部请求。
+document.querySelectorAll('.admin-prototype').forEach(function (frame) {
+  frame.addEventListener('click', function (event) {
+    var button = event.target.closest('[data-prototype-tab]');
+    if (!button) return;
+    var source = frame.querySelector('template[data-prototype-index="' + button.dataset.prototypeTab + '"]');
+    if (source) frame.querySelector('.prototype-stage').replaceChildren(source.content.cloneNode(true));
+  });
+});
 </script>
 </body>
 </html>

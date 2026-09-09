@@ -59,7 +59,39 @@ class NagResponseServiceTest {
     service.pending(USER_ID);
     var order = org.mockito.Mockito.inOrder(nags);
     order.verify(nags).expireBefore(USER_ID, LocalDate.of(2026, 9, 7));
+    order.verify(nags).supersedeOlderAppNags(USER_ID);
     order.verify(nags).findAwaitingByUser(USER_ID);
+  }
+
+  @Test
+  void 被替代的催办不再要求回应也不刷新操作时间() {
+    Nag old = nag(true);
+    Nag replaced =
+        new Nag(
+            old.id(),
+            old.userId(),
+            old.localDate(),
+            old.thresholdLevel(),
+            old.trigger(),
+            old.triggeredByUserId(),
+            old.idleMinutes(),
+            old.pendingCount(),
+            old.message(),
+            old.requireReason(),
+            old.status(),
+            old.deliveredAt(),
+            old.respondedAt(),
+            old.reasonTag(),
+            old.reasonText(),
+            old.supervisorUserIdSnapshot(),
+            old.createdAt(),
+            old.title(),
+            true);
+    assertThat(replaced.awaitingResponse()).isFalse();
+    when(nags.findById("nag-1")).thenReturn(Optional.of(replaced));
+    assertThat(service.respond(USER_ID, "nag-1", "TEMP_BUSY", "临时有事马上回来")).isEqualTo(replaced);
+    verify(nags, never()).markResponded(anyString(), anyString(), anyString(), any());
+    verifyNoInteractions(effectiveAction);
   }
 
   @Test

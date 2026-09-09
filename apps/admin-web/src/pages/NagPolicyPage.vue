@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { api, ApiError } from '@/api/client';
 
 /**
@@ -282,9 +282,16 @@ function editingUsername(userId: string): string {
 const editingIsNew = computed(
   () => editing.value !== null && !overrides.value.some((row) => row.userId === editing.value?.userId),
 );
+/** 分区隐藏不销毁表单，编辑草稿在切换时保留。 */
+const section = ref('global');
+/** 切换分区回到内容顶部，保留表单草稿但不继承上一分区滚动位置。 */
+const scrollArea = ref<HTMLElement | null>(null);
+watch(section, () => scrollArea.value?.scrollTo({ top: 0 }), { flush: 'post' });
 </script>
 
 <template>
+  <!-- 标题和操作固定，长内容在工作区内滚动。 -->
+  <section class="workspace-page">
   <div class="page-head">
     <h1>催办策略</h1>
     <p class="lead">
@@ -296,8 +303,28 @@ const editingIsNew = computed(
   <p v-if="error" class="notice danger">{{ error }}</p>
   <p v-if="loading" class="loading">加载中…</p>
 
-  <template v-if="!loading">
-    <div class="wcard">
+  <nav class="workspace-tabs" aria-label="页面分区">
+    <button
+      type="button"
+      :class="{ on: section === 'global' }"
+      :aria-pressed="section === 'global'"
+      @click="section = 'global'"
+    >全局默认</button>
+    <button
+      type="button"
+      :class="{ on: section === 'transport' }"
+      :aria-pressed="section === 'transport'"
+      @click="section = 'transport'"
+    >通知方式</button>
+    <button
+      type="button"
+      :class="{ on: section === 'users' }"
+      :aria-pressed="section === 'users'"
+      @click="section = 'users'"
+    >用户覆盖</button>
+  </nav>
+  <div v-if="!loading" ref="scrollArea" class="workspace-scroll">
+    <div v-show="section === 'transport'" class="wcard">
       <label class="wlabel" for="nag-transport">客户端催办通知方式（全局）</label>
       <select id="nag-transport" v-model="transportMode" class="winput" :disabled="savingTransport">
         <option value="SSE">SSE 实时通知（默认）</option>
@@ -306,7 +333,7 @@ const editingIsNew = computed(
       <p class="muted">SSE 收到通知后立即查询催办；心跳轮询等待下一次心跳。两种方式都保留心跳在线判定。</p>
       <button class="wbtn" :disabled="savingTransport" @click="saveTransport">{{ savingTransport ? '保存中…' : '保存通知方式' }}</button>
     </div>
-    <div class="wcard">
+    <div v-show="section === 'global'" class="wcard">
       <b style="font-size: 14px">全局默认</b>
 
       <div class="wgrid c4 mt12">
@@ -477,15 +504,10 @@ const editingIsNew = computed(
         </table>
       </div>
 
-      <div class="row mt16" style="gap: 9px">
-        <button class="wbtn" :disabled="savingGlobal" @click="saveGlobal">
-          {{ savingGlobal ? '保存中…' : '保存全局默认' }}
-        </button>
-        <button class="wbtn ghost" :disabled="savingGlobal" @click="resetFactory">恢复出厂值</button>
-      </div>
+
     </div>
 
-    <div class="wcard mt16">
+    <div v-show="section === 'users' && !editing" class="wcard">
       <div class="between">
         <b style="font-size: 14px">按用户覆盖</b>
         <button class="wbtn ghost sm" @click="startCreate">新增覆盖</button>
@@ -544,7 +566,7 @@ const editingIsNew = computed(
       </div>
     </div>
 
-    <div v-if="editing" class="wcard mt16">
+    <div v-if="editing" v-show="section === 'users'" class="wcard">
       <div class="between">
         <b style="font-size: 14px">
           {{ editingIsNew ? '新增覆盖' : `编辑覆盖 · ${editingUsername(editing.userId)}` }}
@@ -645,15 +667,23 @@ const editingIsNew = computed(
         </label>
       </div>
 
-      <div class="row mt16" style="gap: 9px">
-        <button class="wbtn" :disabled="savingOverride" @click="saveOverride">
-          {{ savingOverride ? '保存中…' : '保存覆盖' }}
-        </button>
-        <button class="wbtn ghost" @click="editing = null">取消</button>
-      </div>
+
       <div class="muted mt10" style="font-size: 11.5px">
         扫描周期、在线宽限期、心跳间隔、文案模板与督学提醒规则不可按用户覆盖，始终跟随全局默认。
       </div>
     </div>
-  </template>
+  </div>
+      <footer v-if="!loading && section === 'global'" class="workspace-actions">
+        <button class="wbtn" :disabled="savingGlobal" @click="saveGlobal">
+          {{ savingGlobal ? '保存中…' : '保存全局默认' }}
+        </button>
+        <button class="wbtn ghost" :disabled="savingGlobal" @click="resetFactory">恢复出厂值</button>
+      </footer>
+      <footer v-if="!loading && section === 'users' && editing" class="workspace-actions">
+        <button class="wbtn" :disabled="savingOverride" @click="saveOverride">
+          {{ savingOverride ? '保存中…' : '保存覆盖' }}
+        </button>
+        <button class="wbtn ghost" @click="editing = null">取消</button>
+      </footer>
+  </section>
 </template>

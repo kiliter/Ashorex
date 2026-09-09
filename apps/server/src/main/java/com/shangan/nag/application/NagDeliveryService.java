@@ -128,14 +128,21 @@ public class NagDeliveryService {
       Nag nag, NagChannelType target, NagChannel.DeliveryOutcome outcome, Instant now) {
     nags.insertDelivery(
         idGenerator.nextId(), nag.id(), target, outcome.status(), outcome.detail(), now);
-    if (outcome.succeeded()) nags.markDelivered(nag.id(), now);
+    if (outcome.succeeded()) {
+      nags.markDelivered(nag.id(), now);
+      // 只合并 App 待回应项；较早记录的 Bark 降级和失败重投仍可继续。
+      nags.supersedeOlderAppNags(nag.userId());
+    }
   }
 
   /** Bark 开启即替代 Server 酱，失败也不双发。 */
   private NagChannelType externalChannel(String userId) {
-    return channels.stream().anyMatch(c -> c.type() == NagChannelType.BARK && c.enabled(userId))
-        ? NagChannelType.BARK
-        : NagChannelType.SERVERCHAN;
+    return personalBarkEnabled(userId) ? NagChannelType.BARK : NagChannelType.SERVERCHAN;
+  }
+
+  /** 重投检查个人当前开关，关闭后不得强制发送旧 Bark 目的地。 */
+  public boolean personalBarkEnabled(String userId) {
+    return channels.stream().anyMatch(c -> c.type() == NagChannelType.BARK && c.enabled(userId));
   }
 
   /** Bark 是独立开关；旧的 Server 酱开关仅控制原渠道。 */

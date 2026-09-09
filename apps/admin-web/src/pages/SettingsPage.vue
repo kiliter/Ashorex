@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { api, ApiError } from '@/api/client';
 
+/** 分区切换只改变可见性，所有配置草稿继续参与统一保存。 */
+const section = ref('emby');
+
 /**
- * 结构对应原型 8-9 下半部分「运行配置 · Emby」与「运行配置 · Server 酱」两张并排卡片，
+ * 按 ADR-0046 使用固定分区导航与统一保存栏，
  * 系统 Bark 与功能开关分别使用独立卡片，个人催办目的地由用户在 App 维护。
  *
  * 安全边界：后端 `/settings` 只回传 `apiKeyConfigured` / `sendKeyConfigured` 布尔值，
@@ -161,6 +164,12 @@ async function save(): Promise<void> {
   } catch (cause) {
     if (cause instanceof ApiError) {
       fieldErrors.value = cause.fieldErrors;
+      // 整体保存可能发现隐藏分区的错误，自动切到首个错误，避免用户找不到字段。
+      const firstField = Object.keys(cause.fieldErrors)[0] ?? '';
+      if (firstField.startsWith('emby')) section.value = 'emby';
+      else if (firstField.startsWith('serverChan')) section.value = 'serverchan';
+      else if (firstField.startsWith('bark')) section.value = 'bark';
+      else if (firstField.startsWith('feature') || firstField === 'maxDocumentSizeMb') section.value = 'features';
       error.value = cause.message;
     } else {
       error.value = cause instanceof Error ? cause.message : '保存失败';
@@ -209,9 +218,14 @@ const embyDotClass = computed(() => {
   if (embyStatus.value === '不可用') return 'off';
   return 'idle';
 });
+/** 切换分区回到内容顶部，保留表单草稿但不继承上一分区滚动位置。 */
+const scrollArea = ref<HTMLElement | null>(null);
+watch(section, () => scrollArea.value?.scrollTo({ top: 0 }), { flush: 'post' });
 </script>
 
 <template>
+  <!-- 标题和操作固定，长内容在工作区内滚动。 -->
+  <section class="workspace-page">
   <div class="page-head">
     <h1>运行配置</h1>
     <p class="lead">
@@ -224,9 +238,35 @@ const embyDotClass = computed(() => {
 
   <p v-if="!loaded" class="loading">正在加载运行配置…</p>
 
-  <template v-else>
-    <div class="wgrid c2">
-      <div class="wcard">
+  <nav class="workspace-tabs" aria-label="页面分区">
+    <button
+      type="button"
+      :class="{ on: section === 'emby' }"
+      :aria-pressed="section === 'emby'"
+      @click="section = 'emby'"
+    >Emby</button>
+    <button
+      type="button"
+      :class="{ on: section === 'serverchan' }"
+      :aria-pressed="section === 'serverchan'"
+      @click="section = 'serverchan'"
+    >Server 酱</button>
+    <button
+      type="button"
+      :class="{ on: section === 'bark' }"
+      :aria-pressed="section === 'bark'"
+      @click="section = 'bark'"
+    >系统 Bark</button>
+    <button
+      type="button"
+      :class="{ on: section === 'features' }"
+      :aria-pressed="section === 'features'"
+      @click="section = 'features'"
+    >功能开关</button>
+  </nav>
+  <div v-if="loaded" ref="scrollArea" class="workspace-scroll">
+    <div>
+      <div v-show="section === 'emby'" class="wcard">
         <b style="font-size: 14px">运行配置 · Emby</b>
         <div class="wgrid c2 mt12">
           <div>
@@ -288,9 +328,6 @@ const embyDotClass = computed(() => {
           <button class="wbtn ghost sm" :disabled="probing" @click="probeEmby">
             {{ probing ? '探测中…' : '测试连接' }}
           </button>
-          <button class="wbtn sm" :disabled="saving" @click="save">
-            {{ saving ? '保存中…' : '保存' }}
-          </button>
           <span class="dotstate" :class="embyDotClass" style="margin-left: 6px">
             <i></i>{{ embyStatus || '未知' }}
           </span>
@@ -309,7 +346,7 @@ const embyDotClass = computed(() => {
         </div>
       </div>
 
-      <div class="wcard">
+      <div v-show="section === 'serverchan'" class="wcard">
         <b style="font-size: 14px">运行配置 · Server 酱</b>
         <div class="wgrid c2 mt12">
           <div>
@@ -376,12 +413,6 @@ const embyDotClass = computed(() => {
             </tr>
           </tbody>
         </table>
-
-        <div class="wbtn-row mt12">
-          <button class="wbtn sm" :disabled="saving" @click="save">
-            {{ saving ? '保存中…' : '保存' }}
-          </button>
-        </div>
         <div class="muted mt10" style="font-size: 11.5px">
           密钥只在服务端保存与使用，不下发给 App，日志中脱敏。当前没有「发送测试」端点，可在「在线与进度」页用手动催办验证投递链路。
         </div>
@@ -389,7 +420,7 @@ const embyDotClass = computed(() => {
     </div>
 
     <!-- 系统目的地独立成卡；沿用后台表单组件，避免原生控件挤成一行。 -->
-    <section class="wcard mt16 bark-settings" aria-labelledby="system-bark-title">
+    <section v-show="section === 'bark'" class="wcard bark-settings" aria-labelledby="system-bark-title">
       <div class="wcard-head">
         <h2 id="system-bark-title">系统 Bark 异常通知</h2>
         <span class="badge b-ink">系统专用</span>
@@ -429,7 +460,6 @@ const embyDotClass = computed(() => {
         </div>
       </div>
       <div class="wbtn-row mt16">
-        <button type="button" class="wbtn sm" :disabled="saving || testingBark" @click="save">{{ saving ? '保存中…' : '保存运行配置' }}</button>
         <button type="button" class="wbtn ghost sm" :disabled="saving || testingBark || barkDirty" @click="testBark">{{ testingBark ? '发送中…' : '发送测试通知' }}</button>
         <span class="muted">保存本页全部配置后生效</span>
       </div>
@@ -437,7 +467,7 @@ const embyDotClass = computed(() => {
       <p v-if="barkTestResult && !barkDirty" class="notice mt10" :class="barkTestResult.ok ? 'success' : 'danger'" role="status">{{ barkTestResult.message }}</p>
     </section>
 
-    <div class="wcard mt16">
+    <div v-show="section === 'features'" class="wcard">
       <div class="wcard-head">
         <h2>功能开关</h2>
         <span class="badge b-ink">ADR-0030</span>
@@ -473,16 +503,16 @@ const embyDotClass = computed(() => {
           </div>
         </div>
       </div>
-      <div class="wbtn-row mt12">
-        <button class="wbtn sm" :disabled="saving" @click="save">
-          {{ saving ? '保存中…' : '保存' }}
-        </button>
-      </div>
       <div class="muted mt10" style="font-size: 11.5px">
-        服务端只有一个保存端点，任意一处「保存」都会提交本页全部卡片的配置。
+        服务端只有一个保存端点，底部「保存运行配置」会提交全部分区的配置。
       </div>
     </div>
-  </template>
+  </div>
+  <footer v-if="loaded" class="workspace-actions">
+    <span class="muted">切换分区保留输入，保存全部配置</span>
+    <button type="button" class="wbtn" :disabled="saving || testingBark" @click="save">{{ saving ? '保存中…' : '保存运行配置' }}</button>
+  </footer>
+  </section>
 </template>
 
 <style scoped>

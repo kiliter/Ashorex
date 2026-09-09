@@ -80,8 +80,15 @@ public class NagManagementService {
             requireFailed(id, latestAttemptId);
             nags.recordAdminAction(id, "RETRY", actor, clock.instant());
           });
+      // Bark 的失败重投保留通知渠道，不能因用户已上线就变成 App 全屏。
+      var lastChannel = nags.deliveriesOf(id).getLast().channel();
+      var preferred =
+          lastChannel == com.shangan.nag.domain.NagChannelType.BARK
+                  && delivery.personalBarkEnabled(nag.userId())
+              ? com.shangan.nag.domain.NagChannelType.BARK
+              : null;
       delivery.deliver(
-          nag, user.displayName(), presence.find(nag.userId()).orElse(null), policy, null);
+          nag, user.displayName(), presence.find(nag.userId()).orElse(null), policy, preferred);
     } finally {
       active.remove(id);
     }

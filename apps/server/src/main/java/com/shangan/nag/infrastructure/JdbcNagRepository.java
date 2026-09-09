@@ -22,7 +22,7 @@ public class JdbcNagRepository implements NagRepository {
       SELECT id, user_id, local_date, threshold_level, trigger_source, triggered_by_user_id,
              idle_minutes, pending_count, message, require_reason, status,
              delivered_at, responded_at, reason_tag, reason_text,
-             supervisor_user_id_snapshot, created_at, title
+             supervisor_user_id_snapshot, created_at, title, app_superseded
         FROM nags
       """;
 
@@ -67,8 +67,8 @@ public class JdbcNagRepository implements NagRepository {
         .sql(
             SELECT
                 + """
-                 WHERE user_id = :userId AND status = 'DELIVERED'
-                 ORDER BY created_at
+                 WHERE user_id = :userId AND status = 'DELIVERED' AND app_superseded = 0
+                 ORDER BY created_at DESC, id DESC
                  LIMIT 1
                 """)
         .param("userId", userId)
@@ -189,6 +189,26 @@ public class JdbcNagRepository implements NagRepository {
         .param("status", nag.status().name())
         .param("supervisor", nag.supervisorUserIdSnapshot())
         .param("createdAt", nag.createdAt().toEpochMilli())
+        .update();
+  }
+
+  /** 由投递或待回应查询的短事务调用；保留旧记录的渠道状态以继续外部推送。 */
+  @Override
+  public void supersedeOlderAppNags(String userId) {
+    jdbcClient
+        .sql(
+            """
+            UPDATE nags AS older SET app_superseded = 1
+             WHERE older.user_id = :userId AND older.app_superseded = 0 AND older.status IN ('PENDING', 'DELIVERED')
+               AND EXISTS (
+                 SELECT 1 FROM nags AS newer
+                  WHERE newer.user_id = older.user_id AND newer.local_date = older.local_date
+                    AND newer.status IN ('DELIVERED', 'RESPONDED')
+                    AND (newer.created_at > older.created_at
+                         OR (newer.created_at = older.created_at AND newer.id > older.id))
+               )
+            """)
+        .param("userId", userId)
         .update();
   }
 
@@ -385,7 +405,8 @@ public class JdbcNagRepository implements NagRepository {
         row.getString("reason_text"),
         row.getString("supervisor_user_id_snapshot"),
         Instant.ofEpochMilli(row.getLong("created_at")),
-        row.getString("title"));
+        row.getString("title"),
+        row.getInt("app_superseded") == 1);
   }
 
   private Delivery mapDelivery(ResultSet row, int rowNumber) throws SQLException {

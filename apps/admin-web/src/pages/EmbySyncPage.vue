@@ -341,9 +341,16 @@ async function confirmMapping(resource: ResourceRow): Promise<void> {
 const selectedRebindCourse = computed(() =>
   courseRows.value.find((row) => row.id === rebindCourseId.value) ?? null,
 );
+/** 只切换操作分区，不丢弃媒体库选择和迁移预览。 */
+const section = ref('libraries');
+/** 切换分区回到内容顶部，保留表单草稿但不继承上一分区滚动位置。 */
+const scrollArea = ref<HTMLElement | null>(null);
+watch(section, () => scrollArea.value?.scrollTo({ top: 0 }), { flush: 'post' });
 </script>
 
 <template>
+  <!-- 标题和操作固定，长内容在工作区内滚动。 -->
+  <section class="workspace-page">
   <div class="page-head">
     <h1>Emby 同步</h1>
     <p class="lead">
@@ -358,14 +365,34 @@ const selectedRebindCourse = computed(() =>
 
   <p v-if="loading" class="loading">加载中…</p>
 
-  <template v-else>
+  <nav class="workspace-tabs" aria-label="页面分区">
+    <button
+      type="button"
+      :class="{ on: section === 'libraries' }"
+      :aria-pressed="section === 'libraries'"
+      @click="section = 'libraries'"
+    >媒体库绑定</button>
+    <button
+      type="button"
+      :class="{ on: section === 'mapping' }"
+      :aria-pressed="section === 'mapping'"
+      @click="section = 'mapping'"
+    >映射与失联</button>
+    <button
+      type="button"
+      :class="{ on: section === 'rebind' }"
+      :aria-pressed="section === 'rebind'"
+      @click="section = 'rebind'"
+    >重新绑定</button>
+  </nav>
+  <div v-if="!loading" ref="scrollArea" class="workspace-scroll">
     <p v-if="!embyConfigured" class="notice warn">
       Emby 尚未配置，本页的远端读取、预览与迁移都不可用。请先到「运行配置」填写 Emby 地址、API Key
       与用户 ID，保存后回到本页继续绑定媒体库。
       <RouterLink :to="{ name: 'settings' }">前往运行配置 →</RouterLink>
     </p>
 
-    <div class="wgrid c4">
+    <div v-show="section === 'libraries'" class="wgrid c4 workspace-summary">
       <div class="wcard">
         <div class="wlabel">Emby 连接</div>
         <div class="dotstate mt8" :class="embyConfigured ? 'on' : 'off'">
@@ -410,8 +437,8 @@ const selectedRebindCourse = computed(() =>
       </div>
     </div>
 
-    <div class="wcard mt16">
-      <div class="between">
+    <div v-show="section === 'libraries'" class="wcard mt16">
+      <div class="between workspace-card-head">
         <b style="font-size: 14px">媒体库绑定</b>
         <div class="row" style="gap: 8px">
           <button
@@ -489,7 +516,7 @@ const selectedRebindCourse = computed(() =>
     </div>
 
 
-    <div class="wgrid c2 mt16">
+    <div v-show="section === 'mapping'" class="wgrid c2 mt16">
       <div class="wcard" style="border-color: var(--ochre-line)">
         <b style="font-size: 14px">课时映射待确认</b>
         <p class="lead" style="margin: 6px 0 12px">
@@ -596,7 +623,7 @@ const selectedRebindCourse = computed(() =>
                     class="wbtn sm"
                     style="white-space: nowrap"
                     :disabled="busy"
-                    @click="rebindCourseId = row.id"
+                    @click="rebindCourseId = row.id; section = 'rebind'"
                   >
                     重新绑定
                   </button>
@@ -614,7 +641,7 @@ const selectedRebindCourse = computed(() =>
       </div>
     </div>
 
-    <div class="wcard mt16">
+    <div v-show="section === 'rebind'" class="wcard mt16">
       <b style="font-size: 14px">
         重新绑定向导{{ selectedRebindCourse ? ` · ${selectedRebindCourse.title}` : '' }}
       </b>
@@ -729,7 +756,14 @@ const selectedRebindCourse = computed(() =>
         </div>
       </div>
 
-      <div class="row mt12" style="gap: 9px">
+
+      <div class="muted mt10" style="font-size: 11.5px">
+        元数据是纯展示与筛选维度，改名或重打标签<b>不触发任何数据迁移</b>；统计按课程与课时 ID
+        聚合，历史结果不会变化。
+      </div>
+    </div>
+  </div>
+      <footer v-if="!loading && section === 'rebind'" class="workspace-actions">
         <button
           class="wbtn ghost"
           :disabled="busy || !embyConfigured || !rebindCourseId || !newParentRef.trim()"
@@ -741,13 +775,7 @@ const selectedRebindCourse = computed(() =>
           在单个事务内提交迁移
         </button>
         <button class="wbtn ghost" :disabled="busy || !plan" @click="plan = null">取消</button>
-      </div>
-      <div class="muted mt10" style="font-size: 11.5px">
-        元数据是纯展示与筛选维度，改名或重打标签<b>不触发任何数据迁移</b>；统计按课程与课时 ID
-        聚合，历史结果不会变化。
-      </div>
-    </div>
-  </template>
+      </footer>
 
   <EmbyCourseImportDialog v-if="importOpen" @close="importOpen = false" @busy="busy = $event" @imported="load(true)" />
 
@@ -765,4 +793,5 @@ const selectedRebindCourse = computed(() =>
       </div>
     </div>
   </div>
+  </section>
 </template>

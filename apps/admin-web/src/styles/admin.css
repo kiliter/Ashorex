@@ -865,3 +865,64 @@ table.wt td b {
   font-size: 11.5px;
   color: var(--course);
 }
+
+/* ADR-0046：四个管理工作区锁定可视高度，滚动仅发生在内容或导航中。 */
+.bounded-shell { height: 100dvh; min-height: 0; overflow: hidden; }
+.bounded-shell .admin-nav { overflow-y: auto; flex-shrink: 0; }
+.bounded-shell .admin-main { height: 100%; min-height: 0; padding: 18px 24px; overflow: hidden; }
+.workspace-page { height: 100%; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.workspace-page > * { flex-shrink: 0; min-width: 0; }
+.workspace-page .page-head { margin-bottom: 0; }
+.workspace-page > .notice, .workspace-page > .loading { margin: 0; }
+.workspace-tabs { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--hair); padding-bottom: 8px; }
+.workspace-tabs button { appearance: none; border: 0; border-radius: var(--r-field); padding: 10px 16px; min-height: 44px; background: transparent; color: var(--muted); font: inherit; font-weight: 700; cursor: pointer; }
+.workspace-tabs button.on { background: var(--blue-soft); color: var(--blue); }
+.workspace-tabs button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.workspace-page > .workspace-scroll, .workspace-page .records-panel { flex: 1 1 0; min-height: 0; overflow: auto; scrollbar-gutter: stable; overscroll-behavior: contain; }
+.workspace-scroll { padding-right: 4px; }
+.workspace-actions { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 10px; padding: 12px 0 0; border-top: 1px solid var(--hair); background: var(--paper); }
+.workspace-actions .muted { margin-right: auto; }
+.workspace-page .wgrid > *, .workspace-page .winput-row, .workspace-page .winput { min-width: 0; }
+.workspace-page .between, .workspace-page .row { flex-wrap: wrap; gap: 8px; }
+.workspace-page .wt th { position: sticky; top: 0; z-index: 1; background: var(--ink-soft); }
+.workspace-page .wt td { overflow-wrap: anywhere; }
+.workspace-card-head { position: sticky; top: -1px; background: var(--surface); z-index: 2; padding: 8px 0; }
+.workspace-summary .wcard { padding: 10px 14px; }
+.workspace-summary .wcard > .muted { display: none; }
+/* 流水占满剩余高度，筛选与汇总不随表格滚走。 */
+.workspace-page .records-panel { display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+.records-panel > * { flex-shrink: 0; }
+/* 桌面筛选保持一行，展开分布时优先压缩分布区，保留流水可用高度。 */
+.records-panel > .wgrid.c3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.records-panel > .lead { margin: 0 !important; }
+.record-distribution { flex-shrink: 1; min-height: 44px; border: 1px solid var(--hair); border-radius: var(--r-field); padding: 10px 14px; max-height: min(140px, 20vh); overflow: auto; }
+.record-distribution summary { cursor: pointer; font-weight: 700; }
+.record-distribution > .mt12 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.records-panel .records-table { flex: 1 1 0; min-height: 100px; display: flex; overflow: hidden; }
+.records-table > .table-wrap { flex: 1; overflow: auto; scrollbar-gutter: stable; overscroll-behavior: contain; }
+.records-table .wt { min-width: 850px; }
+@media (max-width: 1100px) {
+  .workspace-page .wgrid.c4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .bounded-shell .admin-nav { width: 64px; flex-basis: 64px; padding: 8px 4px; }
+  .bounded-shell .admin-nav .brand { font-size: 0; padding: 6px 10px 14px; }
+  .bounded-shell .admin-nav a { font-size: 10px; flex-direction: column; gap: 4px; text-align: center; padding: 8px 2px; }
+  .bounded-shell .admin-nav .nav-foot { overflow-wrap: anywhere; padding: 8px 2px; }
+  .bounded-shell .admin-main { padding: 12px; }
+  .workspace-page .page-head .lead { display: none; }
+  .workspace-tabs { gap: 2px; }
+  .workspace-tabs button { padding: 8px 10px; }
+  .workspace-page .wgrid.c2, .workspace-page .wgrid.c3, .workspace-page .wgrid.c4 { grid-template-columns: minmax(0, 1fr); }
+  .workspace-page .workspace-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workspace-page .wcard { padding: 12px; }
+  .workspace-page .wcard.flush { padding: 0; }
+  .record-distribution > .mt12 { grid-template-columns: minmax(0, 1fr); }
+  .workspace-page .records-panel { overflow: auto; }
+  .workspace-page .records-panel > .wgrid.c3 { grid-template-columns: minmax(0, 1fr); }
+  .records-panel .records-table { flex-basis: 280px; }
+}
+@media (max-height: 650px) and (min-width: 761px) {
+  .workspace-page { gap: 8px; }
+  .workspace-page .page-head .lead { display: none; }
+}

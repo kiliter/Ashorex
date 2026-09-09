@@ -40,6 +40,7 @@ public class NagResponseService {
   public Optional<Nag> pending(String userId) {
     // 回到 App 即清理跨日催办，不等待下一轮扫描后才解除旧全屏提醒。
     nags.expireBefore(userId, userTime.today(userId));
+    nags.supersedeOlderAppNags(userId);
     return nags.findAwaitingByUser(userId);
   }
 
@@ -64,6 +65,9 @@ public class NagResponseService {
     }
     if (nag.status() == com.shangan.nag.domain.NagStatus.CANCELLED)
       throw new BusinessException(HttpStatus.CONFLICT, "NAG_CANCELLED", "该催办已取消，请刷新");
+    // 旧版 App 只识别成功后关页：返回旧记录的真实状态，不伪造回应或刷新有效操作。
+    // 外层会再次查询最新项；不引入旧版无法处理的错误码而将用户锁在全屏页。
+    if (nag.appSuperseded()) return nag;
     EffectiveNagPolicy policy = policies.resolve(userId);
     if (nag.requireReason()) {
       if (reasonTag == null || reasonTag.isBlank()) {
