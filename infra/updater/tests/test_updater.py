@@ -150,4 +150,19 @@ class UpgradeTest(unittest.TestCase):
         self.assertEqual(worker.engine.events, [])
 
 
+    def test_version_probe_uses_detached_exec_and_waits_for_exit(self):
+        calls = []
+        class ProbeDocker(u.Docker):
+            def call(self, method, path, body=None, missing=False):
+                calls.append((method, path, body))
+                if path.endswith('/exec'): return {'Id': 'probe'}
+                if path.endswith('/start'): return {}
+                if path.startswith('/exec/'): return {'Running': False, 'ExitCode': 0}
+                return {'Id': 'old', 'State': {'Status': 'running', 'Health': {'Status': 'healthy'}}}
+        ProbeDocker().verify(Engine().current())
+        start = next(body for method, path, body in calls if path == '/exec/probe/start')
+        self.assertTrue(start['Detach'])
+        self.assertEqual(calls[-1][1], '/exec/probe/json')
+
+
 if __name__ == '__main__': unittest.main()

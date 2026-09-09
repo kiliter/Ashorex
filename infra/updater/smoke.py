@@ -61,6 +61,15 @@ def main():
         assert not (worker.root/'maintenance').exists()
         assert engine.current()['Config']['Labels']['org.opencontainers.image.version'] == '9.0.1'
         print('真实容器验收通过：健康启动、版本升级、坏版本恢复及维护解除。')
+    except Exception:
+        # 只输出状态和公开探测结果，不输出容器环境或完整 inspect。
+        for line in docker('ps', '-a', '--format', '{{.ID}} {{.Names}}').splitlines():
+            cid, name = line.split(' ', 1)
+            if name.startswith(prefix) and name != registry:
+                state = json.loads(docker('inspect', cid))[0]['State']
+                print(json.dumps({'container': name, 'status': state['Status'], 'health': state.get('Health', {}).get('Status'), 'exitCode': state['ExitCode']}), flush=True)
+                subprocess.run(['docker', 'exec', cid, 'curl', '--silent', '--max-time', '5', 'http://127.0.0.1:18080/internal/upgrade-readiness'])
+        raise
     finally:
         # CI 自建容器与卷按随机前缀清理，不接触其他部署。
         for line in docker('ps', '-a', '--format', '{{.ID}} {{.Names}}').splitlines():
