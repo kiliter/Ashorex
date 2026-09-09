@@ -33,3 +33,4 @@ CREATE UNIQUE INDEX uq_nags_auto_level
     WHERE trigger_source = 'AUTO';
 CREATE INDEX idx_nags_user_status ON nags(user_id, status, created_at);
 CREATE INDEX idx_nags_date ON nags(local_date, created_at);
+
