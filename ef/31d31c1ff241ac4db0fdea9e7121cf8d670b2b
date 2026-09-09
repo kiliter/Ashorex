@@ -1,0 +1,29 @@
+apps/admin-web/src/pages/UpgradesPage.vue
+  s_4db1592e08aea0::t_b86b30304cbbd6 8,68
+docs/prototypes/shangan-v2-prototype.html
+  s_4db1592e08aea0::t_979010e0b97c2f 5074
+docs/runbooks/server-auto-upgrade.md
+  s_4db1592e08aea0::t_1170b36d23451f 31
+infra/updater/tests/test_updater.py
+  s_4db1592e08aea0::t_19ca8fc70cc476 60-62,84,93
+infra/updater/updater.py
+  s_4db1592e08aea0::t_af3556d047b3a9 324-326,357
+apps/server/src/main/java/com/shangan/upgrade/UpgradeService.java
+  s_4db1592e08aea0::t_e01575e5884b4c 55-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "ef31d31c1ff241ac4db0fdea9e7121cf8d670b2b",
+  "prompts": {},
+  "sessions": {
+    "s_4db1592e08aea0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a085b7-dd62-7fe1-9d28-0616c49eea81",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
