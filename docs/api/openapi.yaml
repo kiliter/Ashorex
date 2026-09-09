@@ -876,7 +876,7 @@ paths:
           description: 原因缺失或过短（errorCode = NAG_REASON_REQUIRED）
           $ref: '#/components/responses/Problem'
         '409':
-          description: 催办已过期，不再接受回应（errorCode = NAG_EXPIRED）
+          description: 催办已过期或已取消，不再接受回应（errorCode = NAG_EXPIRED / NAG_CANCELLED）
           $ref: '#/components/responses/Problem'
 
   /api/v1/supervisor/learners:
@@ -1052,7 +1052,7 @@ components:
             TODO_BACKFILL_NOT_HISTORY、TODO_BACKFILL_NOTE_REQUIRED、TODO_TARGET_INVALID、
             TODO_PLANNED_INVALID、TODO_DAILY_LIMIT、FOCUS_ILLEGAL_TRANSITION、
             FOCUS_ALREADY_RUNNING、ATTACHMENT_TOO_LARGE、ATTACHMENT_LIMIT_REACHED、
-            ATTACHMENT_TYPE_UNSUPPORTED、NAG_REASON_REQUIRED、NAG_EXPIRED、NAG_DAILY_LIMIT_REACHED、
+            ATTACHMENT_TYPE_UNSUPPORTED、NAG_REASON_REQUIRED、NAG_EXPIRED、NAG_CANCELLED、NAG_DAILY_LIMIT_REACHED、
             SUPERVISION_FORBIDDEN、SUPERVISION_PRIMARY_EXISTS、RESOURCE_UNAVAILABLE、
             RESOURCE_NOT_MEASURABLE、CATALOG_MAPPING_AMBIGUOUS、ARCHIVE_LABEL_MISMATCH、ARCHIVE_REQUIRED、
             EMBY_STREAM_UNAVAILABLE、
@@ -1601,7 +1601,7 @@ components:
         title: { type: string, nullable: true }
         message: { type: string }
         requireReason: { type: boolean }
-        status: { type: string, enum: [PENDING, DELIVERED, RESPONDED, EXPIRED] }
+        status: { type: string, enum: [PENDING, DELIVERED, RESPONDED, EXPIRED, CANCELLED] }
         deliveredAt: { type: string, format: date-time, nullable: true }
         respondedAt: { type: string, format: date-time, nullable: true }
         reasonTag: { type: string, nullable: true }

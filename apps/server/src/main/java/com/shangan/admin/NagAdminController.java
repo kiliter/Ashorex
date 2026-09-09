@@ -35,19 +35,45 @@ public class NagAdminController {
   private final TodoDeletionService deletions;
   private final AuthService users;
   private final Clock clock;
+  private final com.shangan.nag.application.NagManagementService management;
 
   public NagAdminController(
       NagPolicyResolver policies,
       NagRepository nags,
       TodoDeletionService deletions,
       AuthService users,
-      Clock clock) {
+      Clock clock,
+      com.shangan.nag.application.NagManagementService management) {
     this.policies = policies;
     this.nags = nags;
     this.deletions = deletions;
     this.users = users;
     this.clock = clock;
+    this.management = management;
   }
+
+  /** 管理员身份由认证会话提供，不接受客户端伪造操作人。 */
+  @PostMapping("/nags/{id}/cancel")
+  ResponseEntity<Void> cancel(
+      @PathVariable String id,
+      @RequestBody FailedOperation request,
+      java.security.Principal principal) {
+    management.cancel(id, request.latestAttemptId(), principal.getName());
+    return ResponseEntity.noContent().build();
+  }
+
+  /** 重投追加原催办的渠道流水，页面提交最后一次尝试 ID 防重放。 */
+  @PostMapping("/nags/{id}/retry")
+  ResponseEntity<Void> retry(
+      @PathVariable String id,
+      @RequestBody FailedOperation request,
+      java.security.Principal principal) {
+    management.retry(id, request.latestAttemptId(), principal.getName());
+    return ResponseEntity.noContent().build();
+  }
+
+  /** 乐观版本取服务端流水 ID。 */
+  public record FailedOperation(String latestAttemptId) {}
 
   @GetMapping("/nag-policy")
   NagPolicyResponse policy() {
@@ -123,7 +149,8 @@ public class NagAdminController {
         recentDeletions,
         reasonCounts,
         nags.countByStatus(),
-        deliveryAttempts(recentNags));
+        deliveryAttempts(recentNags),
+        nags.adminActionsOfAll(recentNags.stream().map(Nag::id).toList()));
   }
 
   /**
@@ -143,6 +170,7 @@ public class NagAdminController {
           .computeIfAbsent(delivery.nagId(), key -> new ArrayList<>())
           .add(
               new DeliveryAttempt(
+                  delivery.id(),
                   delivery.channel().name(),
                   delivery.status(),
                   delivery.detail(),
@@ -173,7 +201,8 @@ public class NagAdminController {
       List<TodoRepository.Deletion> deletions,
       Map<String, Integer> reasonCounts,
       List<NagRepository.StatusCount> statusCounts,
-      Map<String, List<DeliveryAttempt>> deliveryAttempts) {}
+      Map<String, List<DeliveryAttempt>> deliveryAttempts,
+      List<NagRepository.AdminAction> adminActions) {}
 
   /**
    * 一次渠道投递尝试。
@@ -181,7 +210,8 @@ public class NagAdminController {
    * <p>{@code status} 取 {@code SENT} / {@code SHOWN} / {@code FAILED}；{@code detail} 是渠道写入的脱敏原因， 不含
    * SendKey、目标地址与堆栈。
    */
-  public record DeliveryAttempt(String channel, String status, String detail, Instant createdAt) {}
+  public record DeliveryAttempt(
+      String id, String channel, String status, String detail, Instant createdAt) {}
 
   /** 全局策略保存请求。 */
   public record GlobalPolicyRequest(

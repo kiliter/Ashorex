@@ -26,6 +26,15 @@ const importing = ref(false);
 const error = ref('');
 const results = ref<ResultRow[]>([]);
 const progress = ref('');
+const progressDialog = ref<HTMLDialogElement | null>(null);
+const total = ref(0);
+// 已处理包含成功与失败，仅在一门请求结束后推进，不模拟远端进度。
+const percent = computed(() => total.value ? Math.round(results.value.length / total.value * 100) : 0);
+
+/** 导入期间不允许关闭，完成后由用户主动收起结果。 */
+function closeProgress(): void {
+  if (!importing.value) progressDialog.value?.close();
+}
 const counts = ref<Record<string, number | 'error'>>({});
 const coverFailed = ref<Record<string, boolean>>({});
 let generation = 0;
@@ -89,16 +98,20 @@ async function loadCounts(rows: Candidate[]): Promise<void> {
 
 /** 一门一请求保留逐项结果；重放由服务端按来源身份幂等处理。 */
 async function runImport(ids: string[]): Promise<void> {
-  if (!ids.length || importing.value) return;
+  if (importing.value) return;
+  const targets = [...new Set(ids)].filter(id => candidates.value.some(row => row.id === id && row.status === 'NEW'));
+  if (!targets.length) return;
+  total.value = targets.length;
   importing.value = true;
+  progressDialog.value?.showModal();
   emit('busy', true);
   results.value = [];
   error.value = '';
   try {
-    for (const [index, id] of ids.entries()) {
+    for (const [index, id] of targets.entries()) {
       const row = candidates.value.find(item => item.id === id);
       if (!row || row.status !== 'NEW') continue;
-      progress.value = `正在导入 ${index + 1} / ${ids.length}：${row.name}`;
+      progress.value = `正在导入 ${index + 1} / ${targets.length}：${row.name}`;
       try {
         const result = await api.post<ImportResult>('/emby-import', { sourceId: id });
         row.courseId = result.courseId;
@@ -156,11 +169,27 @@ onBeforeUnmount(() => { disposed = true; generation++; });
       </table>
     </div>
     <div class="between mt12"><span>共 {{ filtered.length }} 门 · 已选 {{ selected.length }} 门 · 第 {{ page }} / {{ pages }} 页</span><div class="row"><button class="wbtn ghost sm" :disabled="page <= 1 || importing" @click="page--">上一页</button><button class="wbtn ghost sm" :disabled="page >= pages || importing" @click="page++">下一页</button></div></div>
-    <p v-if="progress" role="status" aria-live="polite">{{ progress }}</p>
-    <div v-if="results.length" class="import-results">
-      <p v-for="row in results" :key="row.id" :class="{ 'field-error': !row.ok }">{{ row.name }}：{{ row.message }}</p>
-    </div>
-    <button v-if="failures.length" class="wbtn ghost" :disabled="importing" @click="runImport(failures.map(row => row.id))">重试失败项（{{ failures.length }}）</button>
+    <dialog ref="progressDialog" class="progress-dialog" aria-labelledby="progress-title" @cancel.prevent="closeProgress">
+      <header class="between"><h3 id="progress-title">{{ importing ? '正在导入课程' : '课程导入结果' }}</h3>
+        <button class="wbtn ghost" :disabled="importing" @click="closeProgress">关闭</button>
+      </header>
+      <div class="progress-summary">
+        <div class="progress-ring" role="progressbar" aria-label="课程导入进度" :aria-valuenow="results.length" :aria-valuemax="total" aria-valuemin="0">
+          <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-track" cx="60" cy="60" r="52" />
+            <circle class="ring-value" cx="60" cy="60" r="52" pathLength="100" :stroke-dasharray="`${percent} 100`" />
+          </svg><strong>{{ percent }}%</strong>
+        </div>
+        <b>已处理 {{ results.length }} / {{ total }} 门</b>
+        <p role="status" aria-live="polite">{{ progress }}</p>
+      </div>
+      <div class="import-results" aria-label="逐项导入结果">
+        <p v-if="!results.length" class="muted">正在等待首门课程导入完成…</p>
+        <p v-for="row in results" :key="row.id" :class="{ 'field-error': !row.ok }"><b>{{ row.name }}</b>：{{ row.message }}</p>
+      </div>
+      <footer class="between mt12"><span>成功或已存在 {{ results.length - failures.length }} 门 · 失败 {{ failures.length }} 门</span>
+        <button v-if="failures.length" class="wbtn ghost" :disabled="importing" @click="runImport(failures.map(row => row.id))">重试失败项（{{ failures.length }}）</button>
+      </footer>
+    </dialog>
   </section>
 </template>
 
@@ -170,5 +199,21 @@ onBeforeUnmount(() => { disposed = true; generation++; });
 .import-actions .winput { flex: 1; min-width: 160px; }
 .select-target { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; }
 .import-cover { width: 48px; height: 64px; object-fit: cover; border-radius: 6px; }
-.import-results { max-height: 240px; overflow: auto; }
+/* 表体固定高度并独立滚动，头部和分页不会随课程数量移动。 */
+.table-wrap { height: clamp(160px, 38vh, 420px); overflow: auto; overscroll-behavior: contain; }
+.table-wrap th { position: sticky; top: 0; z-index: 1; background: var(--paper, #fff); }
+.progress-dialog { width: min(640px, 92vw); max-height: 90dvh; overflow: auto; padding: 20px; border: 1px solid #ddd; border-radius: 16px; color: inherit; background: #fff; }
+.progress-dialog::backdrop { background: rgb(0 0 0 / 45%); }
+.progress-dialog h3 { margin: 0; }
+.progress-summary { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px 0 8px; }
+.progress-summary p { overflow-wrap: anywhere; }
+.progress-ring { width: 120px; height: 120px; position: relative; display: grid; place-items: center; margin-bottom: 12px; }
+.progress-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.progress-ring circle { fill: none; stroke-width: 8; }
+.ring-track { stroke: #e2e6e3; }
+.ring-value { stroke: var(--green, #39755c); }
+.progress-ring strong { font-size: 24px; }
+.import-results { height: clamp(120px, 25vh, 240px); overflow: auto; overscroll-behavior: contain; background: #f6f7f6; border: 1px solid #e2e6e3; border-radius: 8px; padding: 0 12px; }
+.import-results p { overflow-wrap: anywhere; }
+.progress-dialog footer { flex-wrap: wrap; gap: 8px; }
 </style>

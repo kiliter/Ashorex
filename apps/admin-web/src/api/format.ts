@@ -67,6 +67,7 @@ const NAG_STATUS_LABELS: Record<string, string> = {
   DELIVERED: '已投递',
   RESPONDED: '已回应',
   EXPIRED: '已过期',
+  CANCELLED: '已取消',
 };
 
 export function nagStatusLabel(status: string): string {

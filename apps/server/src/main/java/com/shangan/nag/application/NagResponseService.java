@@ -62,6 +62,8 @@ public class NagResponseService {
         || nag.localDate().isBefore(userTime.today(userId))) {
       throw new BusinessException(HttpStatus.CONFLICT, "NAG_EXPIRED", "该催办已过期，请刷新");
     }
+    if (nag.status() == com.shangan.nag.domain.NagStatus.CANCELLED)
+      throw new BusinessException(HttpStatus.CONFLICT, "NAG_CANCELLED", "该催办已取消，请刷新");
     EffectiveNagPolicy policy = policies.resolve(userId);
     if (nag.requireReason()) {
       if (reasonTag == null || reasonTag.isBlank()) {

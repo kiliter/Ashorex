@@ -321,7 +321,7 @@ function personLabel(person: CoursePerson): string {
 
   <div class="wcard flush mt16">
     <p v-if="loading" class="loading">加载中…</p>
-    <div v-else class="table-wrap">
+    <div v-else class="table-wrap course-table">
       <table class="wt">
         <thead>
           <tr>
@@ -455,7 +455,7 @@ function personLabel(person: CoursePerson): string {
       <p class="lead" style="margin: 6px 0 12px">
         课时本地 ID 永不重建，因此进度、Todo、附件与统计始终跟随原课时。远端消失只标记不可用，不删本地行。
       </p>
-      <div class="table-wrap">
+      <div class="table-wrap course-table">
         <table class="wt">
           <thead>
             <tr>
@@ -509,3 +509,9 @@ function personLabel(person: CoursePerson): string {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* 主表与课时明细均独立滚动，课程数量不再撑长页面。 */
+.course-table { height: clamp(240px, 52vh, 560px); overflow: auto; overscroll-behavior: contain; }
+.course-table th { position: sticky; top: 0; z-index: 1; background: var(--paper, #fff); }
+</style>
