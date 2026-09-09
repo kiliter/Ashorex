@@ -1,0 +1,31 @@
+.github/workflows/server-verify.yml
+  s_4db1592e08aea0::t_25b59739ec42ee 94
+docs/runbooks/server-auto-upgrade.md
+  s_4db1592e08aea0::t_90e5e84c2865c2 17
+apps/server/src/test/java/com/shangan/common/ProblemDetailTest.java
+  s_904811b98b25ad::t_15f674da9bdab4 27-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "47f6f941b470c7e30c756ce2fd3728a356e7e283",
+  "prompts": {},
+  "sessions": {
+    "s_4db1592e08aea0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a085b7-dd62-7fe1-9d28-0616c49eea81",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    },
+    "s_904811b98b25ad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a085be-6645-75f1-a095-731103b31fd5",
+        "model": "unknown"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
