@@ -1,0 +1,60 @@
+docs/traceability/2026-09-07-shangan-v2-traceability.md
+  s_20a06985cb8621::t_f46abbab52235a 296-300
+  s_20a06985cb8621::t_8eee08ad72c86c 301-302
+docs/prototypes/shangan-v2-prototype.html
+  s_20a06985cb8621::t_8eee08ad72c86c 551
+apps/ios/test/features/home/resource_picker_scroll_test.dart
+  s_20a06985cb8621::t_8eee08ad72c86c 39-41,43-45,47-48,50-55
+  s_20a06985cb8621::t_44483056cf8c89 1-17,20,26-27,29-38,56-65,67-95,97-113,116-132,134,136,141-144
+  s_20a06985cb8621::t_efb84ad139c334 24-25
+  s_20a06985cb8621::t_9210036467075c 18-19
+  s_20a06985cb8621::t_2a2f14b42f382f 21-23
+  s_20a06985cb8621::t_a06cfe2d91ba29 28
+  s_20a06985cb8621::t_f9c80196a786ac 42
+  s_20a06985cb8621::t_e908ba17089cd7 46
+  s_20a06985cb8621::t_8fa88208683632 49
+  s_20a06985cb8621::t_84f6de2fc78fa2 66
+  s_20a06985cb8621::t_e643beb4ee0245 96
+  s_20a06985cb8621::t_f3de76d709ac89 114-115
+  s_20a06985cb8621::t_8d7caaf6c43182 133
+  s_20a06985cb8621::t_9c0119c74d47bf 135
+  s_20a06985cb8621::t_412708742cab2f 137-140
+docs/specs/2026-09-07-shangan-v2-design.md
+  s_20a06985cb8621::t_8eee08ad72c86c 956-957
+  s_20a06985cb8621::t_f46abbab52235a 951-955
+apps/ios/lib/core/widgets/shangan_v2.dart
+  s_20a06985cb8621::t_e2b456de159308 2293-2294,2299
+docs/plans/2026-09-07-shangan-v2-implementation-plan.md
+  s_20a06985cb8621::t_8eee08ad72c86c 1226-1227
+  s_20a06985cb8621::t_f46abbab52235a 1221-1225
+apps/ios/lib/features/home/presentation/add_todo_sheet.dart
+  s_20a06985cb8621::t_e2b456de159308 505,583-598,600-608,611-614,616-625,627-636,654,656-658,661-666,671-672,676-686,688,690-719,728-732,736-747,750-838,840
+  s_20a06985cb8621::t_efb84ad139c334 582,727,733-735,748-749,839
+  s_20a06985cb8621::t_c356baf2549914 637-639
+  s_20a06985cb8621::t_bd7aa44539c325 651-653
+  s_20a06985cb8621::t_5a74122339b375 655
+  s_20a06985cb8621::t_dd791caec70d7f 659
+  s_20a06985cb8621::t_af3f7bf26ffbe8 667-670
+  s_20a06985cb8621::t_3b0dd2c6716949 673-675
+  s_20a06985cb8621::t_cae11e8163c624 841-842
+  s_20a06985cb8621::t_afc7968796d66a 516-517,555,640-647,649-650
+docs/adr/0044-study-folder-layout.md
+  s_20a06985cb8621::t_8eee08ad72c86c 62-63
+  s_20a06985cb8621::t_f46abbab52235a 57-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "7a0b7d73eb1cced0e960162b55c9269076f3b104",
+  "prompts": {},
+  "sessions": {
+    "s_20a06985cb8621": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a083e1-0cae-7fe2-8173-681e7283a6c4",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
