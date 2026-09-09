@@ -118,7 +118,7 @@ class Docker:
                 return {}
             data = response.read(16 * 1024 * 1024)
             if response.status >= 300 and response.status != 304:
-                raise UpgradeError('Docker 操作失败，请检查服务容器与 socket 权限')
+                raise UpgradeError(f'Docker 操作失败（HTTP {response.status}），请检查服务容器与 socket 权限')
             return json.loads(data) if data else {}
         except UpgradeError:
             raise
@@ -208,9 +208,14 @@ class Docker:
                 check = self.call('POST', '/containers/' + container['Id'] + '/exec', {
                     'AttachStdout': False, 'AttachStderr': False,
                     'Cmd': ['python3', '-c', 'import json,urllib.request,sys; d=json.load(urllib.request.urlopen("http://127.0.0.1:18080/internal/upgrade-readiness",timeout=5));sys.exit(0 if d["version"]==sys.argv[1] and d["maintenance"] else 1)', expected]})
-                self.call('POST', '/exec/' + check['Id'] + '/start', {'Detach': False, 'Tty': False})
-                if self.call('GET', '/exec/' + check['Id'] + '/json')['ExitCode'] == 0:
-                    return
+                # 避免 Docker exec 的 HTTP hijack/raw-stream；后台执行后只读结构化状态。
+                self.call('POST', '/exec/' + check['Id'] + '/start', {'Detach': True, 'Tty': False})
+                for _ in range(8):
+                    result = self.call('GET', '/exec/' + check['Id'] + '/json')
+                    if not result['Running']:
+                        if result['ExitCode'] == 0: return
+                        break
+                    time.sleep(1)
             if container['State']['Status'] in ('exited', 'dead') or container.get('RestartCount', 0) > 0:
                 break
             time.sleep(2)
