@@ -213,7 +213,7 @@ docker compose --env-file .env -f infra/compose.yml up --build -d
 
 生产部署直接拉取 `ghcr.io/kiliter/ashorex-server:latest`，不需要在服务器上安装 Java、Maven 或构建 JAR。开始前需要准备：
 
-- Docker Engine 和 Docker Compose Plugin。
+- Linux Docker Engine 和 Docker Compose Plugin；生产配置使用 host 网络。
 - 一台使用本地磁盘保存 Docker 数据的服务器；SQLite 不得位于 NAS、NFS 等网络文件系统。
 - 已有的 HTTPS 反向代理，以及指向部署服务器的域名。
 
@@ -250,6 +250,10 @@ docker compose --env-file .env -f infra/compose.yml up --build -d
 # 永久删除容器、镜像、SQLite 和备份数据卷，需要输入 DELETE 二次确认。
 ./infra/scripts/deploy.sh uninstall --purge-data
 ```
+
+生产服务使用 `network_mode: host`，直接监听宿主机 `0.0.0.0:18080`，不配置 `ports` 映射。切换前确保 18080 未被其他进程占用。同机反向代理可使用 `http://127.0.0.1:18080`，其他机器上的反向代理仍使用服务器 IP。Docker Desktop 需启用 host networking（4.34 及以上），参见 [Docker 官方说明](https://docs.docker.com/engine/network/drivers/host/)。
+
+已部署实例需要先更新仓库中的 `infra/compose.deploy.yml`，再运行 `./infra/scripts/deploy.sh update`，Compose 会重建容器以应用新网络模式，数据卷保持不变。仅拉取镜像不会更新宿主机上的 Compose 配置。
 
 首次部署完成后，脚本会输出随机生成的 `admin` 初始密码。部署配置同时保存在权限为 `600` 的 `.env.deploy` 中；该文件已被 Git 忽略。普通卸载不会删除该文件和数据卷。
 
@@ -299,7 +303,7 @@ docker compose --env-file .env -f infra/compose.yml up --build -d
 
 5. 首次配置：
 
-   使用用户名 `admin` 和 `.env.deploy` 中的初始密码登录 `https://你的域名/admin`，然后在「运行配置」里填写 Emby 与 Server 酱，并在「督学关系」里建立绑定。Emby 位于 Docker 宿主机时可填写 `http://host.docker.internal:8096`；不要填写容器自身的 `localhost`。
+   使用用户名 `admin` 和 `.env.deploy` 中的初始密码登录 `https://你的域名/admin`，然后在「运行配置」里填写 Emby 与 Server 酱，并在「督学关系」里建立绑定。Emby 位于 Docker 宿主机时可填写 `http://127.0.0.1:8096`；已有的 `http://host.docker.internal:8096` 配置仍兼容。host 模式下服务端与宿主机共享网络。
 
 6. 更新 GitHub 镜像：
 
