@@ -74,6 +74,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '归档区', group: '系统' },
       },
       {
+        path: 'upgrades',
+        name: 'upgrades',
+        component: () => import('@/pages/UpgradesPage.vue'),
+        meta: { title: '版本与升级', group: '系统' },
+      },
+      {
         path: 'settings',
         name: 'settings',
         component: () => import('@/pages/SettingsPage.vue'),

@@ -31,7 +31,7 @@ usage() {
 命令：
   无参数       打开中文交互菜单
   deploy       首次部署；不存在 .env.deploy 时自动生成密钥和管理员密码
-  update       拉取最新 GitHub 镜像并滚动重建服务，保留全部数据
+  update       接入后提交安全升级任务；首次接入拉取镜像并重建服务
   uninstall    删除容器和服务端镜像，默认保留 SQLite 与备份数据卷
   --purge-data 与 uninstall 同时使用，确认后删除全部数据卷
 
@@ -44,6 +44,10 @@ require_runtime() {
   command -v docker >/dev/null 2>&1 || fail "未找到 Docker，请先安装 Docker Engine。"
   docker compose version >/dev/null 2>&1 || fail "未找到 Docker Compose Plugin。"
   docker info >/dev/null 2>&1 || fail "Docker 服务不可用，请先启动 Docker。"
+  # Linux socket 的实际组由宿主机读取，updater 仍以非 root UID 运行。
+  if [[ -S /var/run/docker.sock ]]; then
+    export DOCKER_GID="$(stat -c '%g' /var/run/docker.sock 2>/dev/null || stat -f '%g' /var/run/docker.sock)"
+  fi
   [[ -f "${COMPOSE_FILE}" ]] || fail "找不到部署文件：${COMPOSE_FILE}"
 }
 
@@ -127,7 +131,13 @@ wait_for_health() {
 deploy() {
   create_environment_file
   validate_environment_file
-  log "拉取 GitHub Container Registry 最新镜像……"
+  # 已接入升级协议时保持当前镜像；正常版本升级使用 update 子命令。
+  local current_container
+  current_container="$(compose ps -q server 2>/dev/null || true)"
+  if [[ -n "${current_container}" ]] && [[ "$(docker inspect --format '{{index .Config.Labels "com.shangan.upgrade-protocol"}}' "${current_container}")" == "1" ]]; then
+    export SHANGAN_SERVER_IMAGE="$(docker inspect --format '{{.Config.Image}}' "${current_container}")"
+  fi
+  log "拉取 GitHub Container Registry 镜像……"
   compose pull
   log "创建或更新服务……"
   compose up -d --remove-orphans
@@ -142,8 +152,25 @@ deploy() {
 update() {
   validate_environment_file
   log "拉取 GitHub Container Registry 最新镜像……"
+  # 接入升级协议后只提交异步更新，避免手工 up 把运行版本退回 latest。
+  local container_id
+  container_id="$(compose ps -q server)"
+  if [[ -n "${container_id}" ]] && docker exec "${container_id}" test -d /updates; then
+    docker exec "${container_id}" python3 -c '
+import json, os, pathlib
+root = pathlib.Path("/updates")
+if any((root / name).exists() for name in ("operation.json", "request.json", "executing")):
+    raise SystemExit("已有升级任务，请等待完成")
+if not (root / "heartbeat.json").exists():
+    raise SystemExit("升级器尚未运行，请先执行 deploy 接入新版 Compose")
+with open(root / "request.tmp", "w") as stream:
+    json.dump({"action": "APPLY"}, stream)
+os.replace(root / "request.tmp", root / "request.json")'
+    log "已提交升级任务，请在后台版本与升级页面查看结果。"
+    return
+  fi
   compose pull
-  log "重建服务并保留 SQLite 数据卷……"
+  log "首次接入升级协议，重建服务并保留数据卷……"
   compose up -d --remove-orphans
   wait_for_health
 }

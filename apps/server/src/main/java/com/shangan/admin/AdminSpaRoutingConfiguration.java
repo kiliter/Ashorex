@@ -30,6 +30,7 @@ public class AdminSpaRoutingConfiguration implements WebMvcConfigurer {
     "/admin/supervisions",
     "/admin/archive",
     "/admin/settings",
+    "/admin/upgrades",
   };
 
   @Override

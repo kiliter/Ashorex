@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { name: 'users', title: '用户', icon: 'i-lock' },
   { name: 'archive', title: '归档区', icon: 'i-archive' },
   { name: 'settings', title: '运行配置', icon: 'i-server' },
+  { name: 'upgrades', title: '版本与升级', icon: 'i-server' },
 ] as const;
 
 async function signOut(): Promise<void> {

@@ -11,7 +11,7 @@ on:
     paths:
       - "apps/server/**"
       - "apps/admin-web/**"
-      - "infra/docker/server.Dockerfile"
+      - "infra/**"
       - "docs/api/openapi.yaml"
       - "infra/scripts/check-openapi-drift.sh"
       - "Makefile"
@@ -20,7 +20,7 @@ on:
     paths:
       - "apps/server/**"
       - "apps/admin-web/**"
-      - "infra/docker/server.Dockerfile"
+      - "infra/**"
       - "docs/api/openapi.yaml"
       - "infra/scripts/check-openapi-drift.sh"
       - "Makefile"
@@ -51,8 +51,18 @@ jobs:
           echo "$PWD/.run/openapi-venv/bin" >> "$GITHUB_PATH"
       - name: 校验 OpenAPI 合同无漂移
         run: ./infra/scripts/check-openapi-drift.sh
+      - name: 验证升级状态机
+        run: python3 -m unittest discover -s infra/updater/tests -v
       - name: 构建服务端 Docker 镜像
-        run: docker build --file infra/docker/server.Dockerfile --tag ashorex-server:${{ github.sha }} .
+        shell: bash
+        run: |
+          release_version=dev
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then release_version="${GITHUB_REF_NAME#v}"; fi
+          docker build --file infra/docker/server.Dockerfile --build-arg SHANGAN_VERSION="$release_version" --build-arg SHANGAN_REVISION="$GITHUB_SHA" --tag ashorex-server:${{ github.sha }} .
+      - name: 真实容器升级与失败恢复 Smoke
+        env:
+          SMOKE_IMAGE: ashorex-server:${{ github.sha }}
+        run: sudo --preserve-env=SMOKE_IMAGE python3 infra/updater/smoke.py
       - name: 导出 Docker 镜像
         # 主分支镜像直接进入 GHCR；tar 包仅供手动下载或版本发布。
         if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
@@ -66,19 +76,32 @@ jobs:
           if-no-files-found: error
           retention-days: 3
       - name: 登录 GitHub Container Registry
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: 推送服务端镜像到 GitHub Container Registry
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         run: |
           docker tag ashorex-server:${{ github.sha }} ghcr.io/${{ github.repository_owner }}/ashorex-server:${{ github.sha }}
-          docker tag ashorex-server:${{ github.sha }} ghcr.io/${{ github.repository_owner }}/ashorex-server:latest
           docker push ghcr.io/${{ github.repository_owner }}/ashorex-server:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository_owner }}/ashorex-server:latest
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            docker tag ashorex-server:${{ github.sha }} ghcr.io/${{ github.repository_owner }}/ashorex-server:"${GITHUB_REF_NAME#v}"
+            docker push ghcr.io/${{ github.repository_owner }}/ashorex-server:"${GITHUB_REF_NAME#v}"
+            docker inspect --format '{{index .RepoDigests 0}}' ghcr.io/${{ github.repository_owner }}/ashorex-server:"${GITHUB_REF_NAME#v}" > /tmp/server-image-digest.txt
+          else
+            docker tag ashorex-server:${{ github.sha }} ghcr.io/${{ github.repository_owner }}/ashorex-server:latest
+            docker push ghcr.io/${{ github.repository_owner }}/ashorex-server:latest
+          fi
+      - name: 保存正式镜像引用
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-image-digest
+          path: /tmp/server-image-digest.txt
+          retention-days: 3
 
   server-release-assets:
     name: 发布服务端镜像包
@@ -89,6 +112,18 @@ jobs:
       actions: read
       contents: write
     steps:
+      - uses: actions/checkout@v4
+      - name: 下载正式镜像引用
+        uses: actions/download-artifact@v4
+        with:
+          name: server-image-digest
+          path: /tmp/server-image-digest
+      - name: 生成正式升级清单
+        shell: bash
+        run: |
+          export RELEASE_VERSION="${GITHUB_REF_NAME#v}"
+          export RELEASE_IMAGE="$(cat /tmp/server-image-digest/server-image-digest.txt)"
+          python3 infra/updater/publish_manifest.py
       - name: 下载服务端构建产物
         uses: actions/download-artifact@v4
         with:
@@ -110,4 +145,6 @@ jobs:
           gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 \
             || gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes \
             || gh release view "${GITHUB_REF_NAME}" >/dev/null
-          gh release upload "${GITHUB_REF_NAME}" release-assets/* --clobber
+          gh release upload "${GITHUB_REF_NAME}" release-assets/*.tar.gz --clobber
+          # 清单最后公布；版本检查不会看到只有名字而没有镜像的半成品。
+          gh release upload "${GITHUB_REF_NAME}" release-assets/server-update.json --clobber
