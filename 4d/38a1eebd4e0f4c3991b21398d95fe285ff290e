@@ -1,0 +1,40 @@
+apps/admin-web/src/pages/DiagnosticLogsPage.vue
+  h_b1099757fa8f7e 6,19,22,24,48-73,81,85,99,115-117,120,130,132,135-149
+apps/ios/lib/core/widgets/shangan_v2.dart
+  h_b1099757fa8f7e 660-661
+apps/ios/lib/features/catalog/presentation/library_page.dart
+  h_b1099757fa8f7e 171-172,182-183,257-258,384-392,395-412,415-421,423-429,431-441,443-444,541,710,1048-1071,1073-1076,1078,1080-1121,1124-1137,1140-1145,1147-1150,1153-1165,1167-1174,1177-1188,1191-1200,1202-1212,1214-1226
+apps/ios/test/features/catalog/library_pad_layout_test.dart
+  h_b1099757fa8f7e 50
+apps/server/src/main/java/com/shangan/admin/AdminSpaRoutingConfiguration.java
+  h_b1099757fa8f7e 34
+apps/server/src/main/java/com/shangan/admin/DiagnosticLogAdminController.java
+  h_b1099757fa8f7e 11,17,39-44
+apps/server/src/main/java/com/shangan/diagnostics/application/DiagnosticLogService.java
+  h_b1099757fa8f7e 21,141-163
+apps/server/src/test/java/com/shangan/admin/DiagnosticLogAdminControllerTest.java
+  h_b1099757fa8f7e 3,5,27,79-85
+apps/server/src/test/java/com/shangan/diagnostics/application/DiagnosticLogServiceTest.java
+  h_b1099757fa8f7e 171-199
+docs/adr/0052-diagnostic-log-upload.md
+  h_b1099757fa8f7e 3,9,37,47
+docs/plans/2026-09-07-shangan-v2-implementation-plan.md
+  h_b1099757fa8f7e 1266
+docs/prototypes/shangan-v2-prototype.html
+  h_b1099757fa8f7e 5101,5103,5105,5109
+docs/specs/2026-09-07-shangan-v2-design.md
+  h_b1099757fa8f7e 991
+docs/traceability/2026-09-07-shangan-v2-traceability.md
+  h_b1099757fa8f7e 331
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4d38a1eebd4e0f4c3991b21398d95fe285ff290e",
+  "prompts": {},
+  "humans": {
+    "h_b1099757fa8f7e": {
+      "author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
