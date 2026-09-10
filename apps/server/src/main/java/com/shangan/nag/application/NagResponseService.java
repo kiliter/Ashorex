@@ -71,8 +71,7 @@ public class NagResponseService {
   /** 只返回学员今日仍待回应的催办；昨日记录即使尚未写成 EXPIRED 也不再弹出。 */
   private Optional<Nag> awaitingToday(String userId) {
     LocalDate today = userTime.today(userId);
-    return nags.findAwaitingByUser(userId)
-        .filter(nag -> !nag.localDate().isBefore(today));
+    return nags.findAwaitingByUser(userId).filter(nag -> !nag.localDate().isBefore(today));
   }
 
   /** SQLite 写冲突在 JDBC 中常表现为 error code 5，busy_timeout 未等待时也会立刻抛出。 */
