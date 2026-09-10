@@ -62,7 +62,10 @@ final class TodoRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final timezone = ref.watch(meSettingsProvider).value?.profile.timezone;
+    // 只有历史时间线需要账号时区；普通 Todo 行不应因隐藏字段触发设置请求。
+    final timezone = showCompletedTime && todo.completedAt != null
+        ? ref.watch(meSettingsProvider).value?.profile.timezone
+        : null;
     final completedTime = todo.completedAt == null
         ? null
         : AccountTime.hourMinute(todo.completedAt!, timezone);

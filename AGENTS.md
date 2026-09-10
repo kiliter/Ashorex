@@ -154,7 +154,7 @@ make ios-test
 make verify
 ```
 
-本地开发只运行本次新增或直接修改所对应的窄测试。`make server-test`、`make ios-test` 和 `make verify` 属于全量验证，只允许交给 GitHub CI 执行。`make format` 仍可在提交前本地执行。
+日常开发迭代只运行本次新增或直接修改所对应的窄测试，避免在每次小改动后重复跑全量流水线。任何推送前必须在本地执行一次 `make verify`，完整通过 `make server-test` 和 `make ios-test`；推送后再由 GitHub CI 使用同一口径复验。如全量验证后又修改了代码、测试、构建配置或依赖锁文件，推送前必须重新运行 `make verify`。
 
 Server:
 
@@ -198,11 +198,13 @@ For each implementation Task:
 4. Run it and confirm the expected failure.
 5. Implement the minimum complete behavior.
 6. Run the narrow test.
-7. 只补充运行本次新增或直接修改所对应的窄测试，不运行模块全量测试。
-8. Run `make format`；push 后由 GitHub CI 运行 `make verify`。
+7. 开发迭代期间只补充运行本次新增或直接修改所对应的窄测试。
+8. Run `make format`。
 9. Review diff for scope expansion, accidental secrets and missing tests.
 10. Commit once with the Task commit subject.
-11. Stop at review gates and report commands plus results.
+11. 推送前在本地运行 `make verify`；若验证后再修改任何代码、测试、构建配置或依赖锁文件，必须重新运行。
+12. Push 后由 GitHub CI 再次运行 `make verify`。
+13. Stop at review gates and report commands plus results.
 
 > **V2 首轮实施的临时例外**：为了快速迭代，V2 首轮不写单元测试，直接完成代码并做全量编译与真实启动验证，测试统一在实施计划的 T36 补齐。该例外只适用于「V2 首轮实施」，不构成后续跳过测试的先例。各 Task 中列出的测试用例清单保留不删，作为 T36 的实施依据。
 
@@ -400,6 +402,7 @@ A change is complete only when:
 
 - required behavior exists；
 - narrow tests pass（V2 首轮实施期间为编译与静态分析通过，测试见 T36）；
+- 推送前本地 `make verify` 全量验证通过；
 - GitHub CI 中的 full verification passes；
 - 涉及启动边界时，真实 ApplicationContext 启动和健康检查通过；
 - API docs are current；
