@@ -147,4 +147,59 @@ void main() {
     expect(find.text('完成时要求凭证'), findsOneWidget);
     expect(find.text('保存'), findsOneWidget);
   });
+
+  testWidgets('Pad 编辑态不展示目标看板与今日节奏，避免误触', (tester) async {
+    tester.view.physicalSize = const Size(1180, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final backend = FakeBackend()
+      ..on(
+        'GET',
+        '/api/v1/exam-goals',
+        json: [goalJson(id: 'g-1', name: '2026 国考 · 全力以赴')],
+      )
+      ..on('GET', '/api/v1/nags/pending')
+      ..on('GET', '/api/v1/me', json: meJson())
+      ..on(
+        'GET',
+        '/api/v1/todos/pending-summary',
+        json: {
+          'total': 0,
+          'countByType': <String, Object?>{},
+          'items': <Object?>[],
+        },
+      )
+      ..on(
+        'GET',
+        '/api/v1/todos',
+        json: dayViewJson(
+          todos: [todoJson(id: 't-1', title: '行政法第 1 讲')],
+        ),
+      );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          shanganRepositoryProvider.overrideWithValue(buildRepository(backend)),
+        ],
+        child: MaterialApp(
+          theme: ShanganTheme.light(),
+          home: const Scaffold(body: HomePage()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('我的考试目标'), findsOneWidget);
+    expect(find.text('今日节奏'), findsOneWidget);
+
+    await tester.tap(find.text('编辑'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('编辑今日'), findsOneWidget);
+    expect(find.text('我的考试目标'), findsNothing);
+    expect(find.text('今日节奏'), findsNothing);
+  });
 }

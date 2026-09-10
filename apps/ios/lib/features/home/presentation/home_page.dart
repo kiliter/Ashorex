@@ -262,11 +262,14 @@ final class _PadHomeWorkspace extends ConsumerWidget {
                     child: list,
                   ),
                 ),
-                const SizedBox(width: PadChrome.columnGap),
-                SizedBox(
-                  width: PadChrome.asideWidth,
-                  child: PadHomeAside(onOpenStats: onOpenStats),
-                ),
+                // 编辑态只保留待办勾选，避免误触目标看板或节奏入口。
+                if (!editing) ...[
+                  const SizedBox(width: PadChrome.columnGap),
+                  SizedBox(
+                    width: PadChrome.asideWidth,
+                    child: PadHomeAside(onOpenStats: onOpenStats),
+                  ),
+                ],
               ],
             ),
           ),

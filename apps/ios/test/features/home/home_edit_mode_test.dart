@@ -126,6 +126,11 @@ FakeBackend _backend() {
 }
 
 Future<void> _pump(WidgetTester tester, FakeBackend backend) async {
+  // 本文件断言手机端目标看板文案，必须固定为紧凑视口，避免默认 800×600 落入 Pad 布局。
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
