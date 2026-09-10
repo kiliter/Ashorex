@@ -1,0 +1,27 @@
+apps/admin-web/package.json
+  s_4db1592e08aea0::t_b8800d4db5d86b 4
+infra/updater/release-policy.json
+  s_4db1592e08aea0::t_b8800d4db5d86b 4
+apps/server/pom.xml
+  s_4db1592e08aea0::t_b8800d4db5d86b 16
+apps/ios/pubspec.yaml
+  s_4db1592e08aea0::t_b8800d4db5d86b 4
+apps/admin-web/package-lock.json
+  s_4db1592e08aea0::t_5a322133d5601d 3,9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f1e2c9023b20ca978c6c4deb94ed5e7cb83b0866",
+  "prompts": {},
+  "sessions": {
+    "s_4db1592e08aea0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a085b7-dd62-7fe1-9d28-0616c49eea81",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
