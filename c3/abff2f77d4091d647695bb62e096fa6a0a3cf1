@@ -1,0 +1,20 @@
+apps/ios/lib/core/widgets/shangan_v2.dart
+  h_b1099757fa8f7e 160-161,177-179,224-238,240-241,401,407-408,410-430,432-439,442-449
+apps/ios/lib/features/home/presentation/home_page.dart
+  h_b1099757fa8f7e 714,1025-1060,1063-1073,1075-1097,1100-1108,1110-1136
+apps/ios/lib/features/home/presentation/pad_home_layout.dart
+  h_b1099757fa8f7e 163-165,269,281-319,326,332-333,335-339,341,344,346-347,349,354-363
+apps/ios/test/features/home/goal_board_test.dart
+  h_b1099757fa8f7e 53-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c3abff2f77d4091d647695bb62e096fa6a0a3cf1",
+  "prompts": {},
+  "humans": {
+    "h_b1099757fa8f7e": {
+      "author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
