@@ -1,0 +1,22 @@
+apps/server/src/main/java/com/shangan/common/config/SqliteConfiguration.java
+  h_b1099757fa8f7e 34-37,47-48
+apps/server/src/main/java/com/shangan/nag/application/NagResponseService.java
+  h_b1099757fa8f7e 8,10,13-14,23-24,44-53,56-90
+apps/server/src/main/java/com/shangan/presence/application/PresenceService.java
+  h_b1099757fa8f7e 22,67
+apps/server/src/test/java/com/shangan/nag/application/NagResponseServiceTest.java
+  h_b1099757fa8f7e 7,20,27,240-264,266-273,277
+apps/server/src/test/java/com/shangan/presence/application/PresenceServiceTest.java
+  h_b1099757fa8f7e 78,99,112,165
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "70224f8c619a2f72ad1e0df9b4f43a2b3a5046b8",
+  "prompts": {},
+  "humans": {
+    "h_b1099757fa8f7e": {
+      "author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
