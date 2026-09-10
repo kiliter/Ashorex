@@ -1,7 +1,8 @@
-import 'package:shangan_ios/core/presence/app_activity.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shangan_ios/core/api/api_exception.dart';
 import 'package:shangan_ios/core/models/shangan_models.dart';
+import 'package:shangan_ios/core/presence/app_activity.dart';
 import 'package:shangan_ios/core/state/shangan_providers.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_v2.dart';
@@ -50,6 +51,11 @@ final class FullscreenNagPage extends ConsumerStatefulWidget {
 }
 
 class _FullscreenNagPageState extends ConsumerState<FullscreenNagPage> {
+  static const _terminalErrorCodes = {
+    'NAG_EXPIRED',
+    'NAG_CANCELLED',
+    'NAG_NOT_FOUND',
+  };
   final _controller = TextEditingController();
   NagReasonTag? _tag;
   bool _busy = false;
@@ -302,6 +308,15 @@ class _FullscreenNagPageState extends ConsumerState<FullscreenNagPage> {
       ref.invalidate(dayViewProvider);
       if (mounted) Navigator.of(context).pop();
     } catch (error) {
+      // 这些错误说明旧催办已经不可能再回应；关闭后由 AppShell 立即重查最新待回应项。
+      // 网络错误与原因校验错误仍保留本页，避免绕过有效催办。
+      if (mounted &&
+          error is ApiException &&
+          _terminalErrorCodes.contains(error.errorCode)) {
+        Navigator.of(context).pop();
+        return;
+      }
+      if (!mounted) return;
       setState(() {
         _busy = false;
         _error = '提交失败：$error';

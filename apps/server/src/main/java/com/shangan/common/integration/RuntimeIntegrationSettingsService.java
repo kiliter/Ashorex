@@ -31,7 +31,12 @@ public class RuntimeIntegrationSettingsService implements IntegrationSettingsPro
     this.repository = repository;
     this.clock = clock;
     this.transaction = new TransactionTemplate(transactionManager);
-    this.current = new AtomicReference<>(repository.find().orElseGet(environment::snapshot));
+    RuntimeIntegrationSettings stored = repository.find().orElse(null);
+    // V001 会预置 updated_at=0 的空行，它只表示“尚未初始化”。
+    // 管理员一旦保存（即使主动清空字段）updated_at 也不再为 0，不会被环境变量覆盖。
+    this.current =
+        new AtomicReference<>(
+            stored == null || stored.updatedAt() == 0 ? environment.snapshot() : stored);
   }
 
   @Override

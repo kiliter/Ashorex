@@ -128,6 +128,10 @@ public class SecurityConfiguration {
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/admin/login")
                     .permitAll()
+                    // 督学端除了业务层逐学员绑定校验，还必须持有当前 SUPERVISOR 角色。
+                    // JwtAuthenticationConverter 每次从用户表重读角色，因此后台收回身份后立即生效。
+                    .requestMatchers("/api/v1/supervisor/**")
+                    .hasRole("SUPERVISOR")
                     .requestMatchers("/api/v1/**")
                     .authenticated()
                     .anyRequest()

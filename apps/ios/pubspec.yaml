@@ -28,6 +28,8 @@ dependencies:
   media_kit: 1.2.6
   media_kit_video: 2.0.1
   media_kit_libs_video: 1.0.7
+  # 服务端时间保持 UTC；历史时间线按账号 IANA 时区转换后再展示。
+  timezone: 0.11.1
 
 dev_dependencies:
   flutter_test:

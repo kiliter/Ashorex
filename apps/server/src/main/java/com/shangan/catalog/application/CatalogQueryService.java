@@ -97,24 +97,18 @@ public class CatalogQueryService {
             .findResourceById(resourceId)
             .orElseThrow(
                 () -> new BusinessException(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "学习资源不存在"));
-    if (!resource.visibleToLearners()) {
-      throw new BusinessException(HttpStatus.CONFLICT, "RESOURCE_UNAVAILABLE", "该学习资源已下架或已归档");
-    }
-    if (resource.resourceType() == ResourceType.DOCUMENT && !documentEnabled()) {
-      throw new BusinessException(HttpStatus.CONFLICT, "RESOURCE_UNAVAILABLE", "材料资源当前未启用");
-    }
-    Course course =
-        courses
-            .findById(resource.courseId())
-            .filter(Course::visibleToLearners)
-            .orElseThrow(
-                () ->
-                    new BusinessException(
-                        HttpStatus.CONFLICT, "RESOURCE_UNAVAILABLE", "所属课程已归档或失联"));
-    if (course.id() == null) {
-      throw new BusinessException(HttpStatus.CONFLICT, "RESOURCE_UNAVAILABLE", "所属课程不可用");
-    }
+    if (!visibleToLearners(resource))
+      throw new BusinessException(
+          HttpStatus.CONFLICT, "RESOURCE_UNAVAILABLE", "学习资源或所属课程已下架、归档或失联");
     return resource;
+  }
+
+  /** Todo 视图与播放、复习入口共用的可见性口径，避免只读 available 而放过归档课程。 */
+  @Transactional(readOnly = true)
+  public boolean visibleToLearners(LearningResource resource) {
+    if (!resource.visibleToLearners()) return false;
+    if (resource.resourceType() == ResourceType.DOCUMENT && !documentEnabled()) return false;
+    return courses.findById(resource.courseId()).filter(Course::visibleToLearners).isPresent();
   }
 
   private List<LearningResource> visibleResources(String courseId) {

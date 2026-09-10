@@ -96,6 +96,7 @@ public class AuthService {
     Instant now = clock.instant();
     users.updatePasswordHash(userId, passwordEncoder.encode(newPassword), now);
     users.revokeRefreshTokensByUserId(userId, now);
+    users.revokeAdminSessionsByPrincipal(user.username());
   }
 
   /** 修改本人时区；时区决定该用户的每日边界与全部统计口径。 */
@@ -172,6 +173,7 @@ public class AuthService {
     Instant now = clock.instant();
     users.updatePasswordHash(user.id(), passwordEncoder.encode(newPassword), now);
     users.revokeRefreshTokensByUserId(user.id(), now);
+    users.revokeAdminSessionsByPrincipal(user.username());
   }
 
   /** 授予或收回督学人身份。 */

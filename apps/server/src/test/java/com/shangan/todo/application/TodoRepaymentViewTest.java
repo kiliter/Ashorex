@@ -3,6 +3,7 @@ package com.shangan.todo.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
+import com.shangan.catalog.application.CatalogQueryService;
 import com.shangan.catalog.infrastructure.CourseRepository;
 import com.shangan.identity.application.UserTimeService;
 import com.shangan.identity.domain.*;
@@ -44,7 +45,8 @@ class TodoRepaymentViewTest {
             users, Clock.fixed(Instant.parse("2026-09-10T02:00:00Z"), ZoneOffset.UTC));
     when(repos.countDeletionsBetween("user-1", from, to)).thenReturn(3);
     var view =
-        new TodoViewService(repos, mock(CourseRepository.class), time)
+        new TodoViewService(
+                repos, mock(CourseRepository.class), mock(CatalogQueryService.class), time)
             .day("user-1", date.toString());
     assertThat(view.deletionCount()).isEqualTo(3);
     verify(repos).countDeletionsBetween("user-1", from, to);
@@ -91,7 +93,10 @@ class TodoRepaymentViewTest {
         .thenReturn(
             List.of(
                 new TodoRepository.CompletionBucket(from.plusSeconds(120), today.minusDays(2))));
-    var view = new TodoViewService(repos, mock(CourseRepository.class), time).day("user-1", null);
+    var view =
+        new TodoViewService(
+                repos, mock(CourseRepository.class), mock(CatalogQueryService.class), time)
+            .day("user-1", null);
     assertThat(view.todos()).hasSize(1);
     assertThat(view.totals().total()).isEqualTo(1);
     assertThat(view.totals().done()).isZero();
@@ -99,5 +104,39 @@ class TodoRepaymentViewTest {
         .extracting(TodoViewService.TodoView::localDate)
         .containsExactly(today.minusDays(1), today.minusDays(2));
     assertThat(view.repayment()).isEqualTo(new RepaymentTotals(1, 60000, 0));
+  }
+
+  @Test
+  void 归档课程的课时在Todo视图中标记为不可播放() {
+    var repos = mock(TodoRepository.class);
+    var courses = mock(CourseRepository.class);
+    var catalog = mock(CatalogQueryService.class);
+    var users = mock(UserRepository.class);
+    var user =
+        new User(
+            "user-1",
+            "demo",
+            "hash",
+            "测试",
+            "Asia/Shanghai",
+            UserStatus.ACTIVE,
+            null,
+            Set.of(UserRole.LEARNER));
+    var todo = TodoFixtures.course().localDate(LocalDate.of(2026, 9, 10)).build();
+    var resource = TodoFixtures.videoResource(60000);
+    when(users.findById(user.id())).thenReturn(Optional.of(user));
+    when(repos.findByUserAndDate(user.id(), todo.localDate())).thenReturn(List.of(todo));
+    when(courses.findResourceById(resource.id())).thenReturn(Optional.of(resource));
+    when(catalog.visibleToLearners(resource)).thenReturn(false);
+    var time =
+        new UserTimeService(
+            users, Clock.fixed(Instant.parse("2026-09-10T02:00:00Z"), ZoneOffset.UTC));
+
+    var view = new TodoViewService(repos, courses, catalog, time).day(user.id(), null);
+
+    assertThat(view.todos())
+        .singleElement()
+        .extracting(TodoViewService.TodoView::resourceAvailable)
+        .isEqualTo(false);
   }
 }

@@ -1,5 +1,6 @@
 package com.shangan.todo.application;
 
+import com.shangan.catalog.application.CatalogQueryService;
 import com.shangan.catalog.domain.LearningResource;
 import com.shangan.catalog.infrastructure.CourseRepository;
 import com.shangan.common.IdGenerator;
@@ -28,6 +29,7 @@ public class TodoProgressService {
 
   private final TodoRepository todos;
   private final CourseRepository courses;
+  private final CatalogQueryService catalog;
   private final TodoService todoService;
   private final EffectiveActionRecorder effectiveAction;
   private final IdGenerator idGenerator;
@@ -36,12 +38,14 @@ public class TodoProgressService {
   public TodoProgressService(
       TodoRepository todos,
       CourseRepository courses,
+      CatalogQueryService catalog,
       TodoService todoService,
       EffectiveActionRecorder effectiveAction,
       IdGenerator idGenerator,
       Clock clock) {
     this.todos = todos;
     this.courses = courses;
+    this.catalog = catalog;
     this.todoService = todoService;
     this.effectiveAction = effectiveAction;
     this.idGenerator = idGenerator;
@@ -62,10 +66,13 @@ public class TodoProgressService {
     if (requestId.equals(session.resetId())) return session;
     if (session.epoch() != expected)
       throw new BusinessException(HttpStatus.CONFLICT, "TODO_REVIEW_CHANGED", "复习进度已变化，请刷新后重试");
-    var resource = courses.findResourceById(todo.resourceId());
-    if (resource.isEmpty()
-        || !resource.get().available()
-        || resource.get().resourceType() != com.shangan.catalog.domain.ResourceType.VIDEO)
+    LearningResource resource;
+    try {
+      resource = catalog.requireVisibleResource(todo.resourceId());
+    } catch (BusinessException exception) {
+      throw new BusinessException(HttpStatus.BAD_REQUEST, "TODO_RESOURCE_UNAVAILABLE", "当前课时不可播放");
+    }
+    if (resource.resourceType() != com.shangan.catalog.domain.ResourceType.VIDEO)
       throw new BusinessException(HttpStatus.BAD_REQUEST, "TODO_RESOURCE_UNAVAILABLE", "当前课时不可播放");
     if (!todos.resetPlayback(todoId, expected, requestId, clock.instant()))
       throw new BusinessException(HttpStatus.CONFLICT, "TODO_REVIEW_CHANGED", "复习进度已变化，请刷新后重试");

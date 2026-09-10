@@ -1,5 +1,6 @@
 package com.shangan.todo.application;
 
+import com.shangan.catalog.application.CatalogQueryService;
 import com.shangan.catalog.domain.LearningResource;
 import com.shangan.catalog.domain.ResourceType;
 import com.shangan.catalog.infrastructure.CourseRepository;
@@ -31,11 +32,17 @@ public class TodoViewService {
 
   private final TodoRepository todos;
   private final CourseRepository courses;
+  private final CatalogQueryService catalog;
   private final UserTimeService userTime;
 
-  public TodoViewService(TodoRepository todos, CourseRepository courses, UserTimeService userTime) {
+  public TodoViewService(
+      TodoRepository todos,
+      CourseRepository courses,
+      CatalogQueryService catalog,
+      UserTimeService userTime) {
     this.todos = todos;
     this.courses = courses;
+    this.catalog = catalog;
     this.userTime = userTime;
   }
 
@@ -186,7 +193,7 @@ public class TodoViewService {
               resource.map(LearningResource::title).orElse(null),
               resource.map(LearningResource::durationMs).orElse(null),
               resource.map(LearningResource::pageCount).orElse(null),
-              resource.map(LearningResource::available).orElse(true),
+              resource.map(catalog::visibleToLearners).orElse(false),
               todo.targetProgressPermille(),
               permille,
               todo.progressPositionMs(),

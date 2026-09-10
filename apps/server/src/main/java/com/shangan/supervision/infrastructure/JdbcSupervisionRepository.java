@@ -107,6 +107,38 @@ public class JdbcSupervisionRepository implements SupervisionRepository {
   }
 
   @Override
+  public void reactivate(
+      String id,
+      SupervisionKind kind,
+      boolean canView,
+      boolean canNag,
+      boolean canEditGoal,
+      boolean canAddTodo,
+      Instant now) {
+    jdbcClient
+        .sql(
+            """
+            UPDATE supervisions
+               SET kind = :kind,
+                   can_view = :canView,
+                   can_nag = :canNag,
+                   can_edit_goal = :canEditGoal,
+                   can_add_todo = :canAddTodo,
+                   archived_at = NULL,
+                   updated_at = :now
+             WHERE id = :id
+            """)
+        .param("kind", kind.name())
+        .param("canView", canView ? 1 : 0)
+        .param("canNag", canNag ? 1 : 0)
+        .param("canEditGoal", canEditGoal ? 1 : 0)
+        .param("canAddTodo", canAddTodo ? 1 : 0)
+        .param("now", now.toEpochMilli())
+        .param("id", id)
+        .update();
+  }
+
+  @Override
   public void updatePermissions(
       String id,
       boolean canView,
