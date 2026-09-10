@@ -1,0 +1,16 @@
+apps/server/src/main/java/com/shangan/nag/application/NagResponseService.java
+  h_b1099757fa8f7e 74
+apps/server/src/test/java/com/shangan/nag/application/NagResponseServiceTest.java
+  h_b1099757fa8f7e 33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fd1ebd0753ab8086e2cd5e9d1e962b16aa1dc516",
+  "prompts": {},
+  "humans": {
+    "h_b1099757fa8f7e": {
+      "author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
