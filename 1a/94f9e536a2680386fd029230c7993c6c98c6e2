@@ -1,0 +1,58 @@
+apps/ios/lib/core/layout/adaptive_breakpoints.dart
+  h_b1099757fa8f7e 3-6,9-12,19-28
+apps/ios/lib/core/layout/adaptive_scaffold.dart
+  h_b1099757fa8f7e 3,14,22,32-34,39-41,49-54,61-62,92-349
+apps/ios/lib/core/layout/pad_chrome.dart
+  h_b1099757fa8f7e 1-303
+apps/ios/lib/core/widgets/shangan_v2.dart
+  h_b1099757fa8f7e 765,772,777
+apps/ios/lib/features/catalog/presentation/library_page.dart
+  h_b1099757fa8f7e 8,139,160-165,175,180,182,191-195,222,235-258,261-286,288-296,326,330,348-386,388-392,430-498,622,627,633,641-643,646-653,667-669,675-676,702,712-713,717-718,729,739-746,750,753,758-780,783-803,806,812,816-818,984,990,993-995,1061-1071,1100-1107
+apps/ios/lib/features/home/presentation/add_todo_sheet.dart
+  h_b1099757fa8f7e 1130-1161,1181-1196,1198-1210,1212-1234,1236-1252,1255-1267,1271,1317-1348,1363-1387,1389-1398,1400-1408,1412,1437-1603
+apps/ios/lib/features/home/presentation/home_page.dart
+  h_b1099757fa8f7e 5-6,14,23-26,67-69,94-165,170,173-174,198,207-278,328-329,336,339,391-400,403-411,415,433-434,436,467-476,481-484,707,714-716,937-939,1033,1133-1155,1157-1161,1163,1165,1168-1175,1183,1185-1187
+apps/ios/lib/features/home/presentation/pad_home_layout.dart
+  h_b1099757fa8f7e 1-585
+apps/ios/lib/features/profile/presentation/profile_page.dart
+  h_b1099757fa8f7e 10,38-54,56,58-74,76-109,111-144,146-176,178-184,187-211,214-220,223-225,230,232-234
+apps/ios/lib/features/shell/presentation/app_shell.dart
+  h_b1099757fa8f7e 139,144-149,158
+apps/ios/lib/features/stats/presentation/pad_stats_layout.dart
+  h_b1099757fa8f7e 1-324
+apps/ios/lib/features/stats/presentation/stats_page.dart
+  h_b1099757fa8f7e 3-4,9,28,30-35,38-65,67-73,75-76,78-95,97,99,105,113-114,143,147,161,388-595
+apps/ios/pubspec.yaml
+  h_b1099757fa8f7e 49
+apps/ios/test/core/layout/adaptive_scaffold_test.dart
+  h_b1099757fa8f7e 20,33-36,44-47,50,54-60,63-74
+apps/ios/test/features/catalog/library_pad_layout_test.dart
+  h_b1099757fa8f7e 11,72-73,78-79,82,84,86-90
+apps/ios/test/features/home/home_filter_test.dart
+  h_b1099757fa8f7e 11-14,52-59
+apps/ios/test/features/home/home_pad_layout_test.dart
+  h_b1099757fa8f7e 1-150
+apps/ios/test/features/stats/stats_pad_layout_test.dart
+  h_b1099757fa8f7e 1-68
+docs/adr/0053-pad-workspace-layout.md
+  h_b1099757fa8f7e 1-30
+docs/plans/2026-09-07-shangan-v2-implementation-plan.md
+  h_b1099757fa8f7e 1267-1270
+docs/prototypes/ashorex-pad-v2.html
+  h_b1099757fa8f7e 1-831
+docs/specs/2026-09-07-shangan-v2-design.md
+  h_b1099757fa8f7e 5,992-995
+docs/traceability/2026-09-07-shangan-v2-traceability.md
+  h_b1099757fa8f7e 332-335
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1a94f9e536a2680386fd029230c7993c6c98c6e2",
+  "prompts": {},
+  "humans": {
+    "h_b1099757fa8f7e": {
+      "author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
