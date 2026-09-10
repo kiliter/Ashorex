@@ -1,0 +1,21 @@
+AGENTS.md
+  s_80fee584cf19a6::t_95ccd88f1c2a08 157,201-202,205-207,405
+apps/ios/lib/features/home/presentation/todo_row.dart
+  s_80fee584cf19a6::t_74f20cc1621559 65-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ef489fe78d6fdc808b66973fd76cb5c8ecf58d86",
+  "prompts": {},
+  "sessions": {
+    "s_80fee584cf19a6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a089c9-2d36-7063-addb-d856e6a80200",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
