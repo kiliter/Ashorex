@@ -1,0 +1,107 @@
+apps/server/src/main/java/com/shangan/common/config/SecurityConfiguration.java
+  s_80fee584cf19a6::t_cb0d43fd00e97e 131-134
+apps/server/src/main/java/com/shangan/identity/infrastructure/UserRepository.java
+  s_80fee584cf19a6::t_cb0d43fd00e97e 39-41
+apps/server/src/main/java/com/shangan/catalog/application/CatalogQueryService.java
+  s_80fee584cf19a6::t_fbfd03183c789f 100-102,106-111
+  s_80fee584cf19a6::t_7be2d0ed81215e 112-113
+apps/ios/lib/core/time/account_time.dart
+  s_80fee584cf19a6::t_d800447ed2fa3e 23
+  s_80fee584cf19a6::t_eac4343bb45d94 1-22,24-34
+apps/ios/lib/features/nag/presentation/fullscreen_nag_page.dart
+  s_80fee584cf19a6::t_d800447ed2fa3e 5
+  s_80fee584cf19a6::t_f97be16c3757fe 54-58,311-319
+  s_80fee584cf19a6::t_ec7294764959f7 3
+apps/ios/lib/features/player/presentation/player_page.dart
+  s_80fee584cf19a6::t_43444a0f8e370d 1001
+  s_80fee584cf19a6::t_f11cb3260d426b 1095-1107
+  s_80fee584cf19a6::t_9809ef51ad0d07 61,177,980,1093-1094,1108-1109,1137-1144
+  s_80fee584cf19a6::t_9a7e05805695fa 132,135-138,180
+  s_80fee584cf19a6::t_1f513d2b42184f 154
+  s_80fee584cf19a6::t_81df91682aa400 181-190
+  s_80fee584cf19a6::t_0acf623afd6862 1145-1146
+apps/ios/pubspec.yaml
+  s_80fee584cf19a6::t_f97be16c3757fe 31-32
+apps/server/src/main/java/com/shangan/identity/infrastructure/JdbcUserRepository.java
+  s_80fee584cf19a6::t_cb0d43fd00e97e 179-186
+  s_80fee584cf19a6::t_35ef537c5f2b2e 178
+apps/server/src/test/java/com/shangan/todo/application/TodoRepaymentViewTest.java
+  s_80fee584cf19a6::t_85883239837ead 137-139
+  s_80fee584cf19a6::t_d800447ed2fa3e 108-136,140-141
+  s_80fee584cf19a6::t_7b2ecfaca1c5fb 6,48-49,96-99
+apps/server/src/main/java/com/shangan/supervision/infrastructure/SupervisionRepository.java
+  s_80fee584cf19a6::t_9faa4c449c7a36 4,31-39
+  s_80fee584cf19a6::t_73d0ff7b9c33f1 40
+apps/server/src/main/java/com/shangan/todo/application/TodoViewService.java
+  s_80fee584cf19a6::t_fbfd03183c789f 3,35,38-42,45,196
+apps/server/src/test/java/com/shangan/supervision/application/SupervisionServiceTest.java
+  s_80fee584cf19a6::t_85883239837ead 145,153
+  s_80fee584cf19a6::t_5f46e16f84081b 137-144,146-152,154-157
+  s_80fee584cf19a6::t_4cd4eeb83b36bb 136
+apps/server/src/test/java/com/shangan/common/integration/RuntimeSettingsUrlTest.java
+  s_80fee584cf19a6::t_85883239837ead 45
+  s_80fee584cf19a6::t_5f46e16f84081b 3,21-39,41-44,46-55
+  s_80fee584cf19a6::t_ec7294764959f7 13,20,40
+apps/server/src/test/java/com/shangan/todo/application/TodoProgressServiceTest.java
+  s_80fee584cf19a6::t_85883239837ead 332,334
+  s_80fee584cf19a6::t_7b2ecfaca1c5fb 15,47,59,329-331
+  s_80fee584cf19a6::t_5f46e16f84081b 321-328,333,335-340
+apps/ios/test/features/nag/fullscreen_nag_test.dart
+  s_80fee584cf19a6::t_f8af8119fc3687 177,179
+  s_80fee584cf19a6::t_5f46e16f84081b 161-176,178,180-186
+apps/server/src/main/java/com/shangan/common/integration/RuntimeIntegrationSettingsService.java
+  s_80fee584cf19a6::t_9faa4c449c7a36 34-39
+apps/ios/lib/features/home/presentation/todo_row.dart
+  s_80fee584cf19a6::t_52bf71a9cf3376 9,65-68,73,342,349,355-356,520-521
+apps/server/src/test/java/com/shangan/identity/application/AuthServiceTest.java
+  s_80fee584cf19a6::t_80a215cde12f8b 1-55
+apps/ios/test/support/fixtures.dart
+  s_80fee584cf19a6::t_5f46e16f84081b 27,49
+apps/server/src/main/java/com/shangan/supervision/infrastructure/JdbcSupervisionRepository.java
+  s_80fee584cf19a6::t_9faa4c449c7a36 110-140
+  s_80fee584cf19a6::t_12f75340906cee 109
+apps/ios/lib/core/player/playback_adapter.dart
+  s_80fee584cf19a6::t_5f46e16f84081b 11-13
+  s_80fee584cf19a6::t_406fac5591fe9b 28-37,46-47
+  s_80fee584cf19a6::t_b7955327f6f074 48
+apps/server/src/main/java/com/shangan/identity/application/AuthService.java
+  s_80fee584cf19a6::t_cb0d43fd00e97e 99,176
+apps/ios/test/features/player/player_controls_test.dart
+  s_80fee584cf19a6::t_807044e92359cb 125-137,139-142,144,490,501
+  s_80fee584cf19a6::t_6867b2758f2881 138
+  s_80fee584cf19a6::t_f0f5e5f9ae3af8 143,545,575
+  s_80fee584cf19a6::t_5f46e16f84081b 123-124,145-149,530,550,592-595
+  s_80fee584cf19a6::t_7d098576b3d802 549,553
+  s_80fee584cf19a6::t_d54df72d5a8945 596-597
+apps/server/src/main/java/com/shangan/todo/application/TodoProgressService.java
+  s_80fee584cf19a6::t_fbfd03183c789f 3,32,41,48,69-75
+apps/server/src/main/java/com/shangan/admin/AccessAdminController.java
+  s_80fee584cf19a6::t_705b98cdbd6474 74
+apps/server/src/test/java/com/shangan/todo/application/TodoReviewProgressTest.java
+  s_80fee584cf19a6::t_7b2ecfaca1c5fb 6,20,26-32,38-39
+apps/server/src/main/java/com/shangan/supervision/application/SupervisionService.java
+  s_80fee584cf19a6::t_9faa4c449c7a36 79-80,90,99-101,103-105
+  s_80fee584cf19a6::t_85883239837ead 102
+apps/ios/lib/core/player/media_kit_playback_adapter.dart
+  s_80fee584cf19a6::t_406fac5591fe9b 22,45-46,93,114,119,122,146
+apps/ios/test/features/home/history_day_test.dart
+  s_80fee584cf19a6::t_5f46e16f84081b 94-113
+apps/ios/pubspec.lock
+  s_80fee584cf19a6::t_4cb9391310d1a7 1100-1107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "00f13313a939257736a17c46e1e1911e4af7e8f7",
+  "prompts": {},
+  "sessions": {
+    "s_80fee584cf19a6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a089c9-2d36-7063-addb-d856e6a80200",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
