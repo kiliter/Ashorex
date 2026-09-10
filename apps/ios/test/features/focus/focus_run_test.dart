@@ -15,6 +15,156 @@ import '../../support/fixtures.dart';
 /// 专注两种终态：倒计时归零自动 finish 判定完成；提前跳过走二次确认后 abandon，
 /// 记为未完成但保留已专注时长。状态迁移一律由服务端裁决。
 void main() {
+  testWidgets('到点补凭证保存后仍调用专注finish而不是通用complete', (tester) async {
+    final backend =
+        _backend(
+            plannedSeconds: 3,
+            focusState: 'RUNNING',
+            requireEvidence: true,
+          )
+          ..on(
+            'POST',
+            '/api/v1/todos/t-1/focus/pause',
+            json: _actionJson('pause'),
+          )
+          ..on('GET', '/api/v1/todos/t-1/attachments', json: [])
+          ..on('POST', '/api/v1/todos/t-1/attachments', json: _proof)
+          ..on(
+            'GET',
+            '/api/v1/todos/t-1/attachments/a-1/content',
+            bytes: onePixelPng,
+          )
+          ..on('POST', '/api/v1/todos/t-1/annotate')
+          ..on('POST', '/api/v1/todos/t-1/complete')
+          ..on(
+            'POST',
+            '/api/v1/todos/t-1/focus/finish',
+            json: _actionJson('finish'),
+          );
+    await _pump(
+      tester,
+      backend,
+      picker: FakeAttachmentPicker(result: pickedPng()),
+    );
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    // 暂停后重新加载的服务端快照，等待凭证期间不继续计时。
+    backend.on(
+      'GET',
+      '/api/v1/todos',
+      json: dayViewJson(
+        todos: [
+          todoJson(
+            id: 't-1',
+            title: '法条背诵',
+            todoType: 'FOCUS',
+            plannedSeconds: 3,
+            focusState: 'PAUSED',
+            focusedMs: 3000,
+            status: 'IN_PROGRESS',
+            requireEvidence: true,
+            attachmentCount: 1,
+          ),
+        ],
+      ),
+    );
+    backend.on('GET', '/api/v1/todos/t-1/attachments', json: [_proof]);
+    await tester.tap(find.text('添加'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('拍照'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '本轮专注收获');
+    await tester.ensureVisible(find.text('保存并完成'));
+    await tester.tap(find.text('保存并完成'));
+    await tester.pumpAndSettle();
+    expect(backend.callCount('POST', '/api/v1/todos/t-1/complete'), 0);
+    expect(
+      backend.lastRequest('POST', '/api/v1/todos/t-1/annotate').json['note'],
+      '本轮专注收获',
+    );
+    expect(backend.callCount('POST', '/api/v1/todos/t-1/focus/finish'), 1);
+    expect(
+      backend.requests
+          .where((r) => r.method == 'POST')
+          .map((r) => Uri.parse(r.path).path),
+      [
+        '/api/v1/todos/t-1/focus/pause',
+        '/api/v1/todos/t-1/attachments',
+        '/api/v1/todos/t-1/annotate',
+        '/api/v1/todos/t-1/focus/finish',
+      ],
+    );
+    await _dispose(tester);
+  });
+
+  testWidgets('专注备注入口仅回填且不要求提前上传凭证', (tester) async {
+    final backend = _backend(focusState: 'PAUSED', requireEvidence: true)
+      ..on('GET', '/api/v1/todos/t-1/attachments', json: [])
+      ..on('POST', '/api/v1/todos/t-1/annotate');
+    await _pump(tester, backend);
+    await tester.ensureVisible(find.text('备注'));
+    await tester.tap(find.text('备注'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '计时中的备注');
+    await tester.ensureVisible(find.text('保存'));
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    expect(backend.callCount('POST', '/api/v1/todos/t-1/annotate'), 1);
+    expect(backend.callCount('POST', '/api/v1/todos/t-1/complete'), 0);
+    expect(backend.callCount('POST', '/api/v1/todos/t-1/focus/finish'), 0);
+    expect(find.text('已暂停'), findsOneWidget);
+    await _dispose(tester);
+  });
+
+  testWidgets('到点缺凭证取消回填保持暂停且不执行完成', (tester) async {
+    final backend =
+        _backend(
+            plannedSeconds: 3,
+            focusState: 'RUNNING',
+            requireEvidence: true,
+          )
+          ..on(
+            'POST',
+            '/api/v1/todos/t-1/focus/pause',
+            json: _actionJson('pause'),
+          )
+          ..on('GET', '/api/v1/todos/t-1/attachments', json: []);
+    await _pump(tester, backend);
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    backend.on(
+      'GET',
+      '/api/v1/todos',
+      json: dayViewJson(
+        todos: [
+          todoJson(
+            id: 't-1',
+            todoType: 'FOCUS',
+            plannedSeconds: 3,
+            focusedMs: 3000,
+            focusState: 'PAUSED',
+            status: 'IN_PROGRESS',
+            requireEvidence: true,
+          ),
+        ],
+      ),
+    );
+    final save = tester.widget<FilledButton>(
+      find.ancestor(
+        of: find.text('保存并完成'),
+        matching: find.byType(FilledButton),
+      ),
+    );
+    expect(save.onPressed, isNull);
+    await tester.ensureVisible(find.text('稍后再填'));
+    await tester.tap(find.text('稍后再填'));
+    await tester.pumpAndSettle();
+    expect(find.text('已暂停'), findsOneWidget);
+    expect(backend.callCount('POST', '/api/v1/todos/t-1/complete'), 0);
+    expect(backend.callCount('POST', '/api/v1/todos/t-1/focus/finish'), 0);
+    await _dispose(tester);
+  });
+
   testWidgets('专注进度环与小屏滚动布局', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -429,3 +579,14 @@ Map<String, dynamic> _actionJson(String action) => todoJson(
   status: action == 'finish' ? 'DONE' : 'IN_PROGRESS',
   focusedMs: action == 'start' ? 0 : 3000,
 );
+
+/// 完成时补传的凭证元数据，测试不访问磁盘或真实相册。
+const _proof = {
+  'id': 'a-1',
+  'filename': 'proof.png',
+  'contentType': 'image/png',
+  'sizeBytes': 2048,
+  'sortOrder': 0,
+  'createdAt': '2026-09-07T01:00:00Z',
+  'downloadUrl': '/api/v1/todos/t-1/attachments/a-1/content',
+};

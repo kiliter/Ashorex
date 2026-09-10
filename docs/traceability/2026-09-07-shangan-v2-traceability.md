@@ -321,3 +321,7 @@ ADR-0048 → infra/updater、后台版本与升级、server 维护边界、正�
 ## R50 / T50：当前待办复习确认与进度隔离
 
 依据 [ADR-0050](../adr/0050-todo-review-progress.md)，用户确认只重置当前待办视频进度，保留 DONE、历史时长及课程库课时进度。文件：TodoProgressService、TodoRepository/JdbcTodoRepository、V011、TodoView、TodoRow、PlayerPage、ProgressQueue、OpenAPI 和原型。确认后开启新轮次，正常继续记忆；旧轮次迟到事件只累计真实时长，不覆盖新进度。窄测试验证确认/取消、重复重置、续播和课时进度隔离，真实迁移启动 UP；提交主题：fix: 确认复习后独立重置并记忆待办播放进度。
+
+## 2026-09-10 回归修复追踪
+
+R08 / R11 / R19 → T09 / T10 / T11 / T26 → 原型 3-2 / 3-3 / 3-4 → [ADR-0051](../adr/0051-todo-annotation-upload-and-deletion-fixes.md)：完成后及仅回填保存备注标签；附件 401 刷新后完整重发；自然结束补凭证后执行 `finish`；删除规则与日视图按用户时区的实际删除日归集。验收涵盖保存失败和取消不完成、手动完成保留原语义、计划日期不变、夏令时边界及旧 App 协议兼容。

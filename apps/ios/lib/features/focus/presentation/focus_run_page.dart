@@ -506,7 +506,11 @@ class _FocusRunPageState extends ConsumerState<FocusRunPage>
 
   /// 原型 3-2「备注」：提前打开完成回填面板填备注与附件。
   Future<void> _openBackfill(TodoItem todo) async {
-    await CompleteSheet.show(context, todo: todo);
+    await CompleteSheet.show(
+      context,
+      todo: todo,
+      mode: CompleteSheetMode.annotate,
+    );
     if (mounted) await _load();
   }
 
@@ -570,11 +574,15 @@ class _FocusRunPageState extends ConsumerState<FocusRunPage>
       final todo = _todo;
       if (todo == null) return;
       if (todo.requireEvidence && _evidenceCount == 0) {
-        final completed = await CompleteSheet.show(context, todo: todo);
+        final saved = await CompleteSheet.show(
+          context,
+          todo: todo,
+          mode: CompleteSheetMode.focusEvidence,
+        );
         if (!mounted) return;
         await _load();
-        if (!completed) return;
-        // 回填面板可能已经完成 Todo，按服务端事实结束页面。
+        if (!saved) return;
+        // 仅在其他会话已完成时直接退出；本面板不执行通用 complete。
         if (_state == FocusState.finished) {
           if (mounted) Navigator.of(context).maybePop(true);
           return;

@@ -4,6 +4,7 @@ import com.shangan.catalog.infrastructure.CourseRepository;
 import com.shangan.common.IdGenerator;
 import com.shangan.common.api.BusinessException;
 import com.shangan.identity.application.UserTimeService;
+import com.shangan.identity.domain.User;
 import com.shangan.nag.application.NagPolicyResolver;
 import com.shangan.nag.domain.EffectiveNagPolicy;
 import com.shangan.presence.application.EffectiveActionRecorder;
@@ -14,6 +15,7 @@ import com.shangan.todo.domain.TodoType;
 import com.shangan.todo.infrastructure.TodoRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
@@ -111,7 +113,14 @@ public class TodoDeletionService {
       notifications.addAll(rulesFor(todo, reasonTag, supervisor, policy));
     }
 
-    int deletionsToday = todos.countDeletionsOn(userId, userTime.today(userId));
+    // 复用写台账的同一个瞬间，避免跨午夜时把本次删除计到下一天。
+    User user = userTime.requireUser(userId);
+    LocalDate deletionDate = userTime.localDateOf(user, now);
+    int deletionsToday =
+        todos.countDeletionsBetween(
+            userId,
+            userTime.startOfDay(user, deletionDate),
+            userTime.endOfDayExclusive(user, deletionDate));
     if (policy.notifySupervisorOnBulkDelete()
         && deletionsToday >= BULK_DELETE_THRESHOLD
         && supervisor != null) {

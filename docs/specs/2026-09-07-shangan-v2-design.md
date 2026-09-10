@@ -980,3 +980,7 @@ T24 / 原型 2-2：首页添加课程和课程详情共用的加入课时弹窗�
 ## R50 / T50：当前待办复习确认与进度隔离
 
 依据 [ADR-0050](../adr/0050-todo-review-progress.md)，用户确认只重置当前待办视频进度，保留 DONE、历史时长及课程库课时进度。文件：TodoProgressService、TodoRepository/JdbcTodoRepository、V011、TodoView、TodoRow、PlayerPage、ProgressQueue、OpenAPI 和原型。确认后开启新轮次，正常继续记忆；旧轮次迟到事件只累计真实时长，不覆盖新进度。窄测试验证确认/取消、重复重置、续播和课时进度隔离，真实迁移启动 UP；提交主题：fix: 确认复习后独立重置并记忆待办播放进度。
+
+## 2026-09-10 回归修复：回填、上传、专注完成与删除日期
+
+依照 [ADR-0051](../adr/0051-todo-annotation-upload-and-deletion-fixes.md) 落实已有规则：完成后及备注入口只保存回填；自然结束补凭证后仍由 `focus/finish` 判定完成，手动提前完成语义保持原样；附件鉴权刷新后重建 multipart 请求体；删除数量按用户时区的实际删除日归集，台账保留原计划日期。接口、字段与状态机不变。前三项须升级 App 生效，删除日期修复只需升级服务端；旧版 App 继续兼容原接口。

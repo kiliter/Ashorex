@@ -8,6 +8,9 @@ import static org.mockito.Mockito.when;
 import com.shangan.catalog.infrastructure.CourseRepository;
 import com.shangan.common.IdGenerator;
 import com.shangan.identity.application.UserTimeService;
+import com.shangan.identity.domain.User;
+import com.shangan.identity.domain.UserStatus;
+import com.shangan.identity.infrastructure.UserRepository;
 import com.shangan.nag.application.NagPolicyResolver;
 import com.shangan.nag.domain.EffectiveNagPolicy;
 import com.shangan.presence.application.EffectiveActionRecorder;
@@ -20,7 +23,6 @@ import com.shangan.todo.domain.TodoStatus;
 import com.shangan.todo.infrastructure.TodoRepository;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,7 +41,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class SupervisorNotificationRulesTest {
 
   private static final Instant NOW = Instant.parse("2026-09-07T13:00:00Z");
-  private static final LocalDate TODAY = LocalDate.of(2026, 9, 7);
   private static final String SUPERVISOR = "supervisor-1";
 
   @Mock private TodoRepository todos;
@@ -48,13 +49,29 @@ class SupervisorNotificationRulesTest {
   @Mock private CourseRepository courses;
   @Mock private SupervisionService supervisions;
   @Mock private NagPolicyResolver nagPolicies;
-  @Mock private UserTimeService userTime;
+  @Mock private UserRepository users;
+  private UserTimeService userTime;
   @Mock private EffectiveActionRecorder effectiveAction;
 
   private TodoDeletionService service;
 
   @BeforeEach
   void setUp() {
+    // 使用真实时区换算，仓储为替身，不连接数据库。
+    lenient()
+        .when(users.findById(TodoFixtures.USER_ID))
+        .thenReturn(
+            Optional.of(
+                new User(
+                    TodoFixtures.USER_ID,
+                    "learner",
+                    "unused",
+                    "学员",
+                    "Asia/Shanghai",
+                    UserStatus.ACTIVE,
+                    null,
+                    null)));
+    userTime = new UserTimeService(users, Clock.fixed(NOW, ZoneOffset.UTC));
     service = serviceWith(TodoFixtures.nagPolicyAllEnabled());
   }
 
@@ -301,8 +318,11 @@ class SupervisorNotificationRulesTest {
     when(todoService.requireOwned(TodoFixtures.USER_ID, todo.id())).thenReturn(todo);
     when(supervisions.primarySupervisorOf(TodoFixtures.USER_ID))
         .thenReturn(Optional.ofNullable(supervisorUserId));
-    when(userTime.today(TodoFixtures.USER_ID)).thenReturn(TODAY);
-    when(todos.countDeletionsOn(TodoFixtures.USER_ID, TODAY)).thenReturn(deletionsToday);
+    when(todos.countDeletionsBetween(
+            TodoFixtures.USER_ID,
+            Instant.parse("2026-09-06T16:00:00Z"),
+            Instant.parse("2026-09-07T16:00:00Z")))
+        .thenReturn(deletionsToday);
     // 30 分钟课时：position 900 秒正好等于 500‰，用于压住半程判定的边界。
     lenient()
         .when(courses.findResourceById("resource-1"))

@@ -173,7 +173,8 @@ public interface TodoRepository {
 
   List<Deletion> findAllDeletions(int limit);
 
-  int countDeletionsOn(String userId, LocalDate localDate);
+  /** 按实际删除时间计数；应用层按用户时区传入左闭右开的日期边界。 */
+  int countDeletionsBetween(String userId, Instant fromInclusive, Instant toExclusive);
 
   /** 附件元数据；storage_path 为服务端生成的相对路径。 */
   record Attachment(
