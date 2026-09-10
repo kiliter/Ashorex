@@ -1260,3 +1260,7 @@ T24 / 原型 2-2：首页添加课程和课程详情共用的加入课时弹窗�
 - Java 窄测试：`TodoDeletionServiceTest`、`SupervisorNotificationRulesTest`、`TodoRepaymentViewTest`，覆盖原计划日期保留、督学规则、用户时区与夏令时日期边界；不连接真实数据库。
 - 执行 `make format` 和变更文件静态分析，审查后提交；全量验证留给 GitHub CI。前三项需 App 升级，第四项仅服务端升级，发布与回退可独立进行。
 - 提交主题：`fix: 修复待办回填、附件重试与完成删除统计`。
+
+## R52 / T52：本机诊断日志与手动上报（2026-09-10 已批准）
+
+遵循 [ADR-0052](../adr/0052-diagnostic-log-upload.md)。文件：V012、server/diagnostics、Archive 用户级联、Flutter 本机滚动日志与关于页、管理后台只读页、OpenAPI 与原型 6-5 / 8-13。不自动上报，不上报请求正文与播放流地址。窄测试覆盖脱敏、空文件/超限拒绝、保留 30 份、关于页无日志提示与上传成功、后台列表与正文。提交主题：`feat: 支持本机诊断日志手动上报与后台查看`。

@@ -153,4 +153,16 @@ export const api = {
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
   delete: <T>(path: string, body?: unknown) => request<T>('DELETE', path, body),
+  /** 诊断日志正文是纯文本，不能走 JSON 解析。 */
+  getText: async (path: string): Promise<string> => {
+    const response = await fetch(`${BASE}${path}`, {
+      method: 'GET',
+      headers: { Accept: 'text/plain' },
+      credentials: 'same-origin',
+    });
+    if (!response.ok) {
+      throw new ApiError(response.status, await toProblem(response));
+    }
+    return response.text();
+  },
 };

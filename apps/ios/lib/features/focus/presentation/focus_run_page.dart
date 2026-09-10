@@ -2,6 +2,7 @@ import 'package:shangan_ios/core/presence/app_activity.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:shangan_ios/core/api/api_exception.dart';
+import 'package:shangan_ios/core/diagnostics/diagnostic_log.dart';
 import 'package:shangan_ios/core/widgets/shangan_feedback.dart';
 import 'package:shangan_ios/core/device/screen_wake_lock.dart';
 
@@ -526,10 +527,20 @@ class _FocusRunPageState extends ConsumerState<FocusRunPage>
       ).join();
     }
     try {
+      DiagnosticLog.info('focus', 'action', {
+        'todoId': widget.todoId,
+        'action': action,
+        'from': _state.name,
+      });
       final result = await ref
           .read(shanganRepositoryProvider)
           .focusAction(widget.todoId, action, requestId: _pendingRequest);
       if (!mounted) return false;
+      DiagnosticLog.info('focus', 'action result', {
+        'todoId': widget.todoId,
+        'action': action,
+        'state': result.focusState.name,
+      });
       _ticker?.cancel();
       setState(() {
         _applySnapshot(result);

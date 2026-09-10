@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:shangan_ios/core/api/api_exception.dart';
+import 'package:shangan_ios/core/diagnostics/diagnostic_log.dart';
+import 'package:shangan_ios/core/diagnostics/diagnostic_log_redactor.dart';
 import 'package:shangan_ios/core/storage/token_store.dart';
 
 /// 统一的 Dio 客户端，负责 Bearer Token、单飞刷新和一次性请求重试。
@@ -18,7 +20,11 @@ final class ApiClient {
 
   ApiClient._(this._dio, this._refreshDio, this._tokenStore) {
     _dio.interceptors.add(
-      InterceptorsWrapper(onRequest: _onRequest, onError: _onError),
+      InterceptorsWrapper(
+        onRequest: _onRequest,
+        onResponse: _onResponse,
+        onError: _onError,
+      ),
     );
   }
 
@@ -263,11 +269,13 @@ final class ApiClient {
     required String filename,
     required String contentType,
     required List<int> bytes,
+    Map<String, String>? fields,
   }) async {
     try {
       final response = await _dio.post<dynamic>(
         path,
         data: FormData.fromMap({
+          ...?fields,
           fieldName: MultipartFile.fromBytes(
             bytes,
             filename: filename,
@@ -353,6 +361,14 @@ final class ApiClient {
     handler.next(options);
   }
 
+  void _onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) {
+    _logHttp(response.requestOptions, response.statusCode, response.data);
+    handler.next(response);
+  }
+
   Future<void> _onError(
     DioException error,
     ErrorInterceptorHandler handler,
@@ -361,14 +377,14 @@ final class ApiClient {
     if (error.response?.statusCode != 401 ||
         request.extra[_skipAuthMarker] == true ||
         request.path.startsWith('/api/v1/auth/')) {
-      handler.next(error);
+      _forwardError(error, handler);
       return;
     }
 
     final expected = request.extra[_requestRefreshMarker] as String?;
     final current = await _tokenStore.read();
     if (expected == null || current == null) {
-      handler.next(error);
+      _forwardError(error, handler);
       return;
     }
     // 同一次正常轮换后的并发旧 401 可以使用新 Token；换账号则结束旧请求。
@@ -376,18 +392,19 @@ final class ApiClient {
         _lastRefreshSource == expected &&
         _lastRefreshResult?.refreshToken == current.refreshToken;
     if (current.refreshToken != expected && !alreadyRefreshed) {
-      handler.next(
+      _forwardError(
         DioException(
           requestOptions: request,
           type: DioExceptionType.cancel,
           message: '登录会话已切换',
         ),
+        handler,
       );
       return;
     }
     if (request.extra[_retryMarker] == true) {
       await _expireSession(expected);
-      handler.next(error);
+      _forwardError(error, handler);
       return;
     }
 
@@ -406,31 +423,67 @@ final class ApiClient {
       // 只结束发起失败刷新请求的那次会话，迟到的旧失败不得清除新登录凭据。
       if (_isDefinitiveRefreshRejection(refreshError)) {
         if ((await _tokenStore.read())?.refreshToken != expected) {
-          handler.next(
+          _forwardError(
             DioException(
               requestOptions: request,
               type: DioExceptionType.cancel,
               message: '登录会话已切换',
             ),
+            handler,
           );
           return;
         }
         await _expireSession(expected);
-        handler.next(error);
+        _forwardError(error, handler);
       } else if (refreshError is DioException) {
-        handler.next(refreshError);
+        _forwardError(refreshError, handler);
       } else if (refreshError is ApiException &&
           refreshError.errorCode == 'AUTH_SESSION_CHANGED') {
-        handler.next(
+        _forwardError(
           DioException(
             requestOptions: request,
             type: DioExceptionType.cancel,
             message: '登录会话已切换',
           ),
+          handler,
         );
       } else {
-        handler.next(error);
+        _forwardError(error, handler);
       }
+    }
+  }
+
+  void _forwardError(DioException error, ErrorInterceptorHandler handler) {
+    _logHttp(
+      error.requestOptions,
+      error.response?.statusCode,
+      error.response?.data,
+      message: error.message,
+    );
+    handler.next(error);
+  }
+
+  /// 记录写操作与全部失败；心跳成功与 GET 2xx 不落盘，避免刷满日志。
+  void _logHttp(
+    RequestOptions options,
+    int? status,
+    Object? body, {
+    String? message,
+  }) {
+    final method = options.method.toUpperCase();
+    final path = const DiagnosticLogRedactor().pathOnly(options.uri.toString());
+    final ok = status != null && status < 400;
+    if (ok && (method == 'GET' || method == 'HEAD')) return;
+    final errorCode = body is Map ? body['errorCode'] as String? : null;
+    final data = <String, Object?>{
+      'status': status,
+      'errorCode': ?errorCode,
+      if (message != null && message.isNotEmpty) 'message': message,
+    };
+    if (!ok) {
+      DiagnosticLog.warn('api', '$method $path', data);
+    } else {
+      DiagnosticLog.info('api', '$method $path', data);
     }
   }
 

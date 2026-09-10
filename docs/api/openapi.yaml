@@ -40,6 +40,8 @@ tags:
     description: 督学端
   - name: playback
     description: 播放代理
+  - name: diagnostics
+    description: 本机诊断日志手动上报（ADR-0052）
 
 paths:
   /api/v1/todos/{todoId}/review:
@@ -1099,6 +1101,45 @@ paths:
           description: 资源已下架或未启用（errorCode = RESOURCE_UNAVAILABLE）
           $ref: '#/components/responses/Problem'
 
+  /api/v1/diagnostics/logs:
+    post:
+      tags: [diagnostics]
+      summary: 手动上传本机诊断日志
+      description: |
+        用户在「我的 → 应用信息 → 关于」确认后上传。不自动上报。
+        服务端按用户保存最多 30 份，文件名由服务端生成。
+        请求不得携带播放流地址、Authorization 或查询串；服务端仍会再脱敏一次。
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 当前日志与上一份轮转备份合并后的文本，上限 4 MiB
+                appVersion: { type: string, description: 客户端三段版本号 }
+                platform: { type: string, description: ios 或 android }
+      responses:
+        '200':
+          description: 已保存的上传记录，不含存储路径
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  sizeBytes: { type: integer, format: int64 }
+                  appVersion: { type: string }
+                  platform: { type: string }
+                  uploadedAt: { type: string, format: date-time }
+        '400':
+          description: 空文件或超过 4 MiB（errorCode = DIAGNOSTIC_LOG_EMPTY / DIAGNOSTIC_LOG_TOO_LARGE）
+          $ref: '#/components/responses/Problem'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1163,7 +1204,8 @@ components:
             SUPERVISION_FORBIDDEN、SUPERVISION_PRIMARY_EXISTS、RESOURCE_UNAVAILABLE、
             RESOURCE_NOT_MEASURABLE、CATALOG_MAPPING_AMBIGUOUS、ARCHIVE_LABEL_MISMATCH、ARCHIVE_REQUIRED、
             EMBY_STREAM_UNAVAILABLE、
-            AUTH_INVALID_CREDENTIALS、AUTH_USER_ARCHIVED、GOAL_NOT_FOUND。
+            AUTH_INVALID_CREDENTIALS、AUTH_USER_ARCHIVED、GOAL_NOT_FOUND、
+            DIAGNOSTIC_LOG_EMPTY、DIAGNOSTIC_LOG_TOO_LARGE、DIAGNOSTIC_LOG_NOT_FOUND。
 
     TodoType:
       type: string

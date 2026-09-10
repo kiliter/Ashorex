@@ -1,3 +1,4 @@
+import 'package:shangan_ios/core/diagnostics/diagnostic_log.dart';
 import 'package:flutter/material.dart';
 import 'package:shangan_ios/core/player/media_kit_playback_adapter.dart';
 import 'package:flutter/foundation.dart';
@@ -120,15 +121,15 @@ final playbackAdapterFactoryProvider = Provider<PlaybackAdapter Function()>(
   (ref) {
     const engine = String.fromEnvironment('PLAYBACK_ENGINE');
     if (engine == 'media_kit') {
-      debugPrint('播放器内核：media_kit（显式选择）');
+      DiagnosticLog.info('player', 'engine media_kit explicit');
       return MediaKitPlaybackAdapter.new;
     }
     if (engine == 'video_player' ||
         defaultTargetPlatform == TargetPlatform.iOS) {
-      debugPrint('播放器内核：video_player / AVPlayer（iOS 使用原生视图）');
+      DiagnosticLog.info('player', 'engine video_player');
       return NativePlaybackAdapter.new;
     }
-    debugPrint('播放器内核：media_kit');
+    DiagnosticLog.info('player', 'engine media_kit default');
     return MediaKitPlaybackAdapter.new;
   },
 );

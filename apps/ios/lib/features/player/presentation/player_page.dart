@@ -1,3 +1,4 @@
+import 'package:shangan_ios/core/diagnostics/diagnostic_log.dart';
 import 'package:shangan_ios/core/presence/app_activity.dart';
 export 'package:shangan_ios/core/player/progress_queue.dart' show ProgressQueue;
 import 'package:shangan_ios/core/player/progress_queue.dart';
@@ -10,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shangan_ios/core/device/screen_wake_lock.dart';
+import 'package:shangan_ios/core/layout/adaptive_breakpoints.dart';
 import 'package:shangan_ios/core/models/shangan_models.dart';
 import 'package:shangan_ios/core/state/shangan_providers.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
@@ -59,6 +61,9 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
   bool _controlsVisible = true;
   bool _endReported = false;
   bool _authenticationReloading = false;
+  bool? _loggedPlaying;
+  bool? _loggedEnded;
+  String? _loggedError;
 
   TodoItem? _todo;
   bool _loading = true;
@@ -136,7 +141,14 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
         generation,
         resumePositionMs: resumePositionMs,
       ).timeout(const Duration(seconds: 30));
-    } catch (_) {
+    } catch (error, stack) {
+      DiagnosticLog.error(
+        'player',
+        'load failed',
+        error: error,
+        stack: stack,
+        data: {'todoId': widget.todoId},
+      );
       if (!mounted || generation != _loadGeneration) return;
       _loadGeneration++;
       _player?.removeListener(_onPlayerChanged);
@@ -192,6 +204,16 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       }
       if (!active()) return;
       player.addListener(_onPlayerChanged);
+      DiagnosticLog.info('player', 'open', {
+        'todoId': todo.id,
+        'resourceId': todo.resourceId,
+        'resumeMs': resume,
+        'catalogDurationMs': todo.resourceDurationMs,
+        'engine': const String.fromEnvironment(
+          'PLAYBACK_ENGINE',
+          defaultValue: 'default',
+        ),
+      });
     }
     if (!active()) return;
     setState(() {
@@ -258,193 +280,206 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       );
     }
     return Scaffold(
-      body: SafeArea(
-        bottom: false,
+      body: SafeArea(bottom: false, child: _buildPlayerBody(todo)),
+    );
+  }
+
+  /// 手机保持上下结构；Pad 宽屏左侧上视频、下进度操作，右侧预留伴学对话。
+  /// 不用 LayoutBuilder 包住 AVPlayer，避免 iOS 原生画面在约束回调里挂不上。
+  Widget _buildPlayerBody(TodoItem todo) {
+    final size = MediaQuery.sizeOf(context);
+    final sideBySide =
+        size.width >= AppBreakpoints.twoPane &&
+        size.height >= AppBreakpoints.compact;
+    final info = ListView(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
+      children: _playerInfoChildren(todo),
+    );
+    if (!sideBySide) {
+      return Column(
+        children: [
+          _videoSurface(todo, fullscreen: false),
+          Expanded(child: info),
+        ],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          flex: 7,
+          child: ColoredBox(
+            color: ShanganColors.paper,
+            child: Column(
+              children: [
+                _videoSurface(todo, fullscreen: false),
+                Expanded(child: info),
+              ],
+            ),
+          ),
+        ),
+        const VerticalDivider(
+          width: 1,
+          thickness: 1,
+          color: ShanganColors.hair,
+        ),
+        const Expanded(flex: 4, child: _CompanionChatPlaceholder()),
+      ],
+    );
+  }
+
+  /// 播放页右侧/下方信息：标题、达标进度、附件备注和完成操作。
+  List<Widget> _playerInfoChildren(TodoItem todo) {
+    return [
+      Text(
+        todo.title,
+        style: const TextStyle(
+          fontSize: 17,
+          height: 1.32,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      const SizedBox(height: 6),
+      Text(
+        todo.resourceTitle ?? '课程课时',
+        style: const TextStyle(fontSize: 12.5, color: ShanganColors.mutedInk),
+      ),
+      const SizedBox(height: 12),
+      ShanganCard(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _videoSurface(todo, fullscreen: false),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
-                children: [
-                  Text(
-                    todo.title,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      height: 1.32,
-                      fontWeight: FontWeight.w800,
-                    ),
+            Row(
+              children: [
+                const Text(
+                  '观看进度',
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                ),
+                const Spacer(),
+                Text(
+                  '${_progressPermille ~/ 10}%'
+                  '${todo.targetProgressPermille == null ? '' : ' / 目标 ${todo.targetProgressPermille! ~/ 10}%'}',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    fontFeatures: [FontFeature.tabularFigures()],
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    todo.resourceTitle ?? '课程课时',
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      color: ShanganColors.mutedInk,
-                    ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TargetProgressBar(
+              value: _progressPermille / 1000,
+              targetValue: todo.targetProgressPermille == null
+                  ? null
+                  : todo.targetProgressPermille! / 1000,
+              height: 7,
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                Text(
+                  '最远位置 ${formatPosition(_positionMs)}'
+                  '${_targetMs(todo) == null ? '' : ' · 目标 ${formatPosition(_targetMs(todo)!)}'}',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: ShanganColors.mutedInk,
                   ),
-                  const SizedBox(height: 12),
-                  ShanganCard(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          children: [
-                            const Text(
-                              '观看进度',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              '${_progressPermille ~/ 10}%'
-                              '${todo.targetProgressPermille == null ? '' : ' / 目标 ${todo.targetProgressPermille! ~/ 10}%'}',
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w800,
-                                fontFeatures: [FontFeature.tabularFigures()],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        TargetProgressBar(
-                          value: _progressPermille / 1000,
-                          targetValue: todo.targetProgressPermille == null
-                              ? null
-                              : todo.targetProgressPermille! / 1000,
-                          height: 7,
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 4,
-                          children: [
-                            Text(
-                              '最远位置 ${formatPosition(_positionMs)}'
-                              '${_targetMs(todo) == null ? '' : ' · 目标 ${formatPosition(_targetMs(todo)!)}'}',
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                color: ShanganColors.mutedInk,
-                              ),
-                            ),
-                            Text(
-                              _completed
-                                  ? '已达标'
-                                  : _remainingMs(todo) == null
-                                  ? '手动标记完成'
-                                  : '还需 ${formatPosition(_remainingMs(todo)!)}',
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                color: ShanganColors.mutedInk,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          child: Divider(height: 1, color: ShanganColors.hair),
-                        ),
-                        // 目标与操作同排，完整说明独占下一行，避免被两侧控件挤出孤字。
-                        Row(
-                          children: [
-                            if (todo.targetProgressPermille != null)
-                              ShanganBadge(
-                                label:
-                                    '目标 ${todo.targetProgressPermille! ~/ 10}%',
-                                tone: ShanganBadgeTone.blue,
-                              ),
-                            const Spacer(),
-                            ShanganFilterChip(
-                              label: '调整目标',
-                              selected: false,
-                              onTap: () => _adjustTarget(todo),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          '达到目标即自动完成，可继续看完',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: ShanganColors.mutedInk,
-                          ),
-                        ),
-                      ],
-                    ),
+                ),
+                Text(
+                  _completed
+                      ? '已达标'
+                      : _remainingMs(todo) == null
+                      ? '手动标记完成'
+                      : '还需 ${formatPosition(_remainingMs(todo)!)}',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: ShanganColors.mutedInk,
                   ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 9,
-                    runSpacing: 9,
-                    children: [
-                      SizedBox(
-                        child: OutlinedButton.icon(
-                          style: _smallButtonStyle,
-                          onPressed: () => _openCompleteSheet(todo),
-                          icon: const Icon(Icons.attach_file, size: 18),
-                          label: Text(
-                            todo.attachmentCount > 0
-                                ? '附件 ${todo.attachmentCount}'
-                                : '附件',
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        child: OutlinedButton.icon(
-                          style: _smallButtonStyle,
-                          onPressed: () => _openCompleteSheet(todo),
-                          icon: const Icon(
-                            Icons.sticky_note_2_outlined,
-                            size: 18,
-                          ),
-                          label: const Text('备注'),
-                        ),
-                      ),
-                      SizedBox(
-                        child: FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size(0, 44),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            textStyle: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          onPressed: _completed
-                              ? null
-                              : () => _markComplete(todo),
-                          icon: const Icon(Icons.check, size: 18),
-                          label: Text(_completed ? '已完成' : '标记完成'),
-                        ),
-                      ),
-                    ],
+                ),
+              ],
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Divider(height: 1, color: ShanganColors.hair),
+            ),
+            // 目标与操作同排，完整说明独占下一行，避免被两侧控件挤出孤字。
+            Row(
+              children: [
+                if (todo.targetProgressPermille != null)
+                  ShanganBadge(
+                    label: '目标 ${todo.targetProgressPermille! ~/ 10}%',
+                    tone: ShanganBadgeTone.blue,
                   ),
-                  const SizedBox(height: 14),
-                  Text(
-                    '本次观看 ${formatDurationCompact(_sessionWatchedMs)}'
-                    ' · 累计 ${formatDurationCompact(todo.watchedMs + _sessionWatchedMs)}'
-                    '${_queue.depth > 0 ? ' · ${_queue.depth} 条待同步' : ''}',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: ShanganColors.mutedInk,
-                    ),
-                  ),
-                ],
-              ),
+                const Spacer(),
+                ShanganFilterChip(
+                  label: '调整目标',
+                  selected: false,
+                  onTap: () => _adjustTarget(todo),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              '达到目标即自动完成，可继续看完',
+              style: TextStyle(fontSize: 11.5, color: ShanganColors.mutedInk),
             ),
           ],
         ),
       ),
-    );
+      const SizedBox(height: 12),
+      Wrap(
+        spacing: 9,
+        runSpacing: 9,
+        children: [
+          SizedBox(
+            child: OutlinedButton.icon(
+              style: _smallButtonStyle,
+              onPressed: () => _openCompleteSheet(todo),
+              icon: const Icon(Icons.attach_file, size: 18),
+              label: Text(
+                todo.attachmentCount > 0 ? '附件 ${todo.attachmentCount}' : '附件',
+              ),
+            ),
+          ),
+          SizedBox(
+            child: OutlinedButton.icon(
+              style: _smallButtonStyle,
+              onPressed: () => _openCompleteSheet(todo),
+              icon: const Icon(Icons.sticky_note_2_outlined, size: 18),
+              label: const Text('备注'),
+            ),
+          ),
+          SizedBox(
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 44),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              onPressed: _completed ? null : () => _markComplete(todo),
+              icon: const Icon(Icons.check, size: 18),
+              label: Text(_completed ? '已完成' : '标记完成'),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 14),
+      Text(
+        '本次观看 ${formatDurationCompact(_sessionWatchedMs)}'
+        ' · 累计 ${formatDurationCompact(todo.watchedMs + _sessionWatchedMs)}'
+        '${_queue.depth > 0 ? ' · ${_queue.depth} 条待同步' : ''}',
+        style: const TextStyle(fontSize: 11.5, color: ShanganColors.mutedInk),
+      ),
+    ];
   }
 
   /// 共用动作只负责播放控制，横竖屏分别安排位置。
@@ -936,9 +971,8 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
         ),
       ),
     );
-    return fullscreen
-        ? picture
-        : AspectRatio(aspectRatio: 16 / 9, child: picture);
+    if (fullscreen) return picture;
+    return AspectRatio(aspectRatio: 16 / 9, child: picture);
   }
 
   /// 操作后保留三秒浮层；暂停时始终可操作，选择倍速和拖动时暂停隐藏。
@@ -1039,6 +1073,12 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
             ? '正在快退'
             : '正在跳转';
       });
+      DiagnosticLog.info('player', 'seek', {
+        'todoId': widget.todoId,
+        'fromMs': player.positionMs,
+        'toMs': destination,
+        'durationMs': _durationMs,
+      });
       try {
         await player.seek(destination).timeout(const Duration(seconds: 8));
         if (!mounted || !identical(_player, player)) return;
@@ -1132,6 +1172,23 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       }
     }
     if (reachedEnd) unawaited(_report(force: true, eventType: 'PAUSE'));
+    final errorText = player.error;
+    if (_loggedPlaying != player.playing ||
+        _loggedEnded != player.ended ||
+        _loggedError != errorText) {
+      DiagnosticLog.info('player', 'state', {
+        'todoId': widget.todoId,
+        'playing': player.playing,
+        'ended': player.ended,
+        'buffering': player.buffering,
+        'positionMs': player.positionMs,
+        'durationMs': player.durationMs,
+        'error': ?errorText,
+      });
+      _loggedPlaying = player.playing;
+      _loggedEnded = player.ended;
+      _loggedError = errorText;
+    }
   }
 
   /// 原生媒体请求不经过 Dio；明确 401 时释放旧连接，让 playbackSource 触发单飞刷新并重开。
@@ -1186,6 +1243,17 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
         catalogDuration - reportedPosition <= 2000) {
       reportedPosition = catalogDuration;
     }
+    DiagnosticLog.info('player', 'report', {
+      'todoId': _todo?.id,
+      'eventType': eventType,
+      'positionMs': reportedPosition,
+      'playerPositionMs': _positionMs,
+      'durationMs': _durationMs,
+      'deltaWatchedMs': delta,
+      'ended': _player?.ended,
+      'playing': _playing,
+      'force': force,
+    });
     final result = await _queue.submit(
       positionMs: reportedPosition,
       deltaWatchedMs: delta,
@@ -1193,6 +1261,11 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       eventType: eventType,
     );
     if (result != null && mounted) {
+      DiagnosticLog.info('player', 'report result', {
+        'todoId': _todo?.id,
+        'completed': result.completed,
+        'progressPermille': result.progressPermille,
+      });
       final newlyCompleted = !_completed && result.completed;
       setState(() {
         _progressPermille = result.progressPermille;
@@ -1443,6 +1516,70 @@ final class _Timeline extends StatelessWidget {
               ? null
               : (value) => onChanged((value * durationMs).round()),
           onChangeEnd: (_) => onChangeEnd(),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pad 播放页右侧占位：只预留伴学对话区域，不接入任何对话能力。
+final class _CompanionChatPlaceholder extends StatelessWidget {
+  const _CompanionChatPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: ShanganColors.inkSoft,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF4F8FD), ShanganColors.inkSoft],
+          ),
+        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 220),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: ShanganColors.blueSoft,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: ShanganColors.blueLine),
+                  ),
+                  child: const Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    color: ShanganColors.blue,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  '伴学对话',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: ShanganColors.ink,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  '后续在这里提问、记要点。当前版本只预留位置。',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.55,
+                    color: ShanganColors.mutedInk,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

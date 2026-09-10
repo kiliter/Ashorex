@@ -30,6 +30,8 @@ dependencies:
   media_kit_libs_video: 1.0.7
   # 服务端时间保持 UTC；历史时间线按账号 IANA 时区转换后再展示。
   timezone: 0.11.1
+  # 诊断日志写在应用支持目录，避免依赖沙盒相对路径。
+  path_provider: 2.1.6
 
 dev_dependencies:
   flutter_test:

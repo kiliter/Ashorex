@@ -468,6 +468,18 @@ final class DayView {
   List<TodoItem> get completed =>
       todos.where((todo) => todo.isDone).toList(growable: false);
 
+  /// 今日还债沿用与今日计划相同的三态分组，避免已完成项再混在一个未分类列表里。
+  List<TodoItem> get repaymentInProgress => repaymentTodos
+      .where((todo) => todo.status == TodoStatus.inProgress)
+      .toList(growable: false);
+
+  List<TodoItem> get repaymentNotStarted => repaymentTodos
+      .where((todo) => todo.status == TodoStatus.todo)
+      .toList(growable: false);
+
+  List<TodoItem> get repaymentCompleted =>
+      repaymentTodos.where((todo) => todo.isDone).toList(growable: false);
+
   factory DayView.fromJson(Map<String, dynamic> json) {
     return DayView(
       date: DateTime.parse(json['date'] as String),

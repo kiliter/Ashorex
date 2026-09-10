@@ -584,9 +584,12 @@ final class _DaySection extends ConsumerStatefulWidget {
   ConsumerState<_DaySection> createState() => _DaySectionState();
 }
 
+enum _HomeTodoFilter { all, pending, done, repayment }
+
 class _DaySectionState extends ConsumerState<_DaySection> {
   /// 原型 1-1「已完成」分组标题右侧的「收起」。
   bool _doneCollapsed = false;
+  _HomeTodoFilter _todoFilter = _HomeTodoFilter.all;
 
   @override
   Widget build(BuildContext context) {
@@ -616,9 +619,42 @@ class _DaySectionState extends ConsumerState<_DaySection> {
             .where((todo) => !todo.isDone)
             .toList(growable: false);
         final allDone = view.totals.total > 0 && pending.isEmpty;
+        final hasRepayment =
+            view.repaymentTodos.isNotEmpty || view.repayment.hasActivity;
+        // 历史日仍按原有分组展示，首页筛选只作用于“今天”的日视图。
+        final effectiveFilter = view.history
+            ? _HomeTodoFilter.all
+            : _todoFilter;
+        final filterEmpty = switch (effectiveFilter) {
+          _HomeTodoFilter.all => view.todos.isEmpty && !hasRepayment,
+          _HomeTodoFilter.pending => pending.isEmpty,
+          _HomeTodoFilter.done => view.completed.isEmpty,
+          _HomeTodoFilter.repayment => !hasRepayment,
+        };
+        final showPlanGroups = effectiveFilter != _HomeTodoFilter.repayment;
+        final showRepayment =
+            !view.history &&
+            hasRepayment &&
+            (effectiveFilter == _HomeTodoFilter.all ||
+                effectiveFilter == _HomeTodoFilter.repayment);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (!view.history)
+              _TodoFilterHeader(
+                total: view.todos.length,
+                pendingCount: pending.length,
+                doneCount: view.completed.length,
+                repaymentCount: view.repaymentTodos.length,
+                showRepayment: hasRepayment,
+                value: _todoFilter,
+                onChanged: (value) => setState(() {
+                  _todoFilter = value;
+                  if (value == _HomeTodoFilter.done) {
+                    _doneCollapsed = false;
+                  }
+                }),
+              ),
             if (view.history) ...[
               const SizedBox(height: 12),
               if (allDone)
@@ -702,73 +738,56 @@ class _DaySectionState extends ConsumerState<_DaySection> {
                 showCompletedTime: true,
               )
             else ...[
-              _group(
-                title: '进行中',
-                items: view.inProgress,
-                view: view,
-                minReasonLength: minReasonLength,
-                supervisorName: supervisorName,
-                // 编辑入口挂在第一个非空的未完成分组上，保证任何一天都能进入编辑态。
-                showEdit: view.inProgress.isNotEmpty,
-              ),
-              _group(
-                title: view.history ? '未完成' : '待开始',
-                items: view.notStarted,
-                view: view,
-                minReasonLength: minReasonLength,
-                supervisorName: supervisorName,
-                borderColor: view.history ? ShanganColors.redLine : null,
-                showEdit: view.inProgress.isEmpty,
-              ),
-              _group(
-                title: '已完成',
-                items: view.completed,
-                view: view,
-                minReasonLength: minReasonLength,
-                supervisorName: supervisorName,
-                collapsible: true,
-                readOnly: view.history,
-              ),
-            ],
-            // 今日计划和历史执行分别展示；完成后的历史项由服务端保留到当天结束。
-            if (view.today &&
-                (view.repaymentTodos.isNotEmpty ||
-                    view.repayment.hasActivity)) ...[
-              const SectionTitle(title: '今日还债'),
-              ShanganCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      '今日完成 ${view.repayment.done} 项 · '
-                      '观看 ${formatDurationCompact(view.repayment.watchedMs)} · '
-                      '专注 ${formatDurationCompact(view.repayment.focusedMs)}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: ShanganColors.mutedInk,
-                      ),
-                    ),
-                    for (final todo in view.repaymentTodos) ...[
-                      const Divider(height: 20, color: ShanganColors.hair),
-                      Text(
-                        '原计划 ${todo.localDate.toIso8601String().substring(0, 10)}${todo.isDone ? " · 今日已完成" : ""}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: ShanganColors.mutedInk,
-                        ),
-                      ),
-                      _HistoryAwareRow(
-                        todo: todo,
-                        history: true,
-                        onChanged: widget.onRefresh,
-                        minReasonLength: minReasonLength,
-                        supervisorName: supervisorName,
-                      ),
-                    ],
-                  ],
+              if (showPlanGroups && effectiveFilter != _HomeTodoFilter.done)
+                _group(
+                  title: '进行中',
+                  items: view.inProgress,
+                  view: view,
+                  minReasonLength: minReasonLength,
+                  supervisorName: supervisorName,
+                  // 编辑入口挂在第一个非空的未完成分组上，保证任何一天都能进入编辑态。
+                  showEdit: view.inProgress.isNotEmpty,
                 ),
-              ),
+              if (showPlanGroups && effectiveFilter != _HomeTodoFilter.done)
+                _group(
+                  title: view.history ? '未完成' : '待开始',
+                  items: view.notStarted,
+                  view: view,
+                  minReasonLength: minReasonLength,
+                  supervisorName: supervisorName,
+                  borderColor: view.history ? ShanganColors.redLine : null,
+                  showEdit: view.inProgress.isEmpty,
+                ),
+              if (showPlanGroups && effectiveFilter != _HomeTodoFilter.pending)
+                _group(
+                  title: '已完成',
+                  items: view.completed,
+                  view: view,
+                  minReasonLength: minReasonLength,
+                  supervisorName: supervisorName,
+                  collapsible: true,
+                  readOnly: view.history,
+                ),
+              if (!view.history &&
+                  filterEmpty &&
+                  (view.todos.isNotEmpty || hasRepayment))
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 28),
+                  child: Text(
+                    '这里暂时没有符合条件的待办',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: ShanganColors.mutedInk),
+                  ),
+                ),
             ],
+            // 今日还债与今日计划分开；内部再按进行中 / 待开始 / 已完成归类，避免已完成项重复露在两个一级分类里。
+            if (showRepayment)
+              _repaymentSection(
+                view: view,
+                minReasonLength: minReasonLength,
+                supervisorName: supervisorName,
+                compactGroups: effectiveFilter == _HomeTodoFilter.all,
+              ),
             if (view.todos.isEmpty && view.repaymentTodos.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 32),
@@ -793,6 +812,58 @@ class _DaySectionState extends ConsumerState<_DaySection> {
     );
   }
 
+  /// 今日还债作为独立分类，条目再拆成与今日计划相同的三态，数量直接跟在标题后。
+  Widget _repaymentSection({
+    required DayView view,
+    required int minReasonLength,
+    String? supervisorName,
+    required bool compactGroups,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionTitle(title: '今日还债', count: '${view.repaymentTodos.length}'),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+            '今日完成 ${view.repayment.done} 项 · '
+            '观看 ${formatDurationCompact(view.repayment.watchedMs)} · '
+            '专注 ${formatDurationCompact(view.repayment.focusedMs)}',
+            style: const TextStyle(fontSize: 12, color: ShanganColors.mutedInk),
+          ),
+        ),
+        _group(
+          title: '进行中',
+          items: view.repaymentInProgress,
+          view: view,
+          minReasonLength: minReasonLength,
+          supervisorName: supervisorName,
+          compactLabel: compactGroups,
+          historyOverride: true,
+        ),
+        _group(
+          title: '待开始',
+          items: view.repaymentNotStarted,
+          view: view,
+          minReasonLength: minReasonLength,
+          supervisorName: supervisorName,
+          compactLabel: compactGroups,
+          historyOverride: true,
+        ),
+        _group(
+          title: '已完成',
+          items: view.repaymentCompleted,
+          view: view,
+          minReasonLength: minReasonLength,
+          supervisorName: supervisorName,
+          compactLabel: compactGroups,
+          historyOverride: true,
+          readOnly: false,
+        ),
+      ],
+    );
+  }
+
   Widget _group({
     required String title,
     required List<TodoItem> items,
@@ -804,28 +875,36 @@ class _DaySectionState extends ConsumerState<_DaySection> {
     bool readOnly = false,
     bool showCompletedTime = false,
     bool showEdit = false,
+    bool compactLabel = false,
+    bool historyOverride = false,
     Color? borderColor,
   }) {
     if (items.isEmpty) return const SizedBox.shrink();
     final collapsed = collapsible && _doneCollapsed;
     // 历史日保留原日期直接执行，不进入批量改期编辑态。
     final editAction = showEdit && !view.history ? widget.onEdit : null;
+    final heading = compactLabel
+        ? ShanganGroupLabel('$title ${items.length}')
+        : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionTitle(
-          title: title,
-          count: showCount ? '${items.length}' : null,
-          trailing: collapsible
-              ? TextButton(
-                  onPressed: () =>
-                      setState(() => _doneCollapsed = !_doneCollapsed),
-                  child: Text(collapsed ? '展开' : '收起'),
-                )
-              : editAction == null
-              ? null
-              : TextButton(onPressed: editAction, child: const Text('编辑')),
-        ),
+        if (heading != null)
+          heading
+        else
+          SectionTitle(
+            title: title,
+            count: showCount ? '${items.length}' : null,
+            trailing: collapsible
+                ? TextButton(
+                    onPressed: () =>
+                        setState(() => _doneCollapsed = !_doneCollapsed),
+                    child: Text(collapsed ? '展开' : '收起'),
+                  )
+                : editAction == null
+                ? null
+                : TextButton(onPressed: editAction, child: const Text('编辑')),
+          ),
         if (!collapsed)
           ShanganCard(
             borderColor: borderColor,
@@ -834,9 +913,24 @@ class _DaySectionState extends ConsumerState<_DaySection> {
                 for (var index = 0; index < items.length; index++) ...[
                   if (index > 0)
                     const Divider(height: 1, color: ShanganColors.hair),
+                  if (historyOverride) ...[
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 10, bottom: 2),
+                        child: Text(
+                          '原计划 ${items[index].localDate.toIso8601String().substring(0, 10)}${items[index].isDone ? " · 今日已完成" : ""}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: ShanganColors.mutedInk,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                   _HistoryAwareRow(
                     todo: items[index],
-                    history: view.history,
+                    history: historyOverride || view.history,
                     minReasonLength: minReasonLength,
                     supervisorName: supervisorName,
                     readOnly: readOnly,
@@ -850,6 +944,149 @@ class _DaySectionState extends ConsumerState<_DaySection> {
       ],
     );
   }
+}
+
+/// 高保真首页的轻量筛选，只改变当日列表可见项，不改 Todo 数据与服务端请求。
+final class _TodoFilterHeader extends StatelessWidget {
+  const _TodoFilterHeader({
+    required this.total,
+    required this.pendingCount,
+    required this.doneCount,
+    required this.repaymentCount,
+    required this.showRepayment,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final int total;
+  final int pendingCount;
+  final int doneCount;
+  final int repaymentCount;
+  final bool showRepayment;
+  final _HomeTodoFilter value;
+  final ValueChanged<_HomeTodoFilter> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          '今日待办',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(width: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: ShanganColors.inkSoft,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            '$total',
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: ShanganColors.mutedInk,
+            ),
+          ),
+        ),
+      ],
+    );
+    final filters = Wrap(
+      spacing: 3,
+      children: [
+        _TodoFilterButton(
+          key: const ValueKey('home-filter-all'),
+          label: '全部',
+          count: total,
+          selected: value == _HomeTodoFilter.all,
+          onTap: () => onChanged(_HomeTodoFilter.all),
+        ),
+        _TodoFilterButton(
+          key: const ValueKey('home-filter-pending'),
+          label: '未完成',
+          count: pendingCount,
+          selected: value == _HomeTodoFilter.pending,
+          onTap: () => onChanged(_HomeTodoFilter.pending),
+        ),
+        _TodoFilterButton(
+          key: const ValueKey('home-filter-done'),
+          label: '已完成',
+          count: doneCount,
+          selected: value == _HomeTodoFilter.done,
+          onTap: () => onChanged(_HomeTodoFilter.done),
+        ),
+        if (showRepayment)
+          _TodoFilterButton(
+            key: const ValueKey('home-filter-repayment'),
+            label: '今日还债',
+            count: repaymentCount,
+            selected: value == _HomeTodoFilter.repayment,
+            onTap: () => onChanged(_HomeTodoFilter.repayment),
+          ),
+      ],
+    );
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 4),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stack =
+              constraints.maxWidth < 420 ||
+              MediaQuery.textScalerOf(context).scale(11) > 16;
+          if (stack) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [title, const SizedBox(height: 7), filters],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: title),
+              filters,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+final class _TodoFilterButton extends StatelessWidget {
+  const _TodoFilterButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.count,
+    super.key,
+  });
+
+  final String label;
+  final int? count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    selected: selected,
+    button: true,
+    child: TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        minimumSize: const Size(0, 35),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        foregroundColor: selected ? ShanganColors.blue : ShanganColors.mutedInk,
+        backgroundColor: selected ? ShanganColors.blueSoft : Colors.transparent,
+        side: BorderSide(
+          color: selected ? ShanganColors.blueLine : Colors.transparent,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        textStyle: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+      ),
+      child: Text(count == null ? label : '$label $count'),
+    ),
+  );
 }
 
 /// 历史日期直接执行未完成项，删除仍需说明原因。

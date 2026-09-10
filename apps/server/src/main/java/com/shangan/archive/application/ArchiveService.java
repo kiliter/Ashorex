@@ -47,6 +47,7 @@ public class ArchiveService {
   private final IdGenerator idGenerator;
   private final Clock clock;
   private final Path attachmentsRoot;
+  private final Path diagnosticsRoot;
 
   public ArchiveService(
       CascadeRepository cascade,
@@ -56,7 +57,8 @@ public class ArchiveService {
       DeletionAuditRepository audits,
       IdGenerator idGenerator,
       Clock clock,
-      @Value("${app.attachments-dir}") String attachmentsDir) {
+      @Value("${app.attachments-dir}") String attachmentsDir,
+      @Value("${app.diagnostics-dir}") String diagnosticsDir) {
     this.cascade = cascade;
     this.courses = courses;
     this.users = users;
@@ -65,6 +67,7 @@ public class ArchiveService {
     this.idGenerator = idGenerator;
     this.clock = clock;
     this.attachmentsRoot = Path.of(attachmentsDir).toAbsolutePath().normalize();
+    this.diagnosticsRoot = Path.of(diagnosticsDir).toAbsolutePath().normalize();
   }
 
   /** 归档：软下线，学习端不可见且不可新建引用，历史统计仍可查。 */
@@ -133,6 +136,8 @@ public class ArchiveService {
         type == ArchivableEntityType.COURSE
             ? cascade.courseAttachmentPaths(entityId)
             : cascade.userAttachmentPaths(entityId);
+    List<String> diagnosticPaths =
+        type == ArchivableEntityType.USER ? cascade.userDiagnosticPaths(entityId) : List.of();
 
     Map<String, Integer> deleted =
         type == ArchivableEntityType.COURSE
@@ -140,9 +145,11 @@ public class ArchiveService {
             : cascade.deleteUserCascade(entityId);
 
     // 文件删除失败视为整体失败，回滚数据库变更，避免留下无主文件。
-    deleteFiles(attachmentPaths);
+    deleteFiles(attachmentsRoot, attachmentPaths);
     if (type == ArchivableEntityType.USER) {
+      deleteFiles(diagnosticsRoot, diagnosticPaths);
       deleteDirectoryQuietly(attachmentsRoot.resolve(entityId));
+      deleteDirectoryQuietly(diagnosticsRoot.resolve(entityId));
     }
 
     DeletionAuditRepository.DeletionAudit audit =
@@ -215,6 +222,7 @@ public class ArchiveService {
   private String describe(String table) {
     return switch (table) {
       case "todo_attachments" -> "附件行与磁盘文件";
+      case "diagnostic_log_uploads" -> "诊断日志行与磁盘文件";
       case "todo_progress_events" -> "进度与专注流水";
       case "todo_deletions" -> "删除台账中引用该对象的行";
       case "todos" -> "含历史日期的待办";
@@ -237,10 +245,10 @@ public class ArchiveService {
     };
   }
 
-  private void deleteFiles(List<String> relativePaths) {
+  private void deleteFiles(Path root, List<String> relativePaths) {
     for (String relativePath : relativePaths) {
-      Path path = attachmentsRoot.resolve(relativePath).normalize();
-      if (!path.startsWith(attachmentsRoot)) {
+      Path path = root.resolve(relativePath).normalize();
+      if (!path.startsWith(root)) {
         continue;
       }
       try {
@@ -254,7 +262,8 @@ public class ArchiveService {
 
   private void deleteDirectoryQuietly(Path directory) {
     Path normalized = directory.normalize();
-    if (!normalized.startsWith(attachmentsRoot) || !Files.isDirectory(normalized)) {
+    if ((!normalized.startsWith(attachmentsRoot) && !normalized.startsWith(diagnosticsRoot))
+        || !Files.isDirectory(normalized)) {
       return;
     }
     try (var stream = Files.walk(normalized)) {

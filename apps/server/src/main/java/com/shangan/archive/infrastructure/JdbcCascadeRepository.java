@@ -98,6 +98,9 @@ public class JdbcCascadeRepository implements CascadeRepository {
         "todo_attachments",
         countByUser("SELECT count(*) FROM todo_attachments WHERE user_id = :userId", userId));
     counts.put(
+        "diagnostic_log_uploads",
+        countByUser("SELECT count(*) FROM diagnostic_log_uploads WHERE user_id = :userId", userId));
+    counts.put(
         "todo_progress_events",
         countByUser("SELECT count(*) FROM todo_progress_events WHERE user_id = :userId", userId));
     counts.put("todos", countByUser("SELECT count(*) FROM todos WHERE user_id = :userId", userId));
@@ -171,6 +174,15 @@ public class JdbcCascadeRepository implements CascadeRepository {
   public List<String> userAttachmentPaths(String userId) {
     return jdbcClient
         .sql("SELECT storage_path FROM todo_attachments WHERE user_id = :userId")
+        .param("userId", userId)
+        .query(String.class)
+        .list();
+  }
+
+  @Override
+  public List<String> userDiagnosticPaths(String userId) {
+    return jdbcClient
+        .sql("SELECT storage_path FROM diagnostic_log_uploads WHERE user_id = :userId")
         .param("userId", userId)
         .query(String.class)
         .list();
@@ -290,6 +302,9 @@ public class JdbcCascadeRepository implements CascadeRepository {
     deleted.put(
         "todo_attachments",
         updateByUser("DELETE FROM todo_attachments WHERE user_id = :userId", userId));
+    deleted.put(
+        "diagnostic_log_uploads",
+        updateByUser("DELETE FROM diagnostic_log_uploads WHERE user_id = :userId", userId));
     deleted.put(
         "todo_progress_events",
         updateByUser("DELETE FROM todo_progress_events WHERE user_id = :userId", userId));

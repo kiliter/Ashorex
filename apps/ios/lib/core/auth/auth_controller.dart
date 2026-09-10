@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shangan_ios/core/api/api_exception.dart';
 import 'package:shangan_ios/core/auth/auth_repository.dart';
+import 'package:shangan_ios/core/diagnostics/diagnostic_log.dart';
 import 'package:shangan_ios/core/storage/token_store.dart';
 
 enum AuthStatus {
@@ -61,6 +62,7 @@ final class AuthController extends ChangeNotifier {
     final tokens = await _tokenStore.read();
     _sessionRole = await _roleStore?.readRole() ?? 'LEARNER';
     if (tokens == null) {
+      DiagnosticLog.info('auth', 'restore skipped, no token');
       _setState(const AuthState(status: AuthStatus.unauthenticated));
       return;
     }
@@ -68,6 +70,11 @@ final class AuthController extends ChangeNotifier {
       final user = await _repository.loadCurrentUser().timeout(_restoreTimeout);
       if (generation != _restoreGeneration) return;
       _validateRole(user);
+      DiagnosticLog.info('auth', 'restore ok', {
+        'userId': user.id,
+        'username': user.username,
+        'role': _sessionRole,
+      });
       _setState(AuthState(status: AuthStatus.authenticated, user: user));
     } on AuthException catch (exception) {
       if (generation != _restoreGeneration) return;
@@ -139,8 +146,17 @@ final class AuthController extends ChangeNotifier {
       final user = await _repository.loadCurrentUser();
       _validateRole(user);
       await _roleStore?.writeRole(_sessionRole);
+      DiagnosticLog.info('auth', 'login ok', {
+        'userId': user.id,
+        'username': user.username,
+        'role': _sessionRole,
+      });
       _setState(AuthState(status: AuthStatus.authenticated, user: user));
     } on ApiException catch (exception) {
+      DiagnosticLog.warn('auth', 'login failed', {
+        'username': username.trim(),
+        'errorCode': exception.errorCode,
+      });
       _setState(
         AuthState(
           status: AuthStatus.unauthenticated,
@@ -162,6 +178,7 @@ final class AuthController extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    DiagnosticLog.info('auth', 'logout');
     final tokens = await _tokenStore.read();
     try {
       if (tokens != null) {
@@ -174,6 +191,7 @@ final class AuthController extends ChangeNotifier {
 
   /// Dio 判定登录彻底失效后，清理 Token 并通知 go_router 回登录页。
   Future<void> handleAuthenticationLost() async {
+    DiagnosticLog.warn('auth', 'session lost');
     await _tokenStore.clear();
     await _roleStore?.writeRole(null);
     _setState(const AuthState(status: AuthStatus.unauthenticated));

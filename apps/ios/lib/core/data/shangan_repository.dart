@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:shangan_ios/core/models/course_addition_models.dart';
 
 import 'package:shangan_ios/core/api/api_client.dart';
+import 'package:shangan_ios/core/diagnostics/diagnostic_log.dart';
 
 import 'package:shangan_ios/core/models/shangan_models.dart';
 
@@ -455,6 +456,23 @@ final class ShanganRepository {
     );
   }
 
+  /// 用户确认后上传本机诊断日志；大小与脱敏由服务端再次校验。
+  Future<void> uploadDiagnosticLog({
+    required String filename,
+    required List<int> bytes,
+    required String appVersion,
+    required String platform,
+  }) async {
+    await _api.postFile(
+      '/api/v1/diagnostics/logs',
+      fieldName: 'file',
+      filename: filename,
+      contentType: 'text/plain',
+      bytes: bytes,
+      fields: {'appVersion': appVersion, 'platform': platform},
+    );
+  }
+
   Future<void> deleteAttachment(String todoId, String attachmentId) async {
     await _api.deleteEmpty('/api/v1/todos/$todoId/attachments/$attachmentId');
   }
@@ -553,6 +571,11 @@ final class ShanganRepository {
     required String reasonTag,
     required String reasonText,
   }) async {
+    DiagnosticLog.info('nag', 'respond', {
+      'nagId': nagId,
+      'reasonTag': reasonTag,
+      'reasonChars': reasonText.trim().length,
+    });
     await _api.postEmpty(
       '/api/v1/nags/$nagId/respond',
       data: {'reasonTag': reasonTag, 'reasonText': reasonText},

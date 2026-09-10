@@ -140,6 +140,13 @@ void main() {
     expect(find.text('我督学 3 名学员'), findsNothing);
   });
 
+  testWidgets('应用信息提供关于入口', (tester) async {
+    await _pump(tester, _backend());
+    await tester.scrollUntilVisible(find.text('关于'), 150);
+    expect(find.text('关于'), findsOneWidget);
+    expect(find.text('版本信息与诊断日志'), findsOneWidget);
+  });
+
   testWidgets('时区作为每日边界依据，明确标注影响统计口径', (tester) async {
     await _pump(tester, _backend());
 

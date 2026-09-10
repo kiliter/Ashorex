@@ -1,3 +1,4 @@
+import 'about_page.dart';
 import 'app_update_page.dart';
 import 'bark_settings_sheet.dart';
 import 'package:shangan_ios/core/widgets/shangan_feedback.dart';
@@ -143,13 +144,27 @@ final class ProfilePage extends ConsumerWidget {
                   const ShanganGroupLabel('应用信息'),
                   ShanganCard(
                     padding: EdgeInsets.zero,
-                    child: AppUpdateEntry(
-                      builder: (version, open) => _MenuItem(
-                        icon: Icons.system_update_outlined,
-                        title: '检查更新',
-                        value: version.isEmpty ? '读取中' : version,
-                        onTap: open,
-                      ),
+                    child: Column(
+                      children: [
+                        AppUpdateEntry(
+                          builder: (version, open) => _MenuItem(
+                            icon: Icons.system_update_outlined,
+                            title: '检查更新',
+                            value: version.isEmpty ? '读取中' : version,
+                            onTap: open,
+                          ),
+                        ),
+                        _MenuItem(
+                          icon: Icons.info_outline,
+                          title: '关于',
+                          subtitle: '版本信息与诊断日志',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const AboutPage(),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 18),
