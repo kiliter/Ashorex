@@ -1,0 +1,14 @@
+apps/server/src/main/java/com/shangan/common/config/SqliteConfiguration.java
+  h_b1099757fa8f7e 36-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "db24c567b1fdffb82476934dcf0525a53fd63beb",
+  "prompts": {},
+  "humans": {
+    "h_b1099757fa8f7e": {
+      "author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
