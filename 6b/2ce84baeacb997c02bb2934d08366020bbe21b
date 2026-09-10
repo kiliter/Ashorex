@@ -1,0 +1,178 @@
+apps/ios/lib/features/profile/presentation/app_update_page.dart
+  s_4db1592e08aea0::t_b763543e191179 1-13,18-32,37-109,111-118,120-127,133-155,157-160,162-164,166-190,192-219,221-224,228,240,242-250,252-264,267-271,276-277,279-281
+  s_4db1592e08aea0::t_b9d6c942466257 14-17,33-35
+  s_4db1592e08aea0::t_94d04d52846cb0 128-132
+  s_4db1592e08aea0::t_579e9fee340d36 36,110,119,156,161,165,191,220,225-227,229-239,241,251,265-266,272-275,278
+apps/ios/lib/core/models/app_release.dart
+  s_4db1592e08aea0::t_f73886a5fbee47 1-18,20-33
+  s_4db1592e08aea0::t_1ff417cfbf8076 19
+scripts/check_release_version.py
+  s_4db1592e08aea0::t_33a80dc9eda33f 1-17
+apps/ios/android/app/src/main/res/xml/update_paths.xml
+  s_4db1592e08aea0::t_70e7aa753079d9 1-3
+apps/ios/lib/core/player/progress_queue.dart
+  s_4db1592e08aea0::t_a5075ce1c5346b 118,161-162,176
+  s_4db1592e08aea0::t_f19539f87bade9 160
+.github/workflows/ios-verify.yml
+  s_4db1592e08aea0::t_d54493fa9d38e5 43-45
+  s_4db1592e08aea0::t_33a80dc9eda33f 14,20,29-30,151
+apps/ios/pubspec.yaml
+  s_4db1592e08aea0::t_f73886a5fbee47 18
+apps/ios/android/app/src/main/kotlin/com/shangan/app/AppUpdateBridge.kt
+  s_4db1592e08aea0::t_70e7aa753079d9 1-60,62-76
+  s_4db1592e08aea0::t_f8da9790f1eef4 61
+apps/ios/lib/features/player/presentation/player_page.dart
+  s_4db1592e08aea0::t_f19539f87bade9 181
+  s_4db1592e08aea0::t_a5075ce1c5346b 160,176-180
+apps/server/src/main/java/com/shangan/appupdate/AppRelease.java
+  s_4db1592e08aea0::t_afe006bf59b5dd 8-17,21-22,25,28-30,33,39,45-46,48,53-62,64,66,68,70-73
+  s_4db1592e08aea0::t_adfba49061b9cb 1-7,18-20,23-24,26-27,31-32,34-38,40-44,47,49-52,63,65,67,69,74-75
+apps/ios/test/features/profile/app_download_test.dart
+  s_4db1592e08aea0::t_74f38c7dead122 1-12,16,24-27,31-32,41,48-52,56,65,83-85
+  s_4db1592e08aea0::t_e9e27a053c6726 13-15,17-23,29,33-40,42-47,53-55,57-64,66-82
+  s_4db1592e08aea0::t_97a5cf66dd0c9d 28,30
+apps/ios/lib/core/data/shangan_repository.dart
+  s_4db1592e08aea0::t_83a8084f822676 329-330
+  s_4db1592e08aea0::t_f19539f87bade9 301-309
+  s_4db1592e08aea0::t_33a80dc9eda33f 30,32
+  s_4db1592e08aea0::t_f73886a5fbee47 1-2,25-26,28,33-42,44-53,55-56
+  s_4db1592e08aea0::t_a5075ce1c5346b 300,310-311,322
+  s_4db1592e08aea0::t_ada92d6330f37b 27
+  s_4db1592e08aea0::t_684cf4ce590fa3 29
+  s_4db1592e08aea0::t_9addeff2fc8639 31
+  s_4db1592e08aea0::t_43cff6f93996a9 43
+  s_4db1592e08aea0::t_9b50599455e8e4 54
+  s_4db1592e08aea0::t_ce475b233d34ec 57
+docs/traceability/2026-09-07-shangan-v2-traceability.md
+  s_4db1592e08aea0::t_e6156767d9caba 320-323
+  s_4db1592e08aea0::t_afe006bf59b5dd 316-319
+docs/plans/2026-09-07-shangan-v2-implementation-plan.md
+  s_4db1592e08aea0::t_e6156767d9caba 1249-1252
+  s_4db1592e08aea0::t_dea3282fcb415f 1241-1244
+  s_4db1592e08aea0::t_afe006bf59b5dd 1245-1248
+apps/ios/lib/core/models/shangan_models.dart
+  s_4db1592e08aea0::t_a5075ce1c5346b 240-241,245-248,317-318
+docs/specs/2026-09-07-shangan-v2-design.md
+  s_4db1592e08aea0::t_dea3282fcb415f 971-974
+  s_4db1592e08aea0::t_afe006bf59b5dd 975-978
+  s_4db1592e08aea0::t_e6156767d9caba 979-982
+docs/adr/0048-container-server-upgrade.md
+  s_4db1592e08aea0::t_dea3282fcb415f 31-34
+apps/ios/lib/core/api/api_client.dart
+  s_4db1592e08aea0::t_f73886a5fbee47 54-56,58-63
+  s_4db1592e08aea0::t_33a80dc9eda33f 147-151,153-159
+  s_4db1592e08aea0::t_1186c7e21e5242 57,152
+apps/server/src/main/java/com/shangan/appupdate/AppUpdateController.java
+  s_4db1592e08aea0::t_afe006bf59b5dd 11-35
+  s_4db1592e08aea0::t_e97e6c06b92ea3 1-10,36
+apps/ios/test/features/player/player_controls_test.dart
+  s_4db1592e08aea0::t_f19539f87bade9 43-55,366-367,377-386
+apps/admin-web/src/components/AdminLayout.vue
+  s_4db1592e08aea0::t_dea3282fcb415f 36
+apps/server/src/test/java/com/shangan/appupdate/AppReleaseTest.java
+  s_4db1592e08aea0::t_afe006bf59b5dd 4-32
+  s_4db1592e08aea0::t_d166ba74c712ef 1-3,33-35
+apps/server/src/main/java/com/shangan/appupdate/GithubReleaseClient.java
+  s_4db1592e08aea0::t_f8da9790f1eef4 99
+  s_4db1592e08aea0::t_adfba49061b9cb 1-6,8-23,29-36,38,42-45,57-58,64,66,69,71-73,78,87,90-93,95-96,108,110,113-114
+  s_4db1592e08aea0::t_afe006bf59b5dd 7,24-28,37,39-41,46-56,59-63,65,67-68,70,74-77,79-86,88-89,94,97-98,100-107,109,111-112
+apps/ios/test/features/home/todo_replay_entry_test.dart
+  s_4db1592e08aea0::t_f19539f87bade9 1-2,14,19-24,43-48,52,54-69
+apps/server/src/test/java/com/shangan/todo/application/TodoReviewProgressTest.java
+  s_4db1592e08aea0::t_f19539f87bade9 5-76
+  s_4db1592e08aea0::t_fd8bc9719ed426 1-4,77-78
+apps/ios/test/features/profile/app_update_test.dart
+  s_4db1592e08aea0::t_94d04d52846cb0 7-10,97-104
+  s_4db1592e08aea0::t_a4a367142f1439 1-6,51-54,56-59,62-74,76-79,81,84-96
+  s_4db1592e08aea0::t_d54493fa9d38e5 11-50
+  s_4db1592e08aea0::t_e9e27a053c6726 80
+  s_4db1592e08aea0::t_e62ecbaea4f418 55,60-61,75,82-83
+apps/server/src/main/java/com/shangan/appupdate/AppUpdateService.java
+  s_4db1592e08aea0::t_afe006bf59b5dd 17-23,26-105
+  s_4db1592e08aea0::t_f8da9790f1eef4 24-25
+  s_4db1592e08aea0::t_1f79d296aab045 1-16,106
+docs/adr/0047-course-review-and-completed-replay.md
+  s_4db1592e08aea0::t_e6156767d9caba 40-43
+apps/admin-web/src/pages/UpgradesPage.vue
+  s_4db1592e08aea0::t_dea3282fcb415f 63-64,97,110-129
+apps/ios/android/app/src/main/AndroidManifest.xml
+  s_4db1592e08aea0::t_70e7aa753079d9 4-5,40-43
+apps/ios/ios/Runner/AppDelegate.swift
+  s_4db1592e08aea0::t_70e7aa753079d9 36-53
+apps/ios/lib/features/profile/presentation/profile_page.dart
+  s_4db1592e08aea0::t_b763543e191179 1
+  s_4db1592e08aea0::t_b9d6c942466257 142-154
+docs/api/openapi.yaml
+  s_4db1592e08aea0::t_f19539f87bade9 45-75,1395-1396,1582
+  s_4db1592e08aea0::t_33a80dc9eda33f 76-123,1129-1140
+apps/ios/android/app/src/main/kotlin/com/shangan/app/MainActivity.kt
+  s_4db1592e08aea0::t_70e7aa753079d9 13-14
+apps/server/src/main/java/com/shangan/todo/infrastructure/TodoRepository.java
+  s_4db1592e08aea0::t_e6156767d9caba 41-51
+docs/adr/0049-mobile-app-update.md
+  s_4db1592e08aea0::t_b9d6c942466257 27-28
+  s_4db1592e08aea0::t_afe006bf59b5dd 1-26
+apps/server/src/test/java/com/shangan/appupdate/AppUpdateServiceTest.java
+  s_4db1592e08aea0::t_94d04d52846cb0 1-4,6-15,19,25-29,33,36-37,41-42,44-46,56-57,61,64-65,68-70,72-73,77-80
+  s_4db1592e08aea0::t_afe006bf59b5dd 5,16-18,20-24,30-32,34-35,38-40,43,47-55,58-60,62-63,66-67,71,74-76
+docs/prototypes/shangan-v2-prototype.html
+  s_4db1592e08aea0::t_afe006bf59b5dd 5078,5080,5082-5086
+  s_4db1592e08aea0::t_b9d6c942466257 5081
+  s_4db1592e08aea0::t_f19539f87bade9 5087-5092
+  s_4db1592e08aea0::t_dea3282fcb415f 5067-5068
+  s_4db1592e08aea0::t_d54493fa9d38e5 5079
+.github/workflows/server-verify.yml
+  s_4db1592e08aea0::t_33a80dc9eda33f 18,28,40-41
+docs/adr/0050-todo-review-progress.md
+  s_4db1592e08aea0::t_e6156767d9caba 1-14
+apps/server/src/main/resources/db/migration/V011__todo_playback_review.sql
+  s_4db1592e08aea0::t_e6156767d9caba 1-5
+apps/server/src/main/java/com/shangan/todo/api/TodoController.java
+  s_4db1592e08aea0::t_f19539f87bade9 161-164,167-169,187-188
+  s_4db1592e08aea0::t_f7d612e37938cf 159-160,165-166,170,381-382
+apps/ios/lib/features/home/presentation/todo_row.dart
+  s_4db1592e08aea0::t_a5075ce1c5346b 1-3,120,125,132,134,136,150-151,159-163,168,173-174,241,246
+  s_4db1592e08aea0::t_f19539f87bade9 124,126-130,152-158,164-167,169-172,175-182,184-223,225-232,234-240,242,244
+  s_4db1592e08aea0::t_2149fba9dc4999 69-74,183,224,233,243,245
+  s_4db1592e08aea0::t_f6e950c708bf9c 247
+apps/server/src/main/java/com/shangan/todo/application/TodoViewService.java
+  s_4db1592e08aea0::t_f7d612e37938cf 164,206,212,312-314
+  s_4db1592e08aea0::t_f19539f87bade9 207-211,213-214
+docs/plans/2026-09-10-mobile-upgrade-plan.md
+  s_4db1592e08aea0::t_b9d6c942466257 8,13-14
+  s_4db1592e08aea0::t_afe006bf59b5dd 1,3,5-7,9-10,12
+  s_4db1592e08aea0::t_dce5232b7ad9b7 2,4,11
+apps/ios/lib/core/api/app_download.dart
+  s_4db1592e08aea0::t_f73886a5fbee47 1-8,13-19,21-26,29-43,46-57,59-62,64-72,75-81,83-88
+  s_4db1592e08aea0::t_94d04d52846cb0 9-11,63,73,82
+  s_4db1592e08aea0::t_c897fe64230428 12,20,27-28,44-45,58,74
+apps/server/src/main/java/com/shangan/todo/infrastructure/JdbcTodoRepository.java
+  s_4db1592e08aea0::t_f19539f87bade9 47-61,68-70,75-81,87-89,92-97
+  s_4db1592e08aea0::t_e6156767d9caba 42-46,62-67,71-74,82-86,90-91,98-99
+apps/server/src/main/java/com/shangan/todo/application/TodoProgressService.java
+  s_4db1592e08aea0::t_f7d612e37938cf 51-52,55-56,59-65,69-76,79-81,118-120,141-142,203-205,225-226
+  s_4db1592e08aea0::t_f19539f87bade9 53-54,57-58,66-68,77-78,121-124,136-138,206-224
+apps/ios/test/features/player/progress_queue_test.dart
+  s_4db1592e08aea0::t_525f78d0f842f2 12-25,27-32,34-41
+  s_4db1592e08aea0::t_5e085e3f0b4bf2 26,33
+apps/ios/pubspec.lock
+  s_4db1592e08aea0::t_50b86931ac5f68 125
+apps/server/src/main/java/com/shangan/common/config/SecurityConfiguration.java
+  s_4db1592e08aea0::t_9aeb4fa566314d 124-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6b2ce84baeacb997c02bb2934d08366020bbe21b",
+  "prompts": {},
+  "sessions": {
+    "s_4db1592e08aea0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a085b7-dd62-7fe1-9d28-0616c49eea81",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
