@@ -24,6 +24,7 @@ Map<String, Object?> todoJson({
   String? resourceId,
   int? resourceDurationMs,
   bool resourceAvailable = true,
+  String? completedAt,
 }) {
   return {
     'id': id,
@@ -45,6 +46,7 @@ Map<String, Object?> todoJson({
     'resourceId': resourceId,
     'resourceDurationMs': resourceDurationMs,
     'resourceAvailable': resourceAvailable,
+    'completedAt': completedAt,
   };
 }
 

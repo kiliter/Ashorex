@@ -71,7 +71,7 @@ public class AccessAdminController {
     return ResponseEntity.noContent().build();
   }
 
-  /** 重置密码会撤销该用户的全部刷新令牌。 */
+  /** 重置密码会撤销该用户的 App Refresh Token 与管理后台 Session。 */
   @PostMapping("/users/reset-password")
   ResponseEntity<Void> resetPassword(@RequestBody ResetPasswordRequest request) {
     users.resetPassword(request.userId(), request.password());

@@ -58,6 +58,7 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
   String _bufferingLabel = '正在缓冲';
   bool _controlsVisible = true;
   bool _endReported = false;
+  bool _authenticationReloading = false;
 
   TodoItem? _todo;
   bool _loading = true;
@@ -128,10 +129,13 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
   }
 
   /// 整段加载设定上限，覆盖接口、内核初始化和恢复位置，避免无限等待。
-  Future<void> _load() async {
+  Future<void> _load({int? resumePositionMs}) async {
     final generation = ++_loadGeneration;
     try {
-      await _loadPlayback(generation).timeout(const Duration(seconds: 30));
+      await _loadPlayback(
+        generation,
+        resumePositionMs: resumePositionMs,
+      ).timeout(const Duration(seconds: 30));
     } catch (_) {
       if (!mounted || generation != _loadGeneration) return;
       _loadGeneration++;
@@ -147,7 +151,7 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
   }
 
   /// 每个异步阶段都核对本轮身份；先挂载画面，再恢复位置。
-  Future<void> _loadPlayback(int generation) async {
+  Future<void> _loadPlayback(int generation, {int? resumePositionMs}) async {
     bool active() => mounted && generation == _loadGeneration;
     final view = await _queue.repository.loadDay(
       date: _todo?.localDate ?? widget.localDate,
@@ -169,15 +173,21 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       _player = player;
       await player.initialize(source.uri, source.headers);
       if (!active()) return;
-      // 原生视图先进入布局，避免把首帧展示依赖于远端 seek 完成。
+      // 复习使用本待办的新轮次续播位置；旧服务端的完成回放保持从头兼容。
+      final savedResume = todo.playbackEpoch > 0
+          ? (todo.resumePositionMs ?? todo.progressPositionMs)
+          : (todo.isDone ? 0 : todo.progressPositionMs);
+      final resume = resumePositionMs ?? savedResume;
+      // 401 重开已有明确的故障前位置，初始化后立即恢复，不先闪回旧上报点。
+      if (resumePositionMs != null && resume > 0) {
+        await player.seek(resume).timeout(const Duration(seconds: 8));
+      }
+      if (!active()) return;
+      // 首次进入时原生视图先进入布局，避免把首帧展示依赖于远端 seek 完成。
       setState(() {});
       await WidgetsBinding.instance.endOfFrame;
       if (!active()) return;
-      // 复习使用本待办的新轮次续播位置；旧服务端的完成回放保持从头兼容。
-      final resume = todo.playbackEpoch > 0
-          ? (todo.resumePositionMs ?? todo.progressPositionMs)
-          : (todo.isDone ? 0 : todo.progressPositionMs);
-      if (resume > 0) {
+      if (resumePositionMs == null && resume > 0) {
         await player.seek(resume).timeout(const Duration(seconds: 8));
       }
       if (!active()) return;
@@ -967,7 +977,7 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
   }
 
   /// 重试重新获取当前凭据并创建播放器，不复用已失效的原生连接。
-  Future<void> _retry() async {
+  Future<void> _retry({int? resumePositionMs}) async {
     if (_loading) return;
     // 失败内核的暂停可能不返回，重试直接释放；进度独立进入原有队列。
     _collectWatch();
@@ -988,7 +998,7 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       _confirmedSpeed = 1.0;
       _error = null;
     });
-    await _load();
+    await _load(resumePositionMs: resumePositionMs);
   }
 
   /// 命令串行化，快速连点不会让原生暂停、跳转与倍速乱序。
@@ -1080,6 +1090,23 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
     if (!mounted || _player == null) return;
     _collectWatch();
     final player = _player!;
+    if (player.authenticationExpired && !_authenticationReloading) {
+      _authenticationReloading = true;
+      _counting = false;
+      setState(() {
+        _playing = false;
+        _error = player.error;
+      });
+      // ChangeNotifier 正在遍历监听器时不能同步 dispose，延后到本帧结束再重开。
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !identical(_player, player)) {
+          _authenticationReloading = false;
+          return;
+        }
+        unawaited(_reloadAfterAuthenticationFailure(player));
+      });
+      return;
+    }
     final active =
         player.playing &&
         !player.buffering &&
@@ -1105,6 +1132,16 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       }
     }
     if (reachedEnd) unawaited(_report(force: true, eventType: 'PAUSE'));
+  }
+
+  /// 原生媒体请求不经过 Dio；明确 401 时释放旧连接，让 playbackSource 触发单飞刷新并重开。
+  Future<void> _reloadAfterAuthenticationFailure(PlaybackAdapter failed) async {
+    final resume = failed.positionMs;
+    try {
+      await _retry(resumePositionMs: resume);
+    } finally {
+      if (mounted) _authenticationReloading = false;
+    }
   }
 
   Future<void> _pause() async {

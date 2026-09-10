@@ -134,6 +134,28 @@ class SupervisionServiceTest {
   }
 
   @Test
+  @DisplayName("同一账号对已归档时复用原绑定并更新类型与权限")
+  void 重新绑定复用归档行() {
+    Supervision archived = binding(SupervisionKind.PRIMARY, NOW.minusSeconds(60));
+    when(users.findById(LEARNER)).thenReturn(Optional.of(user(LEARNER, UserRole.LEARNER)));
+    when(users.findById(SUPERVISOR)).thenReturn(Optional.of(user(SUPERVISOR, UserRole.LEARNER)));
+    when(supervisions.find(LEARNER, SUPERVISOR)).thenReturn(Optional.of(archived));
+
+    Supervision restored =
+        service.bind(LEARNER, SUPERVISOR, SupervisionKind.COLLABORATOR, true, false, false, false);
+
+    assertThat(restored.id()).isEqualTo(archived.id());
+    assertThat(restored.kind()).isEqualTo(SupervisionKind.COLLABORATOR);
+    assertThat(restored.canView()).isTrue();
+    assertThat(restored.canNag()).isFalse();
+    assertThat(restored.active()).isTrue();
+    verify(supervisions)
+        .reactivate(archived.id(), SupervisionKind.COLLABORATOR, true, false, false, false, NOW);
+    verify(supervisions, never()).insert(any(), any());
+    verify(users).addRole(SUPERVISOR, UserRole.SUPERVISOR, NOW);
+  }
+
+  @Test
   @DisplayName("归档最后一个绑定后回收督学人的 SUPERVISOR 角色")
   void 归档后回收角色() {
     when(supervisions.findById("supervision-1"))

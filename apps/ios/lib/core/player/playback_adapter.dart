@@ -8,6 +8,9 @@ import 'package:video_player/video_player.dart';
 abstract class PlaybackAdapter extends ChangeNotifier {
   bool get playing;
 
+  /// 原生媒体层明确报告 401 时为真，页面据此刷新凭据并重开媒体源。
+  bool get authenticationExpired => false;
+
   /// 只有原生内核明确报告片尾才为真，不用四舍五入后的时间推断。
   bool get ended => false;
   bool get buffering;
@@ -22,6 +25,16 @@ abstract class PlaybackAdapter extends ChangeNotifier {
   Future<void> speed(double value);
 }
 
+/// 原生播放器错误文本没有统一结构，只在明确出现 HTTP 401/Unauthorized 时触发凭据重开。
+///
+/// 其他网络、解码或 403 业务拒绝仍进入普通手动重试，避免自动重试死循环。
+bool isPlaybackAuthenticationFailure(String? error) {
+  if (error == null) return false;
+  final normalized = error.toLowerCase();
+  return normalized.contains('unauthorized') ||
+      RegExp(r'(^|\D)401(\D|$)').hasMatch(normalized);
+}
+
 /// 官方 video_player 接管解码、流式缓冲、跳转与倍速。
 final class NativePlaybackAdapter extends PlaybackAdapter {
   VideoPlayerController? _controller;
@@ -29,6 +42,9 @@ final class NativePlaybackAdapter extends PlaybackAdapter {
   bool _disposed = false;
   @override
   bool get playing => _controller?.value.isPlaying ?? false;
+  @override
+  bool get authenticationExpired =>
+      isPlaybackAuthenticationFailure(_controller?.value.errorDescription);
   @override
   bool get ended => _controller?.value.isCompleted ?? false;
   @override

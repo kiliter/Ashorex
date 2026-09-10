@@ -1,6 +1,7 @@
 package com.shangan.supervision.infrastructure;
 
 import com.shangan.supervision.domain.Supervision;
+import com.shangan.supervision.domain.SupervisionKind;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +27,16 @@ public interface SupervisionRepository {
   List<Supervision> findAll();
 
   void insert(Supervision supervision, Instant createdAt);
+
+  /** 复用归档账号对，在同一次更新中恢复类型、权限与有效状态。 */
+  void reactivate(
+      String id,
+      SupervisionKind kind,
+      boolean canView,
+      boolean canNag,
+      boolean canEditGoal,
+      boolean canAddTodo,
+      Instant now);
 
   void updatePermissions(
       String id,

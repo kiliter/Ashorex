@@ -36,6 +36,9 @@ public interface UserRepository {
 
   void removeRole(String userId, UserRole role);
 
+  /** 按后台登录名撤销所有持久化 Session；属性表由外键级联清理。 */
+  void revokeAdminSessionsByPrincipal(String username);
+
   /** 撤销指定用户的全部有效 Refresh Token。 */
   void revokeRefreshTokensByUserId(String userId, Instant revokedAt);
 

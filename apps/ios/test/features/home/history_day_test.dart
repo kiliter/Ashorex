@@ -91,6 +91,26 @@ void main() {
     expect(find.text('历史日期 · 未完成项可直接继续，计入今日还债'), findsNothing);
   });
 
+  testWidgets('历史完成时间按账号时区展示而不直接显示 UTC', (tester) async {
+    await _pump(
+      tester,
+      _backend(
+        todos: [
+          todoJson(
+            id: 't-1',
+            title: '时区课时',
+            localDate: '2026-09-03',
+            status: 'DONE',
+            completedAt: '2026-09-03T02:30:00Z',
+          ),
+        ],
+      ),
+    );
+
+    expect(find.text('10:30 时区课时'), findsOneWidget);
+    expect(find.text('02:30 时区课时'), findsNothing);
+  });
+
   testWidgets('历史日不提供批量编辑入口', (tester) async {
     await _pump(
       tester,

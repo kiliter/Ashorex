@@ -120,6 +120,33 @@ void main() {
     await _dispose(tester);
   });
 
+  testWidgets('原生请求 401 后刷新凭据重开媒体并恢复位置', (tester) async {
+    final backend = _backend();
+    final expired = _AuthenticationExpiredPlayback();
+    final refreshed = _FakePlayback();
+    var factoryCalls = 0;
+    await _pump(
+      tester,
+      backend,
+      _RecordingWakeLock(),
+      playbackFactory: () => factoryCalls++ == 0 ? expired : refreshed,
+    );
+    expired.positionMs = 321000;
+    expired.authenticationExpired = true;
+    expired.error = '视频请求鉴权已失效';
+    expired.notifyListeners();
+    await tester.pumpAndSettle();
+
+    expect(factoryCalls, 2);
+    expect(expired.initializeCount, 1);
+    expect(refreshed.initializeCount, 1);
+    expect(refreshed.seekRequests, [321000]);
+    expect(refreshed.positionMs, 321000);
+    // playbackSource 每次重开都先经过 Dio 验证会话，从而触发必要的 Token 刷新。
+    expect(backend.callCount('GET', '/api/v1/me'), 2);
+    await _dispose(tester);
+  });
+
   testWidgets('后台暂停超时释放常亮且不继续累计观看时长', (tester) async {
     final backend = _backend();
     final wake = _RecordingWakeLock();
@@ -460,6 +487,7 @@ Future<void> _pump(
   FakeBackend backend,
   ScreenWakeLock wakeLock, {
   _FakePlayback? playback,
+  PlaybackAdapter Function()? playbackFactory,
   DateTime? localDate,
 }) async {
   // 播放页按 iPhone 竖屏布局；默认 800x600 测试视窗会让底部按钮组溢出。
@@ -470,7 +498,7 @@ Future<void> _pump(
     ProviderScope(
       overrides: [
         playbackAdapterFactoryProvider.overrideWithValue(
-          () => playback ?? _FakePlayback(),
+          playbackFactory ?? () => playback ?? _FakePlayback(),
         ),
         playbackTimeProvider.overrideWithValue(
           () => tester.binding.clock.now().millisecondsSinceEpoch,
@@ -499,6 +527,7 @@ final class _RecordingWakeLock implements ScreenWakeLock {
 
 /// 假原生播放器仅模拟平台位置回调，页面必须通过适配器完成控制。
 class _FakePlayback extends PlaybackAdapter {
+  int initializeCount = 0;
   @override
   bool ended = false;
   @override
@@ -513,12 +542,15 @@ class _FakePlayback extends PlaybackAdapter {
   int get durationMs => 1800000;
   double rate = 1;
   Timer? timer;
+  final seekRequests = <int>[];
   @override
   Widget buildVideo() => const SizedBox(key: Key('nativeVideo'));
   @override
-  Future<void> initialize(Uri uri, Map<String, String> headers) async {
+  Future<void> initialize(Uri uri, Map<String, String> headers) {
+    initializeCount++;
     expect(uri.path, '/api/v1/playback/r-1/stream');
     expect(headers['Authorization'], 'Bearer access');
+    return SynchronousFuture<void>(null);
   }
 
   @override
@@ -540,6 +572,7 @@ class _FakePlayback extends PlaybackAdapter {
 
   @override
   Future<void> seek(int milliseconds) async {
+    seekRequests.add(milliseconds);
     positionMs = milliseconds;
     notifyListeners();
   }
@@ -554,6 +587,12 @@ class _FakePlayback extends PlaybackAdapter {
     timer?.cancel();
     super.dispose();
   }
+}
+
+/// 用于驱动长视频 Token 过期分支，不依赖真实原生解码器。
+final class _AuthenticationExpiredPlayback extends _FakePlayback {
+  @override
+  bool authenticationExpired = false;
 }
 
 /// 原生暂停回调丢失时保持 Future 未完成，用超时驱动页面恢复。

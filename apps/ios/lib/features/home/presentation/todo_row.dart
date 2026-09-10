@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/core/models/shangan_models.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
+import 'package:shangan_ios/core/time/account_time.dart';
 import 'package:shangan_ios/core/widgets/shangan_v2.dart';
 import 'package:shangan_ios/features/home/presentation/complete_sheet.dart';
 import 'package:shangan_ios/features/home/presentation/delete_reason_dialog.dart';
@@ -61,10 +62,18 @@ final class TodoRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 只有历史时间线需要账号时区；普通 Todo 行不应因隐藏字段触发设置请求。
+    final timezone = showCompletedTime && todo.completedAt != null
+        ? ref.watch(meSettingsProvider).value?.profile.timezone
+        : null;
+    final completedTime = todo.completedAt == null
+        ? null
+        : AccountTime.hourMinute(todo.completedAt!, timezone);
     final body = _TodoBody(
       todo: todo,
       compact: compact,
       showCompletedTime: showCompletedTime,
+      completedTime: completedTime,
       extraBadges: [
         if (todo.playbackEpoch > 0)
           ShanganBadge(
@@ -333,21 +342,21 @@ final class _TodoBody extends StatelessWidget {
     required this.todo,
     required this.compact,
     required this.showCompletedTime,
+    required this.completedTime,
     required this.extraBadges,
   });
 
   final TodoItem todo;
   final bool compact;
   final bool showCompletedTime;
+  final String? completedTime;
   final List<Widget> extraBadges;
 
   @override
   Widget build(BuildContext context) {
     final target = todo.targetProgressPermille;
-    final completedAt = todo.completedAt;
-    final prefix = showCompletedTime && completedAt != null
-        ? '${completedAt.hour.toString().padLeft(2, '0')}:'
-              '${completedAt.minute.toString().padLeft(2, '0')} '
+    final prefix = showCompletedTime && completedTime != null
+        ? '$completedTime '
         : '';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -511,14 +520,8 @@ final class _TodoBody extends StatelessWidget {
           );
         }
       case TodoType.task:
-        final completedAt = todo.completedAt;
-        if (todo.isDone && completedAt != null) {
-          chips.add(
-            ShanganMeta(
-              '${completedAt.hour.toString().padLeft(2, '0')}:'
-              '${completedAt.minute.toString().padLeft(2, '0')} 完成',
-            ),
-          );
+        if (todo.isDone && completedTime != null) {
+          chips.add(ShanganMeta('$completedTime 完成'));
         } else if (todo.requireEvidence) {
           chips.add(
             const ShanganMeta('需完成凭证', icon: Icons.photo_camera_outlined),

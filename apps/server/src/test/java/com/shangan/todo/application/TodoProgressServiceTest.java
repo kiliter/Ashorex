@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.shangan.catalog.application.CatalogQueryService;
 import com.shangan.catalog.domain.CatalogStatus;
 import com.shangan.catalog.domain.LearningResource;
 import com.shangan.catalog.domain.ResourceType;
@@ -43,6 +44,7 @@ class TodoProgressServiceTest {
 
   @Mock private TodoRepository todos;
   @Mock private CourseRepository courses;
+  @Mock private CatalogQueryService catalog;
   @Mock private TodoService todoService;
   @Mock private EffectiveActionRecorder effectiveAction;
 
@@ -54,6 +56,7 @@ class TodoProgressServiceTest {
         new TodoProgressService(
             todos,
             courses,
+            catalog,
             todoService,
             effectiveAction,
             sequentialIdGenerator(),
@@ -313,6 +316,26 @@ class TodoProgressServiceTest {
     assertThat(result.status()).isEqualTo(TodoStatus.IN_PROGRESS);
     verify(todos)
         .updateProgress(eq(todo.id()), eq(999_000L), eq(0), eq(1_000L), eq("IN_PROGRESS"), eq(NOW));
+  }
+
+  @Test
+  @DisplayName("归档课程的已完成待办不能先清零再进入不可播放状态")
+  void 归档课程拒绝重新复习() {
+    Todo todo = TodoFixtures.course().status(TodoStatus.DONE).build();
+    when(todoService.requireOwned(TodoFixtures.USER_ID, todo.id())).thenReturn(todo);
+    when(todos.playbackSessions(java.util.List.of(todo.id())))
+        .thenReturn(
+            java.util.Map.of(todo.id(), new TodoRepository.PlaybackSession(0, 90_000, null)));
+    when(catalog.requireVisibleResource("resource-1"))
+        .thenThrow(
+            new BusinessException(
+                org.springframework.http.HttpStatus.CONFLICT, "RESOURCE_UNAVAILABLE", "所属课程已归档"));
+
+    assertThatThrownBy(() -> service.restartReview(TodoFixtures.USER_ID, todo.id(), 0, "review-1"))
+        .isInstanceOf(BusinessException.class)
+        .extracting(exception -> ((BusinessException) exception).errorCode())
+        .isEqualTo("TODO_RESOURCE_UNAVAILABLE");
+    verify(todos, never()).resetPlayback(anyString(), anyLong(), anyString(), any());
   }
 
   /** 旧客户端退出事件必须兼容排队重放，但不能把数据库不支持的值直接写入。 */

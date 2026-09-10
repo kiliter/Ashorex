@@ -19,6 +19,7 @@ final class MediaKitPlaybackAdapter extends PlaybackAdapter {
   mk.Player? _player;
   mv.VideoController? _controller;
   bool _disposed = false;
+  bool _authenticationExpired = false;
   bool _playing = false;
   bool _ended = false;
   bool _buffering = false;
@@ -40,6 +41,8 @@ final class MediaKitPlaybackAdapter extends PlaybackAdapter {
 
   @override
   bool get playing => !_disposed && _error == null && _playing;
+  @override
+  bool get authenticationExpired => _authenticationExpired;
   @override
   bool get ended => _ended;
   @override
@@ -87,6 +90,7 @@ final class MediaKitPlaybackAdapter extends PlaybackAdapter {
         // 解码回退成功后位置继续推进，清除旧错误，不能永久锁住播放状态。
         if (advanced && _playing && _error != null) {
           _error = null;
+          _authenticationExpired = false;
           changed();
         }
         // 位置保持最新，界面最多每 250ms 刷新一次，避免逐帧重建整页。
@@ -107,13 +111,15 @@ final class MediaKitPlaybackAdapter extends PlaybackAdapter {
           _playing = false;
           _buffering = false;
           _error = null;
+          _authenticationExpired = false;
           _position = _duration;
         }
         changed();
       }),
-      player.stream.error.listen((_) {
+      player.stream.error.listen((rawError) {
         if (_ended) return; // 已确认结束后的尾部日志不能覆盖正常片尾状态。
         // 内核错误可能包含带认证参数的地址，不向界面或日志传递原文。
+        _authenticationExpired = isPlaybackAuthenticationFailure(rawError);
         _error = '视频加载或播放失败，请重试';
         if (!_ready.isCompleted) _ready.complete();
         changed();
@@ -137,6 +143,7 @@ final class MediaKitPlaybackAdapter extends PlaybackAdapter {
     // 新一轮跳转重新接受播放错误，不把片尾状态带到下一次播放。
     _ended = false;
     _error = null;
+    _authenticationExpired = false;
     await _player?.seek(Duration(milliseconds: milliseconds));
   }
 

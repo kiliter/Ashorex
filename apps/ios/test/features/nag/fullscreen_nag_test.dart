@@ -158,6 +158,32 @@ void main() {
     expect(find.byType(FullscreenNagPage), findsOneWidget);
   });
 
+  for (final errorCode in const [
+    'NAG_EXPIRED',
+    'NAG_CANCELLED',
+    'NAG_NOT_FOUND',
+  ]) {
+    testWidgets('终态 $errorCode 关闭旧催办页交给外层重新查询', (tester) async {
+      final backend = FakeBackend()
+        ..on(
+          'POST',
+          '/api/v1/nags/n-1/respond',
+          status: errorCode == 'NAG_NOT_FOUND' ? 404 : 409,
+          errorCode: errorCode,
+        );
+      await _pump(tester, backend, nag: _nag(), pushed: true);
+
+      await tester.tap(find.text('临时加班'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), '跨天后已经重新安排学习');
+      await tester.pump();
+      await tester.tap(find.text('提交原因并继续'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FullscreenNagPage), findsNothing);
+    });
+  }
+
   testWidgets('不要求原因的催办可直接提交，标签兜底为 TEMP_BUSY', (tester) async {
     final backend = FakeBackend()..on('POST', '/api/v1/nags/n-1/respond');
     await _pump(tester, backend, nag: _nag(requireReason: false), pushed: true);

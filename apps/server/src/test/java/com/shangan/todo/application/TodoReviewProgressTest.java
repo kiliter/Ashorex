@@ -3,6 +3,7 @@ package com.shangan.todo.application;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.shangan.catalog.application.CatalogQueryService;
 import com.shangan.catalog.infrastructure.CourseRepository;
 import com.shangan.presence.application.EffectiveActionRecorder;
 import com.shangan.todo.TodoFixtures;
@@ -16,19 +17,26 @@ import org.junit.jupiter.api.Test;
 class TodoReviewProgressTest {
   final TodoRepository todos = mock(TodoRepository.class);
   final CourseRepository courses = mock(CourseRepository.class);
+  final CatalogQueryService catalog = mock(CatalogQueryService.class);
   final TodoService owner = mock(TodoService.class);
   final EffectiveActionRecorder actions = mock(EffectiveActionRecorder.class);
   final Instant now = Instant.parse("2026-09-10T00:00:00Z");
   final TodoProgressService service =
       new TodoProgressService(
-          todos, courses, owner, actions, () -> "event-id", Clock.fixed(now, ZoneOffset.UTC));
+          todos,
+          courses,
+          catalog,
+          owner,
+          actions,
+          () -> "event-id",
+          Clock.fixed(now, ZoneOffset.UTC));
 
   @Test
   void resetPreservesCompletionAndDoesNotTouchCourseHistory() {
     var todo = TodoFixtures.course().status(TodoStatus.DONE).build();
     when(owner.requireOwned(todo.userId(), todo.id())).thenReturn(todo);
-    when(courses.findResourceById(todo.resourceId()))
-        .thenReturn(Optional.of(TodoFixtures.videoResource(60000)));
+    when(catalog.requireVisibleResource(todo.resourceId()))
+        .thenReturn(TodoFixtures.videoResource(60000));
     when(todos.resetPlayback(todo.id(), 0, "request-1", now)).thenReturn(true);
     assertThat(service.restartReview(todo.userId(), todo.id(), 0, "request-1").epoch())
         .isEqualTo(1);

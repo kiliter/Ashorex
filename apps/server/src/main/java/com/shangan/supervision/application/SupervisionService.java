@@ -76,7 +76,8 @@ public class SupervisionService {
     }
     User learner = requireUser(learnerUserId, "SUPERVISION_LEARNER_NOT_FOUND");
     User supervisor = requireUser(supervisorUserId, "SUPERVISION_SUPERVISOR_NOT_FOUND");
-    if (supervisions.find(learner.id(), supervisor.id()).filter(Supervision::active).isPresent()) {
+    Optional<Supervision> existing = supervisions.find(learner.id(), supervisor.id());
+    if (existing.filter(Supervision::active).isPresent()) {
       throw new BusinessException(HttpStatus.CONFLICT, "SUPERVISION_ALREADY_BOUND", "该督学关系已存在");
     }
     if (kind == SupervisionKind.PRIMARY
@@ -86,7 +87,7 @@ public class SupervisionService {
     }
     Supervision supervision =
         new Supervision(
-            idGenerator.nextId(),
+            existing.map(Supervision::id).orElseGet(idGenerator::nextId),
             learner.id(),
             supervisor.id(),
             kind,
@@ -95,7 +96,13 @@ public class SupervisionService {
             canEditGoal,
             canAddTodo,
             null);
-    supervisions.insert(supervision, clock.instant());
+    if (existing.isPresent()) {
+      // 账号对唯一索引覆盖已归档行，重绑必须原地恢复，不能再插入新 ID。
+      supervisions.reactivate(
+          supervision.id(), kind, canView, canNag, canEditGoal, canAddTodo, clock.instant());
+    } else {
+      supervisions.insert(supervision, clock.instant());
+    }
     if (!supervisor.hasRole(UserRole.SUPERVISOR)) {
       users.addRole(supervisor.id(), UserRole.SUPERVISOR, clock.instant());
     }

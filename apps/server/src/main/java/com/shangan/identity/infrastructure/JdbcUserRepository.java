@@ -176,6 +176,15 @@ public class JdbcUserRepository implements UserRepository {
   }
 
   @Override
+  public void revokeAdminSessionsByPrincipal(String username) {
+    // SPRING_SESSION_ATTRIBUTES 使用 ON DELETE CASCADE，只删主表即可完整撤销会话。
+    jdbcClient
+        .sql("DELETE FROM SPRING_SESSION WHERE PRINCIPAL_NAME = :username")
+        .param("username", username)
+        .update();
+  }
+
+  @Override
   public void revokeRefreshTokensByUserId(String userId, Instant revokedAt) {
     jdbcClient
         .sql(
