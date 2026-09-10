@@ -1,3 +1,4 @@
+import 'app_update_page.dart';
 import 'bark_settings_sheet.dart';
 import 'package:shangan_ios/core/widgets/shangan_feedback.dart';
 import 'package:flutter/material.dart';
@@ -138,6 +139,19 @@ final class ProfilePage extends ConsumerWidget {
                       ),
                     ),
                   ],
+                  // 应用级信息统一放在设置底部，不混入推送或账号安全分组。
+                  const ShanganGroupLabel('应用信息'),
+                  ShanganCard(
+                    padding: EdgeInsets.zero,
+                    child: AppUpdateEntry(
+                      builder: (version, open) => _MenuItem(
+                        icon: Icons.system_update_outlined,
+                        title: '检查更新',
+                        value: version.isEmpty ? '读取中' : version,
+                        onTap: open,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 18),
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(

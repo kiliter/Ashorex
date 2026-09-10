@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- 客户端需要访问上岸服务端和受控的视频代理。 -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- 仅用户点击安装时申请系统确认，不支持静默安装。 -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <application
         android:label="上岸"
         android:name="${applicationName}"
@@ -35,6 +37,10 @@
                 <data android:scheme="shangan" android:host="home" />
             </intent-filter>
         </activity>
+        <provider android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updates" android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/update_paths"/>
+        </provider>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

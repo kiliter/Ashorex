@@ -9,6 +9,36 @@ import '../../support/fake_backend.dart';
 /// 进度上报队列：`clientSeq` 必须从 0 起严格递增，断网时事件留在队列里，
 /// 恢复后按序重放且不跳号，重复由服务端幂等键拦截（见 Spec 7.1）。
 void main() {
+  test('复习轮次写入实际请求，离线重放保留入队时的轮次', () async {
+    final backend = FakeBackend()
+      ..on('POST', '/api/v1/todos/t-1/progress', status: 503);
+    final repository = buildRepository(backend);
+    final store = _MemoryProgressStore();
+    final queue = ProgressQueue(
+      repository: repository,
+      todoId: 't-1',
+      outbox: ProgressOutbox(repository: repository, store: store),
+      initialSequence: 42,
+    )..playbackEpoch = 2;
+    await queue.submit(
+      positionMs: 15000,
+      deltaWatchedMs: 1000,
+      foreground: true,
+    );
+    // 切换到新轮次不能改写已持久化事件的归属，且最终 HTTP 请求必须携带轮次。
+    queue.playbackEpoch = 3;
+    backend.on(
+      'POST',
+      '/api/v1/todos/t-1/progress',
+      json: _progressJson(positionMs: 15000),
+    );
+    final restored = ProgressOutbox(repository: repository, store: store);
+    await restored.flush();
+    expect(backend.requests.map((r) => r.json['playbackEpoch']), [2, 2]);
+    expect(backend.requests.last.json['positionMs'], 15000);
+    expect(restored.depth, 0);
+  });
+
   test('离线退出并重建队列后，按原幂等键补发且清除持久记录', () async {
     final backend = FakeBackend()
       ..on('POST', '/api/v1/todos/t-1/progress', status: 503);

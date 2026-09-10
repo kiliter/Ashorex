@@ -38,6 +38,17 @@ public interface TodoRepository {
 
   record CourseAdditionReceipt(String fingerprint, String resultJson) {}
 
+  /** 复习轮次与恢复位置独立于课时累计记录，列表批量读取。 */
+  Map<String, PlaybackSession> playbackSessions(List<String> todoIds);
+
+  /** 乐观版本和请求标识保证确认重试不重复清零，只更新当前 Todo 的播放字段。 */
+  boolean resetPlayback(String todoId, long expectedEpoch, String requestId, Instant now);
+
+  /** 只接受本轮较新的序号，防止迟到报告回写续播位置。 */
+  void rememberPlayback(String todoId, long epoch, long sequence, long positionMs);
+
+  record PlaybackSession(long epoch, long resumePositionMs, String resetId) {}
+
   // ---------- Todo 行 ----------
 
   Optional<Todo> findById(String id);

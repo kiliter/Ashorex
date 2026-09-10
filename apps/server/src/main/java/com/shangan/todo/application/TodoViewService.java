@@ -161,6 +161,7 @@ public class TodoViewService {
     Map<String, Integer> attachmentCounts = todos.attachmentCounts(ids);
     Map<String, Set<NoteTag>> noteTags = todos.noteTagsOf(ids);
     Set<String> reviewIds = todos.reviewTodoIds(ids);
+    var playbackSessions = todos.playbackSessions(ids);
     List<TodoView> views = new ArrayList<>(items.size());
     for (Todo todo : items) {
       Optional<LearningResource> resource =
@@ -202,7 +203,15 @@ public class TodoViewService {
               todo.supervisorUserIdSnapshot(),
               attachmentCounts.getOrDefault(todo.id(), 0),
               List.copyOf(noteTags.getOrDefault(todo.id(), Set.of())),
-              reviewIds.contains(todo.id())));
+              reviewIds.contains(todo.id()),
+              playbackSessions
+                  .getOrDefault(
+                      todo.id(),
+                      new TodoRepository.PlaybackSession(0, todo.progressPositionMs(), null))
+                  .epoch(),
+              playbackSessions.containsKey(todo.id()) && playbackSessions.get(todo.id()).epoch() > 0
+                  ? playbackSessions.get(todo.id()).resumePositionMs()
+                  : todo.progressPositionMs()));
     }
     return List.copyOf(views);
   }
@@ -300,7 +309,9 @@ public class TodoViewService {
       String supervisorUserIdSnapshot,
       int attachmentCount,
       List<NoteTag> noteTags,
-      boolean review) {}
+      boolean review,
+      long playbackEpoch,
+      long resumePositionMs) {}
 
   /** 当日指标。 */
   public record DaySummaryTotals(

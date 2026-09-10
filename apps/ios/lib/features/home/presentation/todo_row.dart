@@ -1,3 +1,6 @@
+import 'dart:math';
+import 'package:shangan_ios/core/api/api_exception.dart';
+import 'package:shangan_ios/core/state/shangan_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -63,7 +66,12 @@ final class TodoRow extends ConsumerWidget {
       compact: compact,
       showCompletedTime: showCompletedTime,
       extraBadges: [
-        if (todo.review)
+        if (todo.playbackEpoch > 0)
+          ShanganBadge(
+            label: '本轮复习 ${todo.progressPermille ~/ 10}%',
+            tone: ShanganBadgeTone.ochre,
+          )
+        else if (todo.review)
           const ShanganBadge(label: '复习', tone: ShanganBadgeTone.ochre),
         ...extraBadges,
       ],
@@ -109,25 +117,23 @@ final class TodoRow extends ConsumerWidget {
                 : body,
           ),
           const SizedBox(width: 8),
-          // 已完成课程保留详情箭头，独立回放按钮不影响完成与附件入口。
+          // 继续复习不重置；只有重新复习经确认后开启下一轮，详情入口仍保留。
           if (!selectable &&
               !readOnly &&
               todo.isDone &&
-              todo.todoType == TodoType.course)
+              todo.todoType == TodoType.course) ...[
+            if (todo.playbackEpoch > 0)
+              IconButton(
+                tooltip: '继续复习',
+                icon: const Icon(Icons.play_arrow_rounded),
+                onPressed: () => _continueReview(context, ref),
+              ),
             IconButton(
-              tooltip: '回放',
+              tooltip: todo.playbackEpoch > 0 ? '重新复习' : '复习',
               icon: const Icon(Icons.replay_rounded),
-              onPressed: () async {
-                if (!todo.resourceAvailable) {
-                  _showUnavailable(context, ref);
-                  return;
-                }
-                await context.push<bool>(
-                  '/player/${todo.id}?date=${todo.localDate.toIso8601String().substring(0, 10)}',
-                );
-                await onChanged();
-              },
+              onPressed: () => _restartReview(context, ref),
             ),
+          ],
           if (!selectable && !readOnly)
             Padding(
               padding: const EdgeInsets.only(top: 2),
@@ -139,6 +145,104 @@ final class TodoRow extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// 完成项再次进入播放器保留本轮位置，不能隐式重置历史或课时状态。
+  Future<void> _continueReview(BuildContext context, WidgetRef ref) async {
+    if (!todo.resourceAvailable) {
+      _showUnavailable(context, ref);
+      return;
+    }
+    await context.push<bool>(
+      '/player/${todo.id}?date=${todo.localDate.toIso8601String().substring(0, 10)}',
+    );
+    await onChanged();
+  }
+
+  /// 请求期间锁定确认框，失败允许沿用同一请求标识重试；取消完全不写数据。
+  Future<void> _restartReview(BuildContext context, WidgetRef ref) async {
+    if (!todo.resourceAvailable) {
+      _showUnavailable(context, ref);
+      return;
+    }
+    final random = Random.secure();
+    final requestId = List.generate(
+      16,
+      (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+    var busy = false;
+    String? error;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialog) => StatefulBuilder(
+        builder: (dialog, update) => PopScope(
+          canPop: !busy,
+          child: AlertDialog(
+            title: const Text('确认重新复习？'),
+            scrollable: true,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '将清零这条待办的视频进度，并从头开始记忆新的复习位置。已完成状态、历史观看时长和课程库中对应课时的进度都会保留。',
+                ),
+                if (error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      error!,
+                      style: const TextStyle(color: ShanganColors.red),
+                    ),
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: busy ? null : () => Navigator.pop(dialog, false),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: busy
+                    ? null
+                    : () async {
+                        update(() {
+                          busy = true;
+                          error = null;
+                        });
+                        try {
+                          await ref
+                              .read(shanganRepositoryProvider)
+                              .restartReview(
+                                todo.id,
+                                todo.playbackEpoch,
+                                requestId,
+                              );
+                          if (dialog.mounted) Navigator.pop(dialog, true);
+                        } catch (cause) {
+                          if (dialog.mounted) {
+                            update(() {
+                              busy = false;
+                              error =
+                                  cause is ApiException &&
+                                      cause.statusCode == 404
+                                  ? '当前服务端不支持复习重置或待办已不存在，请刷新并确认服务端版本'
+                                  : shanganErrorMessage(cause, '重置失败，请重试');
+                            });
+                          }
+                        }
+                      },
+                child: Text(busy ? '正在重置…' : '确认复习'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await _continueReview(context, ref);
+    }
   }
 
   Color get _typeColor => switch (todo.todoType) {

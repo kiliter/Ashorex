@@ -39,6 +39,64 @@ public class JdbcTodoRepository implements TodoRepository {
     this.jdbcClient = jdbcClient;
   }
 
+  /** 只查询 Todo 内的播放轮次，不联动 lesson_watch_states。 */
+  @Override
+  public Map<String, PlaybackSession> playbackSessions(List<String> ids) {
+    Map<String, PlaybackSession> result = new LinkedHashMap<>();
+    if (ids.isEmpty()) return result;
+    jdbcClient
+        .sql(
+            "SELECT id, playback_epoch, playback_resume_ms, playback_reset_id FROM todos WHERE id IN (:ids)")
+        .param("ids", ids)
+        .query(
+            (row, index) -> {
+              result.put(
+                  row.getString("id"),
+                  new PlaybackSession(
+                      row.getLong("playback_epoch"),
+                      row.getLong("playback_resume_ms"),
+                      row.getString("playback_reset_id")));
+              return 0;
+            })
+        .list();
+    return result;
+  }
+
+  /** CAS 原子开启复习轮次；不更新完成、时长或课时历史字段。 */
+  @Override
+  public boolean resetPlayback(String id, long expected, String request, Instant now) {
+    return jdbcClient
+            .sql(
+                """
+        UPDATE todos SET progress_position_ms = 0, playback_epoch = playback_epoch + 1,
+          playback_resume_ms = 0, playback_resume_seq = -1, playback_reset_id = :request,
+          updated_at = :now
+        WHERE id = :id AND playback_epoch = :expected
+        """)
+            .param("request", request)
+            .param("now", now.toEpochMilli())
+            .param("id", id)
+            .param("expected", expected)
+            .update()
+        == 1;
+  }
+
+  /** 同一轮保留最新已确认报告的位置；历史事件不能覆盖新轮次。 */
+  @Override
+  public void rememberPlayback(String id, long epoch, long sequence, long position) {
+    jdbcClient
+        .sql(
+            """
+        UPDATE todos SET playback_resume_ms = :position, playback_resume_seq = :sequence
+        WHERE id = :id AND playback_epoch = :epoch AND playback_resume_seq < :sequence
+        """)
+        .param("position", Math.max(0, position))
+        .param("sequence", sequence)
+        .param("id", id)
+        .param("epoch", epoch)
+        .update();
+  }
+
   /** 历史 Todo、删除台账和累计观看状态均只按当前用户的稳定资源 ID 判断。 */
   @Override
   public boolean hasCourseHistory(String userId, String resourceId) {

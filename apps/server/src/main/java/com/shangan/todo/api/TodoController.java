@@ -156,6 +156,18 @@ public class TodoController {
     return ResponseEntity.noContent().build();
   }
 
+  /** 仅在用户明确确认后开启复习轮次；继续播放不调用此接口。 */
+  @PostMapping("/{todoId}/review")
+  public TodoRepository.PlaybackSession restartReview(
+      CurrentUser user, @PathVariable String todoId, @Valid @RequestBody ReviewRequest request) {
+    return progress.restartReview(
+        user.userId(), todoId, request.expectedPlaybackEpoch(), request.requestId());
+  }
+
+  record ReviewRequest(
+      @jakarta.validation.constraints.PositiveOrZero long expectedPlaybackEpoch,
+      @NotBlank String requestId) {}
+
   @PostMapping("/{todoId}/progress")
   ProgressResult report(
       CurrentUser currentUser,
@@ -172,7 +184,8 @@ public class TodoController {
             request.positionPage(),
             request.deltaWatchedMs() == null ? 0 : request.deltaWatchedMs(),
             request.deltaFocusedMs() == null ? 0 : request.deltaFocusedMs(),
-            request.appState()));
+            request.appState(),
+            request.playbackEpoch() == null ? 0 : request.playbackEpoch()));
   }
 
   @PostMapping("/{todoId}/complete")
@@ -365,7 +378,8 @@ public class TodoController {
       Integer positionPage,
       Long deltaWatchedMs,
       Long deltaFocusedMs,
-      String appState) {}
+      String appState,
+      @jakarta.validation.constraints.PositiveOrZero Long playbackEpoch) {}
 
   record CompleteRequest(String note, List<NoteTag> noteTags, Boolean backfill) {}
 

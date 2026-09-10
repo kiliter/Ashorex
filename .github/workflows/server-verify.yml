@@ -15,6 +15,7 @@ on:
       - "docs/api/openapi.yaml"
       - "infra/scripts/check-openapi-drift.sh"
       - "Makefile"
+      - "scripts/check_release_version.py"
       - ".github/workflows/server-verify.yml"
   pull_request:
     paths:
@@ -24,6 +25,7 @@ on:
       - "docs/api/openapi.yaml"
       - "infra/scripts/check-openapi-drift.sh"
       - "Makefile"
+      - "scripts/check_release_version.py"
       - ".github/workflows/server-verify.yml"
 
 jobs:
@@ -35,6 +37,8 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+      - name: 校验统一发布版本
+        run: python3 scripts/check_release_version.py
       - name: 配置 Java 21
         uses: actions/setup-java@v4
         with:

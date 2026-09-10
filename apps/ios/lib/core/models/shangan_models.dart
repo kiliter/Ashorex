@@ -237,8 +237,14 @@ final class TodoItem {
     this.focusStartedAt,
     this.focusAttemptBaseMs = 0,
     this.review = false,
+    this.playbackEpoch = 0,
+    this.resumePositionMs,
     this.completedAt,
   });
+
+  /// 复习轮次与该 Todo 的续播位置，不替代课程库的累计进度。
+  final int playbackEpoch;
+  final int? resumePositionMs;
 
   final String id;
   final DateTime localDate;
@@ -308,6 +314,8 @@ final class TodoItem {
       plannedSeconds: (json['plannedSeconds'] as num?)?.toInt(),
       focusState: FocusState.parse(json['focusState'] as String? ?? 'IDLE'),
       review: json['review'] as bool? ?? false,
+      playbackEpoch: (json['playbackEpoch'] as num?)?.toInt() ?? 0,
+      resumePositionMs: (json['resumePositionMs'] as num?)?.toInt(),
       focusAttemptBaseMs: (json['focusAttemptBaseMs'] as num?)?.toInt() ?? 0,
       focusStartedAt: DateTime.tryParse(
         json['focusStartedAt'] as String? ?? '',

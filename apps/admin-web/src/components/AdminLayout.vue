@@ -33,7 +33,7 @@ async function signOut(): Promise<void> {
 </script>
 
 <template>
-  <div class="admin-shell" :class="{ 'bounded-shell': ['nag-policy', 'nags', 'emby-sync', 'settings'].includes(String($route.name)) }">
+  <div class="admin-shell" :class="{ 'bounded-shell': ['nag-policy', 'nags', 'emby-sync', 'settings', 'upgrades'].includes(String($route.name)) }">
     <nav class="admin-nav">
       <div class="brand">
         <img class="brand-mark" :src="brandMarkSrc" width="28" height="28" alt="" />

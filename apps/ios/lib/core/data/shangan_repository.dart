@@ -1,3 +1,5 @@
+import '../api/app_download.dart';
+import '../models/app_release.dart';
 import 'package:shangan_ios/core/presence/app_activity.dart';
 import 'dart:typed_data';
 import 'package:shangan_ios/core/models/course_addition_models.dart';
@@ -19,6 +21,39 @@ final class ShanganRepository {
   Future<({Uri uri, Map<String, String> headers})> playbackSource(
     String resourceId,
   ) => _api.playbackSource(resourceId);
+
+  /// 仅由显式检查操作调用，心跳和应用生命周期不触发版本查询。
+  Future<AppRelease> checkAppUpdate(String platform) async {
+    if (platform != 'android' && platform != 'ios') {
+      throw ArgumentError('不支持的平台');
+    }
+    return AppRelease.fromJson(
+      await _api.getPublicJson('/api/v1/app-updates/latest?platform=$platform'),
+    );
+  }
+
+  /// 外部页面与原生安装只拿到同源公开地址，不携带会话凭据。
+  Uri appUpdatePage(AppRelease release) => _api.appUpdateUri(release.pagePath);
+
+  /// 页面通过仓储下载，不直接使用 Dio；调用方负责取消离开的下载会话。
+  Future<String> downloadAppUpdate(
+    AppDownload download,
+    AppRelease release,
+    String directory,
+    void Function(int, int) progress,
+  ) {
+    if (!release.downloadable ||
+        !RegExp(r'^[a-f0-9]{64}$').hasMatch(release.sha256) ||
+        release.size <= 0) {
+      throw const FormatException('该安装包尚未就绪');
+    }
+    return download.run(
+      _api.appUpdateUri(release.downloadPath),
+      directory,
+      release,
+      progress,
+    );
+  }
 
   // ---------------- 我的 ----------------
 
@@ -262,6 +297,18 @@ final class ShanganRepository {
   }
 
   /// 上报一次进度；服务端返回裁决结果。
+  /// 重置需要用户确认和稳定请求标识，返回成功后才可进入新一轮播放器。
+  Future<void> restartReview(
+    String todoId,
+    int expectedEpoch,
+    String requestId,
+  ) async {
+    await _api.postJson(
+      '/api/v1/todos/$todoId/review',
+      data: {'expectedPlaybackEpoch': expectedEpoch, 'requestId': requestId},
+    );
+  }
+
   Future<ProgressResult> reportProgress(
     String todoId, {
     required int clientSeq,
@@ -272,12 +319,15 @@ final class ShanganRepository {
     int deltaWatchedMs = 0,
     int deltaFocusedMs = 0,
     bool foreground = true,
+    int playbackEpoch = 0,
   }) async {
     return ProgressResult.fromJson(
       await _api.postJson(
         '/api/v1/todos/$todoId/progress',
         data: {
           'clientSeq': clientSeq,
+          // 随事件传递入队时的复习轮次，避免服务端按旧轮次忽略本轮位置。
+          'playbackEpoch': playbackEpoch,
           'occurredAt': occurredAt.toUtc().toIso8601String(),
           'eventType': eventType,
           'positionMs': ?positionMs,

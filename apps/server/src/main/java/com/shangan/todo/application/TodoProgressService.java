@@ -48,6 +48,37 @@ public class TodoProgressService {
     this.clock = clock;
   }
 
+  /** 明确确认后只重置当前待办；完成历史与课时累计完全不参与此更新。 */
+  @Transactional
+  public TodoRepository.PlaybackSession restartReview(
+      String userId, String todoId, long expected, String requestId) {
+    Todo todo = todoService.requireOwned(userId, todoId);
+    if (todo.todoType() != TodoType.COURSE || !todo.done())
+      throw new BusinessException(
+          HttpStatus.BAD_REQUEST, "TODO_REVIEW_NOT_APPLICABLE", "仅已完成的课程待办可以重新复习");
+    if (requestId == null || !requestId.matches("[A-Za-z0-9_-]{1,80}") || expected < 0)
+      throw new BusinessException(HttpStatus.BAD_REQUEST, "TODO_REVIEW_INVALID", "复习请求无效");
+    var session = playbackSession(todoId);
+    if (requestId.equals(session.resetId())) return session;
+    if (session.epoch() != expected)
+      throw new BusinessException(HttpStatus.CONFLICT, "TODO_REVIEW_CHANGED", "复习进度已变化，请刷新后重试");
+    var resource = courses.findResourceById(todo.resourceId());
+    if (resource.isEmpty()
+        || !resource.get().available()
+        || resource.get().resourceType() != com.shangan.catalog.domain.ResourceType.VIDEO)
+      throw new BusinessException(HttpStatus.BAD_REQUEST, "TODO_RESOURCE_UNAVAILABLE", "当前课时不可播放");
+    if (!todos.resetPlayback(todoId, expected, requestId, clock.instant()))
+      throw new BusinessException(HttpStatus.CONFLICT, "TODO_REVIEW_CHANGED", "复习进度已变化，请刷新后重试");
+    return new TodoRepository.PlaybackSession(expected + 1, 0, requestId);
+  }
+
+  /** 老客户端与未复习的待办统一使用第零轮。 */
+  private TodoRepository.PlaybackSession playbackSession(String todoId) {
+    return todos
+        .playbackSessions(java.util.List.of(todoId))
+        .getOrDefault(todoId, new TodoRepository.PlaybackSession(0, 0, null));
+  }
+
   /** 处理一次进度上报；重复 clientSeq 直接返回当前状态且不重复计数。 */
   @Transactional
   public ProgressResult report(String userId, String todoId, ProgressReport report) {
@@ -84,7 +115,13 @@ public class TodoProgressService {
             occurredAt,
             now));
 
-    long position = TodoPolicy.advancePosition(todo.progressPositionMs(), report.positionMs());
+    long epoch = playbackSession(todoId).epoch();
+    boolean currentRound = report.playbackEpoch() == epoch;
+    // 旧轮次事件仍记真实时长，但不能把复习进度顶回旧片尾。
+    long position =
+        currentRound
+            ? TodoPolicy.advancePosition(todo.progressPositionMs(), report.positionMs())
+            : todo.progressPositionMs();
     int page = TodoPolicy.advancePage(todo.progressPage(), report.positionPage());
     long watched = TodoPolicy.accumulate(todo.watchedMs(), report.deltaWatchedMs(), foreground);
 
@@ -96,9 +133,13 @@ public class TodoProgressService {
         todo.reachedTarget(permille)
             && (!todo.requireEvidence() || !todos.attachmentsOf(todo.id()).isEmpty());
     TodoStatus status =
-        todo.done() ? TodoStatus.DONE : reached ? TodoStatus.DONE : TodoStatus.IN_PROGRESS;
+        todo.done()
+            ? TodoStatus.DONE
+            : !currentRound ? todo.status() : reached ? TodoStatus.DONE : TodoStatus.IN_PROGRESS;
 
     todos.updateProgress(todo.id(), position, page, watched, status.name(), now);
+    if (currentRound && epoch > 0 && report.positionMs() != null)
+      todos.rememberPlayback(todo.id(), epoch, report.clientSeq(), report.positionMs());
     long addedWatched = watched - todo.watchedMs();
     boolean newlyCompleted = status == TodoStatus.DONE && !todo.done();
     if (newlyCompleted) todoService.snapshotCompletion(todo);
@@ -159,7 +200,30 @@ public class TodoProgressService {
       Integer positionPage,
       long deltaWatchedMs,
       long deltaFocusedMs,
-      String appState) {}
+      String appState,
+      long playbackEpoch) {
+    /** 旧内部调用保留第零轮语义；新增参数只用于隔离复习事件。 */
+    public ProgressReport(
+        long clientSeq,
+        Instant occurredAt,
+        String eventType,
+        Long positionMs,
+        Integer positionPage,
+        long deltaWatchedMs,
+        long deltaFocusedMs,
+        String appState) {
+      this(
+          clientSeq,
+          occurredAt,
+          eventType,
+          positionMs,
+          positionPage,
+          deltaWatchedMs,
+          deltaFocusedMs,
+          appState,
+          0);
+    }
+  }
 
   /** 服务端裁决结果；客户端据此更新 UI。 */
   public record ProgressResult(

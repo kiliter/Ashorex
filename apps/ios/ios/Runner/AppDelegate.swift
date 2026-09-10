@@ -33,6 +33,24 @@ import UIKit
       let level = UIDevice.current.batteryLevel
       result(level < 0 ? -1 : Int((level * 100).rounded()))
     }
+    // iOS 仅打开用户选中的下载页面，不自动安装无签名 IPA。
+    let updateChannel = FlutterMethodChannel(name: "com.shangan/app-update", binaryMessenger: registrar.messenger())
+    updateChannel.setMethodCallHandler { call, result in
+      if call.method == "info" {
+        #if targetEnvironment(simulator)
+        let simulator = true
+        #else
+        let simulator = false
+        #endif
+        result(["version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "", "simulator": simulator])
+      } else if call.method == "openPage",
+                let args = call.arguments as? [String: Any], let text = args["url"] as? String,
+                let url = URL(string: text), ["http", "https"].contains(url.scheme ?? ""), url.user == nil {
+        UIApplication.shared.open(url, options: [:]) { success in
+          if success { result(nil) } else { result(FlutterError(code: "OPEN_FAILED", message: "无法打开下载页面", details: nil)) }
+        }
+      } else { result(FlutterMethodNotImplemented) }
+    }
     channel.setMethodCallHandler { [weak self] call, result in
       guard call.method == "pickImage" else {
         result(FlutterMethodNotImplemented)

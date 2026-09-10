@@ -121,6 +121,9 @@ public class SecurityConfiguration {
         .authorizeHttpRequests(
             requests ->
                 requests
+                    // 安装包及版本信息原本公开，供外部浏览器匿名读取；不放宽业务 API。
+                    .requestMatchers(HttpMethod.GET, "/api/v1/app-updates/**")
+                    .permitAll()
                     .requestMatchers("/api/v1/auth/**", "/actuator/health")
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/admin/login")

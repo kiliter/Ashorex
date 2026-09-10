@@ -115,6 +115,7 @@ final class ProgressOutbox {
           positionMs: event['positionMs'] as int,
           deltaWatchedMs: event['deltaWatchedMs'] as int,
           foreground: event['foreground'] as bool,
+          playbackEpoch: (event['playbackEpoch'] as num?)?.toInt() ?? 0,
         );
         if (event['todoId'] == todoId) last = result;
       } on ApiException catch (error) {
@@ -156,6 +157,9 @@ final class ProgressQueue {
   final ProgressOutbox _outbox;
   late final String? _owner;
   int _seq;
+
+  /// 随事件持久化，不在重放时改写成当前轮次，避免旧离线位置覆盖复习。
+  int playbackEpoch = 0;
   int get depth => _outbox.depth;
 
   Future<ProgressResult?> submit({
@@ -169,6 +173,7 @@ final class ProgressQueue {
     return _outbox.submit(owner, {
       'todoId': todoId,
       'clientSeq': _seq++,
+      'playbackEpoch': playbackEpoch,
       'occurredAt': DateTime.now().toUtc().toIso8601String(),
       'positionMs': positionMs,
       'deltaWatchedMs': deltaWatchedMs,

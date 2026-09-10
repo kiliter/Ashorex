@@ -11,11 +11,13 @@ on:
     paths:
       - "apps/ios/**"
       - "Makefile"
+      - "scripts/check_release_version.py"
       - ".github/workflows/ios-verify.yml"
   pull_request:
     paths:
       - "apps/ios/**"
       - "Makefile"
+      - "scripts/check_release_version.py"
       - ".github/workflows/ios-verify.yml"
 
 jobs:
@@ -24,6 +26,8 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+      - name: 校验统一发布版本
+        run: python3 scripts/check_release_version.py
       - name: 提供锁定的 Dart 与 Flutter 环境
         uses: subosito/flutter-action@v2
         with:
@@ -36,6 +40,9 @@ jobs:
         run: make ios-test
       - name: 构建无签名 iOS 应用
         run: cd apps/ios && flutter build ios --release --no-codesign
+      - name: 验证 Android 原生更新适配
+        if: github.event_name != 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/v')
+        run: cd apps/ios && flutter build apk --debug
       - name: 打包无签名 IPA
         # 普通 Push/PR 只验证构建；仅手动运行或版本标签需要形成可下载安装包。
         if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
@@ -141,4 +148,4 @@ jobs:
           gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 \
             || gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes \
             || gh release view "${GITHUB_REF_NAME}" >/dev/null
-          gh release upload "${GITHUB_REF_NAME}" release-assets/* --clobber
+          gh release upload "${GITHUB_REF_NAME}" release-assets/*

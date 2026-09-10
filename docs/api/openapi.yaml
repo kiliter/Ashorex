@@ -42,6 +42,85 @@ tags:
     description: 播放代理
 
 paths:
+  /api/v1/todos/{todoId}/review:
+    post:
+      tags: [todos]
+      summary: 确认复习后重置当前待办的视频进度，保留完成历史与课时进度
+      parameters:
+        - name: todoId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requestId]
+              properties:
+                expectedPlaybackEpoch: { type: integer, format: int64, minimum: 0, default: 0 }
+                requestId: { type: string, description: 本次确认的稳定标识，失败重试不更换 }
+      responses:
+        '200':
+          description: 当前复习轮次；相同请求返回原结果不再次清零
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  epoch: { type: integer, format: int64 }
+                  resumePositionMs: { type: integer, format: int64 }
+                  resetId: { type: string }
+        '409': { description: 确认时的轮次已过期，TODO_REVIEW_CHANGED }
+  /api/v1/app-updates/latest:
+    get:
+      tags: [app-update]
+      summary: 用户主动查询最新正式版本（匿名可读，不检查构建号）
+      security: []
+      parameters:
+        - name: platform
+          in: query
+          required: true
+          schema: { type: string, enum: [android, ios] }
+      responses:
+        '200':
+          description: 最新正式版本及当前平台安装包就绪状态
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppRelease' }
+        '404': { description: 暂无正式版本，APP_UPDATE_NOT_FOUND }
+        '503': { description: 查询失败，APP_UPDATE_UNAVAILABLE }
+  /api/v1/app-updates/releases/{tag}/assets/{platform}:
+    get:
+      tags: [app-update]
+      summary: 流式中转固定版本 APK 或 IPA，支持单段 Range
+      security: []
+      parameters:
+        - name: tag
+          in: path
+          required: true
+          schema: { type: string, example: v2.6.0 }
+        - name: platform
+          in: path
+          required: true
+          schema: { type: string, enum: [android, ios] }
+        - name: Range
+          in: header
+          required: false
+          schema: { type: string }
+        - name: If-Range
+          in: header
+          required: false
+          schema: { type: string }
+      responses:
+        '200': { description: 完整安装包流 }
+        '206': { description: 部分安装包流，包含 Content-Range }
+        '416': { description: 范围越界，空正文及 Content-Range }
+        '400': { description: 平台、版本或范围参数错误 }
+        '404': { description: 正式版本不存在或安装包尚未就绪 }
+        '429': { description: 达到下载并发上限 }
+        '503': { description: 上游不可用 }
   /api/v1/me/bark:
     get:
       tags: [identity]
@@ -1047,6 +1126,18 @@ components:
           schema: { $ref: '#/components/schemas/ProblemDetail' }
 
   schemas:
+    AppRelease:
+      type: object
+      properties:
+        version: { type: string, description: 三段正式版本号 }
+        notes: { type: string, description: 纯文本更新说明 }
+        publishedAt: { type: string, format: date-time }
+        platform: { type: string, enum: [android, ios] }
+        downloadable: { type: boolean }
+        size: { type: integer, format: int64 }
+        sha256: { type: string }
+        downloadPath: { type: string, description: 固定版本同源下载路径 }
+        pagePath: { type: string, description: 同源 iOS 下载说明页 }
     BarkSettingsView:
       type: object
       properties:
@@ -1301,6 +1392,8 @@ components:
         targetProgressPermille: { type: integer, nullable: true }
         progressPermille: { type: integer }
         progressPositionMs: { type: integer }
+        playbackEpoch: { type: integer, format: int64, default: 0, description: 当前待办播放轮次 }
+        resumePositionMs: { type: integer, format: int64, description: 当前待办本轮续播位置 }
         progressPage: { type: integer }
         watchedMs: { type: integer }
         plannedSeconds: { type: integer, nullable: true }
@@ -1486,6 +1579,7 @@ components:
       type: object
       required: [clientSeq]
       properties:
+        playbackEpoch: { type: integer, format: int64, minimum: 0, default: 0, description: 上报产生时的轮次，旧轮次只累计时长不覆盖复习位置 }
         clientSeq: { type: integer, minimum: 0 }
         occurredAt: { type: string, format: date-time }
         eventType:

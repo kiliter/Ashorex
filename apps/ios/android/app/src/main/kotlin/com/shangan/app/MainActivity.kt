@@ -10,6 +10,8 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.shangan/app-update")
+            .setMethodCallHandler(AppUpdateBridge(this))
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.shangan/device-status")
             .setMethodCallHandler { call, result ->
                 if (call.method == "battery") {

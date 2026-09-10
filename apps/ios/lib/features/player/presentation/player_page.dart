@@ -157,6 +157,7 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       (item) => item.id == widget.todoId,
       orElse: () => throw StateError('待办不存在或日期已变更'),
     );
+    _queue.playbackEpoch = todo.playbackEpoch;
     setState(() {
       _todo = todo;
       _durationMs = todo.resourceDurationMs ?? 0;
@@ -172,11 +173,12 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       setState(() {});
       await WidgetsBinding.instance.endOfFrame;
       if (!active()) return;
-      // 已完成项从头回放；服务端保留 DONE 与最远位置，仅新增真实观看时长。
-      if (!todo.isDone && todo.progressPositionMs > 0) {
-        await player
-            .seek(todo.progressPositionMs)
-            .timeout(const Duration(seconds: 8));
+      // 复习使用本待办的新轮次续播位置；旧服务端的完成回放保持从头兼容。
+      final resume = todo.playbackEpoch > 0
+          ? (todo.resumePositionMs ?? todo.progressPositionMs)
+          : (todo.isDone ? 0 : todo.progressPositionMs);
+      if (resume > 0) {
+        await player.seek(resume).timeout(const Duration(seconds: 8));
       }
       if (!active()) return;
       player.addListener(_onPlayerChanged);

@@ -313,3 +313,11 @@ T24 / 原型 2-2：首页添加课程和课程详情共用的加入课时弹窗�
 ## R48 → T48：服务端容器自动升级
 
 ADR-0048 → infra/updater、后台版本与升级、server 维护边界、正式版本清单 → 原型「8-12 版本与升级」。窄测试覆盖可信版本、失败不影响旧服务、备份/恢复、中断接续、旧 App 503、后台输入；CI 运行真实 Docker 升级和失败恢复。仅服务端运维扩展，不涉及 Android/iOS 在线更新。
+
+## R49 / T49：移动端主动检查更新（2026-09-10 已批准）
+
+遵循 [ADR-0049](../adr/0049-mobile-app-update.md) 与 [实施计划](../plans/2026-09-10-mobile-upgrade-plan.md)。文件：server/appupdate、Flutter 我的/版本页/仓储/下载器、Android/iOS 原生桥、移动发布 CI 与 OpenAPI。仅点击检查请求最新正式版本，统一三段版本号比较；Spring Boot 流式代理固定 APK/IPA；Android 校验后系统确认安装，iOS 浏览器下载后自行签名。先发布服务端、旧 App 首次手动安装，不改变学习 API；原型「6-4 版本与更新」。窄测试覆盖无隐式请求、版本比较、Range 续传、缺附件及错误，真实启动与物理安装验收分开。提交主题：feat: 支持移动端主动检查与下载安装更新。
+
+## R50 / T50：当前待办复习确认与进度隔离
+
+依据 [ADR-0050](../adr/0050-todo-review-progress.md)，用户确认只重置当前待办视频进度，保留 DONE、历史时长及课程库课时进度。文件：TodoProgressService、TodoRepository/JdbcTodoRepository、V011、TodoView、TodoRow、PlayerPage、ProgressQueue、OpenAPI 和原型。确认后开启新轮次，正常继续记忆；旧轮次迟到事件只累计真实时长，不覆盖新进度。窄测试验证确认/取消、重复重置、续播和课时进度隔离，真实迁移启动 UP；提交主题：fix: 确认复习后独立重置并记忆待办播放进度。

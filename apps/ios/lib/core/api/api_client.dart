@@ -51,6 +51,16 @@ final class ApiClient {
   String? _lastRefreshSource;
   TokenPair? _lastRefreshResult;
 
+  /// 更新下载只解析本站固定路径，拒绝绝对地址或跨源重定向。
+  Uri appUpdateUri(String path) {
+    if (!RegExp(
+      r'^/(api/v1/app-updates/releases/v[0-9]+\.[0-9]+\.[0-9]+/assets/(android|ios)|downloads/app/v[0-9]+\.[0-9]+\.[0-9]+/ios)$',
+    ).hasMatch(path)) {
+      throw const FormatException('更新下载地址无效');
+    }
+    return Uri.parse(_dio.options.baseUrl).resolve(path);
+  }
+
   /// 原生播放器不经过 Dio：先验证会话触发必要刷新，再提供固定同源流地址和请求头。
   Future<({Uri uri, Map<String, String> headers})> playbackSource(
     String resourceId,
@@ -132,6 +142,19 @@ final class ApiClient {
       },
     );
     return controller.stream;
+  }
+
+  /// 公共发布信息不依赖登录态，避免旧 token 影响检查更新或触发退出登录。
+  Future<Map<String, dynamic>> getPublicJson(String path) async {
+    try {
+      final response = await _dio.get<dynamic>(
+        path,
+        options: Options(extra: {_skipAuthMarker: true}),
+      );
+      return _asJson(response.data);
+    } on DioException catch (exception) {
+      throw ApiException.fromDio(exception);
+    }
   }
 
   Future<Map<String, dynamic>> getJson(String path) async {

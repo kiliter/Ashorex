@@ -5064,7 +5064,8 @@ document.querySelectorAll('.admin-prototype').forEach(function (frame) {
 });
 </script>
 <!-- ADR-0048：已确认的后台升级页面；与 UpgradesPage 共用信息层级和文案。 -->
-<section id="server-upgrades" style="max-width:960px;margin:40px auto;padding:24px;background:#fff;border:1px solid #dddcd4;border-radius:14px">
+<!-- 升级页固定为可用视口高度；长内容在内部滚动，避免外层后台被撑高。 -->
+<section id="server-upgrades" style="max-width:1200px;height:calc(100dvh - 40px);box-sizing:border-box;overflow:auto;margin:20px auto;padding:20px;background:#fff;border:1px solid #dddcd4;border-radius:14px">
 <h2>8-12 版本与升级</h2><p>正式版本发布后，可手动升级或在指定时间自动安装。</p>
 <div style="display:flex;gap:80px"><div>当前版本<h2>2.2.0</h2></div><div>最新正式版本<h2>2.3.0</h2></div></div>
 <p><button>检查更新</button> <button>预下载</button> <button onclick="return confirm('升级期间学习服务会短暂中断。系统会先备份数据库和附件，新版本验收失败时恢复旧服务。确认升级？')">立即升级</button></p>
@@ -5074,5 +5075,20 @@ document.querySelectorAll('.admin-prototype').forEach(function (frame) {
 <h3>最近执行结果</h3><p>上次版本：2.2.0</p><p>尚无升级记录</p><p>升级前会暂停服务并备份数据，验收失败自动恢复。业务恢复后如需回退，请按恢复手册评估新增数据，不直接恢复旧快照。</p>
 </section>
 
+<!-- ADR-0049：两种角色共用「我的」入口；只点击检查按钮时发起请求。 -->
+<!-- 入口位置修订：我的页面底部应用信息卡片，位于退出登录上方，复用现有设置行。 -->
+<section id="mobile-app-update" style="max-width:420px;margin:24px auto;padding:24px;border:1px solid #ddd;border-radius:20px;background:#fff">
+<h2>6-4 版本与更新</h2><p>我的 → 应用信息 → 检查更新 · 当前版本 2.5.0</p>
+<p>点击检查更新后查询最新正式版本，不会自动下载或安装。</p>
+<button style="min-height:44px" onclick="document.getElementById('mobile-update-result').hidden=false">检查更新</button>
+<div id="mobile-update-result" hidden><h3>发现新版本 2.6.0</h3><h4>更新说明</h4><p>改进学习体验。</p><p>安装包 100 MB</p><button style="min-height:44px">Android：下载 APK</button><p>下载进度 → 可取消、重试 → 校验完成 → 安装更新 → 系统确认。</p><button style="min-height:44px">iOS：打开下载页面</button><p>下载 IPA 后，使用轻松签自行签名安装。</p></div>
+<p>状态：检查中 / 当前无需更新 / 查询失败重试 / 服务端不支持 / 安装包尚未发布完整。</p>
+</section>
+<!-- ADR-0050：复习确认只清零当前待办，已完成与课时历史不变。 -->
+<section id="todo-review-confirm" style="max-width:420px;margin:24px auto;padding:24px;background:#fff;border:1px solid #ddd;border-radius:20px">
+<h2>课程复习</h2><p>已完成课程：复习 · 继续复习（已有本轮记录时） · 完成详情。</p>
+<h3>确认重新复习？</h3><p>将清零这条待办的视频进度，并从头开始记忆新的复习位置。已完成状态、历史观看时长和课程库中对应课时的进度都会保留。</p>
+<button style="min-height:44px">取消</button> <button style="min-height:44px">确认复习</button><p>确认期间锁定操作，失败可重试；继续复习不重置。</p>
+</section>
 </body>
 </html>
