@@ -47,9 +47,7 @@ void main() {
         json: courseDetailJson(
           id: 'a',
           title: '行政法专题',
-          resources: [
-            courseResourceJson(id: 'r-1', title: '第 01 讲 · 行政法基础'),
-          ],
+          resources: [courseResourceJson(id: 'r-1', title: '第 01 讲 · 行政法基础')],
         ),
       );
     final repository = buildRepository(backend);

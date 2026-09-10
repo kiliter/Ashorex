@@ -18,7 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 接收用户手动上报的诊断日志，落盘、脱敏、限额并供后台只读读取。 */
+/** 接收用户手动上报的诊断日志，落盘、脱敏、限额，并供后台查看与删除。 */
 @Service
 public class DiagnosticLogService {
 
@@ -136,6 +136,29 @@ public class DiagnosticLogService {
       throw new BusinessException(HttpStatus.NOT_FOUND, "DIAGNOSTIC_LOG_NOT_FOUND", "诊断日志不存在");
     }
     return path;
+  }
+
+  /** 管理员删除一份上报：先删台账再删文件，避免留下无主路径。 */
+  @Transactional
+  public void delete(String id) {
+    DiagnosticLogUpload upload =
+        uploads
+            .findById(id)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "DIAGNOSTIC_LOG_NOT_FOUND", "诊断日志不存在"));
+    uploads.delete(upload.id());
+    Path path = diagnosticsRoot.resolve(upload.storagePath()).normalize();
+    deleteFileQuietly(path);
+    Path parent = path.getParent();
+    if (parent != null && parent.startsWith(diagnosticsRoot)) {
+      try {
+        Files.deleteIfExists(parent);
+      } catch (IOException ignored) {
+        // 目录里还有其他上报时保留。
+      }
+    }
   }
 
   /** 用户彻底删除时同步清掉该用户的诊断日志文件与台账。 */

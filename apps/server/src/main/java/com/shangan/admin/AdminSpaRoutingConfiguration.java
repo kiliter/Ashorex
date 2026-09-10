@@ -31,6 +31,7 @@ public class AdminSpaRoutingConfiguration implements WebMvcConfigurer {
     "/admin/archive",
     "/admin/settings",
     "/admin/upgrades",
+    "/admin/diagnostic-logs",
   };
 
   @Override

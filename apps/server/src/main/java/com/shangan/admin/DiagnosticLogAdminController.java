@@ -8,12 +8,13 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 管理后台只读查看用户上报的诊断日志。 */
+/** 管理后台查看并删除用户上报的诊断日志。 */
 @RestController
 @RequestMapping("/admin/api/diagnostic-logs")
 public class DiagnosticLogAdminController {
@@ -33,6 +34,12 @@ public class DiagnosticLogAdminController {
   ResponseEntity<Resource> content(@PathVariable String id) {
     Path path = logs.locate(id);
     return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(new FileSystemResource(path));
+  }
+
+  @DeleteMapping("/{id}")
+  ResponseEntity<Void> delete(@PathVariable String id) {
+    logs.delete(id);
+    return ResponseEntity.noContent().build();
   }
 
   public record Row(

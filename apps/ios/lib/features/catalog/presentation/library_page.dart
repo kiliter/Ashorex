@@ -168,6 +168,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                           if (!compact)
                             const Text(
                               'LIBRARY',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w700,
@@ -177,6 +179,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                             ),
                           Text(
                             '课程库',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: compact ? 20 : 26,
                               fontWeight: FontWeight.w800,
@@ -250,9 +254,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                   _LibraryOptions(
                     count: visibleCount,
                     hideFullyWatched: _hideFullyWatched,
-                    onToggleHide: () => setState(
-                      () => _hideFullyWatched = !_hideFullyWatched,
-                    ),
+                    onToggleHide: () =>
+                        setState(() => _hideFullyWatched = !_hideFullyWatched),
                   ),
                 Expanded(
                   child: RefreshIndicator(
@@ -378,52 +381,67 @@ final class _LibraryOptions extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(2, 2, 2, 8),
     child: Row(
       children: [
-        Text(
-          count == null ? '课程加载中' : '共 $count 门课程',
-          style: const TextStyle(
-            fontSize: 10.5,
-            color: ShanganColors.mutedInk,
+        Flexible(
+          child: Text(
+            count == null ? '课程加载中' : '共 $count 门课程',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 10.5,
+              color: ShanganColors.mutedInk,
+            ),
           ),
         ),
-        const Spacer(),
-        Semantics(
-          button: true,
-          selected: hideFullyWatched,
-          label: '隐藏已看完',
-          child: InkWell(
-            borderRadius: BorderRadius.circular(8),
-            onTap: onToggleHide,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
-              child: Row(
-                children: [
-                  Container(
-                    width: 14,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: hideFullyWatched
-                          ? ShanganColors.blue
-                          : Colors.transparent,
-                      border: Border.all(
+        const SizedBox(width: 8),
+        Flexible(
+          child: Semantics(
+            button: true,
+            selected: hideFullyWatched,
+            label: '隐藏已看完',
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: onToggleHide,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
                         color: hideFullyWatched
                             ? ShanganColors.blue
-                            : ShanganColors.rule,
+                            : Colors.transparent,
+                        border: Border.all(
+                          color: hideFullyWatched
+                              ? ShanganColors.blue
+                              : ShanganColors.rule,
+                        ),
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                      borderRadius: BorderRadius.circular(4),
+                      child: hideFullyWatched
+                          ? const Icon(
+                              Icons.check,
+                              size: 10,
+                              color: Colors.white,
+                            )
+                          : null,
                     ),
-                    child: hideFullyWatched
-                        ? const Icon(Icons.check, size: 10, color: Colors.white)
-                        : null,
-                  ),
-                  const SizedBox(width: 6),
-                  const Text(
-                    '隐藏已看完',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      color: ShanganColors.mutedInk,
+                    const SizedBox(width: 6),
+                    const Flexible(
+                      child: Text(
+                        '隐藏已看完',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: ShanganColors.mutedInk,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -520,8 +538,7 @@ final class _FolderCourses extends ConsumerWidget {
       final columns = constraints.maxWidth < 600
           ? 2
           : (constraints.maxWidth / 180).floor().clamp(3, 8);
-      final tileWidth =
-          (constraints.maxWidth - (columns - 1) * 10) / columns;
+      final tileWidth = (constraints.maxWidth - (columns - 1) * 10) / columns;
       final coverHeight = (tileWidth - 22) / 1.15;
       return CustomScrollView(
         key: const PageStorageKey('library-folders'),
@@ -690,10 +707,7 @@ final class _CoverTile extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  TargetProgressBar(
-                    value: completedPercent / 100,
-                    height: 5,
-                  ),
+                  TargetProgressBar(value: completedPercent / 100, height: 5),
                 ],
               ],
             ),
@@ -1031,189 +1045,185 @@ class _CourseDetailPageState extends ConsumerState<CourseDetailPage> {
     return _CourseDetailSurface(
       embedded: widget.embedded,
       child: detail.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(child: Text('课程详情加载失败：$error')),
-          data: (data) {
-            final resources = keyword.isEmpty
-                ? data.resources
-                : data.resources
-                      .where((item) => item.title.contains(keyword))
-                      .toList(growable: false);
-            final next = data.resources
-                .where(
-                  (item) => item.measurable && item.progressPermille < 1000,
-                )
-                .firstOrNull;
-            // 列表占用剩余高度；横屏和键盘下收起摘要，操作区仍保持固定。
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final compact =
-                    constraints.maxHeight < 460 ||
-                    MediaQuery.textScalerOf(context).scale(14) > 22;
-                return Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          if (!widget.embedded) ...[
-                            ShanganIconButton(
-                              icon: Icons.chevron_right,
-                              quarterTurns: 2,
-                              semanticLabel: '返回',
-                              onTap: () => Navigator.of(context).pop(),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                          Expanded(
-                            child: compact && _searchOpen
-                                ? ShanganSearchField(
-                                    controller: _keyword,
-                                    hint: '搜索课时',
-                                    onChanged: (_) => setState(() {}),
-                                  )
-                                : Tooltip(
-                                    message: data.summary.title,
-                                    child: Text(
-                                      data.summary.title,
-                                      key: const ValueKey(
-                                        'course-detail-title',
-                                      ),
-                                      maxLines: compact ? 1 : 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w800,
-                                      ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(child: Text('课程详情加载失败：$error')),
+        data: (data) {
+          final resources = keyword.isEmpty
+              ? data.resources
+              : data.resources
+                    .where((item) => item.title.contains(keyword))
+                    .toList(growable: false);
+          final next = data.resources
+              .where((item) => item.measurable && item.progressPermille < 1000)
+              .firstOrNull;
+          // 列表占用剩余高度；横屏和键盘下收起摘要，操作区仍保持固定。
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final compact =
+                  constraints.maxHeight < 460 ||
+                  MediaQuery.textScalerOf(context).scale(14) > 22;
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        if (!widget.embedded) ...[
+                          ShanganIconButton(
+                            icon: Icons.chevron_right,
+                            quarterTurns: 2,
+                            semanticLabel: '返回',
+                            onTap: () => Navigator.of(context).pop(),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        Expanded(
+                          child: compact && _searchOpen
+                              ? ShanganSearchField(
+                                  controller: _keyword,
+                                  hint: '搜索课时',
+                                  onChanged: (_) => setState(() {}),
+                                )
+                              : Tooltip(
+                                  message: data.summary.title,
+                                  child: Text(
+                                    data.summary.title,
+                                    key: const ValueKey('course-detail-title'),
+                                    maxLines: compact ? 1 : 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
                                     ),
                                   ),
-                          ),
-                          ShanganIconButton(
-                            icon: Icons.search,
-                            highlighted: _searchOpen,
-                            semanticLabel: '搜索课时',
-                            onTap: () =>
-                                setState(() => _searchOpen = !_searchOpen),
-                          ),
-                        ],
-                      ),
-                      if (!compact) ...[
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            '${data.resources.length} 课时 · ${formatDurationCompact(data.summary.totalDurationMs)}'
-                            ' · 已完成 ${data.summary.completedCount}/${data.resources.length}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: ShanganColors.mutedInk,
-                            ),
-                          ),
+                                ),
                         ),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            [
-                              ...data.people,
-                              ...data.genres,
-                              ...data.tags,
-                            ].join(' · '),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: ShanganColors.mutedInk,
-                            ),
-                          ),
+                        ShanganIconButton(
+                          icon: Icons.search,
+                          highlighted: _searchOpen,
+                          semanticLabel: '搜索课时',
+                          onTap: () =>
+                              setState(() => _searchOpen = !_searchOpen),
                         ),
-                        const SizedBox(height: 8),
-                        TargetProgressBar(
-                          value: data.summary.completedPercent / 100,
-                        ),
-                        if (_searchOpen) ...[
-                          const SizedBox(height: 8),
-                          ShanganSearchField(
-                            controller: _keyword,
-                            hint: '搜索课时',
-                            onChanged: (_) => setState(() {}),
-                          ),
-                        ],
                       ],
+                    ),
+                    if (!compact) ...[
                       const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: FilledButton.icon(
-                              style: _smallFilledStyle,
-                              onPressed: next == null
-                                  ? null
-                                  : () => _addToToday(data.summary),
-                              icon: const Icon(
-                                Icons.play_arrow_rounded,
-                                size: 18,
-                              ),
-                              label: Text(
-                                data.summary.fullyWatched
-                                    ? '已全部看完'
-                                    : next == null
-                                    ? '暂无可学课时'
-                                    : '继续${next.title}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 9),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              style: _smallOutlinedStyle,
-                              onPressed: () => _addToToday(data.summary),
-                              icon: const Icon(Icons.add, size: 18),
-                              label: const Text(
-                                '批量加入',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Align(
+                      Align(
                         alignment: Alignment.centerLeft,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 6),
-                          child: Text(
-                            '课时',
-                            style: TextStyle(fontWeight: FontWeight.w700),
+                        child: Text(
+                          '${data.resources.length} 课时 · ${formatDurationCompact(data.summary.totalDurationMs)}'
+                          ' · 已完成 ${data.summary.completedCount}/${data.resources.length}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: ShanganColors.mutedInk,
                           ),
                         ),
                       ),
-                      Expanded(
-                        child: resources.isEmpty
-                            ? const Center(child: Text('没有符合条件的课时'))
-                            : ListView.separated(
-                                key: const ValueKey('course-lessons'),
-                                padding: const EdgeInsets.only(bottom: 24),
-                                itemCount: resources.length,
-                                separatorBuilder: (_, _) => const Divider(
-                                  height: 1,
-                                  color: ShanganColors.hair,
-                                ),
-                                itemBuilder: (context, index) => _ResourceRow(
-                                  resource: resources[index],
-                                  onAdd: () => _addToToday(data.summary),
-                                ),
-                              ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          [
+                            ...data.people,
+                            ...data.genres,
+                            ...data.tags,
+                          ].join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: ShanganColors.mutedInk,
+                          ),
+                        ),
                       ),
+                      const SizedBox(height: 8),
+                      TargetProgressBar(
+                        value: data.summary.completedPercent / 100,
+                      ),
+                      if (_searchOpen) ...[
+                        const SizedBox(height: 8),
+                        ShanganSearchField(
+                          controller: _keyword,
+                          hint: '搜索课时',
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ],
                     ],
-                  ),
-                );
-              },
-            );
-          },
-        ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            style: _smallFilledStyle,
+                            onPressed: next == null
+                                ? null
+                                : () => _addToToday(data.summary),
+                            icon: const Icon(
+                              Icons.play_arrow_rounded,
+                              size: 18,
+                            ),
+                            label: Text(
+                              data.summary.fullyWatched
+                                  ? '已全部看完'
+                                  : next == null
+                                  ? '暂无可学课时'
+                                  : '继续${next.title}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: _smallOutlinedStyle,
+                            onPressed: () => _addToToday(data.summary),
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text(
+                              '批量加入',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 6),
+                        child: Text(
+                          '课时',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: resources.isEmpty
+                          ? const Center(child: Text('没有符合条件的课时'))
+                          : ListView.separated(
+                              key: const ValueKey('course-lessons'),
+                              padding: const EdgeInsets.only(bottom: 24),
+                              itemCount: resources.length,
+                              separatorBuilder: (_, _) => const Divider(
+                                height: 1,
+                                color: ShanganColors.hair,
+                              ),
+                              itemBuilder: (context, index) => _ResourceRow(
+                                resource: resources[index],
+                                onAdd: () => _addToToday(data.summary),
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 

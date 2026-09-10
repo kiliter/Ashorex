@@ -5098,14 +5098,15 @@ document.querySelectorAll('.admin-prototype').forEach(function (frame) {
 </section>
 <section id="admin-diagnostic-logs" style="max-width:960px;margin:24px auto;padding:24px;border:1px solid #ddd;border-radius:20px;background:#fff">
 <h2>8-13 诊断日志</h2>
-<p>管理后台只读。按上传时间倒序列出用户、版本、平台与大小；点开查看正文。不提供检索集群、删除按钮或自动采集。</p>
+<p>管理后台按上传时间倒序列出用户、版本、平台与大小；点开查看正文。可确认后删除单份台账与磁盘文件。不提供检索集群或自动采集。</p>
 <table style="width:100%;border-collapse:collapse;font-size:13px">
-<thead><tr><th align="left">时间</th><th align="left">用户</th><th align="left">版本</th><th align="left">平台</th><th align="right">大小</th></tr></thead>
+<thead><tr><th align="left">时间</th><th align="left">用户</th><th align="left">版本</th><th align="left">平台</th><th align="right">大小</th><th align="right">操作</th></tr></thead>
 <tbody>
-<tr><td>2026-09-10 16:20:01</td><td>zhangsan</td><td>2.6.0</td><td>ios</td><td align="right">186 KB</td></tr>
+<tr><td>2026-09-10 16:20:01</td><td>zhangsan</td><td>2.6.0</td><td>ios</td><td align="right">186 KB</td><td align="right"><button>删除</button></td></tr>
 </tbody>
 </table>
 <pre style="margin-top:16px;padding:12px;background:#f0f3f7;white-space:pre-wrap;font-size:12px">2026-09-10T08:20:01.123Z INFO  [player] ended todoId=t-1 positionMs=12000 durationMs=60000 playing=false</pre>
+<p>确认删除：将删除这份日志的台账和磁盘文件，不能恢复。</p>
 </section>
 <!-- ADR-0050：复习确认只清零当前待办，已完成与课时历史不变。 -->
 <section id="todo-review-confirm" style="max-width:420px;margin:24px auto;padding:24px;background:#fff;border:1px solid #ddd;border-radius:20px">

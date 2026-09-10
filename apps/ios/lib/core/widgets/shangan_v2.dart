@@ -657,6 +657,8 @@ final class ShanganSegmented extends StatelessWidget {
                   child: Text(
                     labels[index],
                     textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,

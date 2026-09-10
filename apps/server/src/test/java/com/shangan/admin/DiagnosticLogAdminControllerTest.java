@@ -1,6 +1,8 @@
 package com.shangan.admin;
 
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -22,7 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-/** 后台只读列表与正文，响应不含磁盘绝对路径。 */
+/** 后台列表、正文与删除，响应不含磁盘绝对路径。 */
 @ExtendWith(MockitoExtension.class)
 class DiagnosticLogAdminControllerTest {
 
@@ -73,5 +75,12 @@ class DiagnosticLogAdminControllerTest {
         .perform(get("/admin/api/diagnostic-logs/log-1/content"))
         .andExpect(status().isOk())
         .andExpect(content().string("INFO [player] ended"));
+  }
+
+  @Test
+  @DisplayName("删除成功返回 204")
+  void 删除返回204() throws Exception {
+    mockMvc.perform(delete("/admin/api/diagnostic-logs/log-1")).andExpect(status().isNoContent());
+    verify(logs).delete("log-1");
   }
 }

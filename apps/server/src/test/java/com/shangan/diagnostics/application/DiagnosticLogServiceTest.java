@@ -168,4 +168,33 @@ class DiagnosticLogServiceTest {
     assertThat(row.username()).isEqualTo("zhangsan");
     assertThat(row.id()).isEqualTo("log-1");
   }
+
+  @Test
+  @DisplayName("管理员删除同时清掉台账与磁盘文件")
+  void 删除台账与文件() throws Exception {
+    Path file = diagnosticsRoot.resolve(USER_ID).resolve("log-1.log");
+    Files.createDirectories(file.getParent());
+    Files.writeString(file, "log");
+    when(uploads.findById("log-1"))
+        .thenReturn(
+            Optional.of(
+                new DiagnosticLogUpload(
+                    "log-1", USER_ID, USER_ID + "/log-1.log", 3, "2.6.0", "ios", NOW)));
+
+    service.delete("log-1");
+
+    verify(uploads).delete("log-1");
+    assertThat(Files.exists(file)).isFalse();
+  }
+
+  @Test
+  @DisplayName("删除不存在的日志返回 DIAGNOSTIC_LOG_NOT_FOUND")
+  void 删除不存在() {
+    when(uploads.findById("missing")).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> service.delete("missing"))
+        .isInstanceOf(BusinessException.class)
+        .extracting(exception -> ((BusinessException) exception).errorCode())
+        .isEqualTo("DIAGNOSTIC_LOG_NOT_FOUND");
+    verify(uploads, never()).delete(any());
+  }
 }
