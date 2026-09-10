@@ -1,0 +1,20 @@
+docs/adr/0052-diagnostic-log-upload.md
+  s_4cee3de4005ba6::t_3d749d5b0ee021 1-25
+  s_4cee3de4005ba6::t_945e9d701c8b93 26-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "38285b04aa33e6cc8cbf3a61b00b1aff7486f557",
+  "prompts": {},
+  "sessions": {
+    "s_4cee3de4005ba6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a08aad-b9db-7a31-825c-923571093080",
+        "model": "unknown"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
