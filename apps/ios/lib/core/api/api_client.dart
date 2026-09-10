@@ -396,6 +396,10 @@ final class ApiClient {
       request.extra[_retryMarker] = true;
       request.extra[_requestRefreshMarker] = tokens.refreshToken;
       request.headers['Authorization'] = 'Bearer ${tokens.accessToken}';
+      // multipart 首次发送后已 finalized；克隆表单及文件以重发完整附件。
+      if (request.data is FormData) {
+        request.data = (request.data as FormData).clone();
+      }
       final response = await _dio.fetch<dynamic>(request);
       handler.resolve(response);
     } catch (refreshError) {

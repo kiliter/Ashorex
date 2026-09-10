@@ -1167,16 +1167,28 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
     }
   }
 
+  /// 附件与备注入口只回填；手动标记完成使用独立入口。
   Future<void> _openCompleteSheet(TodoItem todo) async {
     await _pause();
     if (!mounted) return;
-    await CompleteSheet.show(context, todo: todo);
+    await CompleteSheet.show(
+      context,
+      todo: todo,
+      mode: CompleteSheetMode.annotate,
+    );
   }
 
+  /// 补报可能已触发服务端自动完成，此时面板仅保存回填，避免复用旧 Todo 快照。
   Future<void> _markComplete(TodoItem todo) async {
     await _report(force: true);
     if (!mounted) return;
-    final done = await CompleteSheet.show(context, todo: todo);
+    final done = await CompleteSheet.show(
+      context,
+      todo: todo,
+      mode: _completed
+          ? CompleteSheetMode.annotate
+          : CompleteSheetMode.complete,
+    );
     if (done && mounted) {
       setState(() => _completed = true);
     }

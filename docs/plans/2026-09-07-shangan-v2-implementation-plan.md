@@ -1250,3 +1250,13 @@ T24 / 原型 2-2：首页添加课程和课程详情共用的加入课时弹窗�
 ## R50 / T50：当前待办复习确认与进度隔离
 
 依据 [ADR-0050](../adr/0050-todo-review-progress.md)，用户确认只重置当前待办视频进度，保留 DONE、历史时长及课程库课时进度。文件：TodoProgressService、TodoRepository/JdbcTodoRepository、V011、TodoView、TodoRow、PlayerPage、ProgressQueue、OpenAPI 和原型。确认后开启新轮次，正常继续记忆；旧轮次迟到事件只累计真实时长，不覆盖新进度。窄测试验证确认/取消、重复重置、续播和课时进度隔离，真实迁移启动 UP；提交主题：fix: 确认复习后独立重置并记忆待办播放进度。
+
+## T09 / T10 / T11 / T26 回归修复（2026-09-10）
+
+依据 [ADR-0051](../adr/0051-todo-annotation-upload-and-deletion-fixes.md)，修复已完成项回填丢失、附件鉴权重试失败、自然结束补凭证漏算专注完成数、按计划日期误计删除数量。文件涉及 CompleteSheet、FocusRunPage、PlayerPage、ApiClient、TodoDeletionService、TodoViewService 及 TodoRepository/JdbcTodoRepository；仅使用既有 API，无数据库迁移或公开合同变更。
+
+- 先复现失败，再区分完成/仅回填/专注补凭证意图，修复 multipart 克隆与删除时间范围。
+- Flutter 窄测试：`complete_sheet_test.dart`、`focus_run_test.dart`、`api_client_test.dart`、`player_controls_test.dart`。
+- Java 窄测试：`TodoDeletionServiceTest`、`SupervisorNotificationRulesTest`、`TodoRepaymentViewTest`，覆盖原计划日期保留、督学规则、用户时区与夏令时日期边界；不连接真实数据库。
+- 执行 `make format` 和变更文件静态分析，审查后提交；全量验证留给 GitHub CI。前三项需 App 升级，第四项仅服务端升级，发布与回退可独立进行。
+- 提交主题：`fix: 修复待办回填、附件重试与完成删除统计`。

@@ -7,17 +7,26 @@ import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_v2.dart';
 import 'package:shangan_ios/features/home/presentation/attachment_editor.dart';
 
+/// 面板保存意图：专注到点只准备凭证，由运行页继续请求 finish。
+enum CompleteSheetMode { complete, annotate, focusEvidence }
+
 /// 完成回填面板：附件（上传 / 预览 / 删除）+ 备注 + 一键标签。
 ///
 /// 任何类型完成后统一弹出；一键标签会写入 `noteTags` 供数据 Tab 聚合。
 final class CompleteSheet extends ConsumerStatefulWidget {
-  const CompleteSheet({required this.todo, super.key});
+  const CompleteSheet({
+    required this.todo,
+    this.mode = CompleteSheetMode.complete,
+    super.key,
+  });
 
   final TodoItem todo;
+  final CompleteSheetMode mode;
 
   static Future<bool> show(
     BuildContext context, {
     required TodoItem todo,
+    CompleteSheetMode mode = CompleteSheetMode.complete,
   }) async {
     // 原型 3-4：待办事项走居中对话框，其余类型走 3-3 的底部弹层。
     if (todo.todoType == TodoType.task) {
@@ -25,7 +34,9 @@ final class CompleteSheet extends ConsumerStatefulWidget {
         context: context,
         builder: (context) => Dialog(
           insetPadding: const EdgeInsets.symmetric(horizontal: 18),
-          child: SingleChildScrollView(child: CompleteSheet(todo: todo)),
+          child: SingleChildScrollView(
+            child: CompleteSheet(todo: todo, mode: mode),
+          ),
         ),
       );
       return result ?? false;
@@ -33,7 +44,7 @@ final class CompleteSheet extends ConsumerStatefulWidget {
     return showShanganSheet(
       context,
       heightFactor: 0.9,
-      builder: (context) => CompleteSheet(todo: todo),
+      builder: (context) => CompleteSheet(todo: todo, mode: mode),
     );
   }
 
@@ -65,8 +76,12 @@ class _CompleteSheetState extends ConsumerState<CompleteSheet> {
     super.dispose();
   }
 
+  /// 已完成项和仅回填入口不改变完成状态，也不以完成凭证拦截备注保存。
+  bool get _annotationOnly =>
+      widget.todo.isDone || widget.mode == CompleteSheetMode.annotate;
+
   bool get _evidenceSatisfied =>
-      !widget.todo.requireEvidence || _attachmentCount > 0;
+      _annotationOnly || !widget.todo.requireEvidence || _attachmentCount > 0;
 
   @override
   Widget build(BuildContext context) => AppActivityScope(
@@ -128,7 +143,7 @@ class _CompleteSheetState extends ConsumerState<CompleteSheet> {
                 child: Divider(height: 1, color: ShanganColors.rule),
               ),
             ShanganGroupLabel(
-              todo.requireEvidence
+              todo.requireEvidence && !_annotationOnly
                   ? '完成凭证（必填）'
                   : '附件${_attachmentCount > 0 ? ' · $_attachmentCount 个' : ''}',
               padding: const EdgeInsets.only(top: 14, bottom: 8),
@@ -227,7 +242,9 @@ class _CompleteSheetState extends ConsumerState<CompleteSheet> {
                     onPressed: _submitting || !_evidenceSatisfied
                         ? null
                         : _submit,
-                    child: Text(_submitting ? '保存中…' : '保存并完成'),
+                    child: Text(
+                      _submitting ? '保存中…' : (_annotationOnly ? '保存' : '保存并完成'),
+                    ),
                   ),
                 ),
               ],
@@ -283,21 +300,25 @@ class _CompleteSheetState extends ConsumerState<CompleteSheet> {
     );
   }
 
+  /// 回填复用 annotate；通用完成保持原语义，专注达标由调用页执行 finish。
   Future<void> _submit() async {
     setState(() {
       _submitting = true;
       _error = null;
     });
     try {
-      await ref
-          .read(shanganRepositoryProvider)
-          .completeTodo(
-            widget.todo.id,
-            note: _controller.text.trim(),
-            noteTags: _selected.toList(growable: false),
-          );
+      final repository = ref.read(shanganRepositoryProvider);
+      final save = !_annotationOnly && widget.mode == CompleteSheetMode.complete
+          ? repository.completeTodo
+          : repository.annotateTodo;
+      await save(
+        widget.todo.id,
+        note: _controller.text.trim(),
+        noteTags: _selected.toList(growable: false),
+      );
       if (mounted) Navigator.of(context).pop(true);
     } catch (error) {
+      if (!mounted) return;
       setState(() {
         _submitting = false;
         _error = '保存失败：$error';

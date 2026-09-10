@@ -991,17 +991,19 @@ public class JdbcTodoRepository implements TodoRepository {
         .list();
   }
 
+  /** 删除发生日按 deleted_at 归集，local_date 仍是被删 Todo 的原计划日期。 */
   @Override
-  public int countDeletionsOn(String userId, LocalDate localDate) {
+  public int countDeletionsBetween(String userId, Instant fromInclusive, Instant toExclusive) {
     Long count =
         jdbcClient
             .sql(
                 """
                 SELECT count(*) FROM todo_deletions
-                 WHERE user_id = :userId AND local_date = :date
+                 WHERE user_id = :userId AND deleted_at >= :from AND deleted_at < :to
                 """)
             .param("userId", userId)
-            .param("date", localDate.toString())
+            .param("from", fromInclusive.toEpochMilli())
+            .param("to", toExclusive.toEpochMilli())
             .query(Long.class)
             .single();
     return count == null ? 0 : count.intValue();

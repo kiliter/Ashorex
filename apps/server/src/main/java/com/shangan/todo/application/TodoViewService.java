@@ -233,8 +233,10 @@ public class TodoViewService {
     return new DaySummaryTotals(total, done, watched, focused, 0);
   }
 
+  /** 日视图和删除规则共用实际删除日口径，历史计划日期仅用于台账展示。 */
   private int deletionCount(User user, LocalDate date) {
-    return todos.countDeletionsOn(user.id(), date);
+    return todos.countDeletionsBetween(
+        user.id(), userTime.startOfDay(user, date), userTime.endOfDayExclusive(user, date));
   }
 
   private OverdueBucket bucketOf(long overdueDays) {

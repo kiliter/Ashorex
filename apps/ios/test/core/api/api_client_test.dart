@@ -9,6 +9,28 @@ import 'package:shangan_ios/core/api/api_exception.dart';
 import 'package:shangan_ios/core/storage/token_store.dart';
 
 void main() {
+  test('上传收到401后刷新并重发完整附件', () async {
+    final adapter = _UploadRetryAdapter();
+    final store = _MemoryTokenStore(
+      const TokenPair(accessToken: 'old', refreshToken: 'refresh'),
+    );
+    final result = await _client(adapter, store).postFile(
+      '/api/v1/todos/t-1/attachments',
+      fieldName: 'file',
+      filename: 'proof.txt',
+      contentType: 'application/pdf',
+      bytes: utf8.encode('凭证内容'),
+    );
+    expect(result['id'], 'attachment-1');
+    expect(adapter.bodies, hasLength(2));
+    for (final body in adapter.bodies) {
+      expect(body, contains('凭证内容'));
+      expect(body, contains('filename="proof.txt"'));
+      expect(body, contains('application/pdf'));
+    }
+    expect(adapter.refreshCalls, 1);
+  });
+
   for (final status in [200, 401]) {
     test('旧账号刷新响应 $status 迟到不覆盖或清除新账号 Token', () async {
       final store = _MemoryTokenStore(
@@ -239,6 +261,41 @@ final class _DelayedAuthAdapter implements HttpClientAdapter {
     if (!meStarted.isCompleted) meStarted.complete();
     if (delayUnauthorized) await unauthorized.future;
     return _response(401, {'errorCode': 'AUTH_ACCESS_TOKEN_INVALID'});
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+/// 消费真实 multipart 字节流，确保重试不是仅检查请求对象。
+final class _UploadRetryAdapter implements HttpClientAdapter {
+  final bodies = <String>[];
+  int refreshCalls = 0;
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    if (options.path.endsWith('/refresh')) {
+      refreshCalls++;
+      return _response(200, {
+        'accessToken': 'new',
+        'refreshToken': 'new-refresh',
+      });
+    }
+    final bytes = <int>[];
+    await for (final chunk in requestStream!) {
+      bytes.addAll(chunk);
+    }
+    expect(
+      options.headers['Authorization'],
+      bodies.isEmpty ? 'Bearer old' : 'Bearer new',
+    );
+    bodies.add(utf8.decode(bytes));
+    return bodies.length == 1
+        ? _response(401, {'errorCode': 'AUTH_ACCESS_TOKEN_INVALID'})
+        : _response(200, {'id': 'attachment-1'});
   }
 
   @override

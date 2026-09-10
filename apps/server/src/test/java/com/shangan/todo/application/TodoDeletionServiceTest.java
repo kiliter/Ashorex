@@ -14,6 +14,9 @@ import com.shangan.catalog.infrastructure.CourseRepository;
 import com.shangan.common.IdGenerator;
 import com.shangan.common.api.BusinessException;
 import com.shangan.identity.application.UserTimeService;
+import com.shangan.identity.domain.User;
+import com.shangan.identity.domain.UserStatus;
+import com.shangan.identity.infrastructure.UserRepository;
 import com.shangan.nag.application.NagPolicyResolver;
 import com.shangan.presence.application.EffectiveActionRecorder;
 import com.shangan.supervision.application.SupervisionService;
@@ -51,13 +54,29 @@ class TodoDeletionServiceTest {
   @Mock private CourseRepository courses;
   @Mock private SupervisionService supervisions;
   @Mock private NagPolicyResolver nagPolicies;
-  @Mock private UserTimeService userTime;
+  @Mock private UserRepository users;
+  private UserTimeService userTime;
   @Mock private EffectiveActionRecorder effectiveAction;
 
   private TodoDeletionService service;
 
   @BeforeEach
   void setUp() {
+    // 使用真实时区换算，仓储为替身，不连接数据库。
+    lenient()
+        .when(users.findById(TodoFixtures.USER_ID))
+        .thenReturn(
+            Optional.of(
+                new User(
+                    TodoFixtures.USER_ID,
+                    "learner",
+                    "unused",
+                    "学员",
+                    "Asia/Shanghai",
+                    UserStatus.ACTIVE,
+                    null,
+                    null)));
+    userTime = new UserTimeService(users, Clock.fixed(NOW, ZoneOffset.UTC));
     // 删除流程每次都会解析催办策略；校验失败的用例走不到这一步，因此用 lenient 避免多余打桩告警。
     lenient().when(nagPolicies.resolve(anyString())).thenReturn(TodoFixtures.nagPolicyAllEnabled());
     service =
@@ -186,8 +205,11 @@ class TodoDeletionServiceTest {
     when(todoService.requireOwned(TodoFixtures.USER_ID, "todo-1")).thenReturn(first);
     when(todoService.requireOwned(TodoFixtures.USER_ID, "todo-2")).thenReturn(second);
     when(supervisions.primarySupervisorOf(TodoFixtures.USER_ID)).thenReturn(Optional.empty());
-    when(userTime.today(TodoFixtures.USER_ID)).thenReturn(LocalDate.of(2026, 9, 7));
-    when(todos.countDeletionsOn(TodoFixtures.USER_ID, LocalDate.of(2026, 9, 7))).thenReturn(2);
+    when(todos.countDeletionsBetween(
+            TodoFixtures.USER_ID,
+            Instant.parse("2026-09-06T16:00:00Z"),
+            Instant.parse("2026-09-07T16:00:00Z")))
+        .thenReturn(2);
 
     TodoDeletionService.DeletionOutcome outcome =
         service.deleteAll(
@@ -261,12 +283,41 @@ class TodoDeletionServiceTest {
         .contains("\"targetPermille\":null");
   }
 
+  @Test
+  @DisplayName("历史待办删除规则按用户时区的删除当天计数")
+  void 历史待办使用删除当天边界() {
+    Todo todo = TodoFixtures.task().localDate(LocalDate.of(2026, 9, 3)).build();
+    stubDelete(todo, "supervisor-1");
+    Instant start = Instant.parse("2026-09-06T16:00:00Z");
+    Instant end = Instant.parse("2026-09-07T16:00:00Z");
+    when(todos.countDeletionsBetween(TodoFixtures.USER_ID, start, end)).thenReturn(3);
+    var outcome =
+        service.delete(
+            TodoFixtures.USER_ID,
+            todo.id(),
+            new TodoDeletionService.DeleteCommand(DeletionReasonTag.TEMP_BUSY, "清理历史学习计划", 5));
+    verify(todos).countDeletionsBetween(TodoFixtures.USER_ID, start, end);
+    assertThat(outcome.notifications())
+        .containsExactly(
+            new TodoDeletionService.Notification(
+                TodoDeletionService.NotificationRule.BULK_DELETE, "supervisor-1", 3));
+    ArgumentCaptor<TodoRepository.Deletion> row =
+        ArgumentCaptor.forClass(TodoRepository.Deletion.class);
+    verify(todos).insertDeletion(row.capture());
+    assertThat(row.getValue().localDate()).isEqualTo(LocalDate.of(2026, 9, 3));
+    assertThat(row.getValue().deletedAt()).isEqualTo(NOW);
+  }
+
+  /** 普通删除夹具保留原计划日期，日期口径由用户时间服务提供。 */
   private void stubDelete(Todo todo, String supervisorUserId) {
     when(todoService.requireOwned(TodoFixtures.USER_ID, todo.id())).thenReturn(todo);
     when(supervisions.primarySupervisorOf(TodoFixtures.USER_ID))
         .thenReturn(Optional.ofNullable(supervisorUserId));
-    when(userTime.today(TodoFixtures.USER_ID)).thenReturn(LocalDate.of(2026, 9, 7));
-    when(todos.countDeletionsOn(TodoFixtures.USER_ID, LocalDate.of(2026, 9, 7))).thenReturn(1);
+    when(todos.countDeletionsBetween(
+            TodoFixtures.USER_ID,
+            Instant.parse("2026-09-06T16:00:00Z"),
+            Instant.parse("2026-09-07T16:00:00Z")))
+        .thenReturn(1);
   }
 
   private static IdGenerator fixedIdGenerator() {

@@ -13,6 +13,58 @@ import '../../support/fixtures.dart';
 /// 完成回填面板是 AGENTS.md 点名的关键确认流程：凭证必填与补记备注必填
 /// 两条约束都不能被绕过，一键标签必须真正进入提交载荷。
 void main() {
+  testWidgets('已完成项保存备注标签仅调用回填接口', (tester) async {
+    final backend = FakeBackend()..on('POST', '/api/v1/todos/t-1/annotate');
+    await _pump(
+      tester,
+      backend,
+      todo: todoItem(id: 't-1', status: TodoStatus.done),
+    );
+    await tester.enterText(find.byType(TextField), '新的学习备注');
+    await tester.tap(find.text('需重看'));
+    await tester.tap(find.textContaining('保存').last);
+    await tester.pumpAndSettle();
+    expect(backend.callCount('POST', '/api/v1/todos/t-1/complete'), 0);
+    final request = backend.lastRequest('POST', '/api/v1/todos/t-1/annotate');
+    expect(request.json['note'], contains('新的学习备注'));
+    expect(request.json['noteTags'], ['NEED_REVIEW']);
+  });
+
+  testWidgets('仅回填未完成项不要求凭证且不会提前完成', (tester) async {
+    final backend = FakeBackend()..on('POST', '/api/v1/todos/t-1/annotate');
+    await _pump(
+      tester,
+      backend,
+      todo: todoItem(id: 't-1', requireEvidence: true),
+      mode: CompleteSheetMode.annotate,
+    );
+    expect(find.text('还需上传至少 1 个凭证才能标记完成'), findsNothing);
+    await tester.enterText(find.byType(TextField), '先记录学习问题');
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    expect(backend.callCount('POST', '/api/v1/todos/t-1/complete'), 0);
+    expect(
+      backend.lastRequest('POST', '/api/v1/todos/t-1/annotate').json['note'],
+      '先记录学习问题',
+    );
+  });
+
+  testWidgets('已完成项回填失败时不关闭并保留用户输入', (tester) async {
+    final backend = FakeBackend()
+      ..on('POST', '/api/v1/todos/t-1/annotate', status: 500);
+    await _pump(
+      tester,
+      backend,
+      todo: todoItem(id: 't-1', status: TodoStatus.done),
+    );
+    await tester.enterText(find.byType(TextField), '不能丢失的备注');
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('保存失败'), findsOneWidget);
+    expect(find.text('不能丢失的备注'), findsOneWidget);
+    expect(backend.callCount('POST', '/api/v1/todos/t-1/complete'), 0);
+  });
+
   testWidgets('要求凭证但没有附件时不能标记完成', (tester) async {
     final backend = FakeBackend();
     await _pump(
@@ -197,6 +249,7 @@ Future<void> _pump(
   required TodoItem todo,
   FakeAttachmentPicker? picker,
   List<Map<String, Object?>> attachments = const [],
+  CompleteSheetMode mode = CompleteSheetMode.complete,
 }) async {
   // 附件区现在读真实清单，因此每个用例都要给出清单与缩略图字节。
   backend
@@ -216,7 +269,9 @@ Future<void> _pump(
       ],
       child: MaterialApp(
         home: Scaffold(
-          body: SingleChildScrollView(child: CompleteSheet(todo: todo)),
+          body: SingleChildScrollView(
+            child: CompleteSheet(todo: todo, mode: mode),
+          ),
         ),
       ),
     ),

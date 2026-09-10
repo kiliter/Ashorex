@@ -17,6 +17,58 @@ import '../../support/fixtures.dart';
 /// 不改变时长口径；播放期间保持屏幕常亮，暂停与退出必须释放。
 /// 是否达标一律由服务端裁决，客户端不自行判定完成。
 void main() {
+  testWidgets('播放中备注入口只保存，不提前完成课程', (tester) async {
+    final backend = _backend()
+      ..on('GET', '/api/v1/todos/t-1/attachments', json: [])
+      ..on('POST', '/api/v1/todos/t-1/annotate');
+    await _pump(tester, backend, _RecordingWakeLock());
+    await tester.ensureVisible(find.text('备注'));
+    await tester.tap(find.text('备注'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '中途记录的问题');
+    await tester.ensureVisible(find.text('保存'));
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    expect(
+      backend.lastRequest('POST', '/api/v1/todos/t-1/annotate').json['note'],
+      '中途记录的问题',
+    );
+    expect(backend.callCount('POST', '/api/v1/todos/t-1/complete'), 0);
+    await _dispose(tester);
+  });
+
+  testWidgets('手动完成前补报已达标时只保存回填', (tester) async {
+    final backend = _backend()
+      ..on('GET', '/api/v1/todos/t-1/attachments', json: [])
+      ..on('POST', '/api/v1/todos/t-1/annotate');
+    await _pump(tester, backend, _RecordingWakeLock());
+    backend.on(
+      'POST',
+      '/api/v1/todos/t-1/progress',
+      json: {
+        'completed': true,
+        'status': 'DONE',
+        'positionMs': 900000,
+        'watchedMs': 900000,
+        'progressPermille': 500,
+        'targetProgressPermille': 500,
+      },
+    );
+    await tester.ensureVisible(find.text('标记完成'));
+    await tester.tap(find.text('标记完成'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '达标后的笔记');
+    await tester.ensureVisible(find.text('保存'));
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    expect(
+      backend.lastRequest('POST', '/api/v1/todos/t-1/annotate').json['note'],
+      '达标后的笔记',
+    );
+    expect(backend.callCount('POST', '/api/v1/todos/t-1/complete'), 0);
+    await _dispose(tester);
+  });
+
   test('iOS 默认选用 AVPlayer 以隔离 media_kit 模拟器音频问题', () {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
