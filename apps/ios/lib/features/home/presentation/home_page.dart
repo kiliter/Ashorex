@@ -711,7 +711,7 @@ final class _DaySection extends ConsumerStatefulWidget {
 
   final Future<void> Function() onRefresh;
 
-  /// 进入编辑态（原型 1-1「进行中」标题右侧的「编辑」）；历史日不提供。
+  /// 进入编辑态；入口收在第一个非空未完成分组的卡片标题行右侧，历史日不提供。
   final VoidCallback? onEdit;
 
   /// Pad 空态提示指向页头添加按钮，而不是右下角 FAB。
@@ -1022,66 +1022,118 @@ class _DaySectionState extends ConsumerState<_DaySection> {
     final collapsed = collapsible && _doneCollapsed;
     // 历史日保留原日期直接执行，不进入批量改期编辑态。
     final editAction = showEdit && !view.history ? widget.onEdit : null;
-    final heading = compactLabel
-        ? ShanganGroupLabel('$title ${items.length}')
-        : null;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (heading != null)
-          heading
-        else
-          SectionTitle(
-            title: title,
-            padding: const EdgeInsets.only(top: 4, bottom: 6),
-            count: showCount ? '${items.length}' : null,
-            trailing: collapsible
-                ? TextButton(
-                    onPressed: () =>
-                        setState(() => _doneCollapsed = !_doneCollapsed),
-                    child: Text(collapsed ? '展开' : '收起'),
-                  )
-                : editAction == null
-                ? null
-                : TextButton(onPressed: editAction, child: const Text('编辑')),
-          ),
-        if (!collapsed)
-          ShanganCard(
-            borderColor: borderColor,
-            child: Column(
-              children: [
-                for (var index = 0; index < items.length; index++) ...[
-                  if (index > 0)
-                    const Divider(height: 1, color: ShanganColors.hair),
-                  if (historyOverride) ...[
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 10, bottom: 2),
-                        child: Text(
-                          '原计划 ${items[index].localDate.toIso8601String().substring(0, 10)}${items[index].isDone ? " · 今日已完成" : ""}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: ShanganColors.mutedInk,
-                          ),
+    // 分组标题收进卡片边框内：标题与数量靠左，「编辑 / 收起」放在标题行右侧。
+    final trailing = collapsible
+        ? _GroupHeaderAction(
+            label: collapsed ? '展开' : '收起',
+            onTap: () => setState(() => _doneCollapsed = !_doneCollapsed),
+          )
+        : editAction == null
+        ? null
+        : _GroupHeaderAction(label: '编辑', onTap: editAction);
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: ShanganCard(
+        borderColor: borderColor,
+        padding: const EdgeInsets.fromLTRB(13, 0, 13, 2),
+        child: Column(
+          children: [
+            SizedBox(
+              height: 38,
+              child: Row(
+                children: [
+                  if (compactLabel)
+                    Text(
+                      '$title ${items.length}',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.6,
+                        color: ShanganColors.mutedInk,
+                      ),
+                    )
+                  else ...[
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (showCount) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        '${items.length}',
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: ShanganColors.mutedInk,
+                        ),
+                      ),
+                    ],
+                  ],
+                  const Spacer(),
+                  ?trailing,
+                ],
+              ),
+            ),
+            if (!collapsed) ...[
+              const Divider(height: 1, color: ShanganColors.hair),
+              for (var index = 0; index < items.length; index++) ...[
+                if (index > 0)
+                  const Divider(height: 1, color: ShanganColors.hair),
+                if (historyOverride) ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 10, bottom: 2),
+                      child: Text(
+                        '原计划 ${items[index].localDate.toIso8601String().substring(0, 10)}${items[index].isDone ? " · 今日已完成" : ""}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: ShanganColors.mutedInk,
                         ),
                       ),
                     ),
-                  ],
-                  _HistoryAwareRow(
-                    todo: items[index],
-                    history: historyOverride || view.history,
-                    minReasonLength: minReasonLength,
-                    supervisorName: supervisorName,
-                    readOnly: readOnly,
-                    showCompletedTime: showCompletedTime,
-                    onChanged: widget.onRefresh,
                   ),
                 ],
+                _HistoryAwareRow(
+                  todo: items[index],
+                  history: historyOverride || view.history,
+                  minReasonLength: minReasonLength,
+                  supervisorName: supervisorName,
+                  readOnly: readOnly,
+                  showCompletedTime: showCompletedTime,
+                  onChanged: widget.onRefresh,
+                ),
               ],
-            ),
-          ),
-      ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 分组卡片标题行右侧的轻量操作按钮（编辑 / 收起 / 展开）。
+final class _GroupHeaderAction extends StatelessWidget {
+  const _GroupHeaderAction({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        minimumSize: const Size(0, 30),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        foregroundColor: ShanganColors.blue,
+        textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+      ),
+      child: Text(label),
     );
   }
 }

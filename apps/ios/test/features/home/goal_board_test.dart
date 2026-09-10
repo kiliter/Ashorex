@@ -50,6 +50,21 @@ void main() {
     expect(find.text('公考省考'), findsOneWidget);
   });
 
+  testWidgets('次目标按倒数日由小到大排列，最近的考试排在最前', (tester) async {
+    await _pump(
+      tester,
+      goals: [
+        _goal(id: 'g-1', name: '主目标', daysRemaining: 90, primary: true),
+        _goal(id: 'g-2', name: '较远考试', daysRemaining: 40, primary: false),
+        _goal(id: 'g-3', name: '较近考试', daysRemaining: 20, primary: false),
+      ],
+    );
+
+    final near = tester.getTopLeft(find.text('较近考试'));
+    final far = tester.getTopLeft(find.text('较远考试'));
+    expect(near.dx, lessThan(far.dx));
+  });
+
   testWidgets('没有标记主目标时取第一个作为主目标，不出现空看板', (tester) async {
     await _pump(
       tester,

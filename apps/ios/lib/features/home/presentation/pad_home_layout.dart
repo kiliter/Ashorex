@@ -160,9 +160,9 @@ final class _PadGoalCard extends ConsumerWidget {
             (goal) => goal.primary,
             orElse: () => list.first,
           );
-          final others = list
-              .where((goal) => goal.id != primary.id)
-              .toList(growable: false);
+          // 次目标按倒数日由小到大排序，最近的考试排在最前。
+          final others = list.where((goal) => goal.id != primary.id).toList()
+            ..sort((a, b) => a.daysRemaining.compareTo(b.daysRemaining));
           return Stack(
             children: [
               const Positioned(
@@ -266,11 +266,7 @@ final class _PadGoalCard extends ConsumerWidget {
                   ),
                   if (others.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    for (final goal in others)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: _PadOtherGoalRow(goal: goal),
-                      ),
+                    _PadOtherGoalStrip(goals: others),
                   ],
                 ],
               ),
@@ -282,55 +278,87 @@ final class _PadGoalCard extends ConsumerWidget {
   }
 }
 
-/// Pad 侧栏次目标：名称、日期和剩余天数，口径与手机迷你目标格相同。
-final class _PadOtherGoalRow extends StatelessWidget {
-  const _PadOtherGoalRow({required this.goal});
+/// Pad 侧栏次目标条：矩形磁贴突出倒数日、下方标注日期；
+/// 一屏最多 4 个，超出时支持左右滑动。
+final class _PadOtherGoalStrip extends StatelessWidget {
+  const _PadOtherGoalStrip({required this.goals});
+
+  final List<ExamGoal> goals;
+
+  @override
+  Widget build(BuildContext context) {
+    const gap = 8.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 磁贴宽度按可见区均分 4 份，第 5 个起自然进入横向滚动区。
+        final tileWidth = (constraints.maxWidth - gap * 3) / 4;
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (var index = 0; index < goals.length; index++)
+                Padding(
+                  padding: EdgeInsets.only(
+                    right: index == goals.length - 1 ? 0 : gap,
+                  ),
+                  child: SizedBox(
+                    width: tileWidth,
+                    child: _PadOtherGoalTile(goal: goals[index]),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Pad 侧栏次目标磁贴：名称在上，倒数日放大为视觉主体，日期标在数字下方。
+final class _PadOtherGoalTile extends StatelessWidget {
+  const _PadOtherGoalTile({required this.goal});
 
   final ExamGoal goal;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
       decoration: BoxDecoration(
         color: ShanganColors.surface,
         borderRadius: BorderRadius.circular(11),
         border: Border.all(color: ShanganColors.hair),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  goal.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  '${goal.examDate.month.toString().padLeft(2, '0')}-'
-                  '${goal.examDate.day.toString().padLeft(2, '0')}',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: ShanganColors.mutedInk,
-                  ),
-                ),
-              ],
-            ),
+          Text(
+            goal.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
           ),
+          const SizedBox(height: 4),
           Text(
             '${goal.daysRemaining}',
+            maxLines: 1,
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: 20,
+              height: 1.1,
               fontWeight: FontWeight.w800,
-              letterSpacing: -0.6,
+              letterSpacing: -0.8,
               color: ShanganColors.ink,
               fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '${goal.examDate.month.toString().padLeft(2, '0')}-'
+            '${goal.examDate.day.toString().padLeft(2, '0')}',
+            maxLines: 1,
+            style: const TextStyle(
+              fontSize: 9.5,
+              color: ShanganColors.mutedInk,
             ),
           ),
         ],
