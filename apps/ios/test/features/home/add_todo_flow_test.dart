@@ -99,7 +99,8 @@ void main() {
   });
 
   testWidgets('非今天时标题写明目标日期', (tester) async {
-    await _open(tester, FakeBackend(), date: DateTime(2026, 9, 11));
+    // 固定使用过去日期，保证永远不会等于运行当天的“今天”。
+    await _open(tester, FakeBackend(), date: DateTime(2026, 9, 7));
 
     expect(find.textContaining('添加到'), findsOneWidget);
     expect(find.text('添加到今日'), findsNothing);
