@@ -1,0 +1,75 @@
+apps/ios/lib/features/focus/presentation/focus_run_page.dart
+  s_a46ad602f7c351::t_516ec5ae130576 584-585
+  s_a46ad602f7c351::t_f8b3855e47efa0 509-513,577-581
+apps/server/src/test/java/com/shangan/todo/application/TodoRepaymentViewTest.java
+  s_a46ad602f7c351::t_f8b3855e47efa0 24-26,31-40,42-44,46-48
+  s_a46ad602f7c351::t_58447419f96498 16-17,21-23,27-30,41,45,49-52
+apps/server/src/main/java/com/shangan/todo/application/TodoDeletionService.java
+  s_a46ad602f7c351::t_e0e962cbe49f1c 7,18,116-118
+  s_a46ad602f7c351::t_f8b3855e47efa0 119-123
+apps/server/src/main/java/com/shangan/todo/infrastructure/JdbcTodoRepository.java
+  s_a46ad602f7c351::t_e0e962cbe49f1c 994,996,1002,1005-1006
+apps/server/src/main/java/com/shangan/todo/application/TodoViewService.java
+  s_a46ad602f7c351::t_e0e962cbe49f1c 236,238-239
+apps/ios/test/features/home/complete_sheet_test.dart
+  s_a46ad602f7c351::t_5560fcdc61e094 16-17,23-32
+  s_a46ad602f7c351::t_f8b3855e47efa0 18-22,35-40,46-49,53-59,272-274
+  s_a46ad602f7c351::t_58447419f96498 33-34,41-45,50-52,60-67,252
+apps/server/src/test/java/com/shangan/todo/application/TodoDeletionServiceTest.java
+  s_a46ad602f7c351::t_e23e129eae989d 17-18,286-292,309-311
+  s_a46ad602f7c351::t_f8b3855e47efa0 19,66-78,208-212,294-298,300-305,316-320
+  s_a46ad602f7c351::t_e0e962cbe49f1c 57-58,65,79,293,299,306-308
+apps/ios/test/features/player/player_controls_test.dart
+  s_a46ad602f7c351::t_dcfbdb39de95d3 20-31,36-44,57-63,68-71
+  s_a46ad602f7c351::t_f8b3855e47efa0 32-35,45-56,64-67
+apps/ios/test/features/focus/focus_run_test.dart
+  s_a46ad602f7c351::t_762005aaabc8a0 18,49-51,72-80,85,97-99,582-584,591-592
+  s_a46ad602f7c351::t_f8b3855e47efa0 19-48,52-70,81-84,86-96,120-131,135-157,585-590
+  s_a46ad602f7c351::t_58447419f96498 100-119,132-134,158-167
+  s_a46ad602f7c351::t_e23e129eae989d 71
+apps/server/src/test/java/com/shangan/todo/application/SupervisorNotificationRulesTest.java
+  s_a46ad602f7c351::t_e0e962cbe49f1c 11-12,52-53,60,74
+  s_a46ad602f7c351::t_f8b3855e47efa0 13,61-73,321-325
+docs/plans/2026-09-07-shangan-v2-implementation-plan.md
+  s_a46ad602f7c351::t_7d6b78963bef80 1253-1262
+apps/ios/lib/core/api/api_client.dart
+  s_a46ad602f7c351::t_516ec5ae130576 399-402
+apps/ios/lib/features/home/presentation/complete_sheet.dart
+  s_a46ad602f7c351::t_516ec5ae130576 10-12,24,29,47,79,82,84,146,303,310-318,321
+  s_a46ad602f7c351::t_f8b3855e47efa0 17-21,37-39,80-81,245-247
+docs/traceability/2026-09-07-shangan-v2-traceability.md
+  s_a46ad602f7c351::t_7d6b78963bef80 324-327
+docs/prototypes/shangan-v2-prototype.html
+  s_a46ad602f7c351::t_7d6b78963bef80 2776
+apps/ios/test/core/api/api_client_test.dart
+  s_a46ad602f7c351::t_f8b3855e47efa0 14-23,275-279,282-285,288-294,296-298,300
+  s_a46ad602f7c351::t_5560fcdc61e094 12-13,24-33,269-274,280-281,286-287,295,299,301
+  s_a46ad602f7c351::t_30a3afc0ab862a 302-303
+apps/ios/lib/features/player/presentation/player_page.dart
+  s_a46ad602f7c351::t_f8b3855e47efa0 1174-1178,1186-1190
+  s_a46ad602f7c351::t_dcfbdb39de95d3 1181,1185,1191
+  s_a46ad602f7c351::t_516ec5ae130576 1170
+docs/adr/0051-todo-annotation-upload-and-deletion-fixes.md
+  s_a46ad602f7c351::t_1b5bb21c5750eb 1-23
+  s_a46ad602f7c351::t_49acc9e221e2fd 24-29
+docs/specs/2026-09-07-shangan-v2-design.md
+  s_a46ad602f7c351::t_7d6b78963bef80 983-986
+apps/server/src/main/java/com/shangan/todo/infrastructure/TodoRepository.java
+  s_a46ad602f7c351::t_e0e962cbe49f1c 176-177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "70aff9a8555d3fa8f2e66efe31f1656d9d233e95",
+  "prompts": {},
+  "sessions": {
+    "s_a46ad602f7c351": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08946-7f08-7400-8fc9-86e20a94aa08",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
