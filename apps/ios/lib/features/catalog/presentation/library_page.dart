@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/core/layout/adaptive_breakpoints.dart';
+import 'package:shangan_ios/core/layout/pad_chrome.dart';
 import 'package:shangan_ios/core/models/shangan_models.dart';
 import 'package:shangan_ios/core/state/shangan_providers.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
@@ -135,7 +136,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         // 横屏键盘展开后固定区压为两行，仍保留标题与所有筛选入口。
         final compact =
             constraints.maxHeight < 300 && constraints.maxWidth > 600;
-        final twoPane = AppBreakpoints.useTwoPane(constraints);
+        final pad = AppBreakpoints.usePadLayoutOf(context);
         final visibleCount = courses.maybeWhen(
           data: (list) => _visibleCourses(
             list: list,
@@ -156,7 +157,12 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             }
           },
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+            padding: EdgeInsets.fromLTRB(
+              pad ? 28 : 18,
+              pad ? 12 : 8,
+              pad ? 28 : 18,
+              0,
+            ),
             child: Column(
               children: [
                 Row(
@@ -166,14 +172,14 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (!compact)
-                            const Text(
+                            Text(
                               'LIBRARY',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 11.5,
+                                fontSize: pad ? 9 : 11.5,
                                 fontWeight: FontWeight.w700,
-                                letterSpacing: 1.6,
+                                letterSpacing: pad ? 1.8 : 1.6,
                                 color: ShanganColors.mutedInk,
                               ),
                             ),
@@ -182,7 +188,11 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: compact ? 20 : 26,
+                              fontSize: compact
+                                  ? 20
+                                  : pad
+                                  ? 27
+                                  : 26,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.8,
                             ),
@@ -209,7 +219,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                       ),
                     ShanganIconButton(
                       icon: Icons.search,
-                      highlighted: _searchOpen,
+                      highlighted: pad || _searchOpen,
                       semanticLabel: '搜索课程',
                       onTap: () => setState(() => _searchOpen = !_searchOpen),
                     ),
@@ -222,41 +232,68 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                     ),
                   ],
                 ),
-                SizedBox(height: compact ? 4 : 12),
-                if (_searchOpen && !compact) ...[
-                  ShanganSearchField(
-                    controller: _keyword,
-                    hint: '搜索课程或人物',
-                    onChanged: _search,
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (compact)
-                  Row(
-                    children: [
-                      Expanded(child: grouping),
-                      const SizedBox(width: 12),
-                      Expanded(child: selectedFilters),
-                    ],
+                SizedBox(height: compact ? 4 : (pad ? 12 : 12)),
+                if (pad)
+                  _PadLibraryControls(
+                    grouping: grouping,
+                    categories: _CategoryRail(
+                      key: ValueKey(filter.groupByPerson),
+                      categories: categories,
+                      selected: selectedCategory,
+                      onSelected: (value) =>
+                          setState(() => _browseCategory = value),
+                    ),
+                    search: ShanganSearchField(
+                      controller: _keyword,
+                      hint: '搜索课程或讲师',
+                      onChanged: _search,
+                    ),
+                    options: _LibraryOptions(
+                      count: visibleCount,
+                      hideFullyWatched: _hideFullyWatched,
+                      onToggleHide: () => setState(
+                        () => _hideFullyWatched = !_hideFullyWatched,
+                      ),
+                    ),
+                    selectedFilters: selectedFilters,
                   )
                 else ...[
-                  grouping,
-                  selectedFilters,
-                ],
-                _CategoryRail(
-                  key: ValueKey(filter.groupByPerson),
-                  categories: categories,
-                  selected: selectedCategory,
-                  onSelected: (value) =>
-                      setState(() => _browseCategory = value),
-                ),
-                if (!compact)
-                  _LibraryOptions(
-                    count: visibleCount,
-                    hideFullyWatched: _hideFullyWatched,
-                    onToggleHide: () =>
-                        setState(() => _hideFullyWatched = !_hideFullyWatched),
+                  if (_searchOpen && !compact) ...[
+                    ShanganSearchField(
+                      controller: _keyword,
+                      hint: '搜索课程或人物',
+                      onChanged: _search,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (compact)
+                    Row(
+                      children: [
+                        Expanded(child: grouping),
+                        const SizedBox(width: 12),
+                        Expanded(child: selectedFilters),
+                      ],
+                    )
+                  else ...[
+                    grouping,
+                    selectedFilters,
+                  ],
+                  _CategoryRail(
+                    key: ValueKey(filter.groupByPerson),
+                    categories: categories,
+                    selected: selectedCategory,
+                    onSelected: (value) =>
+                        setState(() => _browseCategory = value),
                   ),
+                  if (!compact)
+                    _LibraryOptions(
+                      count: visibleCount,
+                      hideFullyWatched: _hideFullyWatched,
+                      onToggleHide: () => setState(
+                        () => _hideFullyWatched = !_hideFullyWatched,
+                      ),
+                    ),
+                ],
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: () async {
@@ -286,11 +323,11 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                         );
                         return _FolderCourses(
                           courses: visible,
-                          twoPane: twoPane,
+                          padWall: pad,
                           selectedCourseId: _selectedCourseId,
                           onTap: (course) async {
                             ref.invalidate(courseDetailProvider(course.id));
-                            if (twoPane) {
+                            if (pad) {
                               setState(() => _selectedCourseId = course.id);
                               return;
                             }
@@ -308,25 +345,51 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             ),
           ),
         );
-        if (!twoPane) return master;
-        return Row(
-          children: [
-            SizedBox(width: 348, child: master),
-            const VerticalDivider(
-              width: 1,
-              thickness: 1,
-              color: ShanganColors.hair,
-            ),
-            Expanded(
-              child: _selectedCourseId == null
-                  ? const _CourseDetailEmptyState()
-                  : CourseDetailPage(
-                      key: ValueKey('pad-course-$_selectedCourseId'),
-                      courseId: _selectedCourseId!,
-                      embedded: true,
+        if (!pad) return master;
+        final drawerOpen = _selectedCourseId != null;
+        final drawerWidth = constraints.maxWidth < PadChrome.drawerWidth + 26
+            ? (constraints.maxWidth - 26).clamp(280.0, PadChrome.drawerWidth)
+            : PadChrome.drawerWidth;
+        return PopScope(
+          canPop: !drawerOpen,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop && drawerOpen) {
+              setState(() => _selectedCourseId = null);
+            }
+          },
+          child: Stack(
+            children: [
+              master,
+              if (drawerOpen) ...[
+                Positioned.fill(
+                  child: GestureDetector(
+                    key: const ValueKey('library-drawer-scrim'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => setState(() => _selectedCourseId = null),
+                    child: const ColoredBox(color: Color(0x1C263B60)),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: SizedBox(
+                    key: const ValueKey('library-lesson-drawer'),
+                    width: drawerWidth,
+                    child: Material(
+                      color: ShanganColors.surface,
+                      elevation: 12,
+                      shadowColor: const Color(0x40263B60),
+                      child: CourseDetailPage(
+                        key: ValueKey('pad-course-$_selectedCourseId'),
+                        courseId: _selectedCourseId!,
+                        embedded: true,
+                        onClose: () => setState(() => _selectedCourseId = null),
+                      ),
                     ),
-            ),
-          ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         );
       },
     );
@@ -363,6 +426,75 @@ String _courseMeta(CourseSummary course) => [
 List<String> _courseCategories(CourseSummary course, bool byPerson) => byPerson
     ? (course.people.isEmpty ? ['未标注人物'] : course.people)
     : (course.genres.isEmpty ? ['未分类'] : course.genres);
+
+/// Pad 课程墙工具行：流派切换、分类、搜索同一行，不挤压课程网格。
+final class _PadLibraryControls extends StatelessWidget {
+  const _PadLibraryControls({
+    required this.grouping,
+    required this.categories,
+    required this.search,
+    required this.options,
+    required this.selectedFilters,
+  });
+
+  final Widget grouping;
+  final Widget categories;
+  final Widget search;
+  final Widget options;
+  final Widget selectedFilters;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final stacked = constraints.maxWidth < 800;
+            if (stacked) {
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: search),
+                      const SizedBox(width: 12),
+                      SizedBox(width: 172, child: grouping),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(child: categories),
+                      const SizedBox(width: 8),
+                      Flexible(child: options),
+                    ],
+                  ),
+                  selectedFilters,
+                ],
+              );
+            }
+            return Column(
+              children: [
+                Row(
+                  children: [
+                    SizedBox(width: 176, child: grouping),
+                    const SizedBox(width: 15),
+                    Expanded(child: categories),
+                    const SizedBox(width: 15),
+                    SizedBox(width: 250, child: search),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                options,
+                selectedFilters,
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
 
 /// 高保真课程库的数量与隐藏开关；只消费已有课程快照，不增加任何接口。
 final class _LibraryOptions extends StatelessWidget {
@@ -487,59 +619,38 @@ class _CategoryRail extends StatelessWidget {
   );
 }
 
-/// 课程目录继续按需构建：手机保持 Grid，Pad 双栏时仅把同一份课程数据排成紧凑列表。
+/// 课程目录继续按需构建：手机保持封面网格，Pad 改为矮封面课程墙，点选后不重排。
 final class _FolderCourses extends ConsumerWidget {
   const _FolderCourses({
     required this.courses,
     required this.onTap,
-    required this.twoPane,
+    required this.padWall,
     this.selectedCourseId,
   });
 
   final List<CourseSummary> courses;
   final ValueChanged<CourseSummary> onTap;
-  final bool twoPane;
+  final bool padWall;
   final String? selectedCourseId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => LayoutBuilder(
     builder: (context, constraints) {
-      if (twoPane) {
-        return CustomScrollView(
-          key: const PageStorageKey('library-folders'),
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            if (courses.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(child: Text('没有符合条件的课程')),
-              )
-            else
-              SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final course = courses[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _MasterCourseTile(
-                      course: course,
-                      selected: selectedCourseId == course.id,
-                      onTap: () => onTap(course),
-                    ),
-                  );
-                }, childCount: courses.length),
-              ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-          ],
-        );
-      }
-
       final scaler = MediaQuery.textScalerOf(context);
       final compact = constraints.maxHeight < 110;
-      final columns = constraints.maxWidth < 600
+      final columns = padWall
+          ? (constraints.maxWidth / 172).floor().clamp(2, 8)
+          : constraints.maxWidth < 600
           ? 2
           : (constraints.maxWidth / 180).floor().clamp(3, 8);
-      final tileWidth = (constraints.maxWidth - (columns - 1) * 10) / columns;
-      final coverHeight = (tileWidth - 22) / 1.15;
+      final gap = padWall ? 12.0 : 10.0;
+      final tileWidth = (constraints.maxWidth - (columns - 1) * gap) / columns;
+      final coverHeight = padWall ? 68.0 : (tileWidth - 22) / 1.15;
+      final extent = compact
+          ? scaler.scale(12) * 2.8 + 36
+          : padWall
+          ? coverHeight + scaler.scale(12) * 2.8 + scaler.scale(10) * 3 + 52
+          : coverHeight + scaler.scale(12) * 2.8 + scaler.scale(10) * 3 + 70;
       return CustomScrollView(
         key: const PageStorageKey('library-folders'),
         physics: const AlwaysScrollableScrollPhysics(),
@@ -553,19 +664,16 @@ final class _FolderCourses extends ConsumerWidget {
             SliverGrid(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: columns,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                mainAxisExtent: compact
-                    ? scaler.scale(12) * 2.8 + 36
-                    : coverHeight +
-                          scaler.scale(12) * 2.8 +
-                          scaler.scale(10) * 3 +
-                          70,
+                crossAxisSpacing: gap,
+                mainAxisSpacing: gap,
+                mainAxisExtent: extent,
               ),
               delegate: SliverChildBuilderDelegate((context, index) {
                 final course = courses[index];
                 return _CoverTile(
                   compact: compact,
+                  padCompact: padWall,
+                  selected: selectedCourseId == course.id,
                   title: course.title,
                   courseId: course.id,
                   meta: _courseMeta(course),
@@ -591,7 +699,7 @@ final _courseCoverProvider = FutureProvider.autoDispose
       retry: (count, error) => null,
     );
 
-/// 手机课程卡片保持双列结构，只按 Pad 高保真补足边框、讲师/课时和进度信息。
+/// 手机课程卡片保持双列结构；Pad 课程墙改用矮封面，选中时只加描边，不改变网格。
 final class _CoverTile extends ConsumerWidget {
   const _CoverTile({
     required this.title,
@@ -601,9 +709,13 @@ final class _CoverTile extends ConsumerWidget {
     required this.completedPercent,
     required this.onTap,
     this.compact = false,
+    this.padCompact = false,
+    this.selected = false,
   });
 
   final bool compact;
+  final bool padCompact;
+  final bool selected;
   final String courseId;
   final String title;
   final String meta;
@@ -614,6 +726,7 @@ final class _CoverTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => Semantics(
     button: true,
+    selected: selected,
     label: '$title，$caption',
     onTap: onTap,
     excludeSemantics: true,
@@ -623,51 +736,86 @@ final class _CoverTile extends ConsumerWidget {
         color: ShanganColors.surface,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-          side: const BorderSide(
-            color: ShanganColors.rule,
-            width: ShanganRadius.borderWidth,
+          borderRadius: BorderRadius.circular(padCompact ? 12 : 15),
+          side: BorderSide(
+            color: selected
+                ? ShanganColors.blue
+                : padCompact
+                ? ShanganColors.hair
+                : ShanganColors.rule,
+            width: selected || !padCompact ? ShanganRadius.borderWidth : 1,
           ),
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(padCompact ? 12 : 15),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(11),
+            padding: EdgeInsets.all(padCompact ? 8 : 11),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (!compact) ...[
-                  AspectRatio(
-                    aspectRatio: 1.15,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: ref
-                          .watch(_courseCoverProvider(courseId))
-                          .when(
-                            data: (bytes) => Image.memory(
-                              bytes,
-                              fit: BoxFit.cover,
-                              cacheWidth: 480,
-                              errorBuilder: (_, _, _) =>
-                                  _TextCover(title: title),
+                  SizedBox(
+                    height: padCompact ? 68 : null,
+                    width: double.infinity,
+                    child: AspectRatio(
+                      aspectRatio: padCompact ? 2.4 : 1.15,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(7),
+                              child: ref
+                                  .watch(_courseCoverProvider(courseId))
+                                  .when(
+                                    data: (bytes) => Image.memory(
+                                      bytes,
+                                      fit: BoxFit.cover,
+                                      cacheWidth: padCompact ? 320 : 480,
+                                      errorBuilder: (_, _, _) =>
+                                          _TextCover(title: title),
+                                    ),
+                                    loading: () => _TextCover(title: title),
+                                    error: (_, _) => _TextCover(title: title),
+                                  ),
                             ),
-                            loading: () => _TextCover(title: title),
-                            error: (_, _) => _TextCover(title: title),
                           ),
+                          if (selected)
+                            const Positioned(
+                              right: 6,
+                              top: 6,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: ShanganColors.blue,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Color(0xA0FFFFFF),
+                                      blurRadius: 4,
+                                      spreadRadius: 3,
+                                    ),
+                                  ],
+                                ),
+                                child: SizedBox(width: 7, height: 7),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: padCompact ? 8 : 8),
                 ],
                 Text(
                   title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     height: 1.4,
                     fontWeight: FontWeight.w700,
-                    color: ShanganColors.course,
+                    color: padCompact
+                        ? ShanganColors.ink
+                        : ShanganColors.course,
                   ),
                 ),
                 if (!compact) ...[
@@ -711,128 +859,6 @@ final class _CoverTile extends ConsumerWidget {
                 ],
               ],
             ),
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-/// Pad 双栏左侧使用更紧凑的同源课程卡片，不复制课程页业务逻辑。
-final class _MasterCourseTile extends ConsumerWidget {
-  const _MasterCourseTile({
-    required this.course,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final CourseSummary course;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => Semantics(
-    button: true,
-    selected: selected,
-    label: '${course.title}，${course.completedPercent}%',
-    child: Material(
-      color: selected ? ShanganColors.blueSoft : ShanganColors.surface,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-        side: BorderSide(
-          color: selected ? ShanganColors.blue : ShanganColors.rule,
-          width: ShanganRadius.borderWidth,
-        ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(11),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 60,
-                height: 84,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: ref
-                      .watch(_courseCoverProvider(course.id))
-                      .when(
-                        data: (bytes) => Image.memory(
-                          bytes,
-                          fit: BoxFit.cover,
-                          cacheWidth: 240,
-                          errorBuilder: (_, _, _) =>
-                              _TextCover(title: course.title),
-                        ),
-                        loading: () => _TextCover(title: course.title),
-                        error: (_, _) => _TextCover(title: course.title),
-                      ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      course.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        height: 1.4,
-                        fontWeight: FontWeight.w700,
-                        color: ShanganColors.course,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _courseMeta(course),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: ShanganColors.mutedInk,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            course.fullyWatched
-                                ? '已全部看完'
-                                : '已完成 ${course.completedCount}/${course.resourceCount}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 9.5,
-                              color: ShanganColors.mutedInk,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '${course.completedPercent}%',
-                          style: const TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w700,
-                            color: ShanganColors.mutedInk,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 5),
-                    TargetProgressBar(
-                      value: course.completedPercent / 100,
-                      height: 4,
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ),
         ),
       ),
@@ -950,67 +976,22 @@ class _BookCoverLines extends CustomPainter {
   bool shouldRepaint(covariant _BookCoverLines oldDelegate) => false;
 }
 
-/// Pad 课程库未选择课程时只展示局部空态，不主动替用户选第一门课。
-final class _CourseDetailEmptyState extends StatelessWidget {
-  const _CourseDetailEmptyState();
-
-  @override
-  Widget build(BuildContext context) => ColoredBox(
-    color: ShanganColors.paper,
-    child: Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                color: ShanganColors.blueSoft,
-                border: Border.all(color: ShanganColors.blueLine),
-                borderRadius: BorderRadius.circular(28),
-              ),
-              child: const Icon(
-                Icons.menu_book_outlined,
-                size: 42,
-                color: ShanganColors.blue,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              '请选择一个课程查看详情',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '课程列表会保留在左侧，切换课程无需来回进入详情页。',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.6,
-                color: ShanganColors.mutedInk,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
 /// 课程详情：固定课程摘要与操作，仅剩余空间中的课时列表滚动（ADR-0044）。
 final class CourseDetailPage extends ConsumerStatefulWidget {
   const CourseDetailPage({
     required this.courseId,
     this.embedded = false,
+    this.onClose,
     super.key,
   });
 
   final String courseId;
 
-  /// Pad 双栏直接嵌入内容；手机路由保持完整 Scaffold 与返回按钮。
+  /// Pad 抽屉直接嵌入内容；手机路由保持完整 Scaffold 与返回按钮。
   final bool embedded;
+
+  /// Pad 覆盖抽屉的收起回调；手机页仍走 Navigator.pop。
+  final VoidCallback? onClose;
 
   @override
   ConsumerState<CourseDetailPage> createState() => _CourseDetailPageState();
@@ -1077,6 +1058,17 @@ class _CourseDetailPageState extends ConsumerState<CourseDetailPage> {
                           ),
                           const SizedBox(width: 8),
                         ],
+                        if (widget.embedded)
+                          const Padding(
+                            padding: EdgeInsets.only(right: 8),
+                            child: Text(
+                              '学习 / 课程详情',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: ShanganColors.mutedInk,
+                              ),
+                            ),
+                          ),
                         Expanded(
                           child: compact && _searchOpen
                               ? ShanganSearchField(
@@ -1105,6 +1097,14 @@ class _CourseDetailPageState extends ConsumerState<CourseDetailPage> {
                           onTap: () =>
                               setState(() => _searchOpen = !_searchOpen),
                         ),
+                        if (widget.onClose != null) ...[
+                          const SizedBox(width: 8),
+                          ShanganIconButton(
+                            icon: Icons.close,
+                            semanticLabel: '收起课程详情',
+                            onTap: widget.onClose!,
+                          ),
+                        ],
                       ],
                     ),
                     if (!compact) ...[

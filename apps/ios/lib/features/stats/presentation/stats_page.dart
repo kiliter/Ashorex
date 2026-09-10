@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shangan_ios/core/layout/adaptive_breakpoints.dart';
+import 'package:shangan_ios/core/layout/pad_chrome.dart';
 import 'package:shangan_ios/core/models/shangan_models.dart';
 import 'package:shangan_ios/core/state/shangan_providers.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_v2.dart';
+import 'package:shangan_ios/features/stats/presentation/pad_stats_layout.dart';
 
 /// 数据 Tab：日 / 周 / 月统计（原型 5-1 ~ 5-3）。
 ///
@@ -22,58 +25,84 @@ final class StatsPage extends ConsumerWidget {
       HomeRange.month => '${date.month} 月',
     };
     // 标题和周期固定，只有统计正文参与滚动。
+    final pad = AppBreakpoints.usePadLayoutOf(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+      padding: EdgeInsets.fromLTRB(
+        pad ? 28 : 18,
+        pad ? 18 : 8,
+        pad ? 28 : 18,
+        0,
+      ),
       child: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'STATS',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.6,
-                        color: ShanganColors.mutedInk,
-                      ),
-                    ),
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.8,
-                      ),
-                    ),
-                  ],
+          if (pad)
+            PadPageHeader(
+              eyebrow: 'SMALL STEPS, REAL PROGRESS',
+              title: '学习数据',
+              subtitle: '你的努力，有迹可循。',
+              actions: [
+                ShanganIconButton(
+                  icon: Icons.calendar_today_outlined,
+                  semanticLabel: '选择统计日期',
+                  onTap: () => _pickDate(context, ref, date),
                 ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'STATS',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.6,
+                          color: ShanganColors.mutedInk,
+                        ),
+                      ),
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.8,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ShanganIconButton(
+                  icon: Icons.calendar_today_outlined,
+                  semanticLabel: '选择统计日期',
+                  onTap: () => _pickDate(context, ref, date),
+                ),
+              ],
+            ),
+          SizedBox(height: pad ? 17 : 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SizedBox(
+              width: pad ? 187 : double.infinity,
+              child: ShanganSegmented(
+                labels: const ['日', '周', '月'],
+                selectedIndex: range.index,
+                onChanged: (index) => ref
+                    .read(statsRangeProvider.notifier)
+                    .select(HomeRange.values[index]),
               ),
-              ShanganIconButton(
-                icon: Icons.calendar_today_outlined,
-                semanticLabel: '选择统计日期',
-                onTap: () => _pickDate(context, ref, date),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 12),
-          ShanganSegmented(
-            labels: const ['日', '周', '月'],
-            selectedIndex: range.index,
-            onChanged: (index) => ref
-                .read(statsRangeProvider.notifier)
-                .select(HomeRange.values[index]),
-          ),
-          const SizedBox(height: 12),
+          SizedBox(height: pad ? 17 : 12),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async => ref.invalidate(statsProvider),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 110),
+                padding: EdgeInsets.only(bottom: pad ? 24 : 110),
                 children: [
                   stats.when(
                     loading: () => const Padding(
@@ -81,7 +110,8 @@ final class StatsPage extends ConsumerWidget {
                       child: Center(child: CircularProgressIndicator()),
                     ),
                     error: (error, _) => Text('统计加载失败：$error'),
-                    data: (view) => _StatsBody(view: view, range: range),
+                    data: (view) =>
+                        _StatsBody(view: view, range: range, pad: pad),
                   ),
                 ],
               ),
@@ -110,10 +140,11 @@ final class StatsPage extends ConsumerWidget {
 }
 
 final class _StatsBody extends StatefulWidget {
-  const _StatsBody({required this.view, required this.range});
+  const _StatsBody({required this.view, required this.range, this.pad = false});
 
   final StatsView view;
   final HomeRange range;
+  final bool pad;
 
   @override
   State<_StatsBody> createState() => _StatsBodyState();
@@ -127,6 +158,7 @@ class _StatsBodyState extends State<_StatsBody> {
   Widget build(BuildContext context) {
     final view = widget.view;
     final range = widget.range;
+    if (widget.pad) return _padBody(view, range);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -350,6 +382,214 @@ class _StatsBodyState extends State<_StatsBody> {
           ),
         ],
       ],
+    );
+  }
+
+  /// Pad 数据看板：四格指标 + 原有图表排行 + 计划执行 / 学习构成。
+  Widget _padBody(StatsView view, HomeRange range) {
+    final items = _statItems(view, range);
+    const icons = [
+      Icons.schedule_outlined,
+      Icons.play_arrow_rounded,
+      Icons.timer_outlined,
+      Icons.task_alt_outlined,
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            for (var index = 0; index < items.length; index++) ...[
+              if (index > 0) const SizedBox(width: 14),
+              Expanded(
+                child: PadMetricCard(
+                  label: items[index].label,
+                  value: items[index].value,
+                  note: items[index].label,
+                  icon: icons[index],
+                  emphasized: items[index].highlighted || index == 2,
+                  accent: index == 2
+                      ? ShanganColors.ochre
+                      : index == 3
+                      ? ShanganColors.green
+                      : ShanganColors.blue,
+                  accentSoft: index == 2
+                      ? ShanganColors.ochreSoft
+                      : index == 3
+                      ? ShanganColors.greenSoft
+                      : ShanganColors.blueSoft,
+                ),
+              ),
+            ],
+          ],
+        ),
+        if (view.repayment.hasActivity)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: PadSurface(
+              padding: const EdgeInsets.all(14),
+              child: Text(
+                '${range == HomeRange.day ? "今日还债" : "本期还债"} · 完成 ${view.repayment.done} 项\n'
+                '观看 ${formatDurationCompact(view.repayment.watchedMs)} · 专注 ${formatDurationCompact(view.repayment.focusedMs)}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: ShanganColors.mutedInk,
+                ),
+              ),
+            ),
+          ),
+        const SizedBox(height: 18),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final stacked = constraints.maxWidth < 720;
+            final chart = _padChart(view, range);
+            final ranking = _padRanking(view);
+            final execution = PadExecutionCard(view: view, range: range);
+            final composition = PadCompositionCard(view: view, range: range);
+            if (stacked) {
+              return Column(
+                children: [
+                  ?chart,
+                  if (ranking != null) ...[const SizedBox(height: 18), ranking],
+                  const SizedBox(height: 18),
+                  execution,
+                  const SizedBox(height: 18),
+                  composition,
+                ],
+              );
+            }
+            return Column(
+              children: [
+                if (chart != null || ranking != null)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (chart != null)
+                        Expanded(flex: 17, child: chart)
+                      else
+                        const Spacer(flex: 17),
+                      const SizedBox(width: 18),
+                      if (ranking != null)
+                        Expanded(flex: 10, child: ranking)
+                      else
+                        const Spacer(flex: 10),
+                    ],
+                  ),
+                const SizedBox(height: 18),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: execution),
+                    const SizedBox(width: 18),
+                    Expanded(child: composition),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget? _padChart(StatsView view, HomeRange range) {
+    if (range == HomeRange.day && view.hours.isNotEmpty) {
+      return _ChartCard(
+        title: '今日时段分布（${view.start.toIso8601String().substring(0, 10)}）',
+        unit: '分钟',
+        chart: ShanganBarChart(
+          columns: view.hours
+              .map(
+                (hour) => ShanganBarColumn(
+                  value: (hour.watchedMs + hour.focusedMs) / 60000,
+                  caption: '${(hour.watchedMs + hour.focusedMs) ~/ 60000}',
+                  label: '${hour.hour}',
+                  color: hour.focusedMs > hour.watchedMs
+                      ? ShanganColors.ochre
+                      : ShanganColors.blue,
+                ),
+              )
+              .toList(growable: false),
+        ),
+        legend: const ShanganLegend(
+          items: [
+            ShanganLegendItem(color: ShanganColors.blue, label: '课程观看'),
+            ShanganLegendItem(color: ShanganColors.ochre, label: '专注计时'),
+          ],
+        ),
+      );
+    }
+    if (range == HomeRange.week && view.days.isNotEmpty) {
+      return _ChartCard(
+        title: '每日时长',
+        unit: '小时',
+        chart: ShanganBarChart(
+          columns: view.days
+              .map(
+                (day) => ShanganBarColumn(
+                  value: day.totalMs / 3600000,
+                  caption: (day.totalMs / 3600000).toStringAsFixed(1),
+                  label:
+                      '周${weekdayLabel(day.date)}\n${day.date.month}/${day.date.day}',
+                  color: day.total > 0 && day.done == 0
+                      ? ShanganColors.red
+                      : day.totalMs < 3600000
+                      ? ShanganHeatColors.l2
+                      : ShanganColors.blue,
+                ),
+              )
+              .toList(growable: false),
+        ),
+      );
+    }
+    if (range == HomeRange.month && view.days.isNotEmpty) {
+      return _ChartCard(
+        title: '学习热力',
+        unit: '一 二 三 四 五 六 日',
+        chart: _Heatmap(days: view.days),
+        legend: const ShanganLegend(
+          items: [
+            ShanganLegendItem(color: ShanganColors.inkSoft, label: '无记录'),
+            ShanganLegendItem(color: ShanganHeatColors.l2, label: '1 小时内'),
+            ShanganLegendItem(color: ShanganHeatColors.l3, label: '1 – 3 小时'),
+            ShanganLegendItem(color: ShanganColors.blue, label: '3 小时以上'),
+          ],
+        ),
+      );
+    }
+    return null;
+  }
+
+  Widget? _padRanking(StatsView view) {
+    if (view.courseRanking.isEmpty && view.personRanking.isEmpty) {
+      return null;
+    }
+    return PadSurface(
+      padding: const EdgeInsets.fromLTRB(19, 17, 19, 15),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _rankByPerson ? '人物排行' : '课程排行',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => setState(() => _rankByPerson = !_rankByPerson),
+                child: Text(_rankByPerson ? '按课程' : '按讲师'),
+              ),
+            ],
+          ),
+          _Ranking(
+            entries: _rankByPerson ? view.personRanking : view.courseRanking,
+          ),
+        ],
+      ),
     );
   }
 

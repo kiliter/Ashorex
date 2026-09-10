@@ -17,6 +17,7 @@ void main() {
           selectedIndex: 0,
           onDestinationSelected: (_) {},
           destinations: destinations,
+          accountName: '张三',
           body: const SizedBox.expand(),
         ),
       ),
@@ -29,7 +30,10 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await pumpAt(tester, const Size(390, 844));
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.byType(NavigationRail), findsNothing);
+    expect(
+      find.byKey(const ValueKey('adaptive-navigation-rail')),
+      findsNothing,
+    );
   });
 
   testWidgets('844x390 手机横屏仍使用 BottomNavigation', (tester) async {
@@ -37,14 +41,35 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await pumpAt(tester, const Size(844, 390));
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.byType(NavigationRail), findsNothing);
+    expect(
+      find.byKey(const ValueKey('adaptive-navigation-rail')),
+      findsNothing,
+    );
   });
 
-  testWidgets('820x1180 Pad 使用 NavigationRail', (tester) async {
+  testWidgets('820x1180 Pad 使用品牌侧栏而不是底栏', (tester) async {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await pumpAt(tester, const Size(820, 1180));
-    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('adaptive-navigation-rail')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('pad-app-icon')), findsOneWidget);
+    expect(find.text('张'), findsOneWidget);
+    expect(find.text('三'), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
+  });
+
+  testWidgets('Pad 横屏侧栏保留首页等四个目的地', (tester) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await pumpAt(tester, const Size(1180, 820));
+    expect(
+      find.byKey(const ValueKey('adaptive-navigation-rail')),
+      findsOneWidget,
+    );
+    expect(find.text('首页'), findsWidgets);
+    expect(find.text('学习'), findsWidgets);
   });
 }

@@ -46,3 +46,4 @@ flutter:
   assets:
     - assets/pets/maoxian-tuantuan/spritesheet.webp
     - assets/pets/maoxian-tuantuan/pet.json
+    - assets/branding/app_icon.png

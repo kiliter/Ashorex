@@ -8,6 +8,10 @@ import '../../support/fixtures.dart';
 
 void main() {
   testWidgets('首页全部/未完成/已完成只过滤当前日列表', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final backend = FakeBackend()
       ..on('GET', '/api/v1/exam-goals', json: <Object>[])
       ..on('GET', '/api/v1/nags/pending')
@@ -45,6 +49,14 @@ void main() {
     expect(find.byKey(const ValueKey('home-filter-all')), findsOneWidget);
     expect(find.byKey(const ValueKey('home-filter-pending')), findsOneWidget);
     expect(find.byKey(const ValueKey('home-filter-done')), findsOneWidget);
+    expect(
+      (tester.getTopLeft(find.text('今日待办')).dy -
+              tester
+                  .getTopLeft(find.byKey(const ValueKey('home-filter-all')))
+                  .dy)
+          .abs(),
+      lessThan(12),
+    );
     expect(find.text('未完成课程'), findsOneWidget);
     expect(find.text('已完成课程'), findsOneWidget);
 

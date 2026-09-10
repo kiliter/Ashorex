@@ -136,11 +136,17 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      HomePage(key: _homeKey),
+      HomePage(key: _homeKey, onOpenStats: () => setState(() => _index = 2)),
       const LibraryPage(),
       const StatsPage(),
       const ProfilePage(),
     ];
+    final displayName = ref
+        .watch(meSettingsProvider)
+        .asData
+        ?.value
+        .profile
+        .displayName;
     return AppActivityScope(
       activity: AppActivity(
         const ['HOME', 'LIBRARY', 'STATS', 'PROFILE'][_index],
@@ -149,6 +155,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       child: AdaptiveScaffold(
         selectedIndex: _index,
         onDestinationSelected: (index) => setState(() => _index = index),
+        accountName: displayName,
         destinations: const [
           AdaptiveDestination(icon: Icons.home_outlined, label: '首页'),
           AdaptiveDestination(icon: Icons.menu_book_outlined, label: '学习'),

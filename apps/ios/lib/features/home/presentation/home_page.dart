@@ -2,6 +2,8 @@ import 'package:shangan_ios/core/widgets/shangan_feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shangan_ios/core/layout/adaptive_breakpoints.dart';
+import 'package:shangan_ios/core/layout/pad_chrome.dart';
 import 'package:shangan_ios/core/models/shangan_models.dart';
 import 'package:shangan_ios/core/state/shangan_providers.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
@@ -9,6 +11,7 @@ import 'package:shangan_ios/core/widgets/shangan_v2.dart';
 import 'package:shangan_ios/features/home/presentation/add_todo_sheet.dart';
 import 'package:shangan_ios/features/home/presentation/complete_sheet.dart';
 import 'package:shangan_ios/features/home/presentation/delete_reason_dialog.dart';
+import 'package:shangan_ios/features/home/presentation/pad_home_layout.dart';
 import 'package:shangan_ios/features/home/presentation/todo_row.dart';
 import 'package:shangan_ios/features/nag/presentation/fullscreen_nag_page.dart';
 
@@ -17,7 +20,10 @@ import 'package:shangan_ios/features/nag/presentation/fullscreen_nag_page.dart';
 /// 对应原型 1-1 ~ 1-10：默认态、编辑态、视图切换面板、周 / 月视图、
 /// 历史日补救动作与回顾态。
 final class HomePage extends ConsumerStatefulWidget {
-  const HomePage({super.key});
+  const HomePage({this.onOpenStats, super.key});
+
+  /// Pad 侧栏「查看数据」切到数据 Tab；手机不展示该入口。
+  final VoidCallback? onOpenStats;
 
   @override
   ConsumerState<HomePage> createState() => HomePageState();
@@ -58,7 +64,9 @@ class HomePageState extends ConsumerState<HomePage> {
           ? (await ref.read(shanganRepositoryProvider).loadDay()).date
           : selection.date;
       if (!mounted) return;
-      final created = await AddTodoSheet.show(context, date);
+      final created = AppBreakpoints.usePadLayoutOf(context)
+          ? await PadAddTodoDialog.show(context, date)
+          : await AddTodoSheet.show(context, date);
       if (created) await _refresh();
     } catch (_) {
       if (mounted) ShanganFeedback.show(context, '读取今日日期失败，请稍后重试', error: true);
@@ -83,29 +91,87 @@ class HomePageState extends ConsumerState<HomePage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxHeight < 600;
+        final pad = AppBreakpoints.usePadLayoutOf(context);
+        final header = _Header(
+          selection: selection,
+          editing: _editing,
+          selectedCount: _selected.length,
+          jumpPanelOpen: _jumpPanelOpen,
+          pad: pad,
+          onAddTodo: addTodo,
+          onToggleEditing: () => setState(() {
+            _editing = !_editing;
+            _jumpPanelOpen = false;
+            _selected.clear();
+          }),
+          onToggleJumpPanel: () => _toggleJumpPanel(compact && !pad),
+        );
+        final jumpPanel = _jumpPanelOpen && !_editing
+            ? _JumpPanel(
+                selection: selection,
+                onClose: () => setState(() => _jumpPanelOpen = false),
+              )
+            : null;
+        final list = RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.only(bottom: pad ? 24 : 110),
+            children: [
+              if (_editing)
+                _EditingSection(
+                  selected: _selected,
+                  onSelectionChanged: (id, value) => setState(() {
+                    if (value) {
+                      _selected.add(id);
+                    } else {
+                      _selected.remove(id);
+                    }
+                  }),
+                  onDone: () async {
+                    setState(() {
+                      _editing = false;
+                      _selected.clear();
+                    });
+                    await _refresh();
+                  },
+                )
+              else
+                switch (selection.range) {
+                  HomeRange.day => _DaySection(
+                    onRefresh: _refresh,
+                    pad: pad,
+                    onEdit: () => setState(() {
+                      _editing = true;
+                      _jumpPanelOpen = false;
+                      _selected.clear();
+                    }),
+                  ),
+                  HomeRange.week => const _WeekSection(),
+                  HomeRange.month => _MonthSection(onRefresh: _refresh),
+                },
+            ],
+          ),
+        );
+        if (pad) {
+          return _PadHomeWorkspace(
+            header: header,
+            jumpPanel: jumpPanel,
+            selection: selection,
+            editing: _editing,
+            list: list,
+            onOpenStats: widget.onOpenStats,
+          );
+        }
         return Padding(
           padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
           child: Column(
             children: [
-              _Header(
-                selection: selection,
-                editing: _editing,
-                selectedCount: _selected.length,
-                jumpPanelOpen: _jumpPanelOpen,
-                onToggleEditing: () => setState(() {
-                  _editing = !_editing;
-                  _jumpPanelOpen = false;
-                  _selected.clear();
-                }),
-                onToggleJumpPanel: () => _toggleJumpPanel(compact),
-              ),
+              header,
               const SizedBox(height: 12),
               if (!_editing) const _PendingNagStrip(),
-              if (_jumpPanelOpen && !_editing && !compact) ...[
-                _JumpPanel(
-                  selection: selection,
-                  onClose: () => setState(() => _jumpPanelOpen = false),
-                ),
+              if (jumpPanel != null && !compact) ...[
+                jumpPanel,
                 const SizedBox(height: 12),
               ],
               if (!_editing) ...[
@@ -129,52 +195,83 @@ class HomePageState extends ConsumerState<HomePage> {
               ],
               if (!_editing && selection.range == HomeRange.day)
                 const _FixedDayTotals(),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _refresh,
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(bottom: 110),
-                    children: [
-                      if (_editing)
-                        _EditingSection(
-                          selected: _selected,
-                          onSelectionChanged: (id, value) => setState(() {
-                            if (value) {
-                              _selected.add(id);
-                            } else {
-                              _selected.remove(id);
-                            }
-                          }),
-                          onDone: () async {
-                            setState(() {
-                              _editing = false;
-                              _selected.clear();
-                            });
-                            await _refresh();
-                          },
-                        )
-                      else
-                        switch (selection.range) {
-                          HomeRange.day => _DaySection(
-                            onRefresh: _refresh,
-                            onEdit: () => setState(() {
-                              _editing = true;
-                              _jumpPanelOpen = false;
-                              _selected.clear();
-                            }),
-                          ),
-                          HomeRange.week => const _WeekSection(),
-                          HomeRange.month => _MonthSection(onRefresh: _refresh),
-                        },
-                    ],
-                  ),
-                ),
-              ),
+              Expanded(child: list),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// Pad 工作台：页头与四格指标通栏，待办在左、目标与节奏在右。
+final class _PadHomeWorkspace extends ConsumerWidget {
+  const _PadHomeWorkspace({
+    required this.header,
+    required this.selection,
+    required this.editing,
+    required this.list,
+    this.jumpPanel,
+    this.onOpenStats,
+  });
+
+  final Widget header;
+  final Widget? jumpPanel;
+  final HomeSelection selection;
+  final bool editing;
+  final Widget list;
+  final VoidCallback? onOpenStats;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        PadChrome.pagePadding,
+        8,
+        PadChrome.pagePadding,
+        24,
+      ),
+      child: Column(
+        children: [
+          header,
+          if (!editing) const _PendingNagStrip(),
+          if (jumpPanel != null) ...[const SizedBox(height: 12), jumpPanel!],
+          if (!editing && selection.range != HomeRange.day) ...[
+            const SizedBox(height: 12),
+            ShanganSegmented(
+              labels: const ['日', '周', '月'],
+              selectedIndex: selection.range.index,
+              onChanged: (index) => ref
+                  .read(homeSelectionProvider.notifier)
+                  .selectRange(HomeRange.values[index]),
+            ),
+          ],
+          if (!editing && selection.range == HomeRange.day) ...[
+            const SizedBox(height: 12),
+            const PadHomeMetrics(),
+            const SizedBox(height: 22),
+          ] else
+            const SizedBox(height: 16),
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: PadSurface(
+                    padding: const EdgeInsets.fromLTRB(19, 4, 19, 12),
+                    child: list,
+                  ),
+                ),
+                const SizedBox(width: PadChrome.columnGap),
+                SizedBox(
+                  width: PadChrome.asideWidth,
+                  child: PadHomeAside(onOpenStats: onOpenStats),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -228,14 +325,18 @@ final class _Header extends ConsumerWidget {
     required this.jumpPanelOpen,
     required this.onToggleEditing,
     required this.onToggleJumpPanel,
+    this.pad = false,
+    this.onAddTodo,
   });
 
   final HomeSelection selection;
   final bool editing;
   final int selectedCount;
   final bool jumpPanelOpen;
+  final bool pad;
   final VoidCallback onToggleEditing;
   final VoidCallback onToggleJumpPanel;
+  final Future<void> Function()? onAddTodo;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -287,15 +388,31 @@ final class _Header extends ConsumerWidget {
       String title,
       double titleSize,
     ) = switch (selection.range) {
-      HomeRange.week => ('WEEK · ${_weekLabel(date)}', '本周待办', 26.0),
-      HomeRange.month => ('MONTH · ${date.year}', '${date.month} 月', 26.0),
+      HomeRange.week => (
+        'WEEK · ${_weekLabel(date)}',
+        '本周待办',
+        pad ? 27.0 : 26.0,
+      ),
+      HomeRange.month => (
+        'MONTH · ${date.year}',
+        '${date.month} 月',
+        pad ? 27.0 : 26.0,
+      ),
       HomeRange.day =>
         isToday
-            ? ('TODAY · 周${weekdayLabel(date)}', formatDate(date), 31.0)
+            ? (
+                pad
+                    ? 'ONE DAY CLOSER TO SHORE'
+                    : 'TODAY · 周${weekdayLabel(date)}',
+                pad
+                    ? '${date.month}月${date.day}日，周${weekdayLabel(date)}'
+                    : formatDate(date),
+                pad ? 27.0 : 31.0,
+              )
             : (
                 overdueDays > 0 ? '历史 · $overdueDays 天前' : '未来 · 计划中',
                 '${formatDate(date)} 周${weekdayLabel(date)}',
-                26.0,
+                pad ? 27.0 : 26.0,
               ),
     };
     final nag = ref.watch(pendingNagProvider);
@@ -313,10 +430,10 @@ final class _Header extends ConsumerWidget {
               children: [
                 Text(
                   kicker,
-                  style: const TextStyle(
-                    fontSize: 11.5,
+                  style: TextStyle(
+                    fontSize: pad ? 9 : 11.5,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: 1.6,
+                    letterSpacing: pad ? 1.8 : 1.6,
                     color: ShanganColors.mutedInk,
                   ),
                 ),
@@ -347,10 +464,24 @@ final class _Header extends ConsumerWidget {
                     ),
                   ],
                 ),
+                if (pad && isToday && selection.range == HomeRange.day) ...[
+                  const SizedBox(height: 5),
+                  const Text(
+                    '把今天过扎实，岸就在前方。',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: ShanganColors.mutedInk,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ),
+        if (pad && onAddTodo != null) ...[
+          PadAddTodoButton(onTap: () => onAddTodo!()),
+          const SizedBox(width: 10),
+        ],
         ShanganIconButton(
           icon: Icons.calendar_today_outlined,
           highlighted: jumpPanelOpen,
@@ -573,12 +704,15 @@ final class _GoalBoardSection extends ConsumerWidget {
 
 /// 日视图：四格指标 + 历史提示条 + 三组 Todo 列表。
 final class _DaySection extends ConsumerStatefulWidget {
-  const _DaySection({required this.onRefresh, this.onEdit});
+  const _DaySection({required this.onRefresh, this.onEdit, this.pad = false});
 
   final Future<void> Function() onRefresh;
 
   /// 进入编辑态（原型 1-1「进行中」标题右侧的「编辑」）；历史日不提供。
   final VoidCallback? onEdit;
+
+  /// Pad 空态提示指向页头添加按钮，而不是右下角 FAB。
+  final bool pad;
 
   @override
   ConsumerState<_DaySection> createState() => _DaySectionState();
@@ -800,7 +934,9 @@ class _DaySectionState extends ConsumerState<_DaySection> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      view.today ? '今天还没有安排，点右下角加一条' : '这一天没有待办记录',
+                      view.today
+                          ? (widget.pad ? '今天还没有安排，点右上角加一条' : '今天还没有安排，点右下角加一条')
+                          : '这一天没有待办记录',
                       style: const TextStyle(color: ShanganColors.mutedInk),
                     ),
                   ],
@@ -894,6 +1030,7 @@ class _DaySectionState extends ConsumerState<_DaySection> {
         else
           SectionTitle(
             title: title,
+            padding: const EdgeInsets.only(top: 4, bottom: 6),
             count: showCount ? '${items.length}' : null,
             trailing: collapsible
                 ? TextButton(
@@ -993,47 +1130,49 @@ final class _TodoFilterHeader extends StatelessWidget {
         ),
       ],
     );
-    final filters = Wrap(
-      spacing: 3,
-      children: [
+    final filterButtons = [
+      _TodoFilterButton(
+        key: const ValueKey('home-filter-all'),
+        label: '全部',
+        count: total,
+        selected: value == _HomeTodoFilter.all,
+        onTap: () => onChanged(_HomeTodoFilter.all),
+      ),
+      _TodoFilterButton(
+        key: const ValueKey('home-filter-pending'),
+        label: '未完成',
+        count: pendingCount,
+        selected: value == _HomeTodoFilter.pending,
+        onTap: () => onChanged(_HomeTodoFilter.pending),
+      ),
+      _TodoFilterButton(
+        key: const ValueKey('home-filter-done'),
+        label: '已完成',
+        count: doneCount,
+        selected: value == _HomeTodoFilter.done,
+        onTap: () => onChanged(_HomeTodoFilter.done),
+      ),
+      if (showRepayment)
         _TodoFilterButton(
-          key: const ValueKey('home-filter-all'),
-          label: '全部',
-          count: total,
-          selected: value == _HomeTodoFilter.all,
-          onTap: () => onChanged(_HomeTodoFilter.all),
+          key: const ValueKey('home-filter-repayment'),
+          label: '今日还债',
+          count: repaymentCount,
+          selected: value == _HomeTodoFilter.repayment,
+          onTap: () => onChanged(_HomeTodoFilter.repayment),
         ),
-        _TodoFilterButton(
-          key: const ValueKey('home-filter-pending'),
-          label: '未完成',
-          count: pendingCount,
-          selected: value == _HomeTodoFilter.pending,
-          onTap: () => onChanged(_HomeTodoFilter.pending),
-        ),
-        _TodoFilterButton(
-          key: const ValueKey('home-filter-done'),
-          label: '已完成',
-          count: doneCount,
-          selected: value == _HomeTodoFilter.done,
-          onTap: () => onChanged(_HomeTodoFilter.done),
-        ),
-        if (showRepayment)
-          _TodoFilterButton(
-            key: const ValueKey('home-filter-repayment'),
-            label: '今日还债',
-            count: repaymentCount,
-            selected: value == _HomeTodoFilter.repayment,
-            onTap: () => onChanged(_HomeTodoFilter.repayment),
-          ),
-      ],
-    );
+    ];
     return Padding(
-      padding: const EdgeInsets.only(top: 10, bottom: 4),
+      padding: const EdgeInsets.only(top: 2, bottom: 0),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final stack =
-              constraints.maxWidth < 420 ||
-              MediaQuery.textScalerOf(context).scale(11) > 16;
+          // 手机与 Pad 都把筛选放在「今日待办」同一行；只有超大字体才折行。
+          final stack = MediaQuery.textScalerOf(context).scale(11) > 16;
+          final filters = Wrap(
+            spacing: 3,
+            runSpacing: 4,
+            alignment: stack ? WrapAlignment.start : WrapAlignment.end,
+            children: filterButtons,
+          );
           if (stack) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1041,9 +1180,11 @@ final class _TodoFilterHeader extends StatelessWidget {
             );
           }
           return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(child: title),
-              filters,
+              title,
+              const SizedBox(width: 8),
+              Expanded(child: filters),
             ],
           );
         },

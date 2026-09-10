@@ -8,7 +8,7 @@ import '../../support/fake_backend.dart';
 import '../../support/fixtures.dart';
 
 void main() {
-  testWidgets('Pad 横屏课程库先显示空态，选择课程后在右侧展示详情', (tester) async {
+  testWidgets('Pad 课程墙点选后以覆盖抽屉展示课时，课程列表仍留在原位', (tester) async {
     tester.view.physicalSize = const Size(1180, 820);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -69,14 +69,24 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('共 1 门课程'), findsOneWidget);
-    expect(find.text('请选择一个课程查看详情'), findsOneWidget);
+    expect(find.byKey(const ValueKey('library-lesson-drawer')), findsNothing);
+    expect(find.text('请选择一个课程查看详情'), findsNothing);
 
     await tester.tap(find.text('行政法专题').first);
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const ValueKey('library-lesson-drawer')), findsOneWidget);
+    expect(find.byKey(const ValueKey('library-drawer-scrim')), findsOneWidget);
     expect(find.byKey(const ValueKey('course-detail-title')), findsOneWidget);
     expect(find.text('第 01 讲 · 行政法基础'), findsOneWidget);
+    expect(find.text('共 1 门课程'), findsOneWidget);
     expect(find.bySemanticsLabel('返回'), findsNothing);
+    expect(find.bySemanticsLabel('收起课程详情'), findsOneWidget);
     expect(tester.takeException(), isNull);
+
+    await tester.tap(find.bySemanticsLabel('收起课程详情'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('library-lesson-drawer')), findsNothing);
+    expect(find.text('共 1 门课程'), findsOneWidget);
   });
 }

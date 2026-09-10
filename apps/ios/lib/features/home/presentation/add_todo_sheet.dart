@@ -1127,6 +1127,38 @@ final class _NewFocusSheet extends ConsumerStatefulWidget {
 }
 
 class _NewFocusSheetState extends ConsumerState<_NewFocusSheet> {
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const ShanganSheetHeader(
+              title: '新建专注计时',
+              subtitle: '倒计时结束即判定完成；提前放弃记为未完成，两种结果都会进入统计。',
+            ),
+            const SizedBox(height: 14),
+            _FocusTodoForm(date: widget.date),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 专注表单：手机抽屉和 Pad 弹框共用同一套字段与提交口径。
+final class _FocusTodoForm extends ConsumerStatefulWidget {
+  const _FocusTodoForm({required this.date});
+
+  final DateTime date;
+
+  @override
+  ConsumerState<_FocusTodoForm> createState() => _FocusTodoFormState();
+}
+
+class _FocusTodoFormState extends ConsumerState<_FocusTodoForm> {
   final _title = TextEditingController();
   final _custom = TextEditingController();
   final _note = TextEditingController();
@@ -1146,108 +1178,97 @@ class _NewFocusSheetState extends ConsumerState<_NewFocusSheet> {
   @override
   Widget build(BuildContext context) {
     const presets = [15, 25, 45, 60];
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ShanganField(
+          label: '名称',
+          controller: _title,
+          hint: '例如 法条背诵 · 第三章',
+          onChanged: (_) => setState(() {}),
+        ),
+        const ShanganGroupLabel(
+          '倒计时时长',
+          padding: EdgeInsets.only(top: 12, bottom: 7),
+        ),
+        Wrap(
+          spacing: 7,
+          runSpacing: 7,
           children: [
-            const ShanganSheetHeader(
-              title: '新建专注计时',
-              subtitle: '倒计时结束即判定完成；提前放弃记为未完成，两种结果都会进入统计。',
-            ),
-            const SizedBox(height: 14),
-            ShanganField(
-              label: '名称',
-              controller: _title,
-              hint: '例如 法条背诵 · 第三章',
-              onChanged: (_) => setState(() {}),
-            ),
-            const ShanganGroupLabel(
-              '倒计时时长',
-              padding: EdgeInsets.only(top: 12, bottom: 7),
-            ),
-            Wrap(
-              spacing: 7,
-              runSpacing: 7,
-              children: [
-                for (final minutes in presets)
-                  ShanganFilterChip(
-                    label: '$minutes 分',
-                    selected: !_customMinutes && _minutes == minutes,
-                    onTap: () => setState(() {
-                      _customMinutes = false;
-                      _minutes = minutes;
-                    }),
-                  ),
-                ShanganFilterChip(
-                  label: '自定义',
-                  selected: _customMinutes,
-                  onTap: () => setState(() => _customMinutes = true),
-                ),
-              ],
-            ),
-            if (_customMinutes) ...[
-              const SizedBox(height: 12),
-              ShanganField(
-                label: '自定义时长（分钟）',
-                controller: _custom,
-                hint: '1 – 480',
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  final parsed = int.tryParse(value);
-                  setState(() => _minutes = parsed ?? 0);
-                },
+            for (final minutes in presets)
+              ShanganFilterChip(
+                label: '$minutes 分',
+                selected: !_customMinutes && _minutes == minutes,
+                onTap: () => setState(() {
+                  _customMinutes = false;
+                  _minutes = minutes;
+                }),
               ),
-            ],
-            const SizedBox(height: 12),
-            ShanganSwitchCard(
-              tiles: [
-                ShanganSwitchTile(
-                  title: '完成时要求拍照',
-                  subtitle: '结束后必须上传至少 1 张凭证',
-                  value: _requireEvidence,
-                  onChanged: (value) =>
-                      setState(() => _requireEvidence = value),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ShanganField(
-              label: '备注（可选）',
-              controller: _note,
-              hint: '写点计划或提醒',
-              minLines: 2,
-              maxLines: 4,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('取消'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 2,
-                  child: FilledButton(
-                    onPressed:
-                        _title.text.trim().isEmpty ||
-                            _minutes < 1 ||
-                            _minutes > 480 ||
-                            _submitting
-                        ? null
-                        : _submit,
-                    child: Text(_submitting ? '保存中…' : '保存并加入今日'),
-                  ),
-                ),
-              ],
+            ShanganFilterChip(
+              label: '自定义',
+              selected: _customMinutes,
+              onTap: () => setState(() => _customMinutes = true),
             ),
           ],
         ),
-      ),
+        if (_customMinutes) ...[
+          const SizedBox(height: 12),
+          ShanganField(
+            label: '自定义时长（分钟）',
+            controller: _custom,
+            hint: '1 – 480',
+            keyboardType: TextInputType.number,
+            onChanged: (value) {
+              final parsed = int.tryParse(value);
+              setState(() => _minutes = parsed ?? 0);
+            },
+          ),
+        ],
+        const SizedBox(height: 12),
+        ShanganSwitchCard(
+          tiles: [
+            ShanganSwitchTile(
+              title: '完成时要求拍照',
+              subtitle: '结束后必须上传至少 1 张凭证',
+              value: _requireEvidence,
+              onChanged: (value) => setState(() => _requireEvidence = value),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ShanganField(
+          label: '备注（可选）',
+          controller: _note,
+          hint: '写点计划或提醒',
+          minLines: 2,
+          maxLines: 4,
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('取消'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: FilledButton(
+                onPressed:
+                    _title.text.trim().isEmpty ||
+                        _minutes < 1 ||
+                        _minutes > 480 ||
+                        _submitting
+                    ? null
+                    : _submit,
+                child: Text(_submitting ? '保存中…' : '保存并加入今日'),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -1293,6 +1314,38 @@ final class _NewTaskSheet extends ConsumerStatefulWidget {
 }
 
 class _NewTaskSheetState extends ConsumerState<_NewTaskSheet> {
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const ShanganSheetHeader(
+              title: '新建待办事项',
+              subtitle: '自行打勾完成，不做任何自动核验。',
+            ),
+            const SizedBox(height: 14),
+            _TaskTodoForm(date: widget.date),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 待办表单：手机抽屉和 Pad 弹框共用同一套字段与提交口径。
+final class _TaskTodoForm extends ConsumerStatefulWidget {
+  const _TaskTodoForm({required this.date});
+
+  final DateTime date;
+
+  @override
+  ConsumerState<_TaskTodoForm> createState() => _TaskTodoFormState();
+}
+
+class _TaskTodoFormState extends ConsumerState<_TaskTodoForm> {
   final _title = TextEditingController();
   final _note = TextEditingController();
   bool _requireEvidence = false;
@@ -1307,67 +1360,56 @@ class _NewTaskSheetState extends ConsumerState<_NewTaskSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const ShanganSheetHeader(
-              title: '新建待办事项',
-              subtitle: '自行打勾完成，不做任何自动核验。',
-            ),
-            const SizedBox(height: 14),
-            ShanganField(
-              label: '标题',
-              controller: _title,
-              hint: '例如 整理错题本第 3 章',
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 12),
-            ShanganField(
-              label: '备注（可选）',
-              controller: _note,
-              hint: '补充说明、页码、章节…',
-              minLines: 2,
-              maxLines: 4,
-            ),
-            const SizedBox(height: 12),
-            ShanganSwitchCard(
-              tiles: [
-                ShanganSwitchTile(
-                  title: '完成时要求凭证',
-                  subtitle: '勾选完成前必须上传照片或文件',
-                  value: _requireEvidence,
-                  onChanged: (value) =>
-                      setState(() => _requireEvidence = value),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('取消'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 2,
-                  child: FilledButton(
-                    onPressed: _title.text.trim().isEmpty || _submitting
-                        ? null
-                        : _submit,
-                    child: Text(_submitting ? '保存中…' : '保存'),
-                  ),
-                ),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ShanganField(
+          label: '标题',
+          controller: _title,
+          hint: '例如 整理错题本第 3 章',
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 12),
+        ShanganField(
+          label: '备注（可选）',
+          controller: _note,
+          hint: '补充说明、页码、章节…',
+          minLines: 2,
+          maxLines: 4,
+        ),
+        const SizedBox(height: 12),
+        ShanganSwitchCard(
+          tiles: [
+            ShanganSwitchTile(
+              title: '完成时要求凭证',
+              subtitle: '勾选完成前必须上传照片或文件',
+              value: _requireEvidence,
+              onChanged: (value) => setState(() => _requireEvidence = value),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('取消'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: FilledButton(
+                onPressed: _title.text.trim().isEmpty || _submitting
+                    ? null
+                    : _submit,
+                child: Text(_submitting ? '保存中…' : '保存'),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -1390,5 +1432,172 @@ class _NewTaskSheetState extends ConsumerState<_NewTaskSheet> {
         ShanganFeedback.show(context, '保存失败：$error', error: true);
       }
     }
+  }
+}
+
+/// Pad 添加待办：居中高保真弹框，内容对齐 ashorex-pad-v2 的 `showAddTodo`。
+final class PadAddTodoDialog extends ConsumerStatefulWidget {
+  const PadAddTodoDialog({required this.date, super.key});
+
+  final DateTime date;
+
+  static Future<bool> show(BuildContext context, DateTime date) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierColor: const Color(0x55263B60),
+      builder: (context) => PadAddTodoDialog(date: date),
+    );
+    return result ?? false;
+  }
+
+  @override
+  ConsumerState<PadAddTodoDialog> createState() => _PadAddTodoDialogState();
+}
+
+enum _PadAddKind { course, focus, task }
+
+class _PadAddTodoDialogState extends ConsumerState<PadAddTodoDialog> {
+  _PadAddKind _kind = _PadAddKind.course;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: ShanganColors.surface,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: const BorderSide(
+          color: ShanganColors.blue,
+          width: ShanganRadius.borderWidth,
+        ),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460, maxHeight: 640),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(23, 20, 23, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      '添加今日待办',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                  ShanganIconButton(
+                    icon: Icons.close,
+                    semanticLabel: '关闭弹窗',
+                    onTap: () => Navigator.of(context).pop(false),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ShanganSegmented(
+                labels: const ['课程', '专注', '待办'],
+                selectedIndex: _kind.index,
+                onChanged: (index) =>
+                    setState(() => _kind = _PadAddKind.values[index]),
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: switch (_kind) {
+                    _PadAddKind.course => const _PadCoursePrompt(),
+                    _PadAddKind.focus => _FocusTodoForm(date: widget.date),
+                    _PadAddKind.task => _TaskTodoForm(date: widget.date),
+                  },
+                ),
+              ),
+              if (_kind == _PadAddKind.course) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('取消'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _pickCourse,
+                        child: const Text('选择课程'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickCourse() async {
+    final created = await _CoursePickerSheet.show(context, widget.date);
+    if (created && mounted) Navigator.of(context).pop(true);
+  }
+}
+
+/// 原型课程类型的空态说明，真正选课仍走现有课程库挑选流程。
+final class _PadCoursePrompt extends StatelessWidget {
+  const _PadCoursePrompt();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(15, 28, 15, 12),
+      child: Column(
+        children: [
+          _PadCourseIcon(),
+          SizedBox(height: 15),
+          Text(
+            '从课程库选择要学的课时',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+          SizedBox(height: 8),
+          Text(
+            '先选课程，再将课时加入今日计划。\n保留现有课程与待办的关联方式。',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.65,
+              color: ShanganColors.mutedInk,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _PadCourseIcon extends StatelessWidget {
+  const _PadCourseIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: ShanganColors.blueSoft,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: ShanganColors.blueLine),
+      ),
+      child: const Icon(
+        Icons.menu_book_outlined,
+        size: 26,
+        color: ShanganColors.course,
+      ),
+    );
   }
 }

@@ -762,17 +762,19 @@ final class SectionTitle extends StatelessWidget {
     required this.title,
     this.trailing,
     this.count,
+    this.padding = const EdgeInsets.only(top: 16, bottom: 8),
     super.key,
   });
 
   final String title;
   final Widget? trailing;
   final String? count;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 8),
+      padding: padding,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
