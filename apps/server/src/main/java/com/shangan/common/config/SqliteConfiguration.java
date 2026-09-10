@@ -33,8 +33,9 @@ public class SqliteConfiguration {
     sqliteConfig.setSynchronous(SQLiteConfig.SynchronousMode.NORMAL);
     // 写事务在 BEGIN 时取锁并等待 busy_timeout，避免 DEFERRED 升级时立刻 SQLITE_BUSY_SNAPSHOT。
     sqliteConfig.setTransactionMode(SQLiteConfig.TransactionMode.IMMEDIATE);
-    // 让 Spring 的 readOnly 事务保持延迟锁，只读请求不和写事务抢 RESERVED。
-    sqliteConfig.setExplicitReadOnly(true);
+    // 禁用 SQLiteConfig#setExplicitReadOnly：与 IMMEDIATE 组合时，readOnly 事务会给物理连接
+    // 打上 PRAGMA query_only=true 且无法复位，连接归还 Hikari 后所有写入都报 SQLITE_READONLY
+    // （2026-09-10 事故）。不启用时 Spring 的 readOnly 标记由驱动静默降级，不影响正确性。
 
     SQLiteDataSource sqliteDataSource = new SQLiteDataSource(sqliteConfig);
     sqliteDataSource.setUrl(jdbcUrl);
