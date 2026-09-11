@@ -1,3 +1,4 @@
+import 'about_page.dart';
 import 'app_update_page.dart';
 import 'bark_settings_sheet.dart';
 import 'package:shangan_ios/core/widgets/shangan_feedback.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shangan_ios/core/auth/auth_controller.dart';
 import 'package:shangan_ios/core/config/server_configuration_controller.dart';
+import 'package:shangan_ios/core/layout/adaptive_breakpoints.dart';
 import 'package:shangan_ios/core/models/shangan_models.dart';
 import 'package:shangan_ios/core/state/shangan_providers.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
@@ -33,142 +35,203 @@ final class ProfilePage extends ConsumerWidget {
           children: [Text('资料加载失败：$error')],
         ),
         // 用户身份固定在顶部；心跳状态及以下设置共用独立滚动区域。
-        data: (data) => Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
-              child: _ProfileHeader(profile: data.profile),
-            ),
-            Expanded(
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(18, 0, 18, 110),
-                children: [
-                  if (!supervisor) const _HeartbeatCard(),
-                  const SizedBox(height: 10),
-                  if (data.supervisors.isNotEmpty)
-                    _SupervisionCard(settings: data),
-                  if (!supervisor) ...[
-                    const ShanganGroupLabel('考试目标'),
-                    _GoalList(onManage: () => context.push('/goals')),
-                  ],
-                  const ShanganGroupLabel('个人推送'),
-                  ShanganCard(
-                    padding: EdgeInsets.zero,
-                    child: _MenuItem(
-                      icon: Icons.notifications_active_outlined,
-                      title: '我的 Bark 推送',
-                      subtitle: '配置个人设备，启用后替代 Server 酱',
-                      onTap: () => showModalBottomSheet<void>(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (_) => const BarkSettingsSheet(),
-                      ),
+        data: (data) {
+          final pad = AppBreakpoints.usePadLayoutOf(context);
+          final horizontal = pad ? 28.0 : 18.0;
+          return Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontal,
+                  pad ? 18 : 12,
+                  horizontal,
+                  12,
+                ),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: pad ? 780 : double.infinity,
                     ),
+                    child: _ProfileHeader(profile: data.profile),
                   ),
-                  const ShanganGroupLabel('账号与安全'),
-                  ShanganCard(
-                    padding: EdgeInsets.zero,
-                    child: Column(
+                ),
+              ),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: pad ? 780 : double.infinity,
+                    ),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(
+                        pad ? 0 : horizontal,
+                        0,
+                        pad ? 0 : horizontal,
+                        pad ? 24 : 110,
+                      ),
                       children: [
-                        _MenuItem(
-                          icon: Icons.person_outline,
-                          title: '用户名',
-                          value: data.profile.username,
+                        if (pad)
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 8),
+                            child: Text(
+                              'MY ASHOREX',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.8,
+                                color: ShanganColors.mutedInk,
+                              ),
+                            ),
+                          ),
+                        if (!supervisor) const _HeartbeatCard(),
+                        const SizedBox(height: 10),
+                        if (data.supervisors.isNotEmpty)
+                          _SupervisionCard(settings: data),
+                        if (!supervisor) ...[
+                          const ShanganGroupLabel('考试目标'),
+                          _GoalList(onManage: () => context.push('/goals')),
+                        ],
+                        const ShanganGroupLabel('个人推送'),
+                        ShanganCard(
+                          padding: EdgeInsets.zero,
+                          child: _MenuItem(
+                            icon: Icons.notifications_active_outlined,
+                            title: '我的 Bark 推送',
+                            subtitle: '配置个人设备，启用后替代 Server 酱',
+                            onTap: () => showModalBottomSheet<void>(
+                              context: context,
+                              isScrollControlled: true,
+                              builder: (_) => const BarkSettingsSheet(),
+                            ),
+                          ),
                         ),
-                        _MenuItem(
-                          icon: Icons.lock_outline,
-                          title: '修改密码',
-                          onTap: () => _showPasswordSheet(context, ref, data),
+                        const ShanganGroupLabel('账号与安全'),
+                        ShanganCard(
+                          padding: EdgeInsets.zero,
+                          child: Column(
+                            children: [
+                              _MenuItem(
+                                icon: Icons.person_outline,
+                                title: '用户名',
+                                value: data.profile.username,
+                              ),
+                              _MenuItem(
+                                icon: Icons.lock_outline,
+                                title: '修改密码',
+                                onTap: () =>
+                                    _showPasswordSheet(context, ref, data),
+                              ),
+                              _MenuItem(
+                                icon: Icons.public,
+                                title: '时区',
+                                subtitle: '影响每日边界与统计口径',
+                                value: data.profile.timezone,
+                                onTap: () =>
+                                    _showTimezoneSheet(context, ref, data),
+                              ),
+                              _MenuItem(
+                                icon: Icons.dns_outlined,
+                                title: '服务端地址',
+                                subtitle: ref
+                                    .read(serverConfigurationControllerProvider)
+                                    .configuration
+                                    .displayLabel,
+                                value: '已连接',
+                              ),
+                            ],
+                          ),
                         ),
-                        _MenuItem(
-                          icon: Icons.public,
-                          title: '时区',
-                          subtitle: '影响每日边界与统计口径',
-                          value: data.profile.timezone,
-                          onTap: () => _showTimezoneSheet(context, ref, data),
+                        if (!supervisor) ...[
+                          const ShanganGroupLabel('提醒与在线（只读）'),
+                          ShanganCard(
+                            padding: EdgeInsets.zero,
+                            child: Column(
+                              children: [
+                                _MenuItem(
+                                  icon: Icons.monitor_heart_outlined,
+                                  title: '后台心跳',
+                                  // 原型 6-1「每 60 秒上报，由服务端下发间隔」。
+                                  subtitle:
+                                      '每 ${data.heartbeatIntervalSeconds} 秒上报，由服务端下发间隔',
+                                  value: '${data.heartbeatIntervalSeconds} 秒',
+                                ),
+                                _MenuItem(
+                                  icon: Icons.notifications_outlined,
+                                  title: '催办策略',
+                                  subtitle:
+                                      '无操作 ${data.firstThresholdMinutes} 分钟触发 · 每日最多 ${data.dailyMax} 次',
+                                  value: '服务端配置',
+                                ),
+                                _MenuItem(
+                                  icon: Icons.nights_stay_outlined,
+                                  title: '免打扰时段',
+                                  subtitle: '由管理员在服务端设置',
+                                  value:
+                                      '${data.quietStart} – ${data.quietEnd}',
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            '催办阈值和免打扰由服务端维护；个人 Bark 可在上方自行配置。',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: ShanganColors.mutedInk,
+                            ),
+                          ),
+                        ],
+                        // 应用级信息统一放在设置底部，不混入推送或账号安全分组。
+                        const ShanganGroupLabel('应用信息'),
+                        ShanganCard(
+                          padding: EdgeInsets.zero,
+                          child: Column(
+                            children: [
+                              AppUpdateEntry(
+                                builder: (version, open) => _MenuItem(
+                                  icon: Icons.system_update_outlined,
+                                  title: '检查更新',
+                                  value: version.isEmpty ? '读取中' : version,
+                                  onTap: open,
+                                ),
+                              ),
+                              _MenuItem(
+                                icon: Icons.info_outline,
+                                title: '关于',
+                                subtitle: '版本信息与诊断日志',
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const AboutPage(),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        _MenuItem(
-                          icon: Icons.dns_outlined,
-                          title: '服务端地址',
-                          subtitle: ref
-                              .read(serverConfigurationControllerProvider)
-                              .configuration
-                              .displayLabel,
-                          value: '已连接',
+                        const SizedBox(height: 18),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: ShanganColors.red,
+                            side: const BorderSide(
+                              color: ShanganColors.red,
+                              width: 1.5,
+                            ),
+                          ),
+                          onPressed: () =>
+                              ref.read(authControllerProvider).logout(),
+                          child: const Text('退出登录'),
                         ),
                       ],
                     ),
                   ),
-                  if (!supervisor) ...[
-                    const ShanganGroupLabel('提醒与在线（只读）'),
-                    ShanganCard(
-                      padding: EdgeInsets.zero,
-                      child: Column(
-                        children: [
-                          _MenuItem(
-                            icon: Icons.monitor_heart_outlined,
-                            title: '后台心跳',
-                            // 原型 6-1「每 60 秒上报，由服务端下发间隔」。
-                            subtitle:
-                                '每 ${data.heartbeatIntervalSeconds} 秒上报，由服务端下发间隔',
-                            value: '${data.heartbeatIntervalSeconds} 秒',
-                          ),
-                          _MenuItem(
-                            icon: Icons.notifications_outlined,
-                            title: '催办策略',
-                            subtitle:
-                                '无操作 ${data.firstThresholdMinutes} 分钟触发 · 每日最多 ${data.dailyMax} 次',
-                            value: '服务端配置',
-                          ),
-                          _MenuItem(
-                            icon: Icons.nights_stay_outlined,
-                            title: '免打扰时段',
-                            subtitle: '由管理员在服务端设置',
-                            value: '${data.quietStart} – ${data.quietEnd}',
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      '催办阈值和免打扰由服务端维护；个人 Bark 可在上方自行配置。',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: ShanganColors.mutedInk,
-                      ),
-                    ),
-                  ],
-                  // 应用级信息统一放在设置底部，不混入推送或账号安全分组。
-                  const ShanganGroupLabel('应用信息'),
-                  ShanganCard(
-                    padding: EdgeInsets.zero,
-                    child: AppUpdateEntry(
-                      builder: (version, open) => _MenuItem(
-                        icon: Icons.system_update_outlined,
-                        title: '检查更新',
-                        value: version.isEmpty ? '读取中' : version,
-                        onTap: open,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: ShanganColors.red,
-                      side: const BorderSide(
-                        color: ShanganColors.red,
-                        width: 1.5,
-                      ),
-                    ),
-                    onPressed: () => ref.read(authControllerProvider).logout(),
-                    child: const Text('退出登录'),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -2,7 +2,7 @@
 
 - 文档状态：待人工批准（批准后冻结）
 - 版本线：V2.0.0
-- 唯一 UI 事实来源：`docs/prototypes/shangan-v2-prototype.html`（35 个移动端屏 + 11 个管理后台页面）
+- 唯一 UI 事实来源：手机与管理后台为 `docs/prototypes/shangan-v2-prototype.html`；Pad 工作台（宽 ≥768 且高 ≥500）为 `docs/prototypes/ashorex-pad-v2.html`
 - 取代文档：`docs/specs/2026-08-27-shangan-v1-design.md`（V2 上线后删除）
 - 相关 ADR：ADR-0025 ~ ADR-0032
 
@@ -451,6 +451,7 @@ UI 不得多画第 4 个时长色阶，图例必须把 3 个时长档全部标�
 | GET | `/me` | 资料、角色、督学人、生效催办策略（只读）、feature 开关 |
 | PATCH | `/me/password` | 改密 |
 | PATCH | `/me/timezone` | 改时区 |
+| POST | `/diagnostics/logs` | 用户手动上传本机诊断日志（multipart，见 ADR-0052） |
 
 ### 10.2 考试目标
 
@@ -577,7 +578,7 @@ todo_attachments(+文件) → todo_progress_events → todo_deletions(引用该�
 用户：
 
 ```text
-todo_attachments(+目录) → todo_progress_events → todos → todo_deletions
+todo_attachments(+目录) → diagnostic_log_uploads(+目录) → todo_progress_events → todos → todo_deletions
 → lesson_watch_states → exam_goals → nag_deliveries → nags
 → nag_policies(scope=USER) → supervisions(双向) → user_presence
 → user_bark_settings → refresh_tokens → user_roles → users → deletion_audits(+1)
@@ -984,3 +985,11 @@ T24 / 原型 2-2：首页添加课程和课程详情共用的加入课时弹窗�
 ## 2026-09-10 回归修复：回填、上传、专注完成与删除日期
 
 依照 [ADR-0051](../adr/0051-todo-annotation-upload-and-deletion-fixes.md) 落实已有规则：完成后及备注入口只保存回填；自然结束补凭证后仍由 `focus/finish` 判定完成，手动提前完成语义保持原样；附件鉴权刷新后重建 multipart 请求体；删除数量按用户时区的实际删除日归集，台账保留原计划日期。接口、字段与状态机不变。前三项须升级 App 生效，删除日期修复只需升级服务端；旧版 App 继续兼容原接口。
+
+## R52 / T52：本机诊断日志与手动上报（2026-09-10 已批准）
+
+遵循 [ADR-0052](../adr/0052-diagnostic-log-upload.md)。App 在本机滚动写入详细诊断日志（启动、生命周期、路由、认证、API 错误、播放状态变化、专注、催办、心跳失败、FlutterError），脱敏后不自动上报。入口为「我的 → 应用信息 → 关于 → 上报日志」。服务端按用户保存最多 30 份，管理后台可查看并确认后删除单份。不替代播放跳片尾的业务修复，也不引入崩溃聚合平台。旧版 App 忽略该入口与接口。
+
+## 2026-09-10 Pad 工作台布局（已批准）
+
+遵循 [ADR-0053](../adr/0053-pad-workspace-layout.md)。整屏宽 ≥768 且高 ≥500 时启用 Pad 工作台：品牌侧栏、首页待办+目标/节奏、课程墙覆盖式课时抽屉、数据页多栏看板。手机布局、API、完成判定与播放协议不变。Pad UI 事实来源为 `docs/prototypes/ashorex-pad-v2.html`。

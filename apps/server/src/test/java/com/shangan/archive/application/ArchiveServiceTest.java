@@ -53,6 +53,7 @@ class ArchiveServiceTest {
   @Mock private DeletionAuditRepository audits;
 
   @TempDir Path attachmentsRoot;
+  @TempDir Path diagnosticsRoot;
 
   private ArchiveService service;
 
@@ -67,7 +68,8 @@ class ArchiveServiceTest {
             audits,
             () -> "audit-1",
             Clock.fixed(NOW, ZoneOffset.UTC),
-            attachmentsRoot.toString());
+            attachmentsRoot.toString(),
+            diagnosticsRoot.toString());
   }
 
   @Test

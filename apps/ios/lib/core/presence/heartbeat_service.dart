@@ -1,3 +1,4 @@
+import 'package:shangan_ios/core/diagnostics/diagnostic_log.dart';
 import 'package:shangan_ios/core/presence/app_activity.dart';
 import 'dart:async';
 
@@ -118,6 +119,9 @@ final class HeartbeatService with WidgetsBindingObserver {
       );
       // 注销期间完成的旧请求不得重建定时器或恢复 SSE。
       if (_disposed) return;
+      if (!_online) {
+        DiagnosticLog.info('heartbeat', 'recovered');
+      }
       _online = true;
       _lastSuccessAt = DateTime.now();
       if (onConnected != null) unawaited(onConnected!());
@@ -130,10 +134,12 @@ final class HeartbeatService with WidgetsBindingObserver {
       onTransportMode?.call(result.nagTransportMode);
       final nagId = result.pendingNagId;
       if (nagId != null && onPendingNag != null) {
+        DiagnosticLog.info('nag', 'pending from heartbeat', {'nagId': nagId});
         onPendingNag!(nagId);
       }
-    } catch (_) {
+    } catch (error) {
       // 心跳失败只标记离线，不影响本地播放与计时。
+      DiagnosticLog.warn('heartbeat', 'failed', {'error': error.toString()});
       _online = false;
     } finally {
       _sending = false;

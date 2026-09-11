@@ -74,5 +74,11 @@
     <symbol id="i-timer" viewBox="0 0 24 24">
       <path d="M9.5 3h5" /><circle cx="12" cy="13.5" r="7.2" /><path d="M12 9.8v3.7h2.8" />
     </symbol>
+    <symbol id="i-log" viewBox="0 0 24 24">
+      <path d="M6 4.5h9.5L18.5 8v12H6z" />
+      <path d="M15 4.5V8h3.5" />
+      <path d="M8.5 12h7" />
+      <path d="M8.5 15.5h7" />
+    </symbol>
   </svg>
 </template>

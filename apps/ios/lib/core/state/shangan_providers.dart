@@ -39,11 +39,17 @@ final class HomeSelectionController extends Notifier<HomeSelection> {
   @override
   HomeSelection build() {
     // 服务端日期就绪后只更新“今天”，不覆盖用户已经明确选中的历史日期。
+    // 首页 build 期间监听可能同步触发，改到微任务再写 state，避免打断播放页首帧。
     ref.listen(serverTodayProvider, (previous, next) {
       final today = next.asData?.value;
-      if (today != null && state.followsToday) {
-        state = state.copyWith(date: today);
+      if (today == null || !state.followsToday || state.date == today) {
+        return;
       }
+      Future.microtask(() {
+        if (state.followsToday && state.date != today) {
+          state = state.copyWith(date: today);
+        }
+      });
     });
     final today = ref.read(serverTodayProvider).asData?.value;
     final now = DateTime.now();

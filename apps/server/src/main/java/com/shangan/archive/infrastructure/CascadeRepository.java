@@ -17,6 +17,9 @@ public interface CascadeRepository {
 
   List<String> userAttachmentPaths(String userId);
 
+  /** 用户上报的诊断日志相对路径，彻底删除时同步清理磁盘文件。 */
+  List<String> userDiagnosticPaths(String userId);
+
   /** 课程删除影响的用户数与累计观看毫秒，用于预检提示。 */
   ImpactSummary courseImpact(String courseId);
 

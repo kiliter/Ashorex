@@ -157,7 +157,8 @@ final class _Chip extends StatelessWidget {
   }
 }
 
-/// 目标看板：主目标大号倒计时 + 其余目标两列紧凑格，一屏展示全部。
+/// 目标看板：主目标大号倒计时置顶；次目标按倒数日由小到大排成横向磁贴，
+/// 一屏正常展示 4 个，超出 4 个时支持左右滑动。
 final class GoalBoard extends StatelessWidget {
   const GoalBoard({required this.goals, this.onManage, super.key});
 
@@ -173,7 +174,9 @@ final class GoalBoard extends StatelessWidget {
       (goal) => goal.primary,
       orElse: () => goals.first,
     );
-    final others = goals.where((goal) => goal.id != primary.id).toList();
+    // 次目标按倒数日由小到大排序，最近的考试排在最前。
+    final others = goals.where((goal) => goal.id != primary.id).toList()
+      ..sort((a, b) => a.daysRemaining.compareTo(b.daysRemaining));
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
@@ -218,18 +221,24 @@ final class GoalBoard extends StatelessWidget {
             LayoutBuilder(
               builder: (context, constraints) {
                 const spacing = 7.0;
-                final width = (constraints.maxWidth - spacing) / 2;
-                return Wrap(
-                  spacing: spacing,
-                  runSpacing: spacing,
-                  children: others
-                      .map(
-                        (goal) => SizedBox(
-                          width: width,
-                          child: _MiniGoalTile(goal: goal),
+                // 磁贴宽度按可见区均分 4 份，第 5 个起进入横向滑动区。
+                final width = (constraints.maxWidth - spacing * 3) / 4;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (var index = 0; index < others.length; index++)
+                        Padding(
+                          padding: EdgeInsets.only(
+                            right: index == others.length - 1 ? 0 : spacing,
+                          ),
+                          child: SizedBox(
+                            width: width,
+                            child: _MiniGoalTile(goal: others[index]),
+                          ),
                         ),
-                      )
-                      .toList(growable: false),
+                    ],
+                  ),
                 );
               },
             ),
@@ -389,54 +398,55 @@ final class _MiniGoalTile extends StatelessWidget {
       ),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(11),
         border: Border.all(color: border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  goal.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  '${goal.examDate.month.toString().padLeft(2, '0')}-'
-                  '${goal.examDate.day.toString().padLeft(2, '0')}',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: ShanganColors.mutedInk,
-                  ),
-                ),
-              ],
-            ),
+          Text(
+            goal.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
           ),
-          const SizedBox(width: 8),
-          // 原型 `.gb-mini .d{min-width:30px;text-align:right}`：数字右对齐后
-          // 多个目标的天数纵向能对齐成一列（1-1 目标看板）。
-          SizedBox(
-            width: 30,
-            child: Text(
-              '${goal.daysRemaining}',
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.6,
-                color: number,
-                fontFeatures: const [FontFeature.tabularFigures()],
+          const SizedBox(height: 5),
+          // 倒数日放大为视觉主体，日期标在数字下方，与 Pad 侧栏磁贴口径一致。
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '${goal.daysRemaining}',
+                style: TextStyle(
+                  fontSize: 19,
+                  height: 1.1,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.8,
+                  color: number,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
               ),
-            ),
+              const SizedBox(width: 3),
+              Text(
+                '天',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: number,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '${goal.examDate.month.toString().padLeft(2, '0')}-'
+            '${goal.examDate.day.toString().padLeft(2, '0')}',
+            maxLines: 1,
+            style: const TextStyle(fontSize: 10, color: ShanganColors.mutedInk),
           ),
         ],
       ),
@@ -657,6 +667,8 @@ final class ShanganSegmented extends StatelessWidget {
                   child: Text(
                     labels[index],
                     textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -760,17 +772,19 @@ final class SectionTitle extends StatelessWidget {
     required this.title,
     this.trailing,
     this.count,
+    this.padding = const EdgeInsets.only(top: 16, bottom: 8),
     super.key,
   });
 
   final String title;
   final Widget? trailing;
   final String? count;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 8),
+      padding: padding,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [

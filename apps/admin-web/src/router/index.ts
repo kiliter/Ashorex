@@ -80,6 +80,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '版本与升级', group: '系统' },
       },
       {
+        path: 'diagnostic-logs',
+        name: 'diagnostic-logs',
+        component: () => import('@/pages/DiagnosticLogsPage.vue'),
+        meta: { title: '诊断日志', group: '系统' },
+      },
+      {
         path: 'settings',
         name: 'settings',
         component: () => import('@/pages/SettingsPage.vue'),

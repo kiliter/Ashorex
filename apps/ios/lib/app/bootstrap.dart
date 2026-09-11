@@ -1,12 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shangan_ios/app/application_bootstrap.dart';
+import 'package:shangan_ios/core/diagnostics/diagnostic_log.dart';
 
 /// 启动可重建的应用依赖；编译地址只作为用户未配置时的默认值。
 Future<void> bootstrap() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  const baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:18080',
+  await runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
+      await DiagnosticLog.install();
+      const baseUrl = String.fromEnvironment(
+        'API_BASE_URL',
+        defaultValue: 'http://127.0.0.1:18080',
+      );
+      runApp(const ApplicationBootstrap(defaultBaseUrl: baseUrl));
+    },
+    (error, stack) {
+      DiagnosticLog.error('zone', error.toString(), error: error, stack: stack);
+    },
   );
-  runApp(const ApplicationBootstrap(defaultBaseUrl: baseUrl));
 }

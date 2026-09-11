@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { name: 'archive', title: '归档区', icon: 'i-archive' },
   { name: 'settings', title: '运行配置', icon: 'i-server' },
   { name: 'upgrades', title: '版本与升级', icon: 'i-server' },
+  { name: 'diagnostic-logs', title: '诊断日志', icon: 'i-log' },
 ] as const;
 
 async function signOut(): Promise<void> {
@@ -33,7 +34,7 @@ async function signOut(): Promise<void> {
 </script>
 
 <template>
-  <div class="admin-shell" :class="{ 'bounded-shell': ['nag-policy', 'nags', 'emby-sync', 'settings', 'upgrades'].includes(String($route.name)) }">
+  <div class="admin-shell" :class="{ 'bounded-shell': ['nag-policy', 'nags', 'emby-sync', 'settings', 'upgrades', 'diagnostic-logs'].includes(String($route.name)) }">
     <nav class="admin-nav">
       <div class="brand">
         <img class="brand-mark" :src="brandMarkSrc" width="28" height="28" alt="" />

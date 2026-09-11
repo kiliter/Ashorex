@@ -31,6 +31,11 @@ public class SqliteConfiguration {
     sqliteConfig.enforceForeignKeys(true);
     sqliteConfig.setBusyTimeout(5000);
     sqliteConfig.setSynchronous(SQLiteConfig.SynchronousMode.NORMAL);
+    // 写事务在 BEGIN 时取锁并等待 busy_timeout，避免 DEFERRED 升级时立刻 SQLITE_BUSY_SNAPSHOT。
+    sqliteConfig.setTransactionMode(SQLiteConfig.TransactionMode.IMMEDIATE);
+    // 禁用 SQLiteConfig#setExplicitReadOnly：与 IMMEDIATE 组合时，readOnly 事务会给物理连接
+    // 打上 PRAGMA query_only=true 且无法复位，连接归还 Hikari 后所有写入都报 SQLITE_READONLY
+    // （2026-09-10 事故）。不启用时 Spring 的 readOnly 标记由驱动静默降级，不影响正确性。
 
     SQLiteDataSource sqliteDataSource = new SQLiteDataSource(sqliteConfig);
     sqliteDataSource.setUrl(jdbcUrl);
@@ -40,6 +45,8 @@ public class SqliteConfiguration {
     hikariConfig.setMaximumPoolSize(Math.min(maximumPoolSize, 4));
     hikariConfig.setConnectionTimeout(connectionTimeoutMs);
     hikariConfig.setPoolName("shangan-sqlite");
+    // Hikari 取出连接后再设一次，避免只写在 SQLiteConfig 时 native busy handler 未生效。
+    hikariConfig.setConnectionInitSql("PRAGMA busy_timeout = 5000");
     return new HikariDataSource(hikariConfig);
   }
 }

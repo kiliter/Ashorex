@@ -75,7 +75,7 @@ class PresenceServiceTest {
   @DisplayName("心跳只写心跳时间与前后台状态，绝不写有效操作时间")
   void 心跳不写有效操作() {
     when(policies.resolve(USER_ID)).thenReturn(policy(60, 5));
-    when(nagResponses.pending(USER_ID)).thenReturn(Optional.empty());
+    when(nagResponses.peekPending(USER_ID)).thenReturn(Optional.empty());
 
     PresenceService.HeartbeatResponse response =
         service.heartbeat(USER_ID, "FOREGROUND", "2.0.0", null, null, null);
@@ -96,7 +96,7 @@ class PresenceServiceTest {
   @DisplayName("未知或缺失的前后台状态统一归一为 BACKGROUND")
   void 前后台状态归一() {
     when(policies.resolve(USER_ID)).thenReturn(policy(60, 5));
-    when(nagResponses.pending(USER_ID)).thenReturn(Optional.empty());
+    when(nagResponses.peekPending(USER_ID)).thenReturn(Optional.empty());
 
     service.heartbeat(USER_ID, null, "2.0.0", null, null, null);
 
@@ -109,7 +109,7 @@ class PresenceServiceTest {
   @DisplayName("有待回应催办时心跳响应下发催办 ID、文案与原因要求")
   void 心跳下发待回应催办() {
     when(policies.resolve(USER_ID)).thenReturn(policy(45, 8));
-    when(nagResponses.pending(USER_ID)).thenReturn(Optional.of(nag()));
+    when(nagResponses.peekPending(USER_ID)).thenReturn(Optional.of(nag()));
 
     PresenceService.HeartbeatResponse response =
         service.heartbeat(USER_ID, "foreground", "2.0.0", null, null, null);
@@ -162,7 +162,7 @@ class PresenceServiceTest {
   @Test
   void 活动上报校验任务并且不刷新有效操作() {
     when(policies.resolve(USER_ID)).thenReturn(policy(60, 5));
-    when(nagResponses.pending(USER_ID)).thenReturn(Optional.empty());
+    when(nagResponses.peekPending(USER_ID)).thenReturn(Optional.empty());
     service.heartbeat(USER_ID, "FOREGROUND", "2.0.0", "PLAYER", "VIDEO_PAUSED", "todo-1");
     verify(activities).validate(USER_ID, "todo-1", "PLAYER");
     verify(presence)

@@ -15,6 +15,7 @@ void main() {
     addTearDown(container.dispose);
     container.read(homeSelectionProvider);
     await container.read(serverTodayProvider.future);
+    await Future<void>.value();
     final view = await container.read(dayViewProvider.future);
     expect(container.read(homeSelectionProvider).date, DateTime(2030, 1, 2));
     expect(view.date, DateTime(2030, 1, 2));

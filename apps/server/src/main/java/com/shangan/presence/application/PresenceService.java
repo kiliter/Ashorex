@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 心跳处理与在线判定。
  *
- * <p>心跳只更新最近心跳时间与前后台状态，**不刷新有效操作时间**；响应向客户端下发实际心跳间隔 与待回应催办 ID（见 ADR-0026）。
+ * <p>心跳只更新最近心跳时间与前后台状态，**不刷新有效操作时间**；响应向客户端下发实际心跳间隔 与今日待回应催办 ID（见 ADR-0026）。催办过期清理不放在心跳写事务里。
  */
 @Service
 public class PresenceService {
@@ -64,7 +64,7 @@ public class PresenceService {
     String normalizedState = "FOREGROUND".equalsIgnoreCase(appState) ? "FOREGROUND" : "BACKGROUND";
     presence.recordHeartbeat(userId, now, normalizedState, clientVersion, activity);
     EffectiveNagPolicy policy = policies.resolve(userId);
-    Optional<Nag> pending = nagResponses.pending(userId);
+    Optional<Nag> pending = nagResponses.peekPending(userId);
     return new HeartbeatResponse(
         now,
         policy.heartbeatIntervalSeconds(),

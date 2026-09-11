@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -16,6 +17,7 @@ import com.shangan.nag.domain.NagStatus;
 import com.shangan.nag.domain.NagTrigger;
 import com.shangan.nag.infrastructure.NagRepository;
 import com.shangan.presence.application.EffectiveActionRecorder;
+import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -28,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.UncategorizedSQLException;
 
 /** 催办回应：原因必填、长度下限来自策略，回应刷新有效操作时间。 */
 @ExtendWith(MockitoExtension.class)
@@ -234,11 +237,44 @@ class NagResponseServiceTest {
     assertThat(service.pending(USER_ID)).map(Nag::id).contains("nag-1");
   }
 
+  @Test
+  @DisplayName("昨日催办即使尚未写成 EXPIRED 也不再作为待回应返回")
+  void 昨日催办不弹出() {
+    when(nags.findAwaitingByUser(USER_ID)).thenReturn(Optional.of(nagOn(LocalDate.of(2026, 9, 6))));
+
+    assertThat(service.pending(USER_ID)).isEmpty();
+    assertThat(service.peekPending(USER_ID)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("清理跨日催办遇到 SQLITE_BUSY 时仍返回今日待回应催办")
+  void 锁冲突时仍可读今日催办() {
+    doThrow(
+            new UncategorizedSQLException(
+                "update",
+                "UPDATE nags",
+                new SQLException("[SQLITE_BUSY] The database file is locked", null, 5)))
+        .when(nags)
+        .expireBefore(USER_ID, LocalDate.of(2026, 9, 7));
+    when(nags.findAwaitingByUser(USER_ID)).thenReturn(Optional.of(nag(true)));
+
+    assertThat(service.pending(USER_ID)).map(Nag::id).contains("nag-1");
+    verify(nags, never()).supersedeOlderAppNags(USER_ID);
+  }
+
   private static Nag nag(boolean requireReason) {
+    return nagOn(LocalDate.of(2026, 9, 7), requireReason);
+  }
+
+  private static Nag nagOn(LocalDate localDate) {
+    return nagOn(localDate, true);
+  }
+
+  private static Nag nagOn(LocalDate localDate, boolean requireReason) {
     return new Nag(
         "nag-1",
         USER_ID,
-        LocalDate.of(2026, 9, 7),
+        localDate,
         1,
         NagTrigger.AUTO,
         null,

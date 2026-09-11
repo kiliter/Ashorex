@@ -59,6 +59,8 @@ logging:
 app:
   # Todo 附件与 SQLite 同处本地数据卷，并由备份脚本成套归档。
   attachments-dir: ${ATTACHMENTS_DIR:${DATA_DIR:./data}/attachments}
+  # 用户手动上报的诊断日志；与附件隔离，避免混入完成凭证目录。
+  diagnostics-dir: ${DIAGNOSTICS_DIR:${DATA_DIR:./data}/diagnostics}
   emby:
     base-url: ${EMBY_BASE_URL:}
     api-key: ${EMBY_API_KEY:}

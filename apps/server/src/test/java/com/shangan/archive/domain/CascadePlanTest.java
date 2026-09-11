@@ -37,6 +37,7 @@ class CascadePlanTest {
     assertThat(CascadePlan.userOrder())
         .containsExactly(
             "todo_attachments",
+            "diagnostic_log_uploads",
             "todo_progress_events",
             "todos",
             "todo_deletions",

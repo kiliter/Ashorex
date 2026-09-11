@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shangan_ios/core/layout/adaptive_scaffold.dart';
 import 'package:shangan_ios/core/presence/heartbeat_service.dart';
 import 'package:shangan_ios/core/presence/nag_event_service.dart';
 import 'package:shangan_ios/core/state/shangan_providers.dart';
@@ -135,68 +136,44 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      HomePage(key: _homeKey),
+      HomePage(key: _homeKey, onOpenStats: () => setState(() => _index = 2)),
       const LibraryPage(),
       const StatsPage(),
       const ProfilePage(),
     ];
+    final displayName = ref
+        .watch(meSettingsProvider)
+        .asData
+        ?.value
+        .profile
+        .displayName;
     return AppActivityScope(
       activity: AppActivity(
         const ['HOME', 'LIBRARY', 'STATS', 'PROFILE'][_index],
         'BROWSING',
       ),
-      child: Scaffold(
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              if (_offline) const _OfflineBanner(),
-              Expanded(child: pages[_index]),
-            ],
-          ),
+      child: AdaptiveScaffold(
+        selectedIndex: _index,
+        onDestinationSelected: (index) => setState(() => _index = index),
+        accountName: displayName,
+        destinations: const [
+          AdaptiveDestination(icon: Icons.home_outlined, label: '首页'),
+          AdaptiveDestination(icon: Icons.menu_book_outlined, label: '学习'),
+          AdaptiveDestination(icon: Icons.bar_chart_outlined, label: '数据'),
+          AdaptiveDestination(icon: Icons.person_outline, label: '我的'),
+        ],
+        // IndexedStack 只解决四个一级 Tab 的状态保持，不引入额外缓存框架。
+        body: Column(
+          children: [
+            if (_offline) const _OfflineBanner(),
+            Expanded(
+              child: IndexedStack(index: _index, children: pages),
+            ),
+          ],
         ),
         floatingActionButton: _index == 0
             ? _AddTodoFab(onTap: () => _homeKey.currentState?.addTodo())
             : null,
-        bottomNavigationBar: DecoratedBox(
-          // 原型 `.tabbar{border-top:1.5px solid var(--ink)}`；NavigationBar 自身
-          // 没有描边属性，只能在外层补一条上边线（1-1 ~ 1-9 底部 Tab）。
-          decoration: const BoxDecoration(
-            border: Border(
-              top: BorderSide(
-                color: ShanganColors.ink,
-                width: ShanganRadius.borderWidth,
-              ),
-            ),
-          ),
-          child: NavigationBar(
-            selectedIndex: _index,
-            onDestinationSelected: (index) => setState(() => _index = index),
-            // 原型 tabbar 选中态只换底色与描边，图标本身保持同一套线性图标。
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home_outlined),
-                label: '首页',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.menu_book_outlined),
-                selectedIcon: Icon(Icons.menu_book_outlined),
-                label: '学习',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.bar_chart_outlined),
-                selectedIcon: Icon(Icons.bar_chart_outlined),
-                label: '数据',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person_outline),
-                label: '我的',
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:shangan_ios/core/diagnostics/diagnostic_route_observer.dart';
 import 'package:shangan_ios/core/presence/app_activity.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -19,7 +20,11 @@ export 'package:shangan_ios/features/shell/presentation/app_shell.dart'
 GoRouter createRouter(AuthController authController) {
   return GoRouter(
     initialLocation: '/',
-    observers: [shanganRouteObserver, activityRouteObserver],
+    observers: [
+      shanganRouteObserver,
+      activityRouteObserver,
+      DiagnosticRouteObserver(),
+    ],
     refreshListenable: authController,
     redirect: (context, state) {
       final status = authController.state.status;
