@@ -250,12 +250,17 @@ final libraryCoursesSnapshotProvider = FutureProvider<List<CourseSummary>>(
   (ref) => ref.watch(shanganRepositoryProvider).loadCourses(),
 );
 
-/// 同类并集、跨类交集作用于完整快照，学习页与今日选课口径一致。
-final coursesProvider = FutureProvider<List<CourseSummary>>((ref) async {
+/// 课程快照按筛选条件过滤的公共逻辑；学习页与 Pad 选课弹窗共用同一口径。
+Future<List<CourseSummary>> loadFilteredCourses(Ref ref) async {
   final filter = ref.watch(catalogFilterProvider);
   final courses = await ref.watch(libraryCoursesSnapshotProvider.future);
   return courses.where(filter.matches).toList(growable: false);
-});
+}
+
+/// 同类并集、跨类交集作用于完整快照，学习页与今日选课口径一致。
+final coursesProvider = FutureProvider<List<CourseSummary>>(
+  loadFilteredCourses,
+);
 
 /// 添加待办专用课程快照，不依赖课程库的筛选条件。
 /// 面板关闭后释放，下次打开重新加载；搜索、流派和标签仅在面板内筛选。

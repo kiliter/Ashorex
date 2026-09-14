@@ -17,7 +17,16 @@ import 'package:shangan_ios/features/home/presentation/add_todo_sheet.dart';
 ///
 /// 筛选维度全部来自 Emby 元数据（流派 / 标签 / 人物），本地不维护分类主数据。
 final class LibraryPage extends ConsumerStatefulWidget {
-  const LibraryPage({super.key});
+  const LibraryPage({this.addDate, this.onCreated, this.onClose, super.key});
+
+  /// 选课弹窗场景：课时加入待办的目标日期；为空时按账号「今天」计算。
+  final DateTime? addDate;
+
+  /// 选课弹窗场景：课时成功加入待办后的回调，供外层记录刷新标记。
+  final VoidCallback? onCreated;
+
+  /// 嵌入弹窗时在页头提供关闭按钮；独立 Tab 页面为 null。
+  final VoidCallback? onClose;
 
   @override
   ConsumerState<LibraryPage> createState() => _LibraryPageState();
@@ -34,7 +43,31 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   String? _browseCategory;
 
   /// 仅用于 Pad 双栏的局部选中态；手机仍使用原有 /courses/:courseId 路由。
+  /// 关闭动画播完前保留内容不清空，避免课时面板提前闪没。
   String? _selectedCourseId;
+
+  /// 抽屉的目标开合状态；与 `_selectedCourseId` 分离后关闭才有滑出动画。
+  bool _drawerOpen = false;
+
+  /// 抽屉进出场动画时长：偏短的 easeOutCubic，跟手但不生硬。
+  static const _kDrawerDuration = Duration(milliseconds: 260);
+
+  /// 打开课时抽屉；重复点击另一门课程时只切换内容，不重新播动画。
+  void _openCourseDrawer(String courseId) => setState(() {
+    _selectedCourseId = courseId;
+    _drawerOpen = true;
+  });
+
+  /// 开始关闭抽屉；子树在滑出动画结束后由 `_onDrawerExitEnd` 移除。
+  void _closeCourseDrawer() => setState(() => _drawerOpen = false);
+
+  /// 关闭动画播完后清空选中课程，让抽屉子树完全退出组件树。
+  void _onDrawerExitEnd() {
+    if (mounted && !_drawerOpen) {
+      setState(() => _selectedCourseId = null);
+    }
+  }
+
   Timer? _debounce;
   String _appliedKeyword = '';
   bool _openingFilters = false;
@@ -230,6 +263,14 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                       semanticLabel: '展开筛选',
                       onTap: _openFilters,
                     ),
+                    if (widget.onClose != null) ...[
+                      const SizedBox(width: 9),
+                      ShanganIconButton(
+                        icon: Icons.close,
+                        semanticLabel: '关闭课程选择',
+                        onTap: widget.onClose!,
+                      ),
+                    ],
                   ],
                 ),
                 SizedBox(height: compact ? 4 : (pad ? 12 : 12)),
@@ -328,7 +369,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                           onTap: (course) async {
                             ref.invalidate(courseDetailProvider(course.id));
                             if (pad) {
-                              setState(() => _selectedCourseId = course.id);
+                              _openCourseDrawer(course.id);
                               return;
                             }
                             await context.push('/courses/${course.id}');
@@ -346,43 +387,83 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           ),
         );
         if (!pad) return master;
-        final drawerOpen = _selectedCourseId != null;
         final drawerWidth = constraints.maxWidth < PadChrome.drawerWidth + 26
             ? (constraints.maxWidth - 26).clamp(280.0, PadChrome.drawerWidth)
             : PadChrome.drawerWidth;
         return PopScope(
-          canPop: !drawerOpen,
+          canPop: !_drawerOpen,
           onPopInvokedWithResult: (didPop, _) {
-            if (!didPop && drawerOpen) {
-              setState(() => _selectedCourseId = null);
-            }
+            if (!didPop && _drawerOpen) _closeCourseDrawer();
           },
           child: Stack(
             children: [
               master,
-              if (drawerOpen) ...[
+              // 抽屉在关闭动画播完前一直留在树中（`_selectedCourseId` 不为空），
+              // 用透明度 + 轻微右移做进出场，替代原来的生硬闪现。
+              if (_selectedCourseId != null) ...[
                 Positioned.fill(
-                  child: GestureDetector(
-                    key: const ValueKey('library-drawer-scrim'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => setState(() => _selectedCourseId = null),
-                    child: const ColoredBox(color: Color(0x1C263B60)),
+                  child: AnimatedOpacity(
+                    opacity: _drawerOpen ? 1 : 0,
+                    duration: _kDrawerDuration,
+                    curve: Curves.easeOutCubic,
+                    onEnd: _onDrawerExitEnd,
+                    child: IgnorePointer(
+                      ignoring: !_drawerOpen,
+                      child: GestureDetector(
+                        key: const ValueKey('library-drawer-scrim'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _closeCourseDrawer,
+                        child: const ColoredBox(color: Color(0x1C263B60)),
+                      ),
+                    ),
                   ),
                 ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: SizedBox(
-                    key: const ValueKey('library-lesson-drawer'),
-                    width: drawerWidth,
-                    child: Material(
-                      color: ShanganColors.surface,
-                      elevation: 12,
-                      shadowColor: const Color(0x40263B60),
-                      child: CourseDetailPage(
-                        key: ValueKey('pad-course-$_selectedCourseId'),
-                        courseId: _selectedCourseId!,
-                        embedded: true,
-                        onClose: () => setState(() => _selectedCourseId = null),
+                AnimatedSlide(
+                  offset: _drawerOpen ? Offset.zero : const Offset(0.06, 0),
+                  duration: _kDrawerDuration,
+                  curve: Curves.easeOutCubic,
+                  child: AnimatedOpacity(
+                    opacity: _drawerOpen ? 1 : 0,
+                    duration: _kDrawerDuration,
+                    curve: Curves.easeOutCubic,
+                    child: IgnorePointer(
+                      ignoring: !_drawerOpen,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        // 抽屉做成圆角浮层卡片：上下留呼吸边距，左侧柔和投影，
+                        // 与 Pad 卡片语言（18+ 圆角、浅描边、轻投影）保持一致。
+                        child: Container(
+                          key: const ValueKey('library-lesson-drawer'),
+                          width: drawerWidth,
+                          margin: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: const BoxDecoration(
+                            color: ShanganColors.surface,
+                            borderRadius: BorderRadius.all(Radius.circular(22)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Color(0x2E263B60),
+                                blurRadius: 40,
+                                offset: Offset(-10, 0),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.all(
+                              Radius.circular(22),
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: CourseDetailPage(
+                                key: ValueKey('pad-course-$_selectedCourseId'),
+                                courseId: _selectedCourseId!,
+                                embedded: true,
+                                addDate: widget.addDate,
+                                onCreated: widget.onCreated,
+                                onClose: _closeCourseDrawer,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -982,6 +1063,8 @@ final class CourseDetailPage extends ConsumerStatefulWidget {
     required this.courseId,
     this.embedded = false,
     this.onClose,
+    this.addDate,
+    this.onCreated,
     super.key,
   });
 
@@ -992,6 +1075,12 @@ final class CourseDetailPage extends ConsumerStatefulWidget {
 
   /// Pad 覆盖抽屉的收起回调；手机页仍走 Navigator.pop。
   final VoidCallback? onClose;
+
+  /// 选课弹窗场景：课时加入待办的目标日期；为空时读取账号「今天」。
+  final DateTime? addDate;
+
+  /// 课时成功加入待办后的回调，供选课弹窗通知外层刷新。
+  final VoidCallback? onCreated;
 
   @override
   ConsumerState<CourseDetailPage> createState() => _CourseDetailPageState();
@@ -1043,8 +1132,14 @@ class _CourseDetailPageState extends ConsumerState<CourseDetailPage> {
               final compact =
                   constraints.maxHeight < 460 ||
                   MediaQuery.textScalerOf(context).scale(14) > 22;
+              // 嵌入抽屉时顶部多留一点边距，内容不贴近浮层的圆角。
               return Padding(
-                padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+                padding: EdgeInsets.fromLTRB(
+                  18,
+                  widget.embedded ? 14 : 8,
+                  18,
+                  0,
+                ),
                 child: Column(
                   children: [
                     Row(
@@ -1200,6 +1295,8 @@ class _CourseDetailPageState extends ConsumerState<CourseDetailPage> {
                         ),
                       ),
                     ),
+                    // 头部信息与课时列表之间补一条细线，视觉上分出两个区域。
+                    const Divider(height: 1, color: ShanganColors.hair),
                     Expanded(
                       child: resources.isEmpty
                           ? const Center(child: Text('没有符合条件的课时'))
@@ -1242,8 +1339,11 @@ class _CourseDetailPageState extends ConsumerState<CourseDetailPage> {
   /// 打开 2-2 的选课时步骤，把课时加入今日待办。
   Future<void> _addToToday(CourseSummary course) async {
     try {
-      // 添加动作重新读取账号“今天”，避免页面跨午夜停留后仍提交昨天。
-      final today = (await ref.read(shanganRepositoryProvider).loadDay()).date;
+      // 选课弹窗指定目标日期；否则重新读取账号“今天”，
+      // 避免页面跨午夜停留后仍提交昨天。
+      final today =
+          widget.addDate ??
+          (await ref.read(shanganRepositoryProvider).loadDay()).date;
       if (!mounted) return;
       final created = await showCourseResourcePicker(
         context,
@@ -1253,6 +1353,7 @@ class _CourseDetailPageState extends ConsumerState<CourseDetailPage> {
       if (created && mounted) {
         ref.invalidate(dayViewProvider);
         ref.invalidate(courseDetailProvider(widget.courseId));
+        widget.onCreated?.call();
       }
     } catch (_) {
       if (mounted) ShanganFeedback.show(context, '读取今日日期失败，请稍后重试', error: true);

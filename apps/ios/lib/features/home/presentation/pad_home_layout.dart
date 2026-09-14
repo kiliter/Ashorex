@@ -290,23 +290,30 @@ final class _PadOtherGoalStrip extends StatelessWidget {
     const gap = 8.0;
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 磁贴宽度按可见区均分 4 份，第 5 个起自然进入横向滚动区。
-        final tileWidth = (constraints.maxWidth - gap * 3) / 4;
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (var index = 0; index < goals.length; index++)
-                Padding(
-                  padding: EdgeInsets.only(
-                    right: index == goals.length - 1 ? 0 : gap,
+        // 磁贴宽度按可见区均分 4 份；超过 4 个时把宽度压窄一点，
+        // 让第 5 个磁贴露出一条边，提示用户还能向右滑动。
+        // 高度固定，避免在纵向滚动容器里被拉伸成高条。
+        final tileWidth = goals.length > 4
+            ? (constraints.maxWidth - gap * 3) / 4.3
+            : (constraints.maxWidth - gap * 3) / 4;
+        return SizedBox(
+          height: 92,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (var index = 0; index < goals.length; index++)
+                  Padding(
+                    padding: EdgeInsets.only(
+                      right: index == goals.length - 1 ? 0 : gap,
+                    ),
+                    child: SizedBox(
+                      width: tileWidth,
+                      child: _PadOtherGoalTile(goal: goals[index]),
+                    ),
                   ),
-                  child: SizedBox(
-                    width: tileWidth,
-                    child: _PadOtherGoalTile(goal: goals[index]),
-                  ),
-                ),
-            ],
+              ],
+            ),
           ),
         );
       },

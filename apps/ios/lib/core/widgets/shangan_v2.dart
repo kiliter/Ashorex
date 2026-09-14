@@ -221,23 +221,30 @@ final class GoalBoard extends StatelessWidget {
             LayoutBuilder(
               builder: (context, constraints) {
                 const spacing = 7.0;
-                // 磁贴宽度按可见区均分 4 份，第 5 个起进入横向滑动区。
-                final width = (constraints.maxWidth - spacing * 3) / 4;
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (var index = 0; index < others.length; index++)
-                        Padding(
-                          padding: EdgeInsets.only(
-                            right: index == others.length - 1 ? 0 : spacing,
+                // 磁贴宽度按可见区均分 4 份；超过 4 个时把宽度压窄一点，
+                // 让第 5 个磁贴露出一条边，提示用户还能向右滑动。
+                // 高度固定，目标看板整体高度不随目标数量变化。
+                final width = others.length > 4
+                    ? (constraints.maxWidth - spacing * 3) / 4.3
+                    : (constraints.maxWidth - spacing * 3) / 4;
+                return SizedBox(
+                  height: 84,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (var index = 0; index < others.length; index++)
+                          Padding(
+                            padding: EdgeInsets.only(
+                              right: index == others.length - 1 ? 0 : spacing,
+                            ),
+                            child: SizedBox(
+                              width: width,
+                              child: _MiniGoalTile(goal: others[index]),
+                            ),
                           ),
-                          child: SizedBox(
-                            width: width,
-                            child: _MiniGoalTile(goal: others[index]),
-                          ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },

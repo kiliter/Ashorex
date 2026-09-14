@@ -10,6 +10,7 @@ import 'package:shangan_ios/core/models/shangan_models.dart';
 import 'package:shangan_ios/core/state/shangan_providers.dart';
 import 'package:shangan_ios/core/theme/shangan_theme.dart';
 import 'package:shangan_ios/core/widgets/shangan_v2.dart';
+import 'pad_course_picker_dialog.dart';
 
 /// 添加 Todo 的类型选择与三条创建流程。
 ///
@@ -1464,12 +1465,12 @@ class _PadAddTodoDialogState extends ConsumerState<PadAddTodoDialog> {
     return Dialog(
       backgroundColor: ShanganColors.surface,
       insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      // 去掉厚重的蓝色描边，改用浅描边 + 柔和投影，与 Pad 卡片语言一致。
+      elevation: 24,
+      shadowColor: const Color(0x33263B60),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(22),
-        side: const BorderSide(
-          color: ShanganColors.blue,
-          width: ShanganRadius.borderWidth,
-        ),
+        side: const BorderSide(color: ShanganColors.hair),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 460, maxHeight: 640),
@@ -1543,7 +1544,7 @@ class _PadAddTodoDialogState extends ConsumerState<PadAddTodoDialog> {
   }
 
   Future<void> _pickCourse() async {
-    final created = await _CoursePickerSheet.show(context, widget.date);
+    final created = await PadCoursePickerDialog.show(context, widget.date);
     if (created && mounted) Navigator.of(context).pop(true);
   }
 }
@@ -1554,23 +1555,30 @@ final class _PadCoursePrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(15, 28, 15, 12),
-      child: Column(
+    // 空态放进浅蓝底色的圆角面板，避免大片留白显得单薄。
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
+      decoration: BoxDecoration(
+        color: ShanganColors.blueSoft.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: ShanganColors.blueLine),
+      ),
+      child: const Column(
         children: [
           _PadCourseIcon(),
-          SizedBox(height: 15),
+          SizedBox(height: 14),
           Text(
             '从课程库选择要学的课时',
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
           ),
-          SizedBox(height: 8),
+          SizedBox(height: 6),
           Text(
-            '先选课程，再将课时加入今日计划。\n保留现有课程与待办的关联方式。',
+            '先选课程，再将课时加入今日计划',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
-              height: 1.65,
+              height: 1.6,
               color: ShanganColors.mutedInk,
             ),
           ),

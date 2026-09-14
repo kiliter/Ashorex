@@ -666,8 +666,9 @@ final class _GoalBoardSection extends ConsumerWidget {
         child: Text('目标加载失败：$error'),
       ),
       data: (list) {
-        // 目标数量不受限，固定区只在空间充足且目标较少时展示完整卡片。
-        if (!compact && list.length <= 3) {
+        // 次目标磁贴横向滑动后看板高度固定，不再因目标多而回退成紧凑行；
+        // 只有小屏高度不足（compact）时才用紧凑行。
+        if (!compact) {
           return GoalBoard(goals: list, onManage: onManage);
         }
         final primary = list.isEmpty
