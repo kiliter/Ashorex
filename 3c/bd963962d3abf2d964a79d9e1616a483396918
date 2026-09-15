@@ -1,0 +1,35 @@
+apps/server/src/main/java/com/shangan/common/api/RequestLoggingInterceptor.java
+  s_266d3b1b200bdb::t_a4253a81fb37e1 21-24
+apps/server/src/test/java/com/shangan/catalog/api/PlaybackControllerTest.java
+  s_266d3b1b200bdb::t_9488342c2b71c8 32,34,41-42,44,49-50,52-54,56-58,60-86,91
+  s_266d3b1b200bdb::t_3476e38e8fc5ec 4,6,15-16,19,21-25,27,29-31,33,35-40,43,45-48,51,55,87-90,92-104,106-107,112-136
+apps/server/src/main/java/com/shangan/catalog/api/PlaybackController.java
+  s_266d3b1b200bdb::t_a4253a81fb37e1 11-12,30-31,41-43,47-49,53-64,67-69,71-102
+  s_266d3b1b200bdb::t_2df3d0a7a002dc 7
+apps/server/src/test/java/com/shangan/common/api/RequestLoggingInterceptorTest.java
+  s_266d3b1b200bdb::t_9488342c2b71c8 1-21
+docs/adr/0039-media-kit-playback-trial.md
+  s_266d3b1b200bdb::t_f10d8f5fb2a951 56-65
+docs/plans/2026-09-07-shangan-v2-implementation-plan.md
+  s_266d3b1b200bdb::t_bb4561981eee5f 1275-1278
+docs/specs/2026-09-07-shangan-v2-design.md
+  s_266d3b1b200bdb::t_a20cc1c88b1528 1000-1003
+docs/traceability/2026-09-07-shangan-v2-traceability.md
+  s_266d3b1b200bdb::t_140572434ad01f 340-343
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3cbd963962d3abf2d964a79d9e1616a483396918",
+  "prompts": {},
+  "sessions": {
+    "s_266d3b1b200bdb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a2db-a913-78f3-91cb-9d68f4045237",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
