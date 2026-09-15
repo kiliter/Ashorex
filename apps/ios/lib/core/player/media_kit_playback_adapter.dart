@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:shangan_ios/core/diagnostics/diagnostic_log.dart';
+import 'package:shangan_ios/core/diagnostics/diagnostic_log_redactor.dart';
 import 'package:media_kit/media_kit.dart' as mk;
 import 'package:media_kit_video/media_kit_video.dart' as mv;
 import 'package:shangan_ios/core/player/playback_adapter.dart';
@@ -28,13 +30,75 @@ final class MediaKitPlaybackAdapter extends PlaybackAdapter {
   String? _error;
   final _ready = Completer<void>();
   Timer? _positionNotification;
+  static int _nextSession = 0;
+  final int _session = ++_nextSession;
+  final Stopwatch _elapsed = Stopwatch()..start();
+  int _windowSecond = -1;
+  int _nativeLines = 0;
+  int _suppressed = 0;
+  int _lastPositionLogMs = -5000;
+
+  /// 在状态变更前后记录同一会话与单调时钟，保留错误被清理前的证据。
+  void _diagnose(String event, [Map<String, Object?> extra = const {}]) {
+    DiagnosticLog.info('player.native', event, {
+      'session': _session,
+      'elapsedMs': _elapsed.elapsedMilliseconds,
+      'positionMs': _position,
+      'durationMs': _duration,
+      'playing': _playing,
+      'ended': _ended,
+      'buffering': _buffering,
+      'hasError': _error != null,
+      ...extra,
+    });
+  }
+
+  /// 原生日志可能包含任意路径和请求头；敏感行整体隐藏，避免空格路径漏脱敏。
+  static String _safeNativeText(String text) {
+    final sensitive = RegExp(
+      r'authorization|cookie|bearer|token|password|passwd|secret|api.?key|sendkey|range\s*[:=]|https?://|[/\\]|filename|file-path',
+      caseSensitive: false,
+    );
+    return text
+        .split('\n')
+        .map((line) {
+          if (sensitive.hasMatch(line)) return '[敏感内核行已隐藏]';
+          final safe = const DiagnosticLogRedactor().redact(line);
+          return safe.length > 2000 ? '${safe.substring(0, 2000)}[截断]' : safe;
+        })
+        .take(20)
+        .join(' | ');
+  }
+
+  /// 非错误内核消息每秒最多记录 40 条；错误不丢弃，省略数量在下一窗口或销毁时汇总。
+  void _nativeLog(mk.PlayerLog log) {
+    final second = _elapsed.elapsedMilliseconds ~/ 1000;
+    if (second != _windowSecond) {
+      if (_suppressed > 0) {
+        _diagnose('native logs suppressed', {'count': _suppressed});
+      }
+      _windowSecond = second;
+      _nativeLines = 0;
+      _suppressed = 0;
+    }
+    final important = ['error', 'fatal', 'warn'].contains(log.level);
+    if (!important && _nativeLines++ >= 40) {
+      _suppressed++;
+      return;
+    }
+    _diagnose('libmpv', {
+      'prefix': _safeNativeText(log.prefix),
+      'level': _safeNativeText(log.level),
+      'text': _safeNativeText(log.text),
+    });
+  }
 
   /// 延迟到打开播放页时加载原生库，让初始化失败进入页面的重试流程。
   static mk.Player _newPlayer() {
     mk.MediaKit.ensureInitialized();
     return mk.Player(
       configuration: const mk.PlayerConfiguration(
-        logLevel: mk.MPVLogLevel.error,
+        logLevel: mk.MPVLogLevel.debug,
       ),
     );
   }
@@ -69,6 +133,7 @@ final class MediaKitPlaybackAdapter extends PlaybackAdapter {
   /// 点播需等到时长可用再恢复历史位置，避免 open 返回早于媒体加载。
   @override
   Future<void> initialize(Uri uri, Map<String, String> headers) async {
+    _diagnose('initialize begin', {'logLevel': 'debug'});
     final player = _player = _createPlayer();
     _controller = _createController(player);
     void changed() {
@@ -76,19 +141,27 @@ final class MediaKitPlaybackAdapter extends PlaybackAdapter {
     }
 
     _subscriptions.addAll([
+      player.stream.log.listen(_nativeLog),
       player.stream.playing.listen((value) {
+        _diagnose('playing received', {'value': value});
         _playing = value;
         changed();
       }),
       player.stream.buffering.listen((value) {
+        _diagnose('buffering received', {'value': value});
         _buffering = value;
         changed();
       }),
       player.stream.position.listen((value) {
         final advanced = value.inMilliseconds > _position;
         _position = value.inMilliseconds;
+        if (_elapsed.elapsedMilliseconds - _lastPositionLogMs >= 5000) {
+          _lastPositionLogMs = _elapsed.elapsedMilliseconds;
+          _diagnose('position sample');
+        }
         // 解码回退成功后位置继续推进，清除旧错误，不能永久锁住播放状态。
         if (advanced && _playing && _error != null) {
+          _diagnose('error cleared by advancing position');
           _error = null;
           _authenticationExpired = false;
           changed();
@@ -100,11 +173,13 @@ final class MediaKitPlaybackAdapter extends PlaybackAdapter {
         });
       }),
       player.stream.duration.listen((value) {
+        _diagnose('duration received', {'valueMs': value.inMilliseconds});
         _duration = value.inMilliseconds;
         if (_duration > 0 && !_ready.isCompleted) _ready.complete();
         changed();
       }),
       player.stream.completed.listen((value) {
+        _diagnose('completed received', {'value': value});
         _ended = value;
         if (value) {
           // 内核确认片尾后对齐最终位置，清除 EOF 附带错误并通知页面补报。
@@ -113,10 +188,15 @@ final class MediaKitPlaybackAdapter extends PlaybackAdapter {
           _error = null;
           _authenticationExpired = false;
           _position = _duration;
+          _diagnose('completed position aligned');
         }
         changed();
       }),
       player.stream.error.listen((rawError) {
+        _diagnose('error received', {
+          'text': _safeNativeText(rawError),
+          'ignored': _ended,
+        });
         if (_ended) return; // 已确认结束后的尾部日志不能覆盖正常片尾状态。
         // 内核错误可能包含带认证参数的地址，不向界面或日志传递原文。
         _authenticationExpired = isPlaybackAuthenticationFailure(rawError);
@@ -125,35 +205,70 @@ final class MediaKitPlaybackAdapter extends PlaybackAdapter {
         changed();
       }),
     ]);
-    await player
-        .open(mk.Media(uri.toString(), httpHeaders: headers), play: false)
-        .timeout(const Duration(seconds: 25));
+    await _command(
+      'open',
+      () => player
+          .open(mk.Media(uri.toString(), httpHeaders: headers), play: false)
+          .timeout(const Duration(seconds: 25)),
+    );
     if (!_disposed && _duration <= 0 && _error == null) {
       await _ready.future.timeout(const Duration(seconds: 25));
     }
+    _diagnose('initialize finished');
     if (_disposed || _error != null) throw StateError('视频初始化失败');
   }
 
   @override
-  Future<void> play() async => _player?.play();
+  Future<void> play() => _command('play', () async {
+    await _player?.play();
+  });
   @override
-  Future<void> pause() async => _player?.pause();
+  Future<void> pause() => _command('pause', () async {
+    await _player?.pause();
+  });
   @override
   Future<void> seek(int milliseconds) async {
+    _diagnose('seek requested', {'targetMs': milliseconds});
     // 新一轮跳转重新接受播放错误，不把片尾状态带到下一次播放。
     _ended = false;
     _error = null;
     _authenticationExpired = false;
-    await _player?.seek(Duration(milliseconds: milliseconds));
+    await _command('seek', () async {
+      await _player?.seek(Duration(milliseconds: milliseconds));
+    });
   }
 
   @override
-  Future<void> speed(double value) async => _player?.setRate(value);
+  Future<void> speed(double value) async {
+    _diagnose('speed requested', {'rate': value});
+    await _command('speed', () async {
+      await _player?.setRate(value);
+    });
+  }
+
+  /// 记录命令耗时与失败，异常原样抛回既有页面处理，不改变播放行为。
+  Future<void> _command(String name, Future<void> Function() action) async {
+    final started = _elapsed.elapsedMilliseconds;
+    _diagnose('$name begin');
+    try {
+      await action();
+      _diagnose('$name success', {
+        'costMs': _elapsed.elapsedMilliseconds - started,
+      });
+    } catch (error) {
+      _diagnose('$name failed', {
+        'costMs': _elapsed.elapsedMilliseconds - started,
+        'text': _safeNativeText(error.toString()),
+      });
+      rethrow;
+    }
+  }
 
   /// 先停止事件投递，再异步释放原生资源，避免离页后的回调更新页面。
   @override
   void dispose() {
     if (_disposed) return;
+    _diagnose('dispose', {'suppressed': _suppressed});
     _disposed = true;
     _positionNotification?.cancel();
     // 离页立即结束媒体就绪等待，不留下直到超时才结束的初始化任务。

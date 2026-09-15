@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'package:shangan_ios/core/diagnostics/diagnostic_log.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:media_kit/media_kit.dart' as mk;
@@ -13,6 +16,82 @@ class _Streams extends Mock implements mk.PlayerStream {}
 class _Controller extends Mock implements mv.VideoController {}
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('内核日志脱敏并保留完成前位置和被忽略的错误', () async {
+    final directory = await Directory.systemTemp.createTemp('player-log-');
+    await DiagnosticLog.install(directory: directory);
+    final fixture = _Fixture();
+    try {
+      await fixture.open();
+      fixture.position.add(const Duration(seconds: 12));
+      fixture.log.add(
+        const mk.PlayerLog(
+          prefix: 'ffmpeg',
+          level: 'error',
+          text: 'HTTP 503 reconnect failed',
+        ),
+      );
+      fixture.log.add(
+        const mk.PlayerLog(
+          prefix: 'http',
+          level: 'debug',
+          text: 'Authorization: Bearer private-token Cookie: a=secret',
+        ),
+      );
+      fixture.log.add(
+        const mk.PlayerLog(
+          prefix: 'file',
+          level: 'debug',
+          text: 'Opening /media/private lesson.mp4',
+        ),
+      );
+      fixture.error.add('failed https://user:password@host/video?token=secret');
+      for (var i = 0; i < 100; i++) {
+        fixture.log.add(
+          const mk.PlayerLog(
+            prefix: 'demux',
+            level: 'debug',
+            text: 'packet diagnostic',
+          ),
+        );
+      }
+      fixture.log.add(
+        const mk.PlayerLog(
+          prefix: 'decoder',
+          level: 'error',
+          text: 'critical decode failure',
+        ),
+      );
+      fixture.completed.add(true);
+      fixture.error.add('EOF after completion');
+      final output = utf8.decode((await DiagnosticLog.snapshot()).bytes);
+      expect(output, contains('HTTP 503 reconnect failed'));
+      expect(output, contains('critical decode failure'));
+      expect(
+        'packet diagnostic'.allMatches(output).length,
+        lessThanOrEqualTo(40),
+      );
+      expect(output, contains('completed received'));
+      expect(output, contains('positionMs=12000'));
+      expect(output, contains('EOF after completion'));
+      expect(output, contains('ignored=true'));
+      for (final secret in [
+        'private-token',
+        'a=secret',
+        '/media/private',
+        'user:password',
+        'token=secret',
+      ]) {
+        expect(output, isNot(contains(secret)));
+      }
+    } finally {
+      await fixture.close();
+      await DiagnosticLog.resetForTest();
+      await directory.delete(recursive: true);
+    }
+  });
+
   setUpAll(() {
     registerFallbackValue(mk.Media('https://example.invalid/video'));
     registerFallbackValue(Duration.zero);
@@ -108,6 +187,7 @@ class _Fixture {
   final duration = StreamController<Duration>.broadcast(sync: true);
   final completed = StreamController<bool>.broadcast(sync: true);
   final error = StreamController<String>.broadcast(sync: true);
+  final log = StreamController<mk.PlayerLog>.broadcast(sync: true);
   late final adapter = MediaKitPlaybackAdapter(
     createPlayer: () => player,
     createController: (_) => _Controller(),
@@ -120,6 +200,7 @@ class _Fixture {
     when(() => streams.position).thenAnswer((_) => position.stream);
     when(() => streams.duration).thenAnswer((_) => duration.stream);
     when(() => streams.completed).thenAnswer((_) => completed.stream);
+    when(() => streams.log).thenAnswer((_) => log.stream);
     when(() => streams.error).thenAnswer((_) => error.stream);
     when(() => player.open(any(), play: false)).thenAnswer((_) async {
       duration.add(const Duration(minutes: 1));
@@ -145,6 +226,7 @@ class _Fixture {
       duration.close(),
       completed.close(),
       error.close(),
+      log.close(),
     ]);
   }
 }
