@@ -337,3 +337,7 @@ R53 → T53 → 原型 `ashorex-pad-v2.html` → [ADR-0053](../adr/0053-pad-work
 ### T25：异常结束防误完成补充（2026-09-15）
 
 ADR-0039 → MediaKitPlaybackAdapter / PlayerPage → media_kit_adapter_test / player_controls_test：中途结束保留真实位置并显示重试错误；正常片尾独立复核，累计尾差不超两秒，不改变服务端完成判定和自由拖动。旧 App 需更新，Android 原视频真机复验待设备连接。
+
+### T25：服务端视频流超时修复
+
+ADR-0039 → PlaybackController / RequestLoggingInterceptor → PlaybackControllerTest / RequestLoggingInterceptorTest / RangeProxyIntegrationTest：同步流避免异步总超时，协议与资源关闭验证通过；默认 30 秒真实容器对照及完整应用健康检查通过，生产与真机复验待部署。

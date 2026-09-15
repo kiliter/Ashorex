@@ -18,7 +18,10 @@ public class RequestLoggingInterceptor implements HandlerInterceptor {
   @Override
   public boolean preHandle(
       HttpServletRequest request, HttpServletResponse response, Object handler) {
-    request.setAttribute(STARTED_AT, System.nanoTime());
+    // 异步重新分派仍沿用初次请求时间，避免长连接被错误记录为 0ms。
+    if (request.getAttribute(STARTED_AT) == null) {
+      request.setAttribute(STARTED_AT, System.nanoTime());
+    }
     return true;
   }
 
