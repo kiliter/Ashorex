@@ -1,0 +1,28 @@
+apps/ios/lib/core/player/media_kit_playback_adapter.dart
+  s_266d3b1b200bdb::t_017c343b6eb1a1 77,79
+  s_266d3b1b200bdb::t_37241730235156 208-210,213
+  s_266d3b1b200bdb::t_09865b75d98be6 4-5,33-76,78,80-94,101,136,144,146,151,158-161,164,176,182,191,196-197,199,217,222-224,226-228,231,236-238,242-255,257-260,262-265,271
+  s_266d3b1b200bdb::t_e3924d6a7ea6f6 198,211-212,256,261
+apps/ios/test/features/player/media_kit_adapter_test.dart
+  s_266d3b1b200bdb::t_4ca78f14cd719c 2-4,19-31,34-38,41-45,48-49,66-69,75-83,85-94,190,203,229
+  s_266d3b1b200bdb::t_37241730235156 50-54,57-62,65,70-72,74
+  s_266d3b1b200bdb::t_2e3d6337b312a0 32-33,39-40,46-47,55-56,63-64,73,84
+docs/adr/0052-diagnostic-log-upload.md
+  s_266d3b1b200bdb::t_37241730235156 49-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "49239fdb99c05e6fd56c62be3c02f34996a6d025",
+  "prompts": {},
+  "sessions": {
+    "s_266d3b1b200bdb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a2db-a913-78f3-91cb-9d68f4045237",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
