@@ -1,0 +1,36 @@
+apps/ios/lib/features/player/presentation/player_page.dart
+  s_266d3b1b200bdb::t_314488da20af5b 1236,1241-1244
+docs/specs/2026-09-07-shangan-v2-design.md
+  s_266d3b1b200bdb::t_314488da20af5b 996-999
+docs/plans/2026-09-07-shangan-v2-implementation-plan.md
+  s_266d3b1b200bdb::t_314488da20af5b 1271-1274
+apps/ios/test/features/player/media_kit_adapter_test.dart
+  s_266d3b1b200bdb::t_247006cb3676f3 78,143-184,186-188,201-213,237-238
+  s_266d3b1b200bdb::t_314488da20af5b 185,239,241
+  s_266d3b1b200bdb::t_6abaa07262100a 189-200
+docs/traceability/2026-09-07-shangan-v2-traceability.md
+  s_266d3b1b200bdb::t_6abaa07262100a 336-339
+docs/adr/0039-media-kit-playback-trial.md
+  s_266d3b1b200bdb::t_314488da20af5b 48-55
+apps/ios/test/features/player/player_controls_test.dart
+  s_266d3b1b200bdb::t_247006cb3676f3 295-314,577
+  s_266d3b1b200bdb::t_6abaa07262100a 315-329
+apps/ios/lib/core/player/media_kit_playback_adapter.dart
+  s_266d3b1b200bdb::t_314488da20af5b 183-190,194-198,243-252
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "40361c13127e558bc09d01117b990b5f6afc54ba",
+  "prompts": {},
+  "sessions": {
+    "s_266d3b1b200bdb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a2db-a913-78f3-91cb-9d68f4045237",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kiliter <kiliter@qq.com>"
+    }
+  }
+}
