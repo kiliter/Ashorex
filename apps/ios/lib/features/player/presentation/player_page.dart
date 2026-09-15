@@ -1233,11 +1233,15 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
     if (!force && _uncommittedMs == 0) return;
     final delta = _uncommittedMs;
     _uncommittedMs = 0;
-    // 片尾按内核精确时长补报；仅校正 Emby 与内核两秒以内的时长尾差。
+    // 独立验证内核位置、时长与错误；从真实位置到目录片尾的总校正不得超过两秒。
     // 达标仍由服务端裁决，观看时长不因校正增加。
     var reportedPosition = _positionMs;
     final catalogDuration = _todo?.resourceDurationMs;
     if (_player?.ended == true &&
+        _player?.error == null &&
+        (_player?.durationMs ?? 0) > 0 &&
+        reportedPosition > 0 &&
+        ((_player!.durationMs) - reportedPosition).abs() <= 2000 &&
         catalogDuration != null &&
         catalogDuration >= reportedPosition &&
         catalogDuration - reportedPosition <= 2000) {

@@ -180,15 +180,22 @@ final class MediaKitPlaybackAdapter extends PlaybackAdapter {
       }),
       player.stream.completed.listen((value) {
         _diagnose('completed received', {'value': value});
-        _ended = value;
+        // completed 也可能表示异常断流；必须结合真实位置与尚未恢复的错误验证。
+        // 保留原始位置，由上报层在总计两秒范围内做一次尾差校正。
+        _ended =
+            value &&
+            _error == null &&
+            _duration > 0 &&
+            _position > 0 &&
+            (_duration - _position).abs() <= 2000;
         if (value) {
-          // 内核确认片尾后对齐最终位置，清除 EOF 附带错误并通知页面补报。
           _playing = false;
           _buffering = false;
-          _error = null;
-          _authenticationExpired = false;
-          _position = _duration;
-          _diagnose('completed position aligned');
+          if (!_ended) {
+            _error ??= '播放意外中断，请重试';
+            if (!_ready.isCompleted) _ready.complete();
+          }
+          _diagnose(_ended ? 'completed verified' : 'completed rejected');
         }
         changed();
       }),
@@ -233,9 +240,16 @@ final class MediaKitPlaybackAdapter extends PlaybackAdapter {
     _ended = false;
     _error = null;
     _authenticationExpired = false;
-    await _command('seek', () async {
-      await _player?.seek(Duration(milliseconds: milliseconds));
-    });
+    try {
+      await _command('seek', () async {
+        await _player?.seek(Duration(milliseconds: milliseconds));
+      });
+    } catch (_) {
+      // 命令失败未必伴随 error 流事件，仍须阻止随后的 completed 被当作正常片尾。
+      _error = '视频跳转失败，请重试';
+      if (!_disposed) notifyListeners();
+      rethrow;
+    }
   }
 
   @override

@@ -292,6 +292,41 @@ void main() {
     await _dispose(tester);
   });
 
+  testWidgets('上报拒绝错误或与内核时长不符的片尾补满', (tester) async {
+    for (final hasError in [false, true]) {
+      final backend = _backend();
+      final playback = _FakePlayback();
+      await _pump(tester, backend, _RecordingWakeLock(), playback: playback);
+      playback.positionMs = 1799500;
+      playback.durationMs = hasError ? 1800000 : 7200000;
+      playback.error = hasError ? '播放意外中断，请重试' : null;
+      playback.ended = true;
+      playback.notifyListeners();
+      await tester.pumpAndSettle();
+      final body = backend
+          .lastRequest('POST', '/api/v1/todos/t-1/progress')
+          .json;
+      expect(body['positionMs'], 1799500);
+      expect(body['deltaWatchedMs'], 0);
+      await _dispose(tester);
+    }
+  });
+
+  testWidgets('目录与实际位置相差超过两秒时不叠加尾差', (tester) async {
+    final backend = _backend();
+    final playback = _FakePlayback();
+    await _pump(tester, backend, _RecordingWakeLock(), playback: playback);
+    playback.positionMs = 1797000;
+    playback.durationMs = 1798500;
+    playback.ended = true;
+    playback.notifyListeners();
+    await tester.pumpAndSettle();
+    final body = backend.lastRequest('POST', '/api/v1/todos/t-1/progress').json;
+    expect(body['positionMs'], 1797000);
+    expect(body['deltaWatchedMs'], 0);
+    await _dispose(tester);
+  });
+
   testWidgets('快进 10 秒会立即补一次上报', (tester) async {
     final backend = _backend();
     await _pump(tester, backend, _RecordingWakeLock());
@@ -539,7 +574,7 @@ class _FakePlayback extends PlaybackAdapter {
   @override
   int positionMs = 0;
   @override
-  int get durationMs => 1800000;
+  int durationMs = 1800000;
   double rate = 1;
   Timer? timer;
   final seekRequests = <int>[];

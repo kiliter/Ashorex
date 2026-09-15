@@ -1268,3 +1268,7 @@ T24 / 原型 2-2：首页添加课程和课程详情共用的加入课时弹窗�
 ## R53 / T53：Pad 工作台高保真布局（2026-09-10 已批准）
 
 遵循 [ADR-0053](../adr/0053-pad-workspace-layout.md)。文件：`adaptive_breakpoints.dart`、`adaptive_scaffold.dart`、`pad_chrome.dart`、首页/课程库/数据/我的页及对应 Widget 测试。只重排 Pad 布局，不改 API。窄测试覆盖侧栏、首页工作台、课程墙覆盖抽屉、数据页计划执行与学习构成。提交主题：`feat: 按 Pad 原型高保真重排工作台布局`。
+
+### T25 补充：异常结束防误完成（2026-09-15）
+
+修改 MediaKitPlaybackAdapter、PlayerPage 与对应窄测试，按 ADR-0039 验证真实片尾并保留实际位置；上报层复核位置、时长与错误。覆盖中途异常、跳转失败、正常片尾、主动拖动和两秒边界；Android 真机用原视频复验，未连接设备时明确待验。无服务端及 API 变更，旧 App 需更新。

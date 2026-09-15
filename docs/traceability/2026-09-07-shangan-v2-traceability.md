@@ -333,3 +333,7 @@ R52 → T52 → 原型 6-5 / 8-13 → [ADR-0052](../adr/0052-diagnostic-log-uplo
 ## R53 / T53：Pad 工作台布局
 
 R53 → T53 → 原型 `ashorex-pad-v2.html` → [ADR-0053](../adr/0053-pad-workspace-layout.md)：Pad 宽 ≥768 且高 ≥500 时启用品牌侧栏、首页工作台、课程墙覆盖抽屉、数据多栏看板。验收：手机底栏保留、Pad 侧栏、首页添加待办与今日节奏、点选课程不挤压课程墙、遮罩/关闭收起抽屉、数据页计划执行与学习构成。不改 API 与完成判定。
+
+### T25：异常结束防误完成补充（2026-09-15）
+
+ADR-0039 → MediaKitPlaybackAdapter / PlayerPage → media_kit_adapter_test / player_controls_test：中途结束保留真实位置并显示重试错误；正常片尾独立复核，累计尾差不超两秒，不改变服务端完成判定和自由拖动。旧 App 需更新，Android 原视频真机复验待设备连接。

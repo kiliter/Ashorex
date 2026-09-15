@@ -75,7 +75,7 @@ void main() {
       expect(output, contains('completed received'));
       expect(output, contains('positionMs=12000'));
       expect(output, contains('EOF after completion'));
-      expect(output, contains('ignored=true'));
+      expect(output, contains('ignored=false'));
       for (final secret in [
         'private-token',
         'a=secret',
@@ -140,6 +140,77 @@ void main() {
     await fixture.close();
   });
 
+  test('正常片尾与手动拖到片尾均保留真实位置', () async {
+    final fixture = _Fixture();
+    await fixture.open();
+    fixture.position.add(const Duration(milliseconds: 59500));
+    fixture.completed.add(true);
+    expect(fixture.adapter.ended, isTrue);
+    expect(fixture.adapter.positionMs, 59500);
+    expect(fixture.adapter.error, isNull);
+    await fixture.adapter.seek(60000);
+    fixture.position.add(const Duration(minutes: 1));
+    fixture.completed.add(true);
+    expect(fixture.adapter.ended, isTrue);
+    expect(fixture.adapter.positionMs, 60000);
+    expect(fixture.adapter.error, isNull);
+    await fixture.close();
+  });
+
+  test('中途无错误的结束也拒绝，重试后允许真实片尾', () async {
+    final fixture = _Fixture();
+    await fixture.open();
+    fixture.position.add(const Duration(seconds: 5));
+    fixture.completed.add(true);
+    expect(fixture.adapter.ended, isFalse);
+    expect(fixture.adapter.positionMs, 5000);
+    expect(fixture.adapter.error, '播放意外中断，请重试');
+    await fixture.adapter.seek(59000);
+    fixture.position.add(const Duration(seconds: 59));
+    fixture.completed.add(true);
+    expect(fixture.adapter.ended, isTrue);
+    expect(fixture.adapter.error, isNull);
+    await fixture.close();
+  });
+
+  test('跳转失败后即使接近片尾也不能接受结束', () async {
+    final fixture = _Fixture();
+    await fixture.open();
+    fixture.position.add(const Duration(seconds: 59));
+    when(() => fixture.player.seek(any())).thenThrow(StateError('seek failed'));
+    await expectLater(fixture.adapter.seek(60000), throwsStateError);
+    fixture.completed.add(true);
+    expect(fixture.adapter.ended, isFalse);
+    expect(fixture.adapter.positionMs, 59000);
+    expect(fixture.adapter.error, '视频跳转失败，请重试');
+    await fixture.close();
+  });
+
+  test('片尾存在未恢复错误时拒绝结束且不清除错误', () async {
+    final fixture = _Fixture();
+    await fixture.open();
+    fixture.position.add(const Duration(milliseconds: 59500));
+    fixture.error.add('decoder failure');
+    fixture.completed.add(true);
+    expect(fixture.adapter.ended, isFalse);
+    expect(fixture.adapter.positionMs, 59500);
+    expect(fixture.adapter.error, '视频加载或播放失败，请重试');
+    await fixture.close();
+  });
+
+  test('未知时长和超过两秒尾差不接受结束', () async {
+    for (final duration in [0, 60000]) {
+      final fixture = _Fixture();
+      await fixture.open();
+      fixture.duration.add(Duration(milliseconds: duration));
+      fixture.position.add(const Duration(milliseconds: 57999));
+      fixture.completed.add(true);
+      expect(fixture.adapter.ended, isFalse);
+      expect(fixture.adapter.positionMs, 57999);
+      await fixture.close();
+    }
+  });
+
   test('初始化错误及时失败且不泄露原始媒体地址', () async {
     final fixture = _Fixture();
     when(() => fixture.player.open(any(), play: false)).thenAnswer((_) async {
@@ -163,11 +234,11 @@ void main() {
     expect(fixture.adapter.error, '视频加载或播放失败，请重试');
     fixture.completed.add(true);
     expect(fixture.adapter.playing, isFalse);
-    expect(fixture.adapter.ended, isTrue);
-    expect(fixture.adapter.positionMs, 60000);
-    expect(fixture.adapter.error, isNull);
+    expect(fixture.adapter.ended, isFalse);
+    expect(fixture.adapter.positionMs, 12000);
+    expect(fixture.adapter.error, '视频加载或播放失败，请重试');
     fixture.error.add('EOF');
-    expect(fixture.adapter.error, isNull);
+    expect(fixture.adapter.error, '视频加载或播放失败，请重试');
     await fixture.adapter.seek(0);
     fixture.error.add('new failure');
     expect(fixture.adapter.error, '视频加载或播放失败，请重试');
